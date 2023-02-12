@@ -9,14 +9,13 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-#BreadcrumbComposite > Composite,
+#BreadcrumbComposite > composite,
 #BreadcrumbItemComposite,
 #BreadcrumbItemDetailComposite,
 #BreadcrumbItemDetailTextComposite,
 #BreadcrumbItemDetailImageComposite,
 #BreadcrumbItemDetailTextLabel,
 #BreadcrumbItemDetailImageLabel,
-#BreadcrumbItemDropDownToolBar
-{
-    background-color:COLOR-WIDGET-LIGHT-SHADOW;;
+#BreadcrumbItemDropDownToolBar {
+  background-color: color-widget-light-shadow;
 }
