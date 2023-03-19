@@ -128,6 +128,9 @@ public class NLSUtil {
 										editOffset= elements[j+1].getTagPosition().getOffset();
 									} else {
 										editOffset= findLineEnd(cu, element.getPosition().getOffset());
+										if (editOffset < element.getPosition().getOffset() + element.getPosition().getLength()) {
+											editOffset= findLineEnd(cu, element.getPosition().getOffset() + element.getPosition().getLength());
+										}
 									}
 								} else {
 									Region previousPosition= elements[j-1].getTagPosition();
@@ -149,7 +152,7 @@ public class NLSUtil {
 		return result.toArray(new TextEdit[result.size()]);
 	}
 
-	private static NLSLine scanCurrentLine(ICompilationUnit cu, int position) throws JavaModelException {
+	public static NLSLine scanCurrentLine(ICompilationUnit cu, int position) throws JavaModelException {
 		try {
 			Assert.isTrue(position >= 0 && position <= cu.getBuffer().getLength());
 			for (NLSLine line : NLSScanner.scan(cu)) {
