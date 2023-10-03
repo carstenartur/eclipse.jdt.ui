@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -11,7 +11,9 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *     John Kaplan, johnkaplantech@gmail.com - 108071 [code templates] template for body of newly created class
- *     Taiming Wang <3120205503@bit.edu.cn> - [extract local] Automated Name Recommendation For The Extract Local Variable Refactoring - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/601
+ *     Taiming Wang <3120205503@bit.edu.cn> - [extract local] Automated Name Recommendation For The Extract Local Variable Refactoring. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/601
+ *     Taiming Wang <3120205503@bit.edu.cn> - [extract local] Context-based Automated Name Recommendation For The Extract Local Variable Refactoring. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/655
+ *     Taiming Wang <3120205503@bit.edu.cn> - [extract local] Recommend variable name for Extracted Local Variable Refactoring when the extracted expression is a method invocation. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/684
  *******************************************************************************/
 package org.eclipse.jdt.internal.core.manipulation;
 
@@ -1051,6 +1053,85 @@ public class StubUtility {
 		return res.toArray(new String[res.size()]);
 	}
 
+	public static String[] getVariableNameSuggestions(int variableKind, IJavaProject project, ITypeBinding expectedType, Expression assignedExpression, Collection<String> excluded,
+			String usedNameForIdenticalExpressionInCu, Collection<String> usedNamesForIdenticalExpressionInMethod) {
+		LinkedHashSet<String> res= new LinkedHashSet<>(); // avoid duplicates but keep order
+
+		String typeName= null;
+		int dim= 0;
+		if (expectedType != null) {
+			expectedType= Bindings.normalizeTypeBinding(expectedType);
+			if (expectedType != null) {
+				if (expectedType.isArray()) {
+					dim= expectedType.getDimensions();
+					expectedType= expectedType.getElementType();
+				}
+				if (expectedType.isParameterizedType()) {
+					expectedType= expectedType.getTypeDeclaration();
+				}
+				typeName= expectedType.getName();
+			}
+		}
+
+		boolean isTypeAvailable= typeName != null && typeName.length() > 0;
+		if (assignedExpression != null) {
+			if (isTypeAvailable) {
+				if (assignedExpression instanceof MethodInvocation) {
+					// if we have a method invocation, see if we can recycle some previously used variable name that is assigned with the same expression.
+					String recycledName= recycleNames(typeName, assignedExpression, excluded, usedNameForIdenticalExpressionInCu, usedNamesForIdenticalExpressionInMethod);
+					if (recycledName != null) {
+						add(getVariableNameSuggestions(variableKind, project, recycledName, 0, excluded, false), res); // pass 0 as dimension, base name already contains plural.
+					}
+				}
+			}
+
+			String nameFromExpression= getBaseNameFromExpression(project, assignedExpression, variableKind);
+			if (nameFromExpression != null) {
+				add(getVariableNameSuggestions(variableKind, project, nameFromExpression, 0, excluded, false), res); // pass 0 as dimension, base name already contains plural.
+			}
+
+			String nameFromParent= getBaseNameFromLocationInParent(assignedExpression);
+			if (nameFromParent != null) {
+				add(getVariableNameSuggestions(variableKind, project, nameFromParent, 0, excluded, false), res); // pass 0 as dimension, base name already contains plural.
+			}
+		}
+
+		if (isTypeAvailable) {
+			add(getVariableNameSuggestions(variableKind, project, typeName, dim, excluded, false), res);
+		}
+
+
+		if (res.isEmpty()) {
+			return getDefaultVariableNameSuggestions(variableKind, excluded);
+		}
+		return res.toArray(new String[res.size()]);
+	}
+
+	private static String recycleNames(String typeName, Expression assignedExpression, Collection<String> excluded,
+			String usedNameForIdenticalExpressionInCu, Collection<String> usedNamesForIdenticalExpressionInMethod) {
+
+		MethodInvocation methodInvocation= (MethodInvocation)assignedExpression;
+		String name= methodInvocation.getName().getIdentifier();
+		if (!name.toLowerCase().contains(typeName.toLowerCase())) {
+			List<Expression> arguments= methodInvocation.arguments();
+			List<Integer> argumentTypes= new ArrayList<>();
+			for (Expression argument : arguments)
+				argumentTypes.add(Integer.valueOf(argument.getNodeType()));
+			if (arguments.size() > 1 || argumentTypes.contains(Integer.valueOf(ASTNode.METHOD_INVOCATION))) {
+				if (usedNameForIdenticalExpressionInCu != null) {
+					if (excluded.contains(usedNameForIdenticalExpressionInCu) || usedNamesForIdenticalExpressionInMethod.contains(usedNameForIdenticalExpressionInCu))
+						return null;
+					else
+						return usedNameForIdenticalExpressionInCu;
+				}
+			}
+		}
+
+		return null;
+	}
+
+
+
 	public static String[] getVariableNameSuggestions(int variableKind, IJavaProject project, Type expectedType, Expression assignedExpression, Collection<String> excluded) {
 		LinkedHashSet<String> res= new LinkedHashSet<>(); // avoid duplicates but keep order
 
@@ -1139,7 +1220,8 @@ public class StubUtility {
 	}
 
 
-	private static final String[] KNOWN_METHOD_NAME_PREFIXES= { "get", "is", "to" }; //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-1$
+	private static final String[] KNOWN_METHOD_NAME_PREFIXES= { "get", "is", "to", "create", "load", "find",  //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$//$NON-NLS-4$//$NON-NLS-5$//$NON-NLS-6$
+			"build", "generate", "prepare", "parse", "current", "read", "resolve", "retrieve", "make", "add", "extract" }; //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$//$NON-NLS-4$//$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$ //$NON-NLS-8$//$NON-NLS-9$//$NON-NLS-10$//$NON-NLS-11$
 
 
 	private static void add(String[] names, Set<String> result) {
@@ -1167,6 +1249,7 @@ public class StubUtility {
 				if (!modifiedName.equals("element")) //$NON-NLS-1$
 					return modifiedName;
 			}
+
 		} else if (assignedExpression instanceof SuperMethodInvocation) {
 			name= ((SuperMethodInvocation)assignedExpression).getName().getIdentifier();
 		} else if (assignedExpression instanceof FieldAccess) {

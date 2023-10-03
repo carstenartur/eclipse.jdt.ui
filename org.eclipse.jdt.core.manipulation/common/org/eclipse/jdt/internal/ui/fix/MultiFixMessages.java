@@ -118,6 +118,7 @@ public class MultiFixMessages extends NLS {
 	public static String VarCleanUp_description;
 	public static String PatternMatchingForInstanceofCleanup_description;
 	public static String LambdaExpressionsCleanUp_use_lambda_where_possible;
+	public static String LambdaExpressionsCleanUp_use_lambda_and_simplify;
 	public static String LambdaExpressionsCleanUp_use_anonymous;
 	public static String LambdaExpressionAndMethodRefCleanUp_description;
 	public static String PatternCleanup_description;
@@ -155,6 +156,7 @@ public class MultiFixMessages extends NLS {
 
 	public static String RedundantModifiersCleanup_description;
 	public static String SubstringCleanUp_description;
+	public static String InlineDeprecatedMethodCleanUp_description;
 	public static String JoinCleanup_description;
 	public static String ArraysFillCleanUp_description;
 	public static String EvaluateNullableCleanUp_description;

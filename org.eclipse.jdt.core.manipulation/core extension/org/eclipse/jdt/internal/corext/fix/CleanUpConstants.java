@@ -957,6 +957,19 @@ public class CleanUpConstants {
 	public static final String USE_ANONYMOUS_CLASS_CREATION= "cleanup.use_anonymous_class_creation"; //$NON-NLS-1$
 
 	/**
+	 * When replacing anonymous class creations with lambda expressions also simplify lambda body.
+	 * <p>
+	 * Possible values: {TRUE, FALSE}
+	 * <p>
+	 * Only has an effect if {@link #USE_LAMBDA} is TRUE.
+	 *
+	 * @see CleanUpOptionsCore#TRUE
+	 * @see CleanUpOptionsCore#FALSE
+	 * @since 4.29
+	 */
+	public static final String ALSO_SIMPLIFY_LAMBDA= "cleanup.also_simplify_lambda"; //$NON-NLS-1$
+
+	/**
 	 * Removes useless parenthesis, return statements and brackets from lambda expressions and
 	 * method references.
 	 * <p>
@@ -1271,6 +1284,18 @@ public class CleanUpConstants {
 	 * @since 4.21
 	 */
 	public static final String STRINGBUFFER_TO_STRINGBUILDER_FOR_LOCALS= "cleanup.stringbuilder_for_local_vars"; //$NON-NLS-1$
+
+	/**
+	 * Replace deprecated method call with specified replacement if possible.
+	 * <p>
+	 * Possible values: {TRUE, FALSE}
+	 * <p>
+	 *
+	 * @see CleanUpOptionsCore#TRUE
+	 * @see CleanUpOptionsCore#FALSE
+	 * @since 4.30
+	 */
+	public static final String REPLACE_DEPRECATED_CALLS= "cleanup.replace_deprecated_calls"; //$NON-NLS-1$
 
 	/**
 	 * Replaces <code>String.replaceAll()</code> by <code>String.replace()</code>.

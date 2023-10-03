@@ -83,6 +83,7 @@ import org.eclipse.jdt.internal.corext.util.Messages;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 
 import org.eclipse.jdt.ui.JavaUI;
+import org.eclipse.jdt.ui.refactoring.IRefactoringSaveModes;
 import org.eclipse.jdt.ui.refactoring.RefactoringSaveHelper;
 
 import org.eclipse.jdt.internal.ui.JavaPlugin;
@@ -104,15 +105,15 @@ public class JavadocWizard extends Wizard implements IExportWizard {
 
 	private boolean fOpenInBrowser;
 
-	private final String TREE_PAGE_DESC= "JavadocTreePage"; //$NON-NLS-1$
-	private final String SPECIFICS_PAGE_DESC= "JavadocSpecificsPage"; //$NON-NLS-1$
-	private final String STANDARD_PAGE_DESC= "JavadocStandardPage"; //$NON-NLS-1$
+	private static final String TREE_PAGE_DESC= "JavadocTreePage"; //$NON-NLS-1$
+	private static final String SPECIFICS_PAGE_DESC= "JavadocSpecificsPage"; //$NON-NLS-1$
+	private static final String STANDARD_PAGE_DESC= "JavadocStandardPage"; //$NON-NLS-1$
 
-	private final int YES= 0;
-	private final int YES_TO_ALL= 1;
-	private final int NO= 2;
-	private final int NO_TO_ALL= 3;
-	private final String JAVADOC_ANT_INFORMATION_DIALOG= "javadocAntInformationDialog";//$NON-NLS-1$
+	private static final int YES= 0;
+	private static final int YES_TO_ALL= 1;
+	private static final int NO= 2;
+	private static final int NO_TO_ALL= 3;
+	private static final String JAVADOC_ANT_INFORMATION_DIALOG= "javadocAntInformationDialog";//$NON-NLS-1$
 
 
 	private JavadocOptionsManager fStore;
@@ -166,7 +167,7 @@ public class JavadocWizard extends Wizard implements IExportWizard {
 		fStore.updateDialogSettings(getDialogSettings(), checkedProjects);
 
 		// Wizard should not run with dirty editors
-		if (!new RefactoringSaveHelper(RefactoringSaveHelper.SAVE_ALL_ALWAYS_ASK).saveEditors(getShell())) {
+		if (!new RefactoringSaveHelper(IRefactoringSaveModes.SAVE_ALL_ALWAYS_ASK).saveEditors(getShell())) {
 			return false;
 		}
 

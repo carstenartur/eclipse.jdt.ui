@@ -171,10 +171,13 @@ public class CleanUpMessages extends NLS {
 	public static String SourceFixingTabPage_warning;
 
 	public static String SourceFixingTabPage_GroupName_standardCode;
+	public static String SourceFixingTabPage_GroupName_deprecated;
 
 	public static String SourceFixingTabPage_CheckboxName_InvertEquals;
 	public static String SourceFixingTabPage_CheckboxName_CheckSignOfBitwiseOperation;
 	public static String SourceFixingTabPage_CheckboxName_StandardComparison;
+
+	public static String SourceFixingTabPage_CheckboxName_ReplaceDeprecatedMethodCall;
 
 	public static String DuplicateCodeTabPage_GroupName_DuplicateCode;
 
@@ -207,6 +210,7 @@ public class CleanUpMessages extends NLS {
 	public static String JavaFeatureTabPage_CheckboxName_ConvertFunctionalInterfaces;
 	public static String JavaFeatureTabPage_RadioName_UseLambdaWherePossible;
 	public static String JavaFeatureTabPage_RadioName_UseAnonymous;
+	public static String JavaFeatureTabPage_CheckboxName_AlsoSimplifyLambda;
 	public static String JavaFeatureTabPage_CheckboxName_ComparingOnCriteria;
 	public static String JavaFeatureTabPage_CheckboxName_Join;
 

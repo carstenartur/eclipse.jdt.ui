@@ -31,6 +31,7 @@ import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.ArrayType;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
@@ -180,11 +181,14 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 				return false;
 			}
 			boolean isTagged= false;
-			if (hasComments) {
+			if (hasComments && ASTNodes.getFirstAncestorOrNull(visited, Annotation.class) == null) {
 				// we must ensure that NLS comments are consistent for all string literals in concatenation
 				ICompilationUnit cu= (ICompilationUnit)((CompilationUnit)leftHand.getRoot()).getJavaElement();
 				try {
 				   NLSLine nlsLine= NLSUtil.scanCurrentLine(cu, leftHand.getStartPosition());
+				   if (nlsLine == null) {
+					   return false;
+				   }
 				   isTagged= nlsLine.getElements()[0].hasTag();
 				   if (!isConsistent(nlsLine, isTagged)) {
 					   return false;
@@ -204,7 +208,11 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 					return false;
 				}
 			}
-			fOperations.add(new ChangeStringConcatToTextBlock(visited, isTagged));
+			// check if we are untagged or else if tagged, make sure we have a Statement or FieldDeclaration
+			// ancestor so we can recreate with proper single NLS tag
+			if (!isTagged || ASTNodes.getFirstAncestorOrNull(visited, Statement.class, FieldDeclaration.class) != null) {
+				fOperations.add(new ChangeStringConcatToTextBlock(visited, isTagged));
+			}
 			return false;
 		}
 
@@ -285,18 +293,17 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 				buf.append(fIndent);
 			}
 			buf.append("\"\"\""); //$NON-NLS-1$
-			TextBlock textBlock= (TextBlock) rewrite.createStringPlaceholder(buf.toString(), ASTNode.TEXT_BLOCK);
 			if (!isTagged) {
+				TextBlock textBlock= (TextBlock) rewrite.createStringPlaceholder(buf.toString(), ASTNode.TEXT_BLOCK);
 				rewrite.replace(fInfix, textBlock, group);
 			} else {
-				Statement stmt= ASTNodes.getFirstAncestorOrNull(fInfix, Statement.class);
+				ASTNode stmt= ASTNodes.getFirstAncestorOrNull(fInfix, Statement.class, FieldDeclaration.class);
 				ICompilationUnit cu= (ICompilationUnit)((CompilationUnit)fInfix.getRoot()).getJavaElement();
 				StringBuilder buffer= new StringBuilder();
 				buffer.append(cu.getBuffer().getText(stmt.getStartPosition(), fInfix.getStartPosition() - stmt.getStartPosition()));
 				buffer.append(buf.toString());
 				buffer.append(cu.getBuffer().getText(fInfix.getStartPosition() + fInfix.getLength(), stmt.getStartPosition() + stmt.getLength() - fInfix.getStartPosition() - fInfix.getLength()));
-//				buffer.append(" //$NON-NLS-1$"); //$NON-NLS-1$
-				Statement newStmt= (Statement) rewrite.createStringPlaceholder(buffer.toString(), stmt.getNodeType());
+				ASTNode newStmt= rewrite.createStringPlaceholder(buffer.toString(), stmt.getNodeType());
 				ASTNodes.replaceButKeepComment(rewrite, stmt, newStmt, group);
 			}
 		}
@@ -400,8 +407,8 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 		private List<Statement> statementList= new ArrayList<>();
 		private SimpleName originalVarName;
 		private Map<ExpressionStatement, ChangeStringBufferToTextBlock> conversions= new HashMap<>();
-		private final String APPEND= "append"; //$NON-NLS-1$
-		private final String TO_STRING= "toString"; //$NON-NLS-1$
+		private static final String APPEND= "append"; //$NON-NLS-1$
+		private static final String TO_STRING= "toString"; //$NON-NLS-1$
 		private final Set<String> fExcludedNames;
 
 		public StringBufferFinder(List<CompilationUnitRewriteOperation> operations, Set<String> excludedNames) {

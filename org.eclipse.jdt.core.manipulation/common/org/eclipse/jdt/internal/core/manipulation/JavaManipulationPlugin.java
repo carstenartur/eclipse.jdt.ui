@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -18,12 +18,15 @@ import org.osgi.framework.BundleContext;
 import org.eclipse.osgi.service.debug.DebugOptions;
 import org.eclipse.osgi.service.debug.DebugOptionsListener;
 
+import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.core.runtime.Plugin;
 import org.eclipse.core.runtime.Status;
 
 import org.eclipse.jdt.core.manipulation.JavaManipulation;
+
+import org.eclipse.jdt.internal.ui.IJavaStatusConstants;
 
 /**
  * The main plug-in class to be used in the workbench.
@@ -99,11 +102,25 @@ public class JavaManipulationPlugin extends Plugin implements DebugOptionsListen
 	}
 
 	public static void log(Throwable e) {
-		Platform.getLog(JavaManipulationPlugin.class).log(new Status(IStatus.ERROR, JavaManipulation.ID_PLUGIN, IStatusConstants.INTERNAL_ERROR, JavaManipulationMessages.JavaManipulationMessages_internalError, e));
+		ILog.of(JavaManipulationPlugin.class).log(new Status(IStatus.ERROR, JavaManipulation.ID_PLUGIN, IStatusConstants.INTERNAL_ERROR, JavaManipulationMessages.JavaManipulationMessages_internalError, e));
 	}
 
 	public static void log(IStatus status) {
-		Platform.getLog(JavaManipulationPlugin.class).log(status);
+		ILog.of(JavaManipulationPlugin.class).log(status);
+	}
+
+	public static void logErrorMessage(String message) {
+		log(new Status(IStatus.ERROR, getPluginId(), IJavaStatusConstants.INTERNAL_ERROR, message, null));
+	}
+
+	public static void logErrorStatus(String message, IStatus status) {
+		if (status == null) {
+			logErrorMessage(message);
+			return;
+		}
+		MultiStatus multi= new MultiStatus(getPluginId(), IJavaStatusConstants.INTERNAL_ERROR, message, null);
+		multi.add(status);
+		log(multi);
 	}
 
 	public static String getPluginId() {
