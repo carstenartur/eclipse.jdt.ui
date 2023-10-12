@@ -4839,6 +4839,66 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				new HashSet<>(Arrays.asList(FixMessages.Java50Fix_ConvertToEnhancedForLoop_description)));
 	}
 
+	/**
+	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/798
+	 *
+	 * @throws CoreException on failure
+	 */
+	@Test
+	public void testWhileIssue798() throws CoreException {
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= "" //
+				+ "package test;\n" //
+				+ "import java.util.HashSet;\n" //
+				+ "import java.util.Iterator;\n" //
+				+ "\n" //
+				+ "public class Test {\n" //
+				+ "    \n" //
+				+ "    public class Element {\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public class ElementOccurrenceResult {\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public void foo(Element element, HashSet<ElementOccurrenceResult> hashSet) {\n" //
+				+ "        Iterator<ElementOccurrenceResult> minIterator= hashSet.iterator();\n" //
+				+ "        while (minIterator.hasNext()) {\n" //
+				+ "            reportProblem(element, minIterator.next(), null);\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    private void reportProblem(Element element, ElementOccurrenceResult next, Object object) {}\n" //
+				+ "\n" //
+				+ "}\n"; //
+		ICompilationUnit cu= pack.createCompilationUnit("Test.java", sample, false, null);
+
+		enable(CleanUpConstants.CONTROL_STATEMENTS_CONVERT_FOR_LOOP_TO_ENHANCED);
+
+		String expected= "" //
+				+ "package test;\n"
+				+ "import java.util.HashSet;\n" //
+				+ "\n" //
+				+ "public class Test {\n" //
+				+ "    \n" //
+				+ "    public class Element {\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public class ElementOccurrenceResult {\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public void foo(Element element, HashSet<ElementOccurrenceResult> hashSet) {\n" //
+				+ "        for (ElementOccurrenceResult element2 : hashSet) {\n" //
+				+ "            reportProblem(element, element2, null);\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    private void reportProblem(Element element, ElementOccurrenceResult next, Object object) {}\n" //
+				+ "\n" //
+				+ "}\n"; //
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
+				new HashSet<>(Arrays.asList(FixMessages.Java50Fix_ConvertToEnhancedForLoop_description)));
+	}
+
 	@Test
 	public void testWhileSelf() throws Exception {
 		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
@@ -5445,6 +5505,70 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		enable(CleanUpConstants.CONTROL_STATEMENTS_CONVERT_FOR_LOOP_TO_ENHANCED);
 
 		assertRefactoringHasNoChange(new ICompilationUnit[] { cu });
+	}
+
+	@Test
+	public void testDoNotAddFinalForFieldUsedBeforeInitialized() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/769
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= "" //
+				+ "package test;\n" //
+				+ "import java.util.ArrayList;\n" //
+				+ "import java.util.List;\n" //
+				+ "\n" //
+				+ "public class E {\n" //
+				+ "    \n" //
+				+ "    public interface I1 {\n" //
+				+ "        public void run();\n" //
+				+ "    }\n" //
+				+ "    private class E1 {\n" //
+				+ "        public void foo2(I1 k) {}\n" //
+				+ "    }\n" //
+				+ "    private E1 fField;\n" //
+				+ "    private List<String> fList;\n" //
+				+ "    \n" //
+				+ "    public E() {\n" //
+				+ "        fField = new E1();\n" //
+				+ "        fField.foo2(() -> {\n" //
+				+ "            fList.clear();\n" //
+				+ "        });\n" //
+				+ "        fList = new ArrayList<>();\n" //
+				+ "    }\n" //
+				+ "}\n"; //
+		ICompilationUnit cu1= pack1.createCompilationUnit("E.java", sample, false, null);
+
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_PARAMETERS);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_PRIVATE_FIELDS);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_LOCAL_VARIABLES);
+
+		sample= "" //
+				+ "package test;\n" //
+				+ "import java.util.ArrayList;\n" //
+				+ "import java.util.List;\n" //
+				+ "\n" //
+				+ "public class E {\n" //
+				+ "    \n" //
+				+ "    public interface I1 {\n" //
+				+ "        public void run();\n" //
+				+ "    }\n" //
+				+ "    private class E1 {\n" //
+				+ "        public void foo2(final I1 k) {}\n" //
+				+ "    }\n" //
+				+ "    private final E1 fField;\n" //
+				+ "    private List<String> fList;\n" //
+				+ "    \n" //
+				+ "    public E() {\n" //
+				+ "        fField = new E1();\n" //
+				+ "        fField.foo2(() -> {\n" //
+				+ "            fList.clear();\n" //
+				+ "        });\n" //
+				+ "        fList = new ArrayList<>();\n" //
+				+ "    }\n" //
+				+ "}\n"; //
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu1}, new String[] {expected1},
+				new HashSet<>(Arrays.asList(FixMessages.VariableDeclarationFix_changeModifierOfUnknownToFinal_description)));
 	}
 
 	@Test
