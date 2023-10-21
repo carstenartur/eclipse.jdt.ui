@@ -97,7 +97,6 @@ import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.NameQualifiedType;
 import org.eclipse.jdt.core.dom.NodeFinder;
-import org.eclipse.jdt.core.dom.ParameterizedType;
 import org.eclipse.jdt.core.dom.ParenthesizedExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.PrimitiveType;
@@ -1810,13 +1809,28 @@ public class LocalCorrectionsSubProcessor {
 		if (node instanceof ClassInstanceCreation) {
 			Type rawReference= (Type)node.getStructuralProperty(ClassInstanceCreation.TYPE_PROPERTY);
 			return rawReference.isVar();
-		} else if (node instanceof SimpleName) {
-			ASTNode rawReference= node.getParent();
-			if (Java50FixCore.isRawTypeReference(rawReference)) {
-				ASTNode parent= rawReference.getParent();
-				if (!(parent instanceof ArrayType)
-						&& !(parent instanceof ParameterizedType)) {
-					return ((SimpleType)rawReference).isVar();
+		} else if (node instanceof SimpleName simpleName) {
+			SimpleType rawReference= Java50FixCore.getRawReference(simpleName, compilationUnit);
+			if (rawReference != null) {
+				return rawReference.isVar();
+			}
+			ASTNode ancestor= ASTNodes.getFirstAncestorOrNull(node, VariableDeclarationStatement.class, FieldDeclaration.class, SingleVariableDeclaration.class, MethodDeclaration.class);
+			if (ancestor != null) {
+				if (ancestor instanceof VariableDeclarationStatement varStmt) {
+					ASTNode result= (ASTNode)varStmt.getStructuralProperty(VariableDeclarationStatement.TYPE_PROPERTY);
+					if (Java50FixCore.isRawTypeReference(result)) {
+						return ((SimpleType) result).isVar();
+					}
+				} else if (ancestor instanceof FieldDeclaration fieldDecl) {
+					ASTNode result= (ASTNode)fieldDecl.getStructuralProperty(FieldDeclaration.TYPE_PROPERTY);
+					if (Java50FixCore.isRawTypeReference(result)) {
+						return ((SimpleType) result).isVar();
+					}
+				} else if (ancestor instanceof SingleVariableDeclaration singleVarDecl) {
+					ASTNode result= (ASTNode)singleVarDecl.getStructuralProperty(SingleVariableDeclaration.TYPE_PROPERTY);
+					if (Java50FixCore.isRawTypeReference(result)) {
+						return ((SimpleType) result).isVar();
+					}
 				}
 			}
 		} else if (node instanceof MethodInvocation) {
@@ -2237,6 +2251,46 @@ public class LocalCorrectionsSubProcessor {
 		newCic.arguments().add(newInfixExpr);
 		newThrowStatement.setExpression(newCic);
 		return newThrowStatement;
+	}
+
+	public static void removeDefaultCaseProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+		ASTNode selectedNode= problem.getCoveringNode(context.getASTRoot());
+
+		if (selectedNode instanceof SwitchCase && ((SwitchCase) selectedNode).isDefault()) {
+			ASTNode parent= selectedNode.getParent();
+			List<Statement> statements;
+			if (parent instanceof SwitchStatement) {
+				statements= ((SwitchStatement) parent).statements();
+			} else if (parent instanceof SwitchExpression) {
+				statements= ((SwitchExpression) parent).statements();
+			} else {
+				return;
+			}
+
+			ASTRewrite astRewrite= ASTRewrite.create(parent.getAST());
+			ListRewrite listRewrite;
+			if (parent instanceof SwitchStatement) {
+				listRewrite= astRewrite.getListRewrite(parent, SwitchStatement.STATEMENTS_PROPERTY);
+			} else {
+				listRewrite= astRewrite.getListRewrite(parent, SwitchExpression.STATEMENTS_PROPERTY);
+			}
+
+			int indexOfDefaultCase= statements.indexOf(selectedNode);
+			if (indexOfDefaultCase != -1) {
+				listRewrite.remove(statements.get(indexOfDefaultCase), null);
+				int indexOfDefaultStatement= indexOfDefaultCase + 1;
+				if (indexOfDefaultStatement < statements.size()) {
+					listRewrite.remove(statements.get(indexOfDefaultStatement), null);
+				}
+			} else {
+				return;
+			}
+
+			String label= CorrectionMessages.LocalCorrectionsSubProcessor_remove_default_case_description;
+			Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_REMOVE);
+			ASTRewriteCorrectionProposal proposal= new ASTRewriteCorrectionProposal(label, context.getCompilationUnit(), astRewrite, IProposalRelevance.ADD_MISSING_DEFAULT_CASE, image);
+			proposals.add(proposal);
+		}
 	}
 
 	public static void addMissingDefaultCaseProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
