@@ -48,9 +48,6 @@ import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.WorkingCopyOwner;
 import org.eclipse.jdt.core.compiler.IProblem;
 
-import org.eclipse.jdt.internal.core.BufferManager;
-
-
 /**
  * This reconcile step has a Java source document as
  * input model and maintains a Java working copy as its model.
@@ -64,24 +61,11 @@ import org.eclipse.jdt.internal.core.BufferManager;
  */
 public class JavaReconcileStep extends AbstractReconcileStep {
 
-	private AnnotationTypeLookup fAnnotationTypeLookup= EditorsUI.getAnnotationTypeLookup();
-
-	private static class TemporaryWorkingCopyOwner extends WorkingCopyOwner  {
-
-
-		/*
-		 * @see org.eclipse.jdt.core.WorkingCopyOwner#createBuffer(org.eclipse.jdt.core.ICompilationUnit)
-		 */
-		@Override
-		public IBuffer createBuffer(ICompilationUnit workingCopy) {
-			// FIXME: Don't know how to get a buffer without using internal API.
-			return BufferManager.createBuffer(workingCopy);
-		}
-	}
+	private final AnnotationTypeLookup fAnnotationTypeLookup= EditorsUI.getAnnotationTypeLookup();
 
 	private class ProblemAdapter extends AnnotationAdapter  {
 
-		private IProblem fProblem;
+		private final IProblem fProblem;
 		private Position fPosition;
 
 		ProblemAdapter(IProblem problem)  {
@@ -221,7 +205,7 @@ public class JavaReconcileStep extends AbstractReconcileStep {
 	 */
 	static class CompilationUnitAdapter implements IReconcilableModel {
 
-		private ICompilationUnit fCompilationUnit;
+		private final ICompilationUnit fCompilationUnit;
 
 		CompilationUnitAdapter(ICompilationUnit cu) {
 			fCompilationUnit= cu;
@@ -234,14 +218,14 @@ public class JavaReconcileStep extends AbstractReconcileStep {
 
 	private CompilationUnitAdapter fWorkingCopy;
 	private ProblemRequestor fProblemRequestor;
-	private WorkingCopyOwner fTemporaryWorkingCopyOwner;
+	private final WorkingCopyOwner fTemporaryWorkingCopyOwner;
 
 	/**
 	 * Creates the last reconcile step of the pipe.
 	 */
 	public JavaReconcileStep(IFile jspFile) {
 		Assert.isNotNull(jspFile);
-		fTemporaryWorkingCopyOwner= new TemporaryWorkingCopyOwner();
+		fTemporaryWorkingCopyOwner= new WorkingCopyOwner() {};
 		try {
 			fWorkingCopy= new CompilationUnitAdapter(createTemporaryWorkingCopy(jspFile));
 		} catch (JavaModelException e) {
@@ -256,7 +240,7 @@ public class JavaReconcileStep extends AbstractReconcileStep {
 	public JavaReconcileStep(IReconcileStep step, IFile jspFile) {
 		super(step);
 		Assert.isNotNull(jspFile);
-		fTemporaryWorkingCopyOwner= new TemporaryWorkingCopyOwner();
+		fTemporaryWorkingCopyOwner= new WorkingCopyOwner() {};
 		try {
 			fWorkingCopy= new CompilationUnitAdapter(createTemporaryWorkingCopy(jspFile));
 		} catch (JavaModelException e) {
@@ -292,7 +276,7 @@ public class JavaReconcileStep extends AbstractReconcileStep {
 		try {
 			synchronized (cu) {
 				fProblemRequestor.setIsActive(true);
-				cu.reconcile(true, getProgressMonitor());
+				cu.reconcile(ICompilationUnit.NO_AST, true, null, getProgressMonitor());
 			}
 		} catch (JavaModelException ex) {
 			ex.printStackTrace();

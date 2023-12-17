@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.performance;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
@@ -28,8 +28,6 @@ import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.source.Annotation;
 import org.eclipse.jface.text.source.IAnnotationModel;
-
-import org.eclipse.ui.internal.editors.text.EditorsPlugin;
 
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 import org.eclipse.ui.texteditor.AnnotationPreference;
@@ -78,7 +76,8 @@ public abstract class ScrollVerticalRulerTest extends ScrollEditorTest {
 
 		IEclipsePreferences editorsNode= InstanceScope.INSTANCE.getNode(EditorsUI.PLUGIN_ID);
 
-		MarkerAnnotationPreferences markerAnnotationPreferences= EditorsPlugin.getDefault().getMarkerAnnotationPreferences();
+		@SuppressWarnings("restriction")
+		MarkerAnnotationPreferences markerAnnotationPreferences= org.eclipse.ui.internal.editors.text.EditorsPlugin.getDefault().getMarkerAnnotationPreferences();
 		Iterator<AnnotationPreference> iterator= markerAnnotationPreferences.getAnnotationPreferences().iterator();
 		while (iterator.hasNext()) {
 			AnnotationPreference pref= iterator.next();
@@ -100,7 +99,8 @@ public abstract class ScrollVerticalRulerTest extends ScrollEditorTest {
 
 		IEclipsePreferences editorsNode= InstanceScope.INSTANCE.getNode(EditorsUI.PLUGIN_ID);
 
-		MarkerAnnotationPreferences markerAnnotationPreferences= EditorsPlugin.getDefault().getMarkerAnnotationPreferences();
+		@SuppressWarnings("restriction")
+		MarkerAnnotationPreferences markerAnnotationPreferences= org.eclipse.ui.internal.editors.text.EditorsPlugin.getDefault().getMarkerAnnotationPreferences();
 		Iterator<AnnotationPreference> iterator= markerAnnotationPreferences.getAnnotationPreferences().iterator();
 		while (iterator.hasNext()) {
 			AnnotationPreference pref= iterator.next();
@@ -120,7 +120,7 @@ public abstract class ScrollVerticalRulerTest extends ScrollEditorTest {
 	protected AbstractTextEditor openEditor(ScrollingMode mode) throws Exception {
 		IFile file= ResourceTestHelper.getProject(PerformanceTestSetup.PROJECT).getFile("faust.txt");
 		if (!file.exists()) {
-			file.create(getFaustInputStream(), true, null);
+			file.create(new ByteArrayInputStream(AbstractDocumentLineDifferTest.getFaust().getBytes(StandardCharsets.UTF_8)), true, null);
 		}
 
 		AbstractTextEditor result= (AbstractTextEditor) EditorTestHelper.openInEditor(file, true);
@@ -134,15 +134,11 @@ public abstract class ScrollVerticalRulerTest extends ScrollEditorTest {
 	}
 
 	private String getFaust(int numberOfLines) throws Exception {
-		String faust= FileTool.read(new InputStreamReader(getFaustInputStream())).toString();
+		String faust= AbstractDocumentLineDifferTest.getFaust();
 
 		IDocument document= new Document(faust);
 		int lineOffset= document.getLineOffset(numberOfLines);
 		return document.get(0, lineOffset);
-	}
-
-	private InputStream getFaustInputStream() {
-		return AbstractDocumentPerformanceTest.class.getResourceAsStream("faust1.txt");
 	}
 
 	/*

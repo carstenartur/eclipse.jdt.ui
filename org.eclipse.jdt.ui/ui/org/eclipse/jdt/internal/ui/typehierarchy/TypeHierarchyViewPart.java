@@ -572,7 +572,6 @@ public class TypeHierarchyViewPart extends ViewPart implements ITypeHierarchyVie
 
 	/*
 	 * Changes the input to a new type
-	 * @param inputElement
 	 */
 	private void updateInput(IJavaElement[] inputElements) {
 		IJavaElement[] prevInput= fInputElements;
@@ -1202,7 +1201,7 @@ public class TypeHierarchyViewPart extends ViewPart implements ITypeHierarchyVie
 
 	/*
 	 * When the input changed or the hierarchy pane becomes visible,
-	 * <code>updateHierarchyViewer<code> brings up the correct view and refreshes
+	 * <code>updateHierarchyViewer</code> brings up the correct view and refreshes
 	 * the current tree
 	 */
 	private void updateHierarchyViewer(final boolean doExpand) {
@@ -1211,7 +1210,7 @@ public class TypeHierarchyViewPart extends ViewPart implements ITypeHierarchyVie
 			fPagebook.showPage(fNoHierarchyShownLabel);
 		} else {
 			if (getCurrentViewer().containsElements() != null) {
-				Runnable runnable= () -> getCurrentViewer().updateContent(doExpand);
+				Runnable runnable= () -> JavaCore.runReadOnly(() -> getCurrentViewer().updateContent(doExpand));
 				BusyIndicator.showWhile(getDisplay(), runnable);
 				if (!isChildVisible(fViewerbook, getCurrentViewer().getControl())) {
 					setViewerVisibility(true);
@@ -1687,7 +1686,7 @@ public class TypeHierarchyViewPart extends ViewPart implements ITypeHierarchyVie
 			Display.getDefault().asyncExec(() -> {
 				// running async: check first if view still exists
 				if (fPagebook != null && !fPagebook.isDisposed()) {
-					doRestoreState(memento, hierarchyInput);
+					JavaCore.runReadOnly(() -> doRestoreState(memento, hierarchyInput));
 				}
 			});
 		}

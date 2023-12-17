@@ -13,16 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.performance;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipException;
-import java.util.zip.ZipFile;
 
 import org.junit.Assert;
 
@@ -132,17 +130,13 @@ public class ResourceTestHelper {
 	}
 
 	public static StringBuffer read(String src) throws IOException, CoreException {
-		return FileTool.read(new InputStreamReader(getFile(src).getContents()));
+		try (InputStream contents= getFile(src).getContents()){
+			return new StringBuffer(new String(contents.readAllBytes(), StandardCharsets.UTF_8));
+		}
 	}
 
 	public static void write(String dest, final String content) throws CoreException {
-		InputStream stream= new InputStream() {
-			private Reader fReader= new StringReader(content);
-			@Override
-			public int read() throws IOException {
-				return fReader.read();
-			}
-		};
+		ByteArrayInputStream stream= new ByteArrayInputStream(content.getBytes());
 		getFile(dest).create(stream, true, null);
 	}
 
@@ -219,7 +213,7 @@ public class ResourceTestHelper {
 
 	public static IProject createProjectFromZip(Plugin installationPlugin, String projectZip, String projectName) throws IOException, ZipException, CoreException {
 		String workspacePath= ResourcesPlugin.getWorkspace().getRoot().getLocation().toString() + "/";
-		FileTool.unzip(new ZipFile(FileTool.getFileInPlugin(installationPlugin, new Path(projectZip))), new File(workspacePath));
+		FileTool.unzip(FileTool.getFileInPlugin(installationPlugin, new Path(projectZip)), new File(workspacePath));
 		return createExistingProject(projectName);
 	}
 

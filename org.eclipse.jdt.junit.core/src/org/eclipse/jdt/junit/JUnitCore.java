@@ -39,7 +39,8 @@ import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IType;
 
 import org.eclipse.jdt.internal.junit.JUnitCorePlugin;
-import org.eclipse.jdt.internal.junit.launcher.JUnit4TestFinder;
+import org.eclipse.jdt.internal.junit.launcher.ITestFinder;
+import org.eclipse.jdt.internal.junit.launcher.TestKindRegistry;
 import org.eclipse.jdt.internal.junit.model.JUnitModel;
 import org.eclipse.jdt.internal.junit.model.ModelMessages;
 import org.eclipse.jdt.internal.junit.model.TestRunSession;
@@ -89,6 +90,12 @@ public class JUnitCore {
 	 * @since 3.10
 	 */
 	public final static IPath JUNIT5_CONTAINER_PATH= new Path(JUNIT_CONTAINER_ID).append("5"); //$NON-NLS-1$
+
+	/**
+	 * Attribute to control if <a href="https://junit.org/junit5/docs/current/user-guide/#migrating-from-junit4">junit-vintage</a> engine should be used for JUnit 5, defaults to true if not specified.
+	 * @since 3.13
+	 */
+	public static final String VINTAGE_ATTRIBUTE= "vintage"; //$NON-NLS-1$
 
 	/**
 	 * Adds a listener for test runs.
@@ -150,7 +157,8 @@ public class JUnitCore {
 	 */
 	public static IType[] findTestTypes(IJavaElement container, IProgressMonitor monitor) throws CoreException, OperationCanceledException {
 		final Set<IType> result= new HashSet<>();
-		JUnit4TestFinder finder= new JUnit4TestFinder();
+		ITestFinder finder= TestKindRegistry.getContainerTestKind(container).getFinder();
+
 		finder.findTestsInContainer(container, result, monitor);
 
 		return result.toArray(new IType[result.size()]);

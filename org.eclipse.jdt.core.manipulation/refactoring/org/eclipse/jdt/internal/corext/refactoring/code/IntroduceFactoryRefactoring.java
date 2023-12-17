@@ -30,7 +30,6 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
-import org.eclipse.core.runtime.SubProgressMonitor;
 
 import org.eclipse.text.edits.MultiTextEdit;
 import org.eclipse.text.edits.TextEditGroup;
@@ -89,6 +88,8 @@ import org.eclipse.jdt.core.search.IJavaSearchScope;
 import org.eclipse.jdt.core.search.SearchMatch;
 import org.eclipse.jdt.core.search.SearchPattern;
 
+import org.eclipse.jdt.internal.core.manipulation.BindingLabelProviderCore;
+import org.eclipse.jdt.internal.core.manipulation.JavaElementLabelsCore;
 import org.eclipse.jdt.internal.core.manipulation.StubUtility;
 import org.eclipse.jdt.internal.core.manipulation.util.BasicElementLabels;
 import org.eclipse.jdt.internal.core.refactoring.descriptors.RefactoringSignatureDescriptorFactory;
@@ -117,11 +118,9 @@ import org.eclipse.jdt.internal.corext.util.Messages;
 import org.eclipse.jdt.internal.corext.util.MethodsSourcePositionComparator;
 import org.eclipse.jdt.internal.corext.util.SearchUtils;
 
-import org.eclipse.jdt.internal.core.manipulation.JavaElementLabelsCore;
-
 import org.eclipse.jdt.internal.ui.JavaUIStatus;
 import org.eclipse.jdt.internal.ui.preferences.JavaPreferencesSettings;
-import org.eclipse.jdt.internal.core.manipulation.BindingLabelProviderCore;
+import org.eclipse.jdt.internal.ui.util.Progress;
 
 /**
  * Refactoring class that permits the substitution of a factory method
@@ -307,9 +306,7 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	/**
 	 * Determines what kind of AST node was selected, and returns an error status
 	 * if the kind of node is inappropriate for this refactoring.
-	 * @param pm
 	 * @return a RefactoringStatus indicating whether the selection is valid
-	 * @throws JavaModelException
 	 */
 	private RefactoringStatus checkSelection(IProgressMonitor pm) throws JavaModelException {
 		try {
@@ -384,14 +381,13 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 			if (!fCUHandle.isStructureKnown())
 				return RefactoringStatus.createFatalErrorStatus(RefactoringCoreMessages.IntroduceFactory_syntaxError);
 
-			return checkSelection(new SubProgressMonitor(pm, 1));
+			return checkSelection(Progress.subMonitor(pm, 1));
 		} finally {
 			pm.done();
 		}
 	}
 
 	/**
-	 * @param searchHits
 	 * @return the set of compilation units that will be affected by this
 	 * particular invocation of this refactoring. This in general includes
 	 * the class containing the constructor in question, as well as all
@@ -414,8 +410,6 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	}
 
 	/**
-	 * @param ctor
-	 * @param methodBinding
 	 * @return a <code>SearchPattern</code> that finds all calls to the constructor
 	 * identified by the argument <code>methodBinding</code>.
 	 */
@@ -452,7 +446,6 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	}
 
 	/**
-	 * @param groups
 	 * @return an array of <code>SearchResultGroup</code>'s like the argument,
 	 * but omitting those groups that have no corresponding compilation unit
 	 * (i.e. are binary and therefore can't be modified).
@@ -474,11 +467,7 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	/**
 	 * Search for all calls to the given <code>IMethodBinding</code> in the project
 	 * that contains the compilation unit <code>fCUHandle</code>.
-	 * @param methodBinding
-	 * @param pm
-	 * @param status
 	 * @return an array of <code>SearchResultGroup</code>'s that identify the search matches
-	 * @throws JavaModelException
 	 */
 	private SearchResultGroup[] searchForCallsTo(IMethodBinding methodBinding, IProgressMonitor pm, RefactoringStatus status) throws JavaModelException {
 		IMethod method= (IMethod) methodBinding.getJavaElement();
@@ -490,7 +479,7 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 		engine.setFiltering(true, true);
 		engine.setScope(createSearchScope(method, methodBinding));
 		engine.setStatus(status);
-		engine.searchPattern(new SubProgressMonitor(pm, 1));
+		engine.searchPattern(Progress.subMonitor(pm, 1));
 		return (SearchResultGroup[]) engine.getResults();
 	}
 
@@ -502,10 +491,8 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	 * constructor signature to search for
 	 * @param pm an <code>IProgressMonitor</code> to use during this potentially
 	 * lengthy operation
-	 * @param status
 	 * @return an array of <code>SearchResultGroup</code>'s identifying all
 	 * calls to the given constructor signature
-	 * @throws JavaModelException
 	 */
 	private SearchResultGroup[] findAllCallsTo(IMethodBinding ctorBinding, IProgressMonitor pm, RefactoringStatus status) throws JavaModelException {
 		SearchResultGroup[] groups= excludeBinaryUnits(searchForCallsTo(ctorBinding, pm, status));
@@ -523,7 +510,7 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 		engine.setFiltering(true, true);
 		engine.setScope(RefactoringScopeFactory.create(fCtorBinding.getDeclaringClass().getJavaElement().getJavaProject()));
 		engine.setStatus(status);
-		engine.searchPattern(new SubProgressMonitor(pm, 1));
+		engine.searchPattern(Progress.subMonitor(pm, 1));
 
 		SearchResultGroup[] groups= (SearchResultGroup[]) engine.getResults();
 
@@ -795,9 +782,7 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	}
 
 	/**
-	 * @param argType
 	 * @param extraDims number of extra array dimensions to add to the resulting type
-	 * @param ast
 	 * @return a Type that describes the given ITypeBinding. If the binding
 	 * refers to an object type, use the import rewriter to determine whether
 	 * the reference requires a new import, or instead needs to be qualified.<br>
@@ -887,7 +872,6 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	}
 
 	/**
-	 * @param unit
 	 * @return true iff the given <code>ICompilationUnit</code> is the unit
 	 * containing the original constructor
 	 */
@@ -907,9 +891,6 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 
 	/**
 	 * Creates and adds the necessary change to make the constructor method protected.
-	 * @param unitAST
-	 * @param unitRewriter
-	 * @param declGD
 	 * @return false iff the constructor didn't exist (i.e. was implicit)
 	 */
 	private boolean protectConstructor(CompilationUnit unitAST, ASTRewrite unitRewriter, TextEditGroup declGD) {
@@ -927,10 +908,8 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	 * <code>SearchResultGroup</code> to implement the refactoring transformation
 	 * to the given <code>CompilationUnitChange</code>.
 	 * @param rg the <code>SearchResultGroup</code> for which changes should be created
-	 * @param unitHandle
 	 * @param unitChange the CompilationUnitChange object for the compilation unit in question
 	 * @return <code>true</code> iff a change has been added
-	 * @throws CoreException
 	 */
 	private boolean addAllChangesFor(SearchResultGroup rg, ICompilationUnit	unitHandle, CompilationUnitChange unitChange) throws CoreException {
 //		ICompilationUnit	unitHandle= rg.getCompilationUnit();
@@ -976,7 +955,6 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	}
 
 	/**
-	 * @param unitHandle
 	 * @return an AST for the given compilation unit handle.<br>
 	 * If this is the unit containing the selection or the unit in which the factory
 	 * is to reside, checks the appropriate field (<code>fCU</code> or <code>fFactoryCU</code>,
@@ -1006,7 +984,6 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	 * @param unit the <code>CompilationUnit</code> to be rewritten
 	 * @param unitRewriter the rewriter
 	 * @param unitChange the compilation unit change
-	 * @throws CoreException
 	 * @return true iff at least one constructor call site was rewritten.
 	 */
 	private boolean replaceConstructorCalls(SearchResultGroup rg, CompilationUnit unit, ASTRewrite unitRewriter, CompilationUnitChange unitChange) throws CoreException {
@@ -1049,11 +1026,7 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	 * Look "in the vicinity" of the given range to find the <code>ClassInstanceCreation</code>
 	 * node that this search hit identified. Necessary because the <code>SearchEngine</code>
 	 * doesn't always cough up text extents that <code>NodeFinder.perform()</code> agrees with.
-	 * @param start
-	 * @param length
-	 * @param unitAST
 	 * @return return a {@link ClassInstanceCreation} or a {@link MethodRef} or <code>null</code> if this is really a constructor->constructor call (e.g. "this(...)")
-	 * @throws CoreException
 	 */
 	private ASTNode getCtorCallAt(int start, int length, CompilationUnit unitAST) throws CoreException {
 		ICompilationUnit unitHandle= ASTCreator.getCu(unitAST);
@@ -1243,7 +1216,6 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	}
 
 	/**
-	 * @param methodName
 	 * @return a <code>RefactoringStatus</code> that identifies whether the
 	 * the name <code>newMethodName</code> is available to use as the name of
 	 * the new factory method within the factory-owner class (either a to-be-
@@ -1272,7 +1244,6 @@ public class IntroduceFactoryRefactoring extends Refactoring {
 	/**
 	 * If the argument is true, change the visibility of the constructor to
 	 * <code>protected</code>, thereby encapsulating it.
-	 * @param protectConstructor
 	 */
 	public void setProtectConstructor(boolean protectConstructor) {
 		fProtectConstructor = protectConstructor;

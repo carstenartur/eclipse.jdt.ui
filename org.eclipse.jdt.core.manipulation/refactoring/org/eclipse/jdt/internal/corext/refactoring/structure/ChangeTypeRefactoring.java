@@ -29,7 +29,6 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
-import org.eclipse.core.runtime.SubProgressMonitor;
 
 import org.eclipse.text.edits.MultiTextEdit;
 import org.eclipse.text.edits.TextEditGroup;
@@ -80,6 +79,9 @@ import org.eclipse.jdt.core.search.IJavaSearchConstants;
 import org.eclipse.jdt.core.search.IJavaSearchScope;
 import org.eclipse.jdt.core.search.SearchPattern;
 
+import org.eclipse.jdt.internal.core.manipulation.BindingLabelProviderCore;
+import org.eclipse.jdt.internal.core.manipulation.JavaElementLabelsCore;
+import org.eclipse.jdt.internal.core.manipulation.JavaManipulationPlugin;
 import org.eclipse.jdt.internal.core.manipulation.StubUtility;
 import org.eclipse.jdt.internal.core.manipulation.util.BasicElementLabels;
 import org.eclipse.jdt.internal.core.refactoring.descriptors.RefactoringSignatureDescriptorFactory;
@@ -120,10 +122,7 @@ import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 import org.eclipse.jdt.internal.corext.util.Messages;
 import org.eclipse.jdt.internal.corext.util.SearchUtils;
 
-import org.eclipse.jdt.internal.core.manipulation.JavaElementLabelsCore;
-
-import org.eclipse.jdt.internal.core.manipulation.JavaManipulationPlugin;
-import org.eclipse.jdt.internal.core.manipulation.BindingLabelProviderCore;
+import org.eclipse.jdt.internal.ui.util.Progress;
 
 /**
  * @author tip
@@ -292,7 +291,7 @@ public class ChangeTypeRefactoring extends Refactoring {
 	public RefactoringStatus checkInitialConditions(IProgressMonitor pm) throws CoreException {
 		if (fCu == null || !fCu.isStructureKnown())
 			return RefactoringStatus.createFatalErrorStatus(RefactoringCoreMessages.ChangeTypeRefactoring_invalidSelection);
-		return checkSelection(new SubProgressMonitor(pm, 1));
+		return checkSelection(Progress.subMonitor(pm, 1));
 	}
 
 	private void setSelectionRanges(Expression exp){
@@ -443,26 +442,26 @@ public class ChangeTypeRefactoring extends Refactoring {
 		pm.beginTask(RefactoringCoreMessages.ChangeTypeRefactoring_checking_preconditions, 100);
 
 		try {
-			fCv= findConstraintVariableForSelectedNode(new SubProgressMonitor(pm, 3));
+			fCv= findConstraintVariableForSelectedNode(Progress.subMonitor(pm, 3));
 			if (DEBUG) System.out.println("selected CV: " + fCv +  //$NON-NLS-1$
 										  " (" + fCv.getClass().getName() +  //$NON-NLS-1$
 										  ")");  //$NON-NLS-1$
 
 			if (pm.isCanceled())
 				throw new OperationCanceledException();
-			fRelevantVars= findRelevantConstraintVars(fCv, new SubProgressMonitor(pm, 50));
+			fRelevantVars= findRelevantConstraintVars(fCv, Progress.subMonitor(pm, 50));
 
 			if (DEBUG)
 				printCollection("relevant vars:", fRelevantVars); //$NON-NLS-1$
 
 			if (pm.isCanceled())
 				throw new OperationCanceledException();
-			fRelevantConstraints= findRelevantConstraints(fRelevantVars, new SubProgressMonitor(pm, 30));
+			fRelevantConstraints= findRelevantConstraints(fRelevantVars, Progress.subMonitor(pm, 30));
 
 			if (pm.isCanceled())
 				throw new OperationCanceledException();
 			fValidTypes.addAll(computeValidTypes(fSelectionTypeBinding, fRelevantVars,
-												 fRelevantConstraints, new SubProgressMonitor(pm, 20)));
+												 fRelevantConstraints, Progress.subMonitor(pm, 20)));
 
 			if (DEBUG)
 				printCollection("valid types:", getValidTypeNames()); //$NON-NLS-1$
@@ -535,9 +534,6 @@ public class ChangeTypeRefactoring extends Refactoring {
 	/**
 	 * Apply all changes related to a single ICompilationUnit
 	 * @param icu the compilation unit
-	 * @param vars
-	 * @param unitChange
-	 * @throws CoreException
 	 */
 	private void addAllChangesFor(ICompilationUnit icu, Set<ConstraintVariable> vars, CompilationUnitChange unitChange) throws CoreException {
 		CompilationUnit	unit= new RefactoringASTParser(IASTSharedValues.SHARED_AST_LEVEL).parse(icu, true);
@@ -612,8 +608,6 @@ public class ChangeTypeRefactoring extends Refactoring {
 	/**
 	 * Creates the appropriate ParameterizedType node. Recursion is needed to
 	 * handle the nested case (e.g., Vector<Vector<String>>).
-	 * @param ast
-	 * @param typeBinding
 	 * @return the created type
 	 */
 	private Type createParameterizedType(AST ast, ITypeBinding typeBinding){
@@ -652,7 +646,7 @@ public class ChangeTypeRefactoring extends Refactoring {
 				icu= ((IMethod) mb.getJavaElement()).getCompilationUnit();
 			}
 			if (!relevantVarsByUnit.containsKey(icu)){
-				relevantVarsByUnit.put(icu, new HashSet<ConstraintVariable>());
+				relevantVarsByUnit.put(icu, new HashSet<>());
 			}
 			relevantVarsByUnit.get(icu).add(cv);
 		}
@@ -794,7 +788,6 @@ public class ChangeTypeRefactoring extends Refactoring {
 
 	/**
 	  * The selection corresponds to a SingleVariableDeclaration
-	 * @param svd
 	 * @return the message
 	  */
 	private String singleVariableDeclarationSelected(SingleVariableDeclaration svd) {
@@ -969,7 +962,6 @@ public class ChangeTypeRefactoring extends Refactoring {
 
 	/**
 	 * Find a ConstraintVariable that corresponds to the selected ASTNode.
-	 * @param pm
 	 * @return the ConstraintVariable
 	 */
 	private ConstraintVariable findConstraintVariableForSelectedNode(IProgressMonitor pm) {
@@ -980,9 +972,9 @@ public class ChangeTypeRefactoring extends Refactoring {
 			System.out.println("Effective selection: " + fEffectiveSelectionStart + "/" + fEffectiveSelectionLength); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 
-		Collection<ITypeConstraint> allConstraints= getConstraints(cus, new SubProgressMonitor(pm, 50));
+		Collection<ITypeConstraint> allConstraints= getConstraints(cus, Progress.subMonitor(pm, 50));
 
-		IProgressMonitor subMonitor= new SubProgressMonitor(pm, 50);
+		IProgressMonitor subMonitor= Progress.subMonitor(pm, 50);
 		subMonitor.beginTask(RefactoringCoreMessages.ChangeTypeRefactoring_analyzingMessage, allConstraints.size());
 		for (ITypeConstraint tc : allConstraints) {
 			subMonitor.worked(1);
@@ -1030,17 +1022,14 @@ public class ChangeTypeRefactoring extends Refactoring {
 	 * expression. In addition to the expression itself, this consists of
 	 * any expression that is defines-equal to it, and any expression equal
 	 * to it.
-	 * @param cv
-	 * @param pm
 	 * @return the constraint variables
-	 * @throws CoreException
 	 */
 	private Collection<ConstraintVariable> findRelevantConstraintVars(ConstraintVariable cv, IProgressMonitor pm) throws CoreException {
 		pm.beginTask(RefactoringCoreMessages.ChangeTypeRefactoring_analyzingMessage, 150);
 		Collection<ConstraintVariable> result= new HashSet<>();
 		result.add(cv);
-		ICompilationUnit[] cus= collectAffectedUnits(new SubProgressMonitor(pm, 50));
-		Collection<ITypeConstraint> allConstraints= getConstraints(cus, new SubProgressMonitor(pm, 50));
+		ICompilationUnit[] cus= collectAffectedUnits(Progress.subMonitor(pm, 50));
+		Collection<ITypeConstraint> allConstraints= getConstraints(cus, Progress.subMonitor(pm, 50));
 
 		List<ConstraintVariable> workList= new ArrayList<>(result);
 		while(! workList.isEmpty()){
@@ -1081,17 +1070,14 @@ public class ChangeTypeRefactoring extends Refactoring {
 
 	/**
 	 * Select the type constraints that involve the selected ASTNode.
-	 * @param relevantConstraintVars
-	 * @param pm
 	 * @return the result
-	 * @throws CoreException
 	 */
 	private Collection<ITypeConstraint> findRelevantConstraints(Collection<ConstraintVariable> relevantConstraintVars,
 																	IProgressMonitor pm) throws CoreException {
 
-		ICompilationUnit[] cus= collectAffectedUnits(new SubProgressMonitor(pm, 100));
+		ICompilationUnit[] cus= collectAffectedUnits(Progress.subMonitor(pm, 100));
 
-		fAllConstraints= getConstraints(cus, new SubProgressMonitor(pm, 900));
+		fAllConstraints= getConstraints(cus, Progress.subMonitor(pm, 900));
 
 		pm.beginTask(RefactoringCoreMessages.ChangeTypeRefactoring_analyzingMessage, 1000 + fAllConstraints.size());
 
@@ -1159,12 +1145,7 @@ public class ChangeTypeRefactoring extends Refactoring {
 
 	/**
 	 * Determines the set of types for which a set of type constraints is satisfied.
-	 * @param originalType
-	 * @param relevantVars
-	 * @param relevantConstraints
-	 * @param pm
 	 * @return the valid types
-	 * @throws JavaModelException
 	 */
 	private Collection<ITypeBinding> computeValidTypes(ITypeBinding originalType,
 			Collection<ConstraintVariable> relevantVars,
@@ -1177,7 +1158,7 @@ public class ChangeTypeRefactoring extends Refactoring {
 		pm.beginTask(RefactoringCoreMessages.ChangeTypeRefactoring_analyzingMessage, allTypes.size());
 
 		for (ITypeBinding type : allTypes) {
-			if (isValid(type, relevantVars, relevantConstraints, new SubProgressMonitor(pm, 1))) {
+			if (isValid(type, relevantVars, relevantConstraints, Progress.subMonitor(pm, 1))) {
 				if (checkTypeParameterConflict(relevantVars, type)) {
 					result.add(type);
 				}
@@ -1241,12 +1222,7 @@ public class ChangeTypeRefactoring extends Refactoring {
 
 	/**
 	 * Determines if a given type satisfies a set of type constraints.
-	 * @param type
-	 * @param relevantVars
-	 * @param constraints
-	 * @param pm
 	 * @return <code>true</code> if a the type satisfies a set of type constraints.
-	 * @throws JavaModelException
 	 */
 	private boolean isValid(ITypeBinding type,
 							Collection<ConstraintVariable> relevantVars,
@@ -1349,8 +1325,6 @@ public class ChangeTypeRefactoring extends Refactoring {
 
 	/**
 	 * Gather constraints associated with a set of compilation units.
-	 * @param referringCus
-	 * @param pm
 	 * @return the constraints
 	 */
 	private Collection<ITypeConstraint> getConstraints(ICompilationUnit[] referringCus, IProgressMonitor pm) {
@@ -1398,7 +1372,6 @@ public class ChangeTypeRefactoring extends Refactoring {
 	 * @param astRoot the AST
 	 * @param rootEdit the resulting edit
 	 * @return the type name to use
-	 * @throws CoreException
 	 */
 	private String updateImports(CompilationUnit astRoot, MultiTextEdit rootEdit) throws CoreException{
 		ImportRewrite rewrite= StubUtility.createImportRewrite(astRoot, true);
@@ -1493,8 +1466,6 @@ public class ChangeTypeRefactoring extends Refactoring {
 	 * Find the ASTNode for the given source text selection, if it is a type
 	 * declaration, or null otherwise.
 	 * @param unit The compilation unit in which the selection was made
-	 * @param offset
-	 * @param length
 	 * @return ASTNode
 	 */
 	private ASTNode getTargetNode(ICompilationUnit unit, int offset, int length) {
@@ -1509,7 +1480,6 @@ public class ChangeTypeRefactoring extends Refactoring {
 	 * method calls, field accesses.
 	 * @param pm the monitor
 	 * @return the affected units
-	 * @throws CoreException
 	 */
 	private ICompilationUnit[] collectAffectedUnits(IProgressMonitor pm) throws CoreException {
 		// BUG: currently, no type constraints are generated for methods that are related
@@ -1536,8 +1506,8 @@ public class ChangeTypeRefactoring extends Refactoring {
 
 			IMethod root= selectedMethod;
 			if (! root.getDeclaringType().isInterface() && MethodChecks.isVirtual(root)) {
-				final SubProgressMonitor subMonitor= new SubProgressMonitor(pm, 5);
-				IMethod inInterface= MethodChecks.isDeclaredInInterface(root, root.getDeclaringType().newTypeHierarchy(new SubProgressMonitor(subMonitor, 1)), subMonitor);
+				final IProgressMonitor subMonitor= Progress.subMonitor(pm, 5);
+				IMethod inInterface= MethodChecks.isDeclaredInInterface(root, root.getDeclaringType().newTypeHierarchy(Progress.subMonitor(subMonitor, 1)), subMonitor);
 				if (inInterface != null && !inInterface.equals(root))
 					root= inInterface;
 			}
@@ -1545,7 +1515,7 @@ public class ChangeTypeRefactoring extends Refactoring {
 			// end code fragment
 
 			IMethod[] rippleMethods= RippleMethodFinder2.getRelatedMethods(
-					root, new SubProgressMonitor(pm, 15), null);
+					root, Progress.subMonitor(pm, 15), null);
 			SearchPattern pattern= RefactoringSearchEngine.createOrPattern(
 					rippleMethods, IJavaSearchConstants.ALL_OCCURRENCES);
 
@@ -1559,7 +1529,7 @@ public class ChangeTypeRefactoring extends Refactoring {
 					null,
 					scope,
 					csr,
-					new SubProgressMonitor(pm, 80),
+					Progress.subMonitor(pm, 80),
 					new RefactoringStatus()); //TODO: deal with errors from non-CU matches
 
 			fAffectedUnits= getCus(groups);
@@ -1578,7 +1548,7 @@ public class ChangeTypeRefactoring extends Refactoring {
 			IJavaSearchScope scope= RefactoringScopeFactory.create(iField);
 			CollectingSearchRequestor csr= new CollectingSearchRequestor();
 			SearchResultGroup[] groups=
-				RefactoringSearchEngine.search(pattern, null, scope, csr, new SubProgressMonitor(pm, 100),
+				RefactoringSearchEngine.search(pattern, null, scope, csr, Progress.subMonitor(pm, 100),
 						new RefactoringStatus()); //TODO: deal with errors from non-CU matches
 			fAffectedUnits= getCus(groups);
 		} else {
@@ -1605,7 +1575,6 @@ public class ChangeTypeRefactoring extends Refactoring {
 
 	/**
 	 * Determines if a constraint variable corresponds to the constant "null".
-	 * @param cv
 	 * @return <code>true</code> if the constraint variable corresponds to the constant "null".
 	 */
 	private static boolean isNull(ConstraintVariable cv) {
@@ -1625,7 +1594,6 @@ public class ChangeTypeRefactoring extends Refactoring {
 
 	/**
 	 * Returns the compilation units that contain the search results.
-	 * @param groups
 	 * @return the CUs
 	 */
 	private ICompilationUnit[] getCus(SearchResultGroup[] groups) {
@@ -1643,7 +1611,6 @@ public class ChangeTypeRefactoring extends Refactoring {
 	/**
 	 * This always includes the type itself. It will include type
 	 * Object for any type other than Object
-	 * @param type
 	 * @return the super types
 	 */
 	public Set<ITypeBinding> getAllSuperTypes(ITypeBinding type){
