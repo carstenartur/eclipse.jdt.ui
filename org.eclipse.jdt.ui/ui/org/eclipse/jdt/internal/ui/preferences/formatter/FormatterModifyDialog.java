@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2023 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -22,26 +22,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import org.eclipse.core.runtime.Assert;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.jdt.core.JavaCore;
-import org.eclipse.jdt.core.formatter.CodeFormatter;
-import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
-import org.eclipse.jdt.internal.corext.util.Messages;
-import org.eclipse.jdt.internal.ui.IJavaHelpContextIds;
-import org.eclipse.jdt.internal.ui.JavaPlugin;
-import org.eclipse.jdt.internal.ui.JavaPluginImages;
-import org.eclipse.jdt.internal.ui.preferences.FilteredPreferenceTree;
-import org.eclipse.jdt.internal.ui.preferences.FilteredPreferenceTree.PreferenceTreeNode;
-import org.eclipse.jdt.internal.ui.preferences.PreferenceHighlight;
-import org.eclipse.jdt.internal.ui.preferences.formatter.ModifyDialog.ProfilePreferenceTree.SectionBuilder;
-import org.eclipse.jdt.internal.ui.preferences.formatter.ModifyDialog.ProfilePreferenceTree.SimpleTreeBuilder;
-import org.eclipse.jdt.internal.ui.preferences.formatter.ProfileManager.Profile;
-import org.eclipse.jdt.internal.ui.util.SWTUtil;
-import org.eclipse.jdt.internal.ui.util.StringMatcher;
-import org.eclipse.jdt.ui.JavaUI;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.FocusAdapter;
@@ -66,6 +46,32 @@ import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 
+import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+
+import org.eclipse.jface.resource.ImageDescriptor;
+
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.formatter.CodeFormatter;
+import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
+
+import org.eclipse.jdt.internal.corext.util.Messages;
+
+import org.eclipse.jdt.ui.JavaUI;
+
+import org.eclipse.jdt.internal.ui.IJavaHelpContextIds;
+import org.eclipse.jdt.internal.ui.JavaPlugin;
+import org.eclipse.jdt.internal.ui.JavaPluginImages;
+import org.eclipse.jdt.internal.ui.preferences.FilteredPreferenceTree;
+import org.eclipse.jdt.internal.ui.preferences.FilteredPreferenceTree.PreferenceTreeNode;
+import org.eclipse.jdt.internal.ui.preferences.PreferenceHighlight;
+import org.eclipse.jdt.internal.ui.preferences.formatter.ModifyDialog.ProfilePreferenceTree.SectionBuilder;
+import org.eclipse.jdt.internal.ui.preferences.formatter.ModifyDialog.ProfilePreferenceTree.SimpleTreeBuilder;
+import org.eclipse.jdt.internal.ui.preferences.formatter.ProfileManager.Profile;
+import org.eclipse.jdt.internal.ui.util.SWTUtil;
+import org.eclipse.jdt.internal.ui.util.StringMatcher;
+
 
 public class FormatterModifyDialog extends ModifyDialog {
 
@@ -73,7 +79,6 @@ public class FormatterModifyDialog extends ModifyDialog {
 
 		private static final String DATA_IMAGE_DISABLED= "image_disabled"; //$NON-NLS-1$
 
-		@SuppressWarnings("boxing")
 		private static final Object[][] WRAP_STYLE= {
 				{ FormatterMessages.FormatterModifyDialog_lineWrap_val_do_not_split, JavaPluginImages.DESC_ELCL_WRAP_NOT, JavaPluginImages.DESC_DLCL_WRAP_NOT, DefaultCodeFormatterConstants.WRAP_NO_SPLIT },
 				{ FormatterMessages.FormatterModifyDialog_lineWrap_val_wrap_when_necessary, JavaPluginImages.DESC_ELCL_WRAP_NECESSARY, JavaPluginImages.DESC_DLCL_WRAP_NECESSARY, DefaultCodeFormatterConstants.WRAP_COMPACT },
@@ -83,7 +88,6 @@ public class FormatterModifyDialog extends ModifyDialog {
 				{ FormatterMessages.FormatterModifyDialog_lineWrap_val_wrap_always_except_first_only_if_necessary, JavaPluginImages.DESC_ELCL_WRAP_ALL_NOT_FIRST, JavaPluginImages.DESC_DLCL_WRAP_ALL_NOT_FIRST, DefaultCodeFormatterConstants.WRAP_NEXT_PER_LINE },
 		};
 
-		@SuppressWarnings("boxing")
 		private static final Object[][] INDENT_STYLE= {
 				{ FormatterMessages.FormatterModifyDialog_lineWrap_val_indentation_default, JavaPluginImages.DESC_ELCL_INDENT_DEFAULT, JavaPluginImages.DESC_DLCL_INDENT_DEFAULT, DefaultCodeFormatterConstants.INDENT_DEFAULT },
 				{ FormatterMessages.FormatterModifyDialog_lineWrap_val_indentation_by_one, JavaPluginImages.DESC_ELCL_INDENT_ONE, JavaPluginImages.DESC_DLCL_INDENT_ONE, DefaultCodeFormatterConstants.INDENT_BY_ONE },
@@ -96,7 +100,6 @@ public class FormatterModifyDialog extends ModifyDialog {
 
 		private static final List<String> WRAP_BEFORE_PREF_VALUES= Arrays.asList(DefaultCodeFormatterConstants.TRUE, DefaultCodeFormatterConstants.FALSE);
 
-		@SuppressWarnings("boxing")
 		private static final Object[][] WRAP_BEFORE_AFTER= {
 				{ FormatterMessages.FormatterModifyDialog_lineWrap_val_wrap_before_operators, JavaPluginImages.DESC_ELCL_WRAP_BEFORE, JavaPluginImages.DESC_DLCL_WRAP_BEFORE, VALUE_WRAP_BEFORE },
 				{ FormatterMessages.FormatterModifyDialog_lineWrap_val_wrap_after_operators, JavaPluginImages.DESC_ELCL_WRAP_AFTER, JavaPluginImages.DESC_DLCL_WRAP_AFTER, VALUE_WRAP_AFTER },
@@ -307,7 +310,7 @@ public class FormatterModifyDialog extends ModifyDialog {
 		}
 
 		public static ModifyAll<ToolBar> addModifyAll(Section section, boolean withIndent, final Images images) {
-			return new ModifyAll<ToolBar>(section, images) {
+			return new ModifyAll<>(section, images) {
 				private LineWrapPreference fPreference;
 
 				@Override
@@ -916,6 +919,8 @@ public class FormatterModifyDialog extends ModifyDialog {
 				DefaultCodeFormatterConstants.FORMATTER_ALIGN_VARIABLE_DECLARATIONS_ON_COLUMNS, CheckboxPreference.FALSE_TRUE);
 		final CheckboxPreference alignAssignmentsPref= fTree.addCheckbox(alignSection, FormatterMessages.FormatterModifyDialog_indentation_pref_align_assignment_statements_on_columns,
 				DefaultCodeFormatterConstants.FORMATTER_ALIGN_ASSIGNMENT_STATEMENTS_ON_COLUMNS, CheckboxPreference.FALSE_TRUE);
+		final CheckboxPreference alignArrowsPref= fTree.addCheckbox(alignSection, FormatterMessages.FormatterModifyDialog_indentation_pref_align_arrows_in_switch_on_columns,
+				DefaultCodeFormatterConstants.FORMATTER_ALIGN_ARROWS_IN_SWITCH_ON_COLUMNS, CheckboxPreference.FALSE_TRUE);
 
 		fTree.addGap(alignSection);
 		final CheckboxPreference useSpacesPref= fTree.addCheckbox(alignSection, FormatterMessages.FormatterModifyDialog_indentation_pref_align_with_spaces,
@@ -923,11 +928,13 @@ public class FormatterModifyDialog extends ModifyDialog {
 		Preference<?> tabCharPref= parentSection.findChildPreference(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR);
 		Predicate<String> anyAlignChecker= v -> DefaultCodeFormatterConstants.TRUE.equals(alignFieldsPref.getValue())
 				|| DefaultCodeFormatterConstants.TRUE.equals(alignVariablesPref.getValue())
-				|| DefaultCodeFormatterConstants.TRUE.equals(alignAssignmentsPref.getValue());
+				|| DefaultCodeFormatterConstants.TRUE.equals(alignAssignmentsPref.getValue())
+				|| DefaultCodeFormatterConstants.TRUE.equals(alignArrowsPref.getValue());
 		Predicate<String> spacesChecker= anyAlignChecker.and(v -> !JavaCore.SPACE.equals(tabCharPref.getValue()));
 		alignFieldsPref.addDependant(useSpacesPref, spacesChecker);
 		alignVariablesPref.addDependant(useSpacesPref, spacesChecker);
 		alignAssignmentsPref.addDependant(useSpacesPref, spacesChecker);
+		alignArrowsPref.addDependant(useSpacesPref, spacesChecker);
 		tabCharPref.addDependant(useSpacesPref, spacesChecker);
 
 		Button checkbox = new Button(alignSection.fInnerComposite, SWT.CHECK);
@@ -942,6 +949,7 @@ public class FormatterModifyDialog extends ModifyDialog {
 		alignFieldsPref.addDependant(groupingPref, anyAlignChecker);
 		alignVariablesPref.addDependant(groupingPref, anyAlignChecker);
 		alignAssignmentsPref.addDependant(groupingPref, anyAlignChecker);
+		alignArrowsPref.addDependant(groupingPref, anyAlignChecker);
 
 		groupingPref.setValueValidator(value -> {
 			String warningMessage= null;
@@ -1572,6 +1580,9 @@ public class FormatterModifyDialog extends ModifyDialog {
 					CheckboxPreference child= fTree.addCheckbox(pref, FormatterMessages.FormatterModifyDialog_comments_pref_format_line_comments_on_first_column,
 							DefaultCodeFormatterConstants.FORMATTER_COMMENT_FORMAT_LINE_COMMENT_STARTING_ON_FIRST_COLUMN, CheckboxPreference.FALSE_TRUE);
 					pref.addDependant(child, valueAcceptor(DefaultCodeFormatterConstants.TRUE));
+					child= fTree.addCheckbox(pref, FormatterMessages.FormatterModifyDialog_comments_pref_never_join_line_comments,
+							DefaultCodeFormatterConstants.FORMATTER_JOIN_LINE_COMMENTS, CheckboxPreference.TRUE_FALSE);
+					pref.addDependant(child, valueAcceptor(DefaultCodeFormatterConstants.TRUE));
 				})
 				.pref(FormatterMessages.FormatterModifyDialog_comments_pref_format_header, DefaultCodeFormatterConstants.FORMATTER_COMMENT_FORMAT_HEADER)
 				.gap()
@@ -1629,6 +1640,10 @@ public class FormatterModifyDialog extends ModifyDialog {
 			blockMaster.addDependant(pref, blockChecker);
 			headerMaster.addDependant(pref, blockChecker);
 		}
+
+		Preference<?> joinLinesPref= section.findChildPreference(DefaultCodeFormatterConstants.FORMATTER_JOIN_LINES_IN_COMMENTS);
+		javadocMaster.addDependant(joinLinesPref, javadocChecker.or(blockChecker));
+		blockMaster.addDependant(joinLinesPref, javadocChecker.or(blockChecker));
 	}
 
 	private SimpleTreeBuilder<?> createJavadocAlignOptions() {

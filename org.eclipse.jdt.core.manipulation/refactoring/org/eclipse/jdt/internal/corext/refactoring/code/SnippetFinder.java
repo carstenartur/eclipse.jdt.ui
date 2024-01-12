@@ -46,7 +46,7 @@ import org.eclipse.jdt.internal.corext.dom.Bindings;
 import org.eclipse.jdt.internal.corext.dom.GenericVisitor;
 
 
-/* package */ class SnippetFinder extends GenericVisitor {
+public class SnippetFinder extends GenericVisitor {
 
 	public static class Match {
 		private List<ASTNode> fNodes;
@@ -93,7 +93,6 @@ import org.eclipse.jdt.internal.corext.dom.GenericVisitor;
 		 * Tests whether the node to be replaced is invalid.
 		 *
 		 * @return true if the node is invalid, false otherwise
-		 *
 		 */
 		public boolean isInvalidNode() {
 			ASTNode first= fNodes.get(0);

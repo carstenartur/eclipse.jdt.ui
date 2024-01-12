@@ -46,9 +46,6 @@ import org.eclipse.jdt.core.IClassFile;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
 
-/**
- *
- */
 public class JavaElementLightweightDecorator extends LabelProvider implements ILightweightLabelDecorator {
 
 	private class FileBufferListener implements IFileBufferListener {
@@ -97,11 +94,11 @@ public class JavaElementLightweightDecorator extends LabelProvider implements IL
 	}
 
 	private Font fBold;
-	private FileBufferListener fListener;
+	private final FileBufferListener fListener;
 
 	private UIJob fNotifierJob;
 
-	private Set<IFile> fChangedResources;
+	private final Set<IFile> fChangedResources;
 
 	public JavaElementLightweightDecorator() {
 		final FontRegistry fontRegistry= PlatformUI.getWorkbench().getThemeManager().getCurrentTheme().getFontRegistry();

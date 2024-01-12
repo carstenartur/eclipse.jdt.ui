@@ -2004,6 +2004,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "import java.util.Date;\n" //
 				+ "import java.util.List;\n" //
 				+ "import java.util.Locale;\n" //
+				+ "import java.util.TreeSet;\n" //
 				+ "\n" //
 				+ "public class E {\n" //
 				+ "    private Comparator<Date> refactorField = new Comparator<Date>() {\n" //
@@ -2404,6 +2405,13 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "\n" //
 				+ "        return listToSort;\n" //
 				+ "    }\n" //
+				+ "\n" //
+				+ "    public class FooBar {\n" //
+				+ "        public String value;\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    private final TreeSet<FooBar> foo = new TreeSet<>((a,b) -> b.value.compareTo(a.value));\n" //
+				+ "\n" //
 				+ "}\n";
 
 		String expected= "" //
@@ -2415,6 +2423,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "import java.util.Date;\n" //
 				+ "import java.util.List;\n" //
 				+ "import java.util.Locale;\n" //
+				+ "import java.util.TreeSet;\n" //
 				+ "\n" //
 				+ "public class E {\n" //
 				+ "    private Comparator<Date> refactorField = Comparator.comparing(Date::toString);\n" //
@@ -2608,6 +2617,13 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "\n" //
 				+ "        return listToSort;\n" //
 				+ "    }\n" //
+				+ "\n" //
+				+ "    public class FooBar {\n" //
+				+ "        public String value;\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    private final TreeSet<FooBar> foo = new TreeSet<>(Comparator.comparing((FooBar a) -> a.value).reversed());\n" //
+				+ "\n" //
 				+ "}\n";
 
 		// When
@@ -4208,6 +4224,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 		String sample= "" //
 				+ "package test1;\n" //
+				+ "import java.io.StringWriter;\n"
 				+ "\n" //
 				+ "public class TestStringBuilderCleanup extends SuperClass {\n" //
 				+ "    StringBuffer field1;\n" //
@@ -4247,6 +4264,12 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "            a.append(\"abc\");\n" //
 				+ "        };\n" //
 				+ "    }\n" //
+				+ "    public void changeStringWriterInLambda(StringBuffer parm) {\n" //
+				+ "        Runnable r = () -> {\n" //
+				+ "            StringWriter a = new StringWriter();\n" //
+				+ "            StringBuffer k = a.getBuffer().append(\"abc\");\n" //
+				+ "        };\n" //
+				+ "    }\n" //
 				+ "}\n";
 		ICompilationUnit cu1= pack1.createCompilationUnit("TestStringBuilderCleanup.java", sample, false, null);
 
@@ -4265,6 +4288,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 		String expected1= "" //
 				+ "package test1;\n" //
+				+ "import java.io.StringWriter;\n"
 				+ "\n" //
 				+ "public class TestStringBuilderCleanup extends SuperClass {\n" //
 				+ "    StringBuilder field1;\n" //
@@ -4302,6 +4326,12 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "            StringBuilder a = new StringBuilder();\n" //
 				+ "            super.method0(a);\n" //
 				+ "            a.append(\"abc\");\n" //
+				+ "        };\n" //
+				+ "    }\n" //
+				+ "    public void changeStringWriterInLambda(StringBuilder parm) {\n" //
+				+ "        Runnable r = () -> {\n" //
+				+ "            StringWriter a = new StringWriter();\n" //
+				+ "            StringBuilder k = new StringBuilder(a.getBuffer().toString()).append(\"abc\");\n" //
 				+ "        };\n" //
 				+ "    }\n" //
 				+ "}\n";
@@ -4628,8 +4658,6 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 	/**
 	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/109
-	 *
-	 * @throws CoreException
 	 */
 	@Test
 	public void testWhileIssue109_EntrySet() throws CoreException {
@@ -4670,8 +4698,6 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 	/**
 	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/109
-	 *
-	 * @throws CoreException
 	 */
 	@Test
 	public void testWhileIssue109_EntrySet_2() throws CoreException {
@@ -4710,8 +4736,6 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 	/**
 	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/109
-	 *
-	 * @throws CoreException
 	 */
 	@Test
 	public void testWhileIssue109_EntrySet_3() throws CoreException {
@@ -4750,8 +4774,6 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 	/**
 	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/120
-	 *
-	 * @throws CoreException
 	 */
 	@Test
 	public void testWhileIssue120_CollectionTypeResolution() throws CoreException {
@@ -4791,8 +4813,6 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 	/**
 	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/190
-	 *
-	 * @throws CoreException
 	 */
 	@Test
 	public void testWhileIssue190_MultipleWhileLoops() throws CoreException {

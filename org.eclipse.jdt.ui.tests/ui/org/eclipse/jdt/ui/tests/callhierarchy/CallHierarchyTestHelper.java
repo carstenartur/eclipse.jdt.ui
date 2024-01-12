@@ -43,7 +43,6 @@ import org.eclipse.jdt.internal.corext.callhierarchy.MethodWrapper;
 import org.eclipse.jdt.ui.tests.core.rules.Java17ProjectTestSetup;
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
-@SuppressWarnings("javadoc")
 public class CallHierarchyTestHelper {
     private static final String[] EMPTY= new String[0];
 
@@ -616,37 +615,22 @@ public class CallHierarchyTestHelper {
         return thirdLevelMethodWrapper;
     }
 
-    /**
-     * @return
-     */
     public IJavaProject getJavaProject2() {
         return fJavaProject2;
     }
 
-    /**
-     * @return
-     */
     public IPackageFragment getPackage1() {
         return fPack1;
     }
 
-    /**
-     * @return
-     */
     public IPackageFragment getPackage2() {
         return fPack2;
     }
 
-    /**
-     * @return
-     */
 	public IType getType1() {
         return fType1;
     }
 
-    /**
-     * @return
-     */
     public IType getType2() {
         return fType2;
     }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -35,8 +35,7 @@ import org.junit.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
-
-import org.eclipse.core.internal.expressions.Messages;
+import org.eclipse.osgi.util.NLS;
 
 import org.eclipse.core.runtime.Preferences;
 
@@ -1518,6 +1517,64 @@ public class AssistQuickFixTest extends QuickFixTest {
 		buf.append("        this.p1 = p1;\n");
 		buf.append("        this.p22 = p2;\n");
 		buf.append("    }\n");
+		buf.append("}\n");
+		String expected2= buf.toString();
+
+		assertEqualStringsIgnoreOrder(new String[] { preview1, preview2 }, new String[] { expected1, expected2 });
+	}
+
+	@Test
+	public void testBug538832() throws Exception {
+		IPreferenceStore store= JavaPlugin.getDefault().getPreferenceStore();
+		store.setValue(PreferenceConstants.CODEGEN_KEYWORD_THIS, true);
+
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test1;\n");
+		buf.append("public class E {\n");
+		buf.append("\n");
+		buf.append("    public void foo(Float p1, Integer p2) {\n");
+		buf.append("    }\n");
+		buf.append("    private Float p1;\n");
+		buf.append("    private Number p2;\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack1.createCompilationUnit("E.java", buf.toString(), false, null);
+
+		int offset= buf.toString().indexOf("Float p1");
+		AssistContext context= getCorrectionContext(cu, offset, 0);
+		List<IJavaCompletionProposal> proposals= collectAssists(context, false);
+
+		assertNumberOfProposals(proposals, 3);
+		assertCorrectLabels(proposals);
+
+		CUCorrectionProposal proposal= (CUCorrectionProposal) proposals.get(0);
+		String preview1= getPreviewContent(proposal);
+
+		buf= new StringBuilder();
+		buf.append("package test1;\n");
+		buf.append("public class E {\n");
+		buf.append("\n");
+		buf.append("    public void foo(Float p1, Integer p2) {\n");
+		buf.append("        this.p1 = p1;\n");
+		buf.append("    }\n");
+		buf.append("    private Float p1;\n");
+		buf.append("    private Number p2;\n");
+		buf.append("}\n");
+		String expected1= buf.toString();
+
+		proposal= (CUCorrectionProposal) proposals.get(1);
+		String preview2= getPreviewContent(proposal);
+
+		buf= new StringBuilder();
+		buf.append("package test1;\n");
+		buf.append("public class E {\n");
+		buf.append("\n");
+		buf.append("    private Float p12;\n");
+		buf.append("    public void foo(Float p1, Integer p2) {\n");
+		buf.append("        this.p12 = p1;\n");
+		buf.append("    }\n");
+		buf.append("    private Float p1;\n");
+		buf.append("    private Number p2;\n");
 		buf.append("}\n");
 		String expected2= buf.toString();
 
@@ -6943,9 +7000,9 @@ public class AssistQuickFixTest extends QuickFixTest {
 		List<IJavaCompletionProposal> proposals= collectAssists(context, false);
 
 		assertNumberOfProposals(proposals, 4);
-		assertProposalExists(proposals, Messages.format(CorrectionMessages.AddGetterSetter_creategetterssettersfortype_description, "E"));
-		assertProposalExists(proposals, Messages.format(CorrectionMessages.AddHashCodeEquals_createhashcodeequalsfortype_description, "E"));
-		assertProposalExists(proposals, Messages.format(CorrectionMessages.AddToString_createtostringfortype_description, "E"));
+		assertProposalExists(proposals, NLS.bind(CorrectionMessages.AddGetterSetter_creategetterssettersfortype_description, "E"));
+		assertProposalExists(proposals, NLS.bind(CorrectionMessages.AddHashCodeEquals_createhashcodeequalsfortype_description, "E"));
+		assertProposalExists(proposals, NLS.bind(CorrectionMessages.AddToString_createtostringfortype_description, "E"));
 		assertProposalDoesNotExist(proposals, CHANGE_MODIFIER_TO_FINAL);
 	}
 
@@ -7227,7 +7284,7 @@ public class AssistQuickFixTest extends QuickFixTest {
 		buf.append("    }\n");
 		buf.append("}\n");
 
-		assertProposalPreviewEquals(buf.toString(), Messages.format(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "StringBuilder"), proposals);
+		assertProposalPreviewEquals(buf.toString(), NLS.bind(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "StringBuilder"), proposals);
 	}
 
 	@Test
@@ -7319,7 +7376,7 @@ public class AssistQuickFixTest extends QuickFixTest {
 		buf.append("    }\n");
 		buf.append("}\n");
 
-		assertProposalPreviewEquals(buf.toString(), Messages.format(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "StringBuilder"), proposals);
+		assertProposalPreviewEquals(buf.toString(), NLS.bind(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "StringBuilder"), proposals);
 	}
 
 	@Test
@@ -7354,7 +7411,7 @@ public class AssistQuickFixTest extends QuickFixTest {
 		buf.append("    }\n");
 		buf.append("}\n");
 
-		assertProposalPreviewEquals(buf.toString(), Messages.format(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "StringBuilder"), proposals);
+		assertProposalPreviewEquals(buf.toString(), NLS.bind(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "StringBuilder"), proposals);
 	}
 
 	@Test
@@ -7385,7 +7442,7 @@ public class AssistQuickFixTest extends QuickFixTest {
 		buf.append("    }\n");
 		buf.append("}\n");
 
-		assertProposalPreviewEquals(buf.toString(), Messages.format(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "StringBuilder"), proposals);
+		assertProposalPreviewEquals(buf.toString(), NLS.bind(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "StringBuilder"), proposals);
 	}
 
 	@Test
@@ -7423,7 +7480,7 @@ public class AssistQuickFixTest extends QuickFixTest {
 			buf.append("    }\n");
 			buf.append("}\n");
 
-			assertProposalPreviewEquals(buf.toString(), Messages.format(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "StringBuffer"), proposals);
+			assertProposalPreviewEquals(buf.toString(), NLS.bind(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "StringBuffer"), proposals);
 		} finally {
 			fJProject1.setOptions(oldOptions);
 		}
@@ -7457,7 +7514,7 @@ public class AssistQuickFixTest extends QuickFixTest {
 		buf.append("    }\n");
 		buf.append("}\n");
 
-		assertProposalPreviewEquals(buf.toString(), Messages.format(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "buf"), proposals);
+		assertProposalPreviewEquals(buf.toString(), NLS.bind(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "buf"), proposals);
 	}
 
 	@Test
@@ -7489,7 +7546,7 @@ public class AssistQuickFixTest extends QuickFixTest {
 		buf.append("    }\n");
 		buf.append("}\n");
 
-		assertProposalPreviewEquals(buf.toString(), Messages.format(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "sb"), proposals);
+		assertProposalPreviewEquals(buf.toString(), NLS.bind(CorrectionMessages.QuickAssistProcessor_convert_to_string_buffer_description, "sb"), proposals);
 	}
 
 	@Test
@@ -10522,7 +10579,7 @@ public class AssistQuickFixTest extends QuickFixTest {
 		List<IJavaCompletionProposal> proposals= collectAssists(context, false);
 
 		assertNumberOfProposals(proposals, 1);
-		assertProposalExists(proposals, Messages.format(CorrectionMessages.QuickAssistProcessor_create_new_junit_test_case, "E.java"));
+		assertProposalExists(proposals, NLS.bind(CorrectionMessages.QuickAssistProcessor_create_new_junit_test_case, "E.java"));
 	}
 
 	@Test
@@ -10591,7 +10648,7 @@ public class AssistQuickFixTest extends QuickFixTest {
 		List<IJavaCompletionProposal> proposals= collectAssists(context, false);
 
 		assertNumberOfProposals(proposals, 3);
-		assertProposalExists(proposals, Messages.format(CorrectionMessages.QuickAssistProcessor_create_new_impl, "E.java"));
+		assertProposalExists(proposals, NLS.bind(CorrectionMessages.QuickAssistProcessor_create_new_impl, "E.java"));
 	}
 
 	@Test
@@ -10609,7 +10666,7 @@ public class AssistQuickFixTest extends QuickFixTest {
 		List<IJavaCompletionProposal> proposals= collectAssists(context, false);
 
 		assertNumberOfProposals(proposals, 3);
-		assertProposalExists(proposals, Messages.format(CorrectionMessages.QuickAssistProcessor_create_new_interface_impl, "E.java"));
+		assertProposalExists(proposals, NLS.bind(CorrectionMessages.QuickAssistProcessor_create_new_interface_impl, "E.java"));
 	}
 
 	@Test
@@ -10914,8 +10971,8 @@ public class AssistQuickFixTest extends QuickFixTest {
 		try {
 			List<IJavaCompletionProposal> proposals= collectAssists(context, false);
 			assertNumberOfProposals(proposals, 2);
-			assertProposalExists(proposals, Messages.format(CorrectionMessages.QuickAssistProcessor_modify_favorites, "test1.T.foo"));
-			assertProposalExists(proposals, Messages.format(CorrectionMessages.QuickAssistProcessor_modify_favorites, "test1.T.*"));
+			assertProposalExists(proposals, NLS.bind(CorrectionMessages.QuickAssistProcessor_modify_favorites, "test1.T.foo"));
+			assertProposalExists(proposals, NLS.bind(CorrectionMessages.QuickAssistProcessor_modify_favorites, "test1.T.*"));
 
 			assertFalse(orig.contains("test1.T"));
 
@@ -10976,7 +11033,7 @@ public class AssistQuickFixTest extends QuickFixTest {
 			List<IJavaCompletionProposal> proposals= collectAssists(context, false);
 
 			assertNumberOfProposals(proposals, 1);
-			assertProposalExists(proposals, Messages.format(CorrectionMessages.QuickAssistProcessor_modify_favorites, "test1.T.*"));
+			assertProposalExists(proposals, NLS.bind(CorrectionMessages.QuickAssistProcessor_modify_favorites, "test1.T.*"));
 
 			assertFalse(orig.contains("test1.T.*"));
 
@@ -11021,8 +11078,8 @@ public class AssistQuickFixTest extends QuickFixTest {
 			AssistContext context= getCorrectionContext(cu, offset, string.length());
 			List<IJavaCompletionProposal> proposals= collectAssists(context, false);
 
-			assertProposalDoesNotExist(proposals, Messages.format(CorrectionMessages.QuickAssistProcessor_modify_favorites, "test1.T.*"));
-			assertProposalDoesNotExist(proposals, Messages.format(CorrectionMessages.QuickAssistProcessor_modify_favorites, "test1.T.foo"));
+			assertProposalDoesNotExist(proposals, NLS.bind(CorrectionMessages.QuickAssistProcessor_modify_favorites, "test1.T.*"));
+			assertProposalDoesNotExist(proposals, NLS.bind(CorrectionMessages.QuickAssistProcessor_modify_favorites, "test1.T.foo"));
 		} finally {
 			store.setToDefault(PreferenceConstants.CODEASSIST_FAVORITE_STATIC_MEMBERS);
 		}

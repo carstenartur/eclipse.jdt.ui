@@ -49,9 +49,8 @@ import org.eclipse.jdt.internal.ui.text.correction.ProblemLocationCore;
  * Supported:
  * 		Add missing $NON-NLS$ tag
  * 		Remove unnecessary $NON-NLS$ tag
- *
  */
-public class StringFixCore implements IProposableFix, ICleanUpFixCore {
+public class StringFixCore implements IProposableFix {
 
 	private final TextEditGroup[] fEditGroups;
 	private final String fName;

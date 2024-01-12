@@ -27,7 +27,6 @@ import java.util.StringTokenizer;
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.SubProgressMonitor;
 
 import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.Refactoring;
@@ -80,6 +79,8 @@ import org.eclipse.jdt.internal.corext.dom.ScopeAnalyzer;
 import org.eclipse.jdt.internal.corext.dom.fragments.ASTFragmentFactory;
 import org.eclipse.jdt.internal.corext.dom.fragments.IASTFragment;
 import org.eclipse.jdt.internal.corext.dom.fragments.IExpressionFragment;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalPositionGroupCore;
 import org.eclipse.jdt.internal.corext.refactoring.Checks;
 import org.eclipse.jdt.internal.corext.refactoring.JDTRefactoringDescriptorComment;
 import org.eclipse.jdt.internal.corext.refactoring.JavaRefactoringArguments;
@@ -97,6 +98,7 @@ import org.eclipse.jdt.internal.corext.util.Messages;
 
 import org.eclipse.jdt.internal.ui.preferences.formatter.FormatterProfileManagerCore;
 import org.eclipse.jdt.internal.ui.util.JavaProjectUtilities;
+import org.eclipse.jdt.internal.ui.util.Progress;
 
 
 public class IntroduceParameterRefactoring extends Refactoring implements IDelegateUpdating {
@@ -118,6 +120,7 @@ public class IntroduceParameterRefactoring extends Refactoring implements IDeleg
 
 	private Expression fSelectedExpression;
 	private String[] fExcludedParameterNames;
+	private LinkedProposalModelCore fLinkedProposalModel;
 
 	/**
 	 * Creates a new introduce parameter refactoring.
@@ -131,6 +134,7 @@ public class IntroduceParameterRefactoring extends Refactoring implements IDeleg
 		fSourceCU= unit;
 		fSelectionStart= selectionStart;
 		fSelectionLength= selectionLength;
+		fLinkedProposalModel = null;
 	}
 
     public IntroduceParameterRefactoring(JavaRefactoringArguments arguments, RefactoringStatus status) {
@@ -199,7 +203,7 @@ public class IntroduceParameterRefactoring extends Refactoring implements IDeleg
 				if (!result.hasFatalError()) {
 					fChangeSignatureRefactoring= new ProcessorBasedRefactoring(fChangeSignatureProcessor);
 					fChangeSignatureRefactoring.setValidationContext(getValidationContext());
-					result.merge(fChangeSignatureProcessor.checkInitialConditions(new SubProgressMonitor(pm, 2)));
+					result.merge(fChangeSignatureProcessor.checkInitialConditions(Progress.subMonitor(pm, 2)));
 					if (result.hasFatalError())
 						return result;
 				} else {
@@ -213,7 +217,7 @@ public class IntroduceParameterRefactoring extends Refactoring implements IDeleg
 					return RefactoringStatus.createFatalErrorStatus(RefactoringCoreMessages.IntroduceParameterRefactoring_expression_in_method);
 				fChangeSignatureRefactoring= new ProcessorBasedRefactoring(fChangeSignatureProcessor);
 				fChangeSignatureRefactoring.setValidationContext(getValidationContext());
-				result.merge(fChangeSignatureProcessor.checkInitialConditions(new SubProgressMonitor(pm, 1)));
+				result.merge(fChangeSignatureProcessor.checkInitialConditions(Progress.subMonitor(pm, 1)));
 				if (result.hasFatalError()) {
 					RefactoringStatusEntry entry= result.getEntryMatchingSeverity(RefactoringStatus.FATAL);
 					if (entry.getCode() == RefactoringStatusCodes.OVERRIDES_ANOTHER_METHOD || entry.getCode() == RefactoringStatusCodes.METHOD_DECLARED_IN_INTERFACE) {
@@ -226,7 +230,7 @@ public class IntroduceParameterRefactoring extends Refactoring implements IDeleg
 						}
 						fChangeSignatureRefactoring= new ProcessorBasedRefactoring(fChangeSignatureProcessor);
 						fChangeSignatureRefactoring.setValidationContext(getValidationContext());
-						result= fChangeSignatureProcessor.checkInitialConditions(new SubProgressMonitor(pm, 1));
+						result= fChangeSignatureProcessor.checkInitialConditions(Progress.subMonitor(pm, 1));
 						if (result.hasFatalError())
 							return result;
 					} else {
@@ -244,7 +248,7 @@ public class IntroduceParameterRefactoring extends Refactoring implements IDeleg
 			initializeSelectedExpression(cuRewrite);
 			pm.worked(1);
 
-			result.merge(checkSelection(cuRewrite, new SubProgressMonitor(pm, 3)));
+			result.merge(checkSelection(cuRewrite, Progress.subMonitor(pm, 3)));
 			if (result.hasFatalError())
 				return result;
 
@@ -266,6 +270,7 @@ public class IntroduceParameterRefactoring extends Refactoring implements IDeleg
 				fChangeSignatureRefactoring.setValidationContext(null);
 		}
 	}
+
 
 	private void addParameterInfo(CompilationUnitRewrite cuRewrite) throws JavaModelException {
 		ITypeBinding typeBinding= Bindings.normalizeForDeclarationUse(fSelectedExpression.resolveTypeBinding(), fSelectedExpression.getAST());
@@ -317,6 +322,10 @@ public class IntroduceParameterRefactoring extends Refactoring implements IDeleg
 		String description= RefactoringCoreMessages.IntroduceParameterRefactoring_replace;
 		cuRewrite.getASTRewrite().replace(expression.getParent() instanceof ParenthesizedExpression
 				? expression.getParent() : expression, newExpression, cuRewrite.createGroupDescription(description));
+		if (fLinkedProposalModel != null) {
+			LinkedProposalPositionGroupCore nameGroup = fLinkedProposalModel.getPositionGroup(fParameter.getNewName(), true);
+			nameGroup.addPosition(cuRewrite.getASTRewrite().track(newExpression), false);
+		}
 	}
 
 	private void initializeSelectedExpression(CompilationUnitRewrite cuRewrite) throws JavaModelException {
@@ -561,7 +570,7 @@ public class IntroduceParameterRefactoring extends Refactoring implements IDeleg
 		ChangeMethodSignatureDescriptor extended= (ChangeMethodSignatureDescriptor) fChangeSignatureProcessor.createDescriptor();
 		RefactoringContribution contribution= RefactoringCore.getRefactoringContribution(IJavaRefactorings.CHANGE_METHOD_SIGNATURE);
 
-		Map<String, String> argumentsMap= contribution.retrieveArgumentMap(extended);
+		Map<String, String> argumentsMap= contribution == null ? Collections.emptyMap() : contribution.retrieveArgumentMap(extended);
 
 		final Map<String, String> arguments= new HashMap<>();
 		arguments.put(ATTRIBUTE_ARGUMENT, fParameter.getNewName());
@@ -624,5 +633,9 @@ public class IntroduceParameterRefactoring extends Refactoring implements IDeleg
 			return RefactoringCoreMessages.DelegateCreator_keep_original_changed_plural;
 		else
 			return RefactoringCoreMessages.DelegateCreator_keep_original_changed_singular;
+	}
+
+	public void setLinkedProposalModel(LinkedProposalModelCore linkedProposalModel) {
+		fLinkedProposalModel = linkedProposalModel;
 	}
 }

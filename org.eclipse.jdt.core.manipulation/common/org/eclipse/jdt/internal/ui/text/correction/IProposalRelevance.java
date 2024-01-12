@@ -19,7 +19,7 @@ package org.eclipse.jdt.internal.ui.text.correction;
 /**
  * Interface defining relevance values for quick fixes/assists.
  *
- * @see org.eclipse.jdt.ui.text.java.IJavaCompletionProposal#getRelevance()
+ * see org.eclipse.jdt.ui.text.java.IJavaCompletionProposall#getRelevance()
  * @since 3.9
  */
 public interface IProposalRelevance {
@@ -218,6 +218,7 @@ public interface IProposalRelevance {
 	int METHOD_RETURNS_VOID= 4;
 	int EXTRACT_CONSTANT= 4;
 	int CREATE_CONSTANT= 4;
+	int ASSIGN_PARAM_TO_MATCHING_FIELD= 4;
 
 	int CHANGE_CLASS_TO_INTERFACE= 3;
 	int GENERATE_HASHCODE_AND_EQUALS= 3;

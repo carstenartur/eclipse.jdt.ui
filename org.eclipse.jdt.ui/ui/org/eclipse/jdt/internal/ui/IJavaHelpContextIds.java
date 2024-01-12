@@ -25,7 +25,6 @@ import org.eclipse.jdt.ui.JavaUI;
  * This interface contains constants only; it is not intended to be implemented
  * or extended.
  * </p>
- *
  */
 public interface IJavaHelpContextIds {
 	String PREFIX= JavaUI.ID_PLUGIN + '.';
@@ -131,7 +130,7 @@ public interface IJavaHelpContextIds {
 	 * @since 3.2
 	 */
 	String INTRODUCE_INDIRECTION_ACTION= 								PREFIX + "introduce_indirection_action"; //$NON-NLS-1$
-
+	String MAKE_STATIC_ACTION= 											PREFIX + "make_static_action"; //$NON-NLS-1$
 	String EXTRACT_INTERFACE_ACTION= 									PREFIX + "extract_interface_action"; //$NON-NLS-1$
 	String CHANGE_TYPE_ACTION= 											PREFIX + "change_type_action"; //$NON-NLS-1$
 	String MOVE_INNER_TO_TOP_ACTION= 									PREFIX + "move_inner_to_top_level_action"; //$NON-NLS-1$

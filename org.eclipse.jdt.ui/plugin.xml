@@ -330,6 +330,7 @@
 			requiresUIThread="false">
 			<partition type="__dftl_partition_content_type"/>
 			<partition type="__java_string"/>
+			<partition type="__java_multiline_string"/>
 		</javaCompletionProposalComputer>
 	</extension>
 	<extension
@@ -342,6 +343,7 @@
 			requiresUIThread="false">
 			<partition type="__dftl_partition_content_type"/>
 			<partition type="__java_string"/>
+			<partition type="__java_multiline_string"/>
 		</javaCompletionProposalComputer>
 	</extension>
 	<extension
@@ -354,6 +356,7 @@
 			requiresUIThread="false">
 			<partition type="__dftl_partition_content_type"/>
 			<partition type="__java_string"/>
+			<partition type="__java_multiline_string"/>
 		</javaCompletionProposalComputer>
 	</extension>
 	<!-- javadoc completions -->
@@ -432,6 +435,7 @@
             requiresUIThread="false">
             <partition type="__dftl_partition_content_type"/>
 			<partition type="__java_string"/>
+			<partition type="__java_multiline_string"/>
       </javaCompletionProposalComputer>
 	</extension>
 	<extension
@@ -444,6 +448,7 @@
 			<partition type="__java_singleline_comment"/>
 			<partition type="__java_multiline_comment"/>
 			<partition type="__java_string"/>
+			<partition type="__java_multiline_string"/>
 			<partition type="__java_javadoc"/>
 		</javaCompletionProposalComputer>
 	</extension>
@@ -2826,6 +2831,13 @@
                menubarPath="org.eclipse.jdt.ui.refactoring.menu/codingGroup2"
                id="org.eclipse.jdt.ui.actions.IntroduceIndirection">
          </action>
+          <action
+               definitionId="org.eclipse.jdt.ui.edit.text.java.make.static"
+               label="%Refactoring.makeStaticAction.label"
+               retarget="true"
+               menubarPath="org.eclipse.jdt.ui.refactoring.menu/codingGroup2"
+               id="org.eclipse.jdt.ui.actions.makeStatic">
+         </action>
 
 <!-- type group 2 -->
          <action
@@ -4163,6 +4175,12 @@
             categoryId="org.eclipse.jdt.ui.category.refactoring"
             id="org.eclipse.jdt.ui.edit.text.java.introduce.indirection">
       </command>
+       <command
+            name="%ActionDefinition.makeStatic.name"
+            description="%ActionDefinition.makeStatic.description"
+            categoryId="org.eclipse.jdt.ui.category.refactoring"
+            id="org.eclipse.jdt.ui.edit.text.java.make.static">
+      </command>
       <command
             name="%ActionDefinition.introduceParameter.name"
             description="%ActionDefinition.introduceParameter.description"
@@ -4827,6 +4845,7 @@
             sequence="M2+M3+C"
             commandId="org.eclipse.jdt.ui.edit.text.java.modify.method.parameters"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+            
       <key
             platform="carbon"
             sequence="M2+M3+C"
@@ -4837,7 +4856,22 @@
             sequence="COMMAND+ALT+C"
             commandId="org.eclipse.jdt.ui.edit.text.java.modify.method.parameters"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
-
+            
+      <key
+            sequence="M2+M3+K"
+            commandId="org.eclipse.jdt.ui.edit.text.java.make.static"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+      <key
+            platform="carbon"
+            sequence="M2+M3+K"
+            commandId=""
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+      <key
+            platform="carbon"
+            sequence="COMMAND+ALT+K"
+            commandId="org.eclipse.jdt.ui.edit.text.java.make.static"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+            
       <key
             sequence="M2+M3+I"
             commandId="org.eclipse.jdt.ui.edit.text.java.inline"
@@ -5875,128 +5909,6 @@
             <instanceof value="org.eclipse.jdt.internal.corext.refactoring.nls.changes.CreateTextFileChange"/>
          </enablement>
       </changePreviewViewer>
-   </extension>
-
-   <extension
-         point="org.eclipse.ltk.core.refactoring.refactoringContributions">
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameCompilationUnitRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.compilationunit"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameEnumConstRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.enum.constant"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameFieldRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.field"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameModuleRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.module"/>      
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameJavaProjectRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.java.project"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameLocalVariableRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.local.variable"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameMethodRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.method"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenamePackageRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.package"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameSourceFolderRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.source.folder"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameTypeParameterRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.type.parameter"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameTypeRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.type"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ChangeMethodSignatureRefactoringContribution"
-            id="org.eclipse.jdt.ui.change.method.signature"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.MoveMethodRefactoringContribution"
-            id="org.eclipse.jdt.ui.move.method"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.MoveStaticMembersRefactoringContribution"
-            id="org.eclipse.jdt.ui.move.static"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractInterfaceRefactoringContribution"
-            id="org.eclipse.jdt.ui.extract.interface"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.UseSupertypeRefactoringContribution"
-            id="org.eclipse.jdt.ui.use.supertype"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.PullUpRefactoringContribution"
-            id="org.eclipse.jdt.ui.pull.up"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.PushDownRefactoringContribution"
-            id="org.eclipse.jdt.ui.push.down"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ConvertAnonymousRefactoringContribution"
-            id="org.eclipse.jdt.ui.convert.anonymous"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.MoveMemberTypeRefactoringContribution"
-            id="org.eclipse.jdt.ui.move.inner"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.InlineMethodRefactoringContribution"
-            id="org.eclipse.jdt.ui.inline.method"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.InlineTempRefactoringContribution"
-            id="org.eclipse.jdt.ui.inline.temp"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.InlineConstantRefactoringContribution"
-            id="org.eclipse.jdt.ui.inline.constant"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractMethodRefactoringContribution"
-            id="org.eclipse.jdt.ui.extract.method"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractTempRefactoringContribution"
-            id="org.eclipse.jdt.ui.extract.temp"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractConstantRefactoringContribution"
-            id="org.eclipse.jdt.ui.extract.constant"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractClassContribution"
-            id="org.eclipse.jdt.ui.extract.class">
-      </contribution>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.IntroduceParameterRefactoringContribution"
-            id="org.eclipse.jdt.ui.introduce.parameter"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.IntroduceParameterObjectContribution"
-            id="org.eclipse.jdt.ui.introduce.parameter.object"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.IntroduceFactoryRefactoringContribution"
-            id="org.eclipse.jdt.ui.introduce.factory"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.IntroduceIndirectionRefactoringContribution"
-            id="org.eclipse.jdt.ui.introduce.indirection"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.PromoteTempToFieldRefactoringContribution"
-            id="org.eclipse.jdt.ui.promote.temp"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.SelfEncapsulateRefactoringContribution"
-            id="org.eclipse.jdt.ui.self.encapsulate"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.InferTypeArgumentsRefactoringContribution"
-            id="org.eclipse.jdt.ui.infer.typearguments"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ChangeTypeRefactoringContribution"
-            id="org.eclipse.jdt.ui.change.type"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractSupertypeRefactoringContribution"
-            id="org.eclipse.jdt.ui.extract.superclass"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.DeleteRefactoringContribution"
-            id="org.eclipse.jdt.ui.delete"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.MoveRefactoringContribution"
-            id="org.eclipse.jdt.ui.move"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.CopyRefactoringContribution"
-            id="org.eclipse.jdt.ui.copy"/>
    </extension>
 
    <extension

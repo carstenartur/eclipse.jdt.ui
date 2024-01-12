@@ -38,7 +38,6 @@ import java.util.StringTokenizer;
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.SubProgressMonitor;
 
 import org.eclipse.text.edits.CopySourceEdit;
 import org.eclipse.text.edits.TextEdit;
@@ -155,6 +154,8 @@ import org.eclipse.jdt.internal.corext.refactoring.util.SideEffectChecker;
 import org.eclipse.jdt.internal.corext.refactoring.util.UnsafeCheckTester;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 import org.eclipse.jdt.internal.corext.util.Messages;
+
+import org.eclipse.jdt.internal.ui.util.Progress;
 /**
  * Extract Local Variable (from selected expression inside method or initializer).
  */
@@ -540,6 +541,8 @@ public class ExtractTempRefactoring extends Refactoring {
 	private String fEnclosingKey;
 	private HashSet<String> fEnclosingKeySet;
 
+	private Map<String,String> fFormatterOptions;
+
 	/**
 	 * Creates a new extract temp refactoring
 	 *
@@ -548,6 +551,10 @@ public class ExtractTempRefactoring extends Refactoring {
 	 * @param selectionLength length of selection
 	 */
 	public ExtractTempRefactoring(ICompilationUnit unit, int selectionStart, int selectionLength) {
+		this(unit, selectionStart, selectionLength, null);
+	}
+
+	public ExtractTempRefactoring(ICompilationUnit unit, int selectionStart, int selectionLength, Map<String,String> formatterOptions) {
 		Assert.isTrue(selectionStart >= 0);
 		Assert.isTrue(selectionLength >= 0);
 		fSelectionStart= selectionStart;
@@ -567,9 +574,14 @@ public class ExtractTempRefactoring extends Refactoring {
 		fEndPoint= -1; // default
 		fEnclosingKey= null;
 		fEnclosingKeySet= new HashSet<>();
+		fFormatterOptions = formatterOptions;
 	}
 
 	public ExtractTempRefactoring(CompilationUnit astRoot, int selectionStart, int selectionLength) {
+		this(astRoot, selectionStart, selectionLength, null);
+	}
+
+	public ExtractTempRefactoring(CompilationUnit astRoot, int selectionStart, int selectionLength, Map<String,String> formatterOptions) {
 		Assert.isTrue(selectionStart >= 0);
 		Assert.isTrue(selectionLength >= 0);
 		Assert.isTrue(astRoot.getTypeRoot() instanceof ICompilationUnit);
@@ -592,6 +604,7 @@ public class ExtractTempRefactoring extends Refactoring {
 		fEndPoint= -1; // default
 		fEnclosingKey= null;
 		fEnclosingKeySet= new HashSet<>();
+		fFormatterOptions = formatterOptions;
 	}
 
 	public ExtractTempRefactoring(JavaRefactoringArguments arguments, RefactoringStatus status) {
@@ -696,7 +709,7 @@ public class ExtractTempRefactoring extends Refactoring {
 		try {
 			pm.beginTask(RefactoringCoreMessages.ExtractTempRefactoring_checking_preconditions, 4);
 
-			fCURewrite= new CompilationUnitRewrite(fCu, fCompilationUnitNode);
+			fCURewrite= new CompilationUnitRewrite(null, fCu, fCompilationUnitNode, fFormatterOptions);
 			fCURewrite.getASTRewrite().setTargetSourceRangeComputer(new NoCommentSourceRangeComputer());
 
 			RefactoringStatus result= new RefactoringStatus();
@@ -713,9 +726,9 @@ public class ExtractTempRefactoring extends Refactoring {
 				}
 			}
 
-			doCreateChange(new SubProgressMonitor(pm, 2));
+			doCreateChange(Progress.subMonitor(pm, 2));
 
-			fChange= fCURewrite.createChange(RefactoringCoreMessages.ExtractTempRefactoring_change_name, true, new SubProgressMonitor(pm, 1));
+			fChange= fCURewrite.createChange(RefactoringCoreMessages.ExtractTempRefactoring_change_name, true, Progress.subMonitor(pm, 1));
 
 			fChange.getEdit().accept(new TextEditVisitor() {
 				@Override
@@ -974,12 +987,12 @@ public class ExtractTempRefactoring extends Refactoring {
 				return result;
 
 			if (fCompilationUnitNode == null) {
-				fCompilationUnitNode= RefactoringASTParser.parseWithASTProvider(fCu, true, new SubProgressMonitor(pm, 3));
+				fCompilationUnitNode= RefactoringASTParser.parseWithASTProvider(fCu, true, Progress.subMonitor(pm, 3));
 			} else {
 				pm.worked(3);
 			}
 
-			result.merge(checkSelection(new SubProgressMonitor(pm, 3)));
+			result.merge(checkSelection(Progress.subMonitor(pm, 3)));
 			if (!result.hasFatalError() && isLiteralNodeSelected())
 				fReplaceAllOccurrences= false;
 			return result;

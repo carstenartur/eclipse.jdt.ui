@@ -171,7 +171,6 @@ public class UnusedCodeFixCore extends CompilationUnitRewriteOperationsFixCore {
 
 	/**
 	 * Removes the unused type parameter.
-	 *
 	 */
 	public static class RemoveUnusedTypeParameterOperation extends CompilationUnitRewriteOperation {
 		private final SimpleName fUnusedName;
@@ -923,7 +922,7 @@ public class UnusedCodeFixCore extends CompilationUnitRewriteOperationsFixCore {
 						if (parent != null) {
 							ASTNode varDecl= parent.getParent();
 							if (!variableDeclarations.containsKey(varDecl)) {
-								variableDeclarations.put(varDecl, new ArrayList<SimpleName>());
+								variableDeclarations.put(varDecl, new ArrayList<>());
 							}
 							variableDeclarations.get(varDecl).add(name);
 						} else {

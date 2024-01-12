@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2021 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -28,7 +28,6 @@ import java.util.StringTokenizer;
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.SubProgressMonitor;
 
 import org.eclipse.text.edits.TextEditGroup;
 
@@ -79,11 +78,11 @@ import org.eclipse.jdt.core.refactoring.IJavaRefactorings;
 import org.eclipse.jdt.core.refactoring.descriptors.ExtractConstantDescriptor;
 import org.eclipse.jdt.core.refactoring.descriptors.JavaRefactoringDescriptor;
 
+import org.eclipse.jdt.internal.core.manipulation.JavaManipulationPlugin;
 import org.eclipse.jdt.internal.core.manipulation.StubUtility;
 import org.eclipse.jdt.internal.core.manipulation.dom.ASTResolving;
 import org.eclipse.jdt.internal.core.manipulation.util.BasicElementLabels;
 import org.eclipse.jdt.internal.core.refactoring.descriptors.RefactoringSignatureDescriptorFactory;
-import org.eclipse.jdt.internal.core.manipulation.JavaManipulationPlugin;
 import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRewriteContext;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.dom.Bindings;
@@ -107,6 +106,7 @@ import org.eclipse.jdt.internal.corext.util.Messages;
 
 import org.eclipse.jdt.internal.ui.preferences.JavaPreferencesSettings;
 import org.eclipse.jdt.internal.ui.text.correction.ModifierCorrectionSubProcessorCore;
+import org.eclipse.jdt.internal.ui.util.Progress;
 
 public class ExtractConstantRefactoring extends Refactoring {
 
@@ -147,6 +147,7 @@ public class ExtractConstantRefactoring extends Refactoring {
 	private LinkedProposalModelCore fLinkedProposalModel;
 	private boolean fCheckResultForCompileProblems;
 
+	private Map<String,String> fFormatterOptions;
 	/**
 	 * Creates a new extract constant refactoring
 	 * @param unit the compilation unit, or <code>null</code> if invoked by scripting
@@ -154,6 +155,10 @@ public class ExtractConstantRefactoring extends Refactoring {
 	 * @param selectionLength length
 	 */
 	public ExtractConstantRefactoring(ICompilationUnit unit, int selectionStart, int selectionLength) {
+		this(unit, selectionStart, selectionLength, null);
+	}
+
+	public ExtractConstantRefactoring(ICompilationUnit unit, int selectionStart, int selectionLength, Map<String,String> formatterOptions) {
 		Assert.isTrue(selectionStart >= 0);
 		Assert.isTrue(selectionLength >= 0);
 		fSelectionStart= selectionStart;
@@ -163,9 +168,14 @@ public class ExtractConstantRefactoring extends Refactoring {
 		fLinkedProposalModel= null;
 		fConstantName= ""; //$NON-NLS-1$
 		fCheckResultForCompileProblems= true;
+		fFormatterOptions = formatterOptions;
 	}
 
 	public ExtractConstantRefactoring(CompilationUnit astRoot, int selectionStart, int selectionLength) {
+		this(astRoot, selectionStart, selectionLength, null);
+	}
+
+	public ExtractConstantRefactoring(CompilationUnit astRoot, int selectionStart, int selectionLength, Map<String,String> formatterOptions) {
 		Assert.isTrue(selectionStart >= 0);
 		Assert.isTrue(selectionLength >= 0);
 		Assert.isTrue(astRoot.getTypeRoot() instanceof ICompilationUnit);
@@ -173,10 +183,11 @@ public class ExtractConstantRefactoring extends Refactoring {
 		fSelectionStart= selectionStart;
 		fSelectionLength= selectionLength;
 		fCu= (ICompilationUnit) astRoot.getTypeRoot();
-		fCuRewrite= new CompilationUnitRewrite(fCu, astRoot);
 		fLinkedProposalModel= null;
 		fConstantName= ""; //$NON-NLS-1$
 		fCheckResultForCompileProblems= true;
+		fFormatterOptions = formatterOptions;
+		fCuRewrite = new CompilationUnitRewrite(null, fCu, astRoot, fFormatterOptions);
 	}
 
     public ExtractConstantRefactoring(JavaRefactoringArguments arguments, RefactoringStatus status) {
@@ -231,10 +242,10 @@ public class ExtractConstantRefactoring extends Refactoring {
 
 	public String guessConstantName() {
 		String[] proposals= guessConstantNames();
-		if (proposals.length > 0)
+		if (proposals.length > 0) {
 			return proposals[0];
-		else
-			return fConstantName;
+		}
+		return fConstantName;
 	}
 
 	/**
@@ -282,18 +293,24 @@ public class ExtractConstantRefactoring extends Refactoring {
 			pm.worked(1);
 
 			if (fCuRewrite == null) {
-				CompilationUnit cuNode= RefactoringASTParser.parseWithASTProvider(fCu, true, new SubProgressMonitor(pm, 3));
-				fCuRewrite= new CompilationUnitRewrite(fCu, cuNode);
+				CompilationUnit cuNode= RefactoringASTParser.parseWithASTProvider(fCu, true, Progress.subMonitor(pm, 3));
+				fCuRewrite= new CompilationUnitRewrite(null, fCu, cuNode, this.fFormatterOptions);
 			} else {
 				pm.worked(3);
 			}
-			result.merge(checkSelection(new SubProgressMonitor(pm, 3)));
+			result.merge(checkSelection(Progress.subMonitor(pm, 3)));
 
 			if (result.hasFatalError())
 				return result;
 
 			if (isLiteralNodeSelected())
 				fReplaceAllOccurrences= false;
+
+			AbstractTypeDeclaration typeDeclaration= ASTNodes.getParent(getSelectedExpression().getAssociatedNode(), AbstractTypeDeclaration.class);
+			if (typeDeclaration == null) {
+				result.merge(RefactoringStatus.createFatalErrorStatus(RefactoringCoreMessages.ExtractConstantRefactoring_no_type));
+				return result;
+			}
 
 			if (isInTypeDeclarationAnnotation(getSelectedExpression().getAssociatedNode())) {
 				fVisibility= JdtFlags.VISIBILITY_STRING_PACKAGE;
@@ -450,7 +467,6 @@ public class ExtractConstantRefactoring extends Refactoring {
 		return fCuRewrite.createChange(RefactoringCoreMessages.ExtractConstantRefactoring_change_name, true, pm);
 	}
 
-
 	@Override
 	public RefactoringStatus checkFinalConditions(IProgressMonitor pm) throws CoreException {
 		pm.beginTask(RefactoringCoreMessages.ExtractConstantRefactoring_checking_preconditions, 2);
@@ -465,7 +481,7 @@ public class ExtractConstantRefactoring extends Refactoring {
 		try {
 			createConstantDeclaration();
 			replaceExpressionsWithConstant();
-			fChange= fCuRewrite.createChange(RefactoringCoreMessages.ExtractConstantRefactoring_change_name, true, new SubProgressMonitor(pm, 1));
+			fChange= fCuRewrite.createChange(RefactoringCoreMessages.ExtractConstantRefactoring_change_name, true, Progress.subMonitor(pm, 1));
 
 			return fCheckResultForCompileProblems ? RefactoringAnalyzeUtil.checkNewSource(fChange, fCu, fCuRewrite.getRoot(), pm) : new RefactoringStatus();
 		} finally {

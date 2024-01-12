@@ -36,9 +36,6 @@ import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.PrimitiveType;
 import org.eclipse.jdt.core.dom.StringLiteral;
 
-/**
- *
- */
 public class Binding extends ASTAttribute {
 
 	private final IBinding fBinding;
@@ -344,6 +341,7 @@ public class Binding extends ASTAttribute {
 		return REF_TYPE;
 	}
 
+	@SuppressWarnings("incomplete-switch")
 	@Override
 	public String getLabel() {
 		StringBuffer buf= new StringBuffer(fLabel);

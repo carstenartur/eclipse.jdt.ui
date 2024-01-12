@@ -16,10 +16,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.ui.text.correction;
 
-import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -411,7 +411,7 @@ public class UnresolvedElementsSubProcessor {
 		String label;
 		Image image;
 		if (senderDeclBinding.isEnum() && !isWriteAccess) {
-			label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_createenum_description, new Object[] { nameLabel, org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getTypeSignature(senderDeclBinding) });
+			label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_createenum_description, new Object[] { nameLabel, ASTResolving.getTypeSignature(senderDeclBinding) });
 			image= JavaPluginImages.get(JavaPluginImages.IMG_FIELD_PUBLIC);
 			proposals.add(new NewVariableCorrectionProposal(label, targetCU, NewVariableCorrectionProposalCore.ENUM_CONST, simpleName, senderDeclBinding, 10, image));
 		} else {
@@ -420,7 +420,7 @@ public class UnresolvedElementsSubProcessor {
 					label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_createfield_description, nameLabel);
 					image= JavaPluginImages.get(JavaPluginImages.IMG_FIELD_PRIVATE);
 				} else {
-					label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_createfield_other_description, new Object[] { nameLabel, org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getTypeSignature(senderDeclBinding) } );
+					label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_createfield_other_description, new Object[] { nameLabel, ASTResolving.getTypeSignature(senderDeclBinding) } );
 					image= JavaPluginImages.get(JavaPluginImages.IMG_FIELD_PUBLIC);
 				}
 				int fieldRelevance= StubUtility.hasFieldName(targetCU.getJavaProject(), name) ? IProposalRelevance.CREATE_FIELD_PREFIX_OR_SUFFIX_MATCH : IProposalRelevance.CREATE_FIELD;
@@ -432,7 +432,7 @@ public class UnresolvedElementsSubProcessor {
 					label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_createconst_description, nameLabel);
 					image= JavaPluginImages.get(JavaPluginImages.IMG_FIELD_PRIVATE);
 				} else {
-					label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_createconst_other_description, new Object[] { nameLabel, org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getTypeSignature(senderDeclBinding) } );
+					label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_createconst_other_description, new Object[] { nameLabel, ASTResolving.getTypeSignature(senderDeclBinding) } );
 					image= JavaPluginImages.get(JavaPluginImages.IMG_FIELD_PUBLIC);
 				}
 				int constRelevance= StubUtility.hasConstantName(targetCU.getJavaProject(), name) ? IProposalRelevance.CREATE_CONSTANT_PREFIX_OR_SUFFIX_MATCH : IProposalRelevance.CREATE_CONSTANT;
@@ -545,7 +545,7 @@ public class UnresolvedElementsSubProcessor {
 						if (NameMatcher.isSimilarName(curr.getName(), identifier)) {
 							AST ast= astRoot.getAST();
 							ASTRewrite rewrite= ASTRewrite.create(ast);
-							String label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_changetomethod_description, org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getMethodSignature(curr));
+							String label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_changetomethod_description, ASTResolving.getMethodSignature(curr));
 							Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
 							LinkedCorrectionProposal proposal= new LinkedCorrectionProposal(label, cu, rewrite, IProposalRelevance.CHANGE_TO_METHOD, image);
 							newProposals.add(proposal);
@@ -799,11 +799,12 @@ public class UnresolvedElementsSubProcessor {
 					@Override
 					public Change perform(IProgressMonitor pm) throws CoreException {
 						try {
-							if (file.exists())
+							if (file.exists()) {
 								file.delete(false, pm);
-							file.create(new BufferedInputStream(new FileInputStream(bundleFile)), false, pm);
+							}
+							file.create(new ByteArrayInputStream(Files.readAllBytes(bundleFile.toPath())), false, pm);
 							return new DeleteResourceChange(file.getFullPath(), false);
-						} catch (FileNotFoundException e) {
+						} catch (IOException e) {
 							throw new CoreException(new Status(IStatus.ERROR, JavaPlugin.getPluginId(), e.getMessage()));
 						}
 					}
@@ -1437,7 +1438,7 @@ public class UnresolvedElementsSubProcessor {
 				Image image;
 				ITypeBinding[] parameterTypes= getParameterTypes(arguments);
 				if (parameterTypes != null) {
-					String sig= org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getMethodSignature(methodName, parameterTypes, false);
+					String sig= ASTResolving.getMethodSignature(methodName, parameterTypes, false);
 					boolean is18OrHigher= JavaModelUtil.is1d8OrHigher(targetCU.getJavaProject());
 					boolean isSenderTypeAbstractClass = (senderDeclBinding.getModifiers() &  Modifier.ABSTRACT) > 0;
 					boolean isSenderBindingInterface= senderDeclBinding.isInterface();
@@ -1470,7 +1471,7 @@ public class UnresolvedElementsSubProcessor {
 							isSenderTypeAbstractClass = (senderDeclBinding.getModifiers() &  Modifier.ABSTRACT) > 0;
 							if (!senderDeclBinding.isAnonymous()) {
 								if (is18OrHigher || !isSenderBindingInterface) {
-									String[] args= new String[] { sig, org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getTypeSignature(senderDeclBinding) };
+									String[] args= new String[] { sig, ASTResolving.getTypeSignature(senderDeclBinding) };
 									label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_createmethod_other_description, args);
 									labelAbstract= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_createmethod_abstract_other_description, args);
 									if (isSenderBindingInterface) {
@@ -1631,7 +1632,7 @@ public class UnresolvedElementsSubProcessor {
 
 		// add arguments
 		{
-			String[] arg= new String[] { org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getMethodSignature(methodBinding) };
+			String[] arg= new String[] { ASTResolving.getMethodSignature(methodBinding) };
 			String label;
 			if (diff == 1) {
 				label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_addargument_description, arg);
@@ -1660,7 +1661,7 @@ public class UnresolvedElementsSubProcessor {
 				changeDesc[idx]= new RemoveDescription();
 				changedTypes[i]= declParameterTypes[idx];
 			}
-			String[] arg= new String[] { org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getMethodSignature(methodDecl), getTypeNames(changedTypes) };
+			String[] arg= new String[] { ASTResolving.getMethodSignature(methodDecl), getTypeNames(changedTypes) };
 			String label;
 			if (methodDecl.isConstructor()) {
 				if (diff == 1) {
@@ -1688,7 +1689,7 @@ public class UnresolvedElementsSubProcessor {
 			if (i > 0) {
 				buf.append(", "); //$NON-NLS-1$
 			}
-			buf.append(org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getTypeSignature(types[i]));
+			buf.append(ASTResolving.getTypeSignature(types[i]));
 		}
 		return BasicElementLabels.getJavaElementName(buf.toString());
 	}
@@ -1735,7 +1736,7 @@ public class UnresolvedElementsSubProcessor {
 			for (int i= diff - 1; i >= 0; i--) {
 				rewrite.remove(arguments.get(indexSkipped[i]), null);
 			}
-			String[] arg= new String[] { org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getMethodSignature(methodRef) };
+			String[] arg= new String[] { ASTResolving.getMethodSignature(methodRef) };
 			String label;
 			if (diff == 1) {
 				label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_removeargument_description, arg);
@@ -1780,7 +1781,7 @@ public class UnresolvedElementsSubProcessor {
 				changeDesc[idx]= new InsertDescription(newType, name);
 				changeTypes[i]= newType;
 			}
-			String[] arg= new String[] { org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getMethodSignature(methodDecl), getTypeNames(changeTypes) };
+			String[] arg= new String[] { ASTResolving.getMethodSignature(methodDecl), getTypeNames(changeTypes) };
 			String label;
 			if (methodDecl.isConstructor()) {
 				if (diff == 1) {
@@ -1911,7 +1912,7 @@ public class UnresolvedElementsSubProcessor {
 						ITypeBinding[] declParamTypes= methodDecl.getParameterTypes();
 
 						ITypeBinding[] swappedTypes= new ITypeBinding[] { declParamTypes[idx1], declParamTypes[idx2] };
-						String[] args=  new String[] { org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getMethodSignature(methodDecl), getTypeNames(swappedTypes) };
+						String[] args=  new String[] { ASTResolving.getMethodSignature(methodDecl), getTypeNames(swappedTypes) };
 						String label;
 						if (methodDecl.isConstructor()) {
 							label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_swapparams_constr_description, args);
@@ -1948,7 +1949,7 @@ public class UnresolvedElementsSubProcessor {
 						return;
 					}
 					boolean isVarArgs= methodDecl.isVarargs() && newParamTypes.length > 0 && newParamTypes[newParamTypes.length - 1].isArray();
-					String[] args=  new String[] { org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getMethodSignature(methodDecl), org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getMethodSignature(methodDecl.getName(), newParamTypes, isVarArgs) };
+					String[] args=  new String[] { ASTResolving.getMethodSignature(methodDecl), ASTResolving.getMethodSignature(methodDecl.getName(), newParamTypes, isVarArgs) };
 					String label;
 					if (methodDecl.isConstructor()) {
 						label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_changeparamsignature_constr_description, args);
@@ -2036,7 +2037,7 @@ public class UnresolvedElementsSubProcessor {
 
 		ASTRewrite rewrite= ASTRewrite.create(invocationNode.getAST());
 
-		String label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_changetoouter_description, org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getTypeSignature(currType));
+		String label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_changetoouter_description, ASTResolving.getTypeSignature(currType));
 		Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
 		ASTRewriteCorrectionProposal proposal= new ASTRewriteCorrectionProposal(label, context.getCompilationUnit(), rewrite, IProposalRelevance.QUALIFY_WITH_ENCLOSING_TYPE, image);
 
@@ -2126,7 +2127,7 @@ public class UnresolvedElementsSubProcessor {
 
 			ICompilationUnit targetCU= ASTResolving.findCompilationUnitForBinding(cu, astRoot, targetDecl);
 			if (targetCU != null) {
-				String[] args= new String[] { org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getMethodSignature( org.eclipse.jdt.internal.ui.text.correction.ASTResolving.getTypeSignature(targetDecl), getParameterTypes(arguments), false) };
+				String[] args= new String[] { ASTResolving.getMethodSignature( ASTResolving.getTypeSignature(targetDecl), getParameterTypes(arguments), false) };
 				String label= Messages.format(CorrectionMessages.UnresolvedElementsSubProcessor_createconstructor_description, args);
 				Image image= JavaElementImageProvider.getDecoratedImage(JavaPluginImages.DESC_MISC_PUBLIC, JavaElementImageDescriptor.CONSTRUCTOR, JavaElementImageProvider.SMALL_SIZE);
 				proposals.add(new NewMethodCorrectionProposal(label, targetCU, selectedNode, arguments, targetDecl, IProposalRelevance.CREATE_CONSTRUCTOR, image));
