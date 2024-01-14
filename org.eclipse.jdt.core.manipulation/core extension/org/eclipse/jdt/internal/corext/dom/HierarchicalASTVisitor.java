@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -54,7 +54,6 @@ import org.eclipse.jdt.core.dom.*;
  * exactly analogous to the dispatching behaviour obtained when method implementations are added to
  * the same ASTNode descendant classes.
  * </p>
- *
  */
 // @see JDTUIHelperClasses
 /*
@@ -63,7 +62,6 @@ import org.eclipse.jdt.core.dom.*;
  * The structure and behaviour of this class is
  * verified reflectively by
  * org.eclipse.jdt.ui.tests.core.HierarchicalASTVisitorTest
- *
  */
 public abstract class HierarchicalASTVisitor extends ASTVisitor {
 //TODO: check callers for handling of comments
@@ -710,6 +708,36 @@ public abstract class HierarchicalASTVisitor extends ASTVisitor {
 	}
 
 	@Override
+	public boolean visit(StringTemplateExpression node) {
+		return visit((Expression) node);
+	}
+
+	@Override
+	public boolean visit(StringTemplateComponent node) {
+		return visit((Expression) node);
+	}
+
+	@Override
+	public boolean visit(StringFragment node) {
+		return visit((Expression) node);
+	}
+
+	@Override
+	public void endVisit(StringTemplateExpression node) {
+		endVisit((Expression) node);
+	}
+
+	@Override
+	public void endVisit(StringTemplateComponent node) {
+		endVisit((Expression) node);
+	}
+
+	@Override
+	public void endVisit(StringFragment node) {
+		endVisit((Expression) node);
+	}
+
+	@Override
 	public boolean visit(SuperFieldAccess node) {
 		return visit((Expression)node);
 	}
@@ -1032,6 +1060,16 @@ public abstract class HierarchicalASTVisitor extends ASTVisitor {
 
 	@Override
 	public void endVisit(EnhancedForStatement node) {
+		endVisit((Statement)node);
+	}
+
+	@Override
+	public boolean visit(EnhancedForWithRecordPattern node) {
+		return visit((Statement)node);
+	}
+
+	@Override
+	public void endVisit(EnhancedForWithRecordPattern node) {
 		endVisit((Statement)node);
 	}
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -51,7 +51,7 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.core.runtime.SubProgressMonitor;
+import org.eclipse.core.runtime.SubMonitor;
 
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -156,6 +156,7 @@ import org.eclipse.jdt.internal.ui.refactoring.contentassist.CompletionContextRe
 import org.eclipse.jdt.internal.ui.refactoring.contentassist.ControlContentAssistHelper;
 import org.eclipse.jdt.internal.ui.refactoring.contentassist.JavaPackageCompletionProcessor;
 import org.eclipse.jdt.internal.ui.refactoring.contentassist.JavaTypeCompletionProcessor;
+import org.eclipse.jdt.internal.ui.util.Progress;
 import org.eclipse.jdt.internal.ui.util.SWTUtil;
 import org.eclipse.jdt.internal.ui.wizards.NewWizardMessages;
 import org.eclipse.jdt.internal.ui.wizards.SuperInterfaceSelectionDialog;
@@ -475,9 +476,9 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 
 	private TypeFieldsAdapter fTypeFieldAdapter;
 
-	private final int PUBLIC_INDEX= 0, DEFAULT_INDEX= 1, PRIVATE_INDEX= 2, PROTECTED_INDEX= 3;
-	private final int ABSTRACT_INDEX= 0, FINAL_INDEX= 1, STATIC_INDEX= 2, ENUM_ANNOT_STATIC_INDEX= 1;
-	private final int SEALED_FINAL_INDEX= 3, SEALED_INDEX= 1, NON_SEALED_INDEX= 2;
+	private static final int PUBLIC_INDEX= 0, DEFAULT_INDEX= 1, PRIVATE_INDEX= 2, PROTECTED_INDEX= 3;
+	private static final int ABSTRACT_INDEX= 0, FINAL_INDEX= 1, STATIC_INDEX= 2, ENUM_ANNOT_STATIC_INDEX= 1;
+	private static final int SEALED_FINAL_INDEX= 3, SEALED_INDEX= 1, NON_SEALED_INDEX= 2;
 
 	private int fTypeKind;
 
@@ -2389,6 +2390,19 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 		return isSealed;
 	}
 
+	/**
+	 * @return returns true if the super class is final
+	 * @since 3.30
+	 */
+	protected boolean isSuperClassFinal() {
+		try {
+			return fSuperClass != null && Flags.isFinal(fSuperClass.getFlags());
+		} catch (Exception e) {
+			// fall through
+		}
+		return false;
+	}
+
 	private boolean isSuperClassSealed() {
 		boolean isSealed= false;
 		if (fIsSealedSupported && fSuperClass != null) {
@@ -2716,7 +2730,7 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 
 		if (!pack.exists()) {
 			String packName= pack.getElementName();
-			pack= root.createPackageFragment(packName, true, new SubProgressMonitor(monitor, 1));
+			pack= root.createPackageFragment(packName, true, Progress.subMonitor(monitor, 1));
 		} else {
 			monitor.worked(1);
 		}
@@ -2740,11 +2754,11 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 				lineDelimiter= StubUtility.getLineDelimiterUsed(pack.getJavaProject());
 
 				String cuName= getCompilationUnitName(typeName);
-				ICompilationUnit parentCU= pack.createCompilationUnit(cuName, "", false, new SubProgressMonitor(monitor, 2)); //$NON-NLS-1$
+				ICompilationUnit parentCU= pack.createCompilationUnit(cuName, "", false, Progress.subMonitor(monitor, 2)); //$NON-NLS-1$
 				// create a working copy with a new owner
 
 				needsSave= true;
-				parentCU.becomeWorkingCopy(new SubProgressMonitor(monitor, 1)); // cu is now a (primary) working copy
+				parentCU.becomeWorkingCopy(Progress.subMonitor(monitor, 1)); // cu is now a (primary) working copy
 				connectedCU= parentCU;
 
 				IBuffer buffer= parentCU.getBuffer();
@@ -2779,7 +2793,7 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 				ICompilationUnit parentCU= enclosingType.getCompilationUnit();
 
 				needsSave= !parentCU.isWorkingCopy();
-				parentCU.becomeWorkingCopy(new SubProgressMonitor(monitor, 1)); // cu is now for sure (primary) a working copy
+				parentCU.becomeWorkingCopy(Progress.subMonitor(monitor, 1)); // cu is now for sure (primary) a working copy
 				connectedCU= parentCU;
 
 				CompilationUnit astRoot= createASTForImports(parentCU);
@@ -2818,7 +2832,7 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 					sibling = elems.length > 0 ? elems[0] : null;
 				}
 
-				createdType= enclosingType.createType(content.toString(), sibling, false, new SubProgressMonitor(monitor, 2));
+				createdType= enclosingType.createType(content.toString(), sibling, false, Progress.subMonitor(monitor, 2));
 
 				indent= StubUtility.getIndentUsed(enclosingType) + 1;
 			}
@@ -2830,7 +2844,7 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 
 			ICompilationUnit cu= createdType.getCompilationUnit();
 
-			imports.create(false, new SubProgressMonitor(monitor, 1));
+			imports.create(false, Progress.subMonitor(monitor, 1));
 
 			JavaModelUtil.reconcile(cu);
 
@@ -2842,10 +2856,10 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 			CompilationUnit astRoot= createASTForImports(imports.getCompilationUnit());
 			imports= new ImportsManager(astRoot);
 
-			createTypeMembers(createdType, imports, new SubProgressMonitor(monitor, 1));
+			createTypeMembers(createdType, imports, Progress.subMonitor(monitor, 1));
 
 			// add imports
-			imports.create(false, new SubProgressMonitor(monitor, 1));
+			imports.create(false, Progress.subMonitor(monitor, 1));
 
 			removeUnusedImports(cu, existingImports, false);
 
@@ -2869,7 +2883,7 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 			fCreatedType= createdType;
 
 			if (needsSave) {
-				cu.commitWorkingCopy(true, new SubProgressMonitor(monitor, 1));
+				cu.commitWorkingCopy(true, Progress.subMonitor(monitor, 1));
 			} else {
 				monitor.worked(1);
 			}
@@ -3313,6 +3327,7 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 	 * @throws CoreException thrown when the creation fails.
 	 */
 	protected IMethod[] createInheritedMethods(IType type, boolean doConstructors, boolean doUnimplementedMethods, ImportsManager imports, IProgressMonitor monitor) throws CoreException {
+		SubMonitor subMonitor= SubMonitor.convert(monitor, 3);
 		final ICompilationUnit cu= type.getCompilationUnit();
 		JavaModelUtil.reconcile(cu);
 		IMethod[] typeMethods= type.getMethods();
@@ -3326,20 +3341,20 @@ public abstract class NewTypeWizardPage extends NewContainerWizardPage {
 		ASTParser parser= ASTParser.newParser(IASTSharedValues.SHARED_AST_LEVEL);
 		parser.setResolveBindings(true);
 		parser.setSource(cu);
-		CompilationUnit unit= (CompilationUnit) parser.createAST(new SubProgressMonitor(monitor, 1));
+		CompilationUnit unit= (CompilationUnit) parser.createAST(subMonitor.newChild(1));
 		final ITypeBinding binding= ASTNodes.getTypeBinding(unit, type);
 		if (binding != null) {
 			if (doUnimplementedMethods) {
 				AddUnimplementedMethodsOperation operation= new AddUnimplementedMethodsOperation(unit, binding, null, -1, false, true, false);
 				operation.setCreateComments(isAddComments());
-				operation.run(monitor);
+				operation.run(subMonitor.newChild(1));
 				createImports(imports, operation.getCreatedImports());
 			}
 			if (doConstructors) {
 				AddUnimplementedConstructorsOperation operation= new AddUnimplementedConstructorsOperation(unit, binding, null, -1, false, true, false, FormatterProfileManager.getProjectSettings(type.getJavaProject()));
 				operation.setOmitSuper(true);
 				operation.setCreateComments(isAddComments());
-				operation.run(monitor);
+				operation.run(subMonitor.newChild(1));
 				createImports(imports, operation.getCreatedImports());
 			}
 		}

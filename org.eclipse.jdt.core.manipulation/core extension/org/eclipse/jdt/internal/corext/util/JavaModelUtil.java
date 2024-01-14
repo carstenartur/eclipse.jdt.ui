@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -24,21 +24,19 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.SubMonitor;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IStorage;
+import org.eclipse.core.resources.ResourceAttributes;
 
 import org.eclipse.text.edits.TextEdit;
 
 import org.eclipse.ltk.core.refactoring.resource.Resources;
 
 import org.eclipse.jdt.core.ClasspathContainerInitializer;
-import org.eclipse.jdt.core.CompletionProposal;
-import org.eclipse.jdt.core.CompletionRequestor;
 import org.eclipse.jdt.core.Flags;
 import org.eclipse.jdt.core.IClasspathContainer;
 import org.eclipse.jdt.core.IClasspathEntry;
@@ -80,7 +78,7 @@ public final class JavaModelUtil {
 	 */
 	public static final String VERSION_LATEST;
 	static {
-		VERSION_LATEST= JavaCore.VERSION_19; // make sure it is not inlined
+		VERSION_LATEST= JavaCore.VERSION_21; // make sure it is not inlined
 	}
 
 	public static final int VALIDATE_EDIT_CHANGED_CONTENT= 10003;
@@ -449,7 +447,7 @@ public final class JavaModelUtil {
 	 */
 	public static boolean hasMainMethod(IType type) throws JavaModelException {
 		for (IMethod method : type.getMethods()) {
-			if (method.isMainMethod()) {
+			if (method.isMainMethodCandidate()) {
 				return true;
 			}
 		}
@@ -529,7 +527,8 @@ public final class JavaModelUtil {
 	public static boolean isEditable(ICompilationUnit cu)  {
 		Assert.isNotNull(cu);
 		IResource resource= cu.getPrimary().getResource();
-		return (resource.exists() && !resource.getResourceAttributes().isReadOnly());
+		ResourceAttributes ra= resource.exists() ? resource.getResourceAttributes() : null;
+		return (ra != null && !ra.isReadOnly());
 	}
 
 	/**
@@ -789,7 +788,7 @@ public final class JavaModelUtil {
 	}
 
 
-	public static boolean is20OrHigher(String compliance) {
+	public static boolean is1d2OrHigher(String compliance) {
 		return !isVersionLessThan(compliance, JavaCore.VERSION_1_2);
 	}
 
@@ -857,6 +856,14 @@ public final class JavaModelUtil {
 		return !isVersionLessThan(compliance, JavaCore.VERSION_19);
 	}
 
+	public static boolean is20OrHigher(String compliance) {
+		return !isVersionLessThan(compliance, JavaCore.VERSION_20);
+	}
+
+	public static boolean is21OrHigher(String compliance) {
+		return !isVersionLessThan(compliance, JavaCore.VERSION_21);
+	}
+
 	/**
 	 * Checks if the given project or workspace has source compliance 1.2 or greater.
 	 *
@@ -864,7 +871,7 @@ public final class JavaModelUtil {
 	 * @return <code>true</code> if the given project or workspace has source compliance 1.2 or greater.
 	 */
 	public static boolean is1d2OrHigher(IJavaProject project) {
-		return is20OrHigher(getSourceCompliance(project));
+		return is1d2OrHigher(getSourceCompliance(project));
 	}
 
 	/**
@@ -1019,6 +1026,28 @@ public final class JavaModelUtil {
 		return is19OrHigher(getSourceCompliance(project));
 	}
 
+	/**
+	 * Checks if the given project or workspace has source compliance 20 or greater.
+	 *
+	 * @param project the project to test or <code>null</code> to test the workspace settings
+	 * @return <code>true</code> if the given project or workspace has source compliance 20 or
+	 *         greater.
+	 */
+	public static boolean is20OrHigher(IJavaProject project) {
+		return is20OrHigher(getSourceCompliance(project));
+	}
+
+	/**
+	 * Checks if the given project or workspace has source compliance 21 or greater.
+	 *
+	 * @param project the project to test or <code>null</code> to test the workspace settings
+	 * @return <code>true</code> if the given project or workspace has source compliance 21 or
+	 *         greater.
+	 */
+	public static boolean is21OrHigher(IJavaProject project) {
+		return is21OrHigher(getSourceCompliance(project));
+	}
+
 	public static String getSourceCompliance(IJavaProject project) {
 		return project != null ? project.getOption(JavaCore.COMPILER_SOURCE, true) : JavaCore.getOption(JavaCore.COMPILER_SOURCE);
 	}
@@ -1069,6 +1098,12 @@ public final class JavaModelUtil {
 		String version= vMInstall.getJavaVersion();
 		if (version == null) {
 			return defaultCompliance;
+		} else if (version.startsWith(JavaCore.VERSION_21)) {
+			return JavaCore.VERSION_21;
+		} else if (version.startsWith(JavaCore.VERSION_20)) {
+			return JavaCore.VERSION_20;
+		} else if (version.startsWith(JavaCore.VERSION_19)) {
+			return JavaCore.VERSION_19;
 		} else if (version.startsWith(JavaCore.VERSION_18)) {
 			return JavaCore.VERSION_18;
 		} else if (version.startsWith(JavaCore.VERSION_17)) {
@@ -1117,7 +1152,11 @@ public final class JavaModelUtil {
 
 		// fallback:
 		String desc= executionEnvironment.getId();
-		if (desc.indexOf(JavaCore.VERSION_19) != -1) {
+		if (desc.indexOf(JavaCore.VERSION_21) != -1) {
+			return JavaCore.VERSION_21;
+		} else if (desc.indexOf(JavaCore.VERSION_20) != -1) {
+			return JavaCore.VERSION_20;
+		} else if (desc.indexOf(JavaCore.VERSION_19) != -1) {
 			return JavaCore.VERSION_19;
 		} else if (desc.indexOf(JavaCore.VERSION_18) != -1) {
 			return JavaCore.VERSION_18;
@@ -1288,55 +1327,9 @@ public final class JavaModelUtil {
 	}
 
 	public static String[] getStaticImportFavorites(ICompilationUnit cu, final String elementName, boolean isMethod, String[] favorites) throws JavaModelException {
-		StringBuilder dummyCU= new StringBuilder();
-		String packName= cu.getParent().getElementName();
-		IType type= cu.findPrimaryType();
-		if (type == null)
-			return new String[0];
-
-		if (packName.length() > 0) {
-			dummyCU.append("package ").append(packName).append(';'); //$NON-NLS-1$
-		}
-		dummyCU.append("public class ").append(type.getElementName()).append("{\n static {\n").append(elementName); // static initializer  //$NON-NLS-1$//$NON-NLS-2$
-		int offset= dummyCU.length();
-		dummyCU.append("\n}\n }"); //$NON-NLS-1$
-
-		ICompilationUnit newCU= null;
-		try {
-			newCU= cu.getWorkingCopy(null);
-			newCU.getBuffer().setContents(dummyCU.toString());
-
-			final HashSet<String> result= new HashSet<>();
-
-			CompletionRequestor requestor= new CompletionRequestor(true) {
-				@Override
-				public void accept(CompletionProposal proposal) {
-					if (elementName.equals(new String(proposal.getName()))) {
-						for (CompletionProposal curr : proposal.getRequiredProposals()) {
-							if (curr.getKind() == CompletionProposal.METHOD_IMPORT || curr.getKind() == CompletionProposal.FIELD_IMPORT) {
-								result.add(concatenateName(Signature.toCharArray(curr.getDeclarationSignature()), curr.getName()));
-							}
-						}
-					}
-				}
-			};
-
-			if (isMethod) {
-				requestor.setIgnored(CompletionProposal.METHOD_REF, false);
-				requestor.setAllowsRequiredProposals(CompletionProposal.METHOD_REF, CompletionProposal.METHOD_IMPORT, true);
-			} else {
-				requestor.setIgnored(CompletionProposal.FIELD_REF, false);
-				requestor.setAllowsRequiredProposals(CompletionProposal.FIELD_REF, CompletionProposal.FIELD_IMPORT, true);
-			}
-			requestor.setFavoriteReferences(favorites);
-
-			newCU.codeComplete(offset, requestor, new NullProgressMonitor());
-
-			return result.toArray(new String[result.size()]);
-		} finally {
-			if (newCU != null) {
-				newCU.discardWorkingCopy();
-			}
-		}
+		StaticImportFavoritesCompletionInvoker ex = new StaticImportFavoritesCompletionInvoker(cu, favorites);
+		String[] result = ex.getStaticImportFavorites(elementName, isMethod);
+		ex.destroy();
+		return result;
 	}
 }

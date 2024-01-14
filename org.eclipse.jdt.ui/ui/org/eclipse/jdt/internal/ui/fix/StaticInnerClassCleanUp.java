@@ -55,12 +55,12 @@ import org.eclipse.jdt.internal.corext.dom.InterruptibleVisitor;
 import org.eclipse.jdt.internal.corext.fix.CleanUpConstants;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix.CompilationUnitRewriteOperation;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalModel;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
-import org.eclipse.jdt.ui.text.java.IProblemLocation;
+import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
 
 /**
  * A fix that makes inner class <code>static</code>:
@@ -72,7 +72,7 @@ import org.eclipse.jdt.ui.text.java.IProblemLocation;
  */
 public class StaticInnerClassCleanUp extends AbstractMultiFix {
 
-	private final String JUPITER_NESTED= "org.junit.jupiter.api.Nested"; //$NON-NLS-1$
+	private static final String JUPITER_NESTED= "org.junit.jupiter.api.Nested"; //$NON-NLS-1$
 
 	public StaticInnerClassCleanUp() {
 		this(Collections.emptyMap());
@@ -346,12 +346,12 @@ public class StaticInnerClassCleanUp extends AbstractMultiFix {
 	}
 
 	@Override
-	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocation problem) {
+	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocationCore problem) {
 		return false;
 	}
 
 	@Override
-	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocation[] problems) throws CoreException {
+	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocationCore[] problems) throws CoreException {
 		return null;
 	}
 
@@ -365,7 +365,7 @@ public class StaticInnerClassCleanUp extends AbstractMultiFix {
 		}
 
 		@Override
-		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModel linkedModel) throws CoreException {
+		public void rewriteASTInternal(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
 			ListRewrite listRewrite= rewrite.getListRewrite(visited, TypeDeclaration.MODIFIERS2_PROPERTY);
 			AST ast= cuRewrite.getRoot().getAST();

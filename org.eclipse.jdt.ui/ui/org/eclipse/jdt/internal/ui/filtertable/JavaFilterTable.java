@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -88,7 +88,6 @@ public class JavaFilterTable {
 	 * Interface for encapsulating the storage of the {@link Filter}s
 	 *
 	 * @since 3.26
-	 *
 	 */
 	public interface FilterStorage {
 		/**
@@ -522,7 +521,7 @@ public class JavaFilterTable {
 		fDeselectAllButton.setEnabled(enabled);
 		fSelectAllButton.setEnabled(enabled);
 		fTableViewer.getTable().setEnabled(enabled);
-		fRemoveFilterButton.setEnabled(enabled & !fTableViewer.getSelection().isEmpty());
+		fRemoveFilterButton.setEnabled(enabled && !fTableViewer.getSelection().isEmpty());
 	}
 
 	/**

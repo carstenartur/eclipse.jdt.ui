@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -74,6 +74,8 @@ public final class CorrectionMessages extends NLS {
 	public static String QuickAssistProcessor_modify_favorites_desc;
 	public static String QuickAssistProcessor_name_extension_from_class;
 	public static String QuickAssistProcessor_name_extension_from_interface;
+	public static String QuickAssistProcessor_convert_constant_name;
+	public static String QuickAssistProcessor_convert_constant_name_description;
 	public static String SerialVersionHashOperation_computing_id;
 	public static String SerialVersionHashOperation_error_classnotfound;
 	public static String SerialVersionHashOperation_save_caption;
@@ -110,6 +112,7 @@ public final class CorrectionMessages extends NLS {
 	public static String LocalCorrectionsSubProcessor_surroundwith_trymulticatch_description;
 	public static String LocalCorrectionsSubProcessor_surroundwith_trymulticatch_var_description;
 	public static String LocalCorrectionsSubProcessor_add_default_case_description;
+	public static String LocalCorrectionsSubProcessor_remove_default_case_description;
 	public static String LocalCorrectionsSubProcessor_add_missing_cases_description;
 	public static String LocalCorrectionsSubProcessor_addthrows_description;
 	public static String ClasspathFixProcessorDescriptor_error_processing_processors;
@@ -391,6 +394,7 @@ public final class CorrectionMessages extends NLS {
 	public static String AdvancedQuickAssistProcessor_inverseConditions_description;
 	public static String AdvancedQuickAssistProcessor_inverseConditionalExpression_description;
 	public static String AdvancedQuickAssistProcessor_replaceIfWithConditional;
+	public static String AdvancedQuickAssistProcessor_replaceIfNoElseWithConditional;
 	public static String AdvancedQuickAssistProcessor_replaceConditionalWithIf;
 	public static String AdvancedQuickAssistProcessor_joinWithOuter_description;
 	public static String AdvancedQuickAssistProcessor_joinWithInner_description;

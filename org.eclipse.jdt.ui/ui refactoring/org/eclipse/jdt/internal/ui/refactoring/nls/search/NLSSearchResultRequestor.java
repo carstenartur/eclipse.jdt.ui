@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2013 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -84,6 +84,7 @@ class NLSSearchResultRequestor extends SearchRequestor {
 	private NLSSearchResult fResult;
 	private IFile fPropertiesFile;
 	private Properties fProperties;
+	private Properties fSpecifiedAsUsedProperties;
 	private HashSet<String> fUsedPropertyNames;
 
 	public NLSSearchResultRequestor(IFile propertiesFile, NLSSearchResult result) {
@@ -165,7 +166,7 @@ class NLSSearchResultRequestor extends SearchRequestor {
 
 		for (Enumeration<?> enumeration= fProperties.propertyNames(); enumeration.hasMoreElements();) {
 			String propertyName= (String) enumeration.nextElement();
-			if (!fUsedPropertyNames.contains(propertyName)) {
+			if (!fUsedPropertyNames.contains(propertyName) && !fSpecifiedAsUsedProperties.containsKey(propertyName)) {
 				addMatch(groupElement, propertyName);
 				hasUnused= true;
 			}
@@ -224,6 +225,10 @@ class NLSSearchResultRequestor extends SearchRequestor {
 
 	public boolean isUsedPropertyKey(String key) {
 		return fUsedPropertyNames.contains(key);
+	}
+
+	public boolean isSpecifiedAsUsed(String key) {
+		return fSpecifiedAsUsedProperties.containsKey(key);
 	}
 
 	/**
@@ -335,33 +340,14 @@ class NLSSearchResultRequestor extends SearchRequestor {
 	 */
 	private int findPropertyNameStartPosition(String propertyName) {
 		// Fix for http://dev.eclipse.org/bugs/show_bug.cgi?id=19319
-		InputStream stream= null;
-		LineReader lineReader= null;
 		String encoding;
 		try {
 			encoding= fPropertiesFile.getCharset();
 		} catch (CoreException e1) {
 			encoding= "ISO-8859-1";  //$NON-NLS-1$
 		}
-		try {
-			stream= createInputStream(fPropertiesFile);
-			lineReader= new LineReader(stream, encoding);
-		} catch (CoreException cex) {
-			// failed to get input stream
-			JavaPlugin.log(cex);
-			return -1;
-		} catch (IOException e) {
-			if (stream != null) {
-				try {
-					stream.close();
-				} catch (IOException ce) {
-					JavaPlugin.log(ce);
-				}
-			}
-			return -1;
-		}
-		int start= 0;
-		try {
+		try (InputStream stream= createInputStream(fPropertiesFile); LineReader lineReader= new LineReader(stream, encoding)) {
+			int start= 0;
 			StringBuffer buf= new StringBuffer(80);
 			int eols= lineReader.readLine(buf);
 			int keyLength= propertyName.length();
@@ -371,54 +357,55 @@ class NLSSearchResultRequestor extends SearchRequestor {
 				int charPos= i + keyLength;
 				char terminatorChar= 0;
 				boolean hasNoValue= (charPos >= line.length());
-				if (i > -1 && !hasNoValue)
+				if (i > -1 && !hasNoValue) {
 					terminatorChar= line.charAt(charPos);
+				}
 				if (line.trim().startsWith(propertyName) &&
 						(hasNoValue || Character.isWhitespace(terminatorChar) || terminatorChar == '=')) {
-					start += line.indexOf(propertyName);
+					start+= line.indexOf(propertyName);
 					eols= -17; // found key
 				} else {
-					start += line.length() + eols;
+					start+= line.length() + eols;
 					buf.setLength(0);
 					eols= lineReader.readLine(buf);
 				}
 			}
-			if (eols != -17)
+			if (eols != -17) {
 				start= -1; //key not found in file. See bug 63794. This can happen if the key contains escaped characters.
-		} catch (IOException ex) {
+			}
+			return start;
+		} catch (CoreException | IOException ex) {
 			JavaPlugin.log(ex);
 			return -1;
-		} finally {
-			try {
-				lineReader.close();
-			} catch (IOException ex) {
-				JavaPlugin.log(ex);
-			}
 		}
-		return start;
 	}
 
 	private void loadProperties() {
 		Set<Object> duplicateKeys= new HashSet<>();
 		fProperties= new Properties(duplicateKeys);
-		InputStream stream;
-		try {
-			stream= new BufferedInputStream(createInputStream(fPropertiesFile));
-		} catch (CoreException ex) {
-			fProperties= new Properties();
-			return;
-		}
-		try {
+		Set<Object> duplicateKeys2= new HashSet<>();
+		fSpecifiedAsUsedProperties= new Properties(duplicateKeys2);
+		try (InputStream stream= new BufferedInputStream(createInputStream(fPropertiesFile))) {
 			fProperties.load(stream);
-		} catch (IOException ex) {
+		} catch (CoreException | IOException ex) {
 			fProperties= new Properties();
 			return;
 		} finally {
-			try {
-				stream.close();
-			} catch (IOException ex) {
-			}
 			reportDuplicateKeys(duplicateKeys);
+		}
+		if (!"properties".equalsIgnoreCase(fPropertiesFile.getFileExtension())) { //$NON-NLS-1$
+			return;
+		}
+		String propertyFileName= fPropertiesFile.getName();
+		String ignorePropertyFileName=
+				propertyFileName.substring(0, propertyFileName.length() - ".properties".length()).concat(NLSSearchQuery.NLS_USED_PROPERTIES_EXT); //$NON-NLS-1$
+		IFile ignoredPropertiesFile= (IFile) fPropertiesFile.getParent().findMember(ignorePropertyFileName);
+		if (ignoredPropertiesFile != null) {
+			try (InputStream stream= new BufferedInputStream(createInputStream(ignoredPropertiesFile))) {
+				fSpecifiedAsUsedProperties.load(stream);
+			} catch (CoreException | IOException ex) {
+				fSpecifiedAsUsedProperties= new Properties();
+			}
 		}
 	}
 

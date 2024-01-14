@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2022 IBM Corporation and others.
+ * Copyright (c) 2019, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -35,6 +35,8 @@ public class ASTHelper {
 	public static final int JLS17 = AST.JLS17;
 	public static final int JLS18 = AST.JLS18;
 	public static final int JLS19 = AST.JLS19;
+	public static final int JLS20 = AST.JLS20;
+	public static final int JLS21 = AST.JLS21;
 
 	private static boolean isNodeTypeSupportedInAST(AST ast, int nodeType) {
 		switch (nodeType) {
@@ -51,7 +53,8 @@ public class ASTHelper {
 				return ast.apiLevel() >= AST.JLS18;
 			case ASTNode.TYPE_PATTERN:
 			case ASTNode.RECORD_PATTERN:
-				return ast.isPreviewEnabled();
+			case ASTNode.PATTERN_INSTANCEOF_EXPRESSION:
+				return ast.apiLevel() >= JLS21;
 			default:
 				break;
 		}

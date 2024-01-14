@@ -88,6 +88,7 @@ import org.eclipse.ui.part.IShowInTarget;
 import org.eclipse.ui.part.IShowInTargetList;
 import org.eclipse.ui.part.Page;
 import org.eclipse.ui.part.ShowInContext;
+import org.eclipse.ui.views.WorkbenchViewerSetup;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
 
 import org.eclipse.ui.texteditor.ITextEditorActionConstants;
@@ -929,6 +930,10 @@ public class JavaOutlinePage extends Page implements IContentOutlinePage, IAdapt
 	 */
 	@Override
 	public void createControl(Composite parent) {
+		JavaCore.runReadOnly(() -> createControlCached(parent));
+	}
+
+	private void createControlCached(Composite parent) {
 
 		Tree tree= new Tree(parent, SWT.MULTI);
 
@@ -938,6 +943,7 @@ public class JavaOutlinePage extends Page implements IContentOutlinePage, IAdapt
 		);
 
 		fOutlineViewer= new JavaOutlineViewer(tree);
+		WorkbenchViewerSetup.setupViewer(fOutlineViewer);
 		initDragAndDrop();
 		fOutlineViewer.setContentProvider(new ChildrenProvider());
 		fOutlineViewer.setLabelProvider(new DecoratingJavaLabelProvider(lprovider));

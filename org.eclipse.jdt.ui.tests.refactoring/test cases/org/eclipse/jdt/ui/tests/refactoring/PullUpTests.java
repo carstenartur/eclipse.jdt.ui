@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2021 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -25,8 +25,9 @@ import java.util.List;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import org.eclipse.core.tests.harness.FussyProgressMonitor;
+
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.NullProgressMonitor;
 
 import org.eclipse.jface.text.templates.Template;
 
@@ -93,15 +94,22 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(merge(methods, fields));
 
 		Refactoring ref= processor.getRefactoring();
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setSuperclassAsTargetClass(processor);
 
 		if (deleteAllInSourceType)
 			processor.setDeletedMethods(methods);
-		if (deleteAllMatchingMethods)
-			processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
-
-		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
+		if (deleteAllMatchingMethods) {
+			processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+			testMonitor.assertUsedUp();
+			testMonitor.prepare();
+		}
+		RefactoringStatus checkInputResult= ref.checkFinalConditions(testMonitor);
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		assertFalse("precondition was supposed to pass", checkInputResult.hasError());
 		performChange(ref, false);
 
@@ -123,7 +131,10 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(merge(methods, fields));
 
 		Refactoring ref= processor.getRefactoring();
-		RefactoringStatus checkInitialConditions= ref.checkInitialConditions(new NullProgressMonitor());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		RefactoringStatus checkInitialConditions= ref.checkInitialConditions(testMonitor);
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		assertTrue("activation", checkInitialConditions.isOK());
 		setSuperclassAsTargetClass(processor);
 
@@ -131,10 +142,14 @@ public class PullUpTests extends GenericRefactoringTest {
 			processor.setDeletedMethods(methods);
 		}
 		if (deleteAllMatchingMethods) {
-			processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+			processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+			testMonitor.assertUsedUp();
+			testMonitor.prepare();
 		}
 
-		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
+		RefactoringStatus checkInputResult= ref.checkFinalConditions(testMonitor);
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		assertFalse("precondition was supposed to pass", checkInputResult.hasError());
 		performChange(ref, false);
 
@@ -148,7 +163,10 @@ public class PullUpTests extends GenericRefactoringTest {
 	}
 
 	private IType[] getPossibleTargetClasses(PullUpRefactoringProcessor processor) throws JavaModelException {
-		return processor.getCandidateTypes(new RefactoringStatus(), new NullProgressMonitor());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		IType[] r= processor.getCandidateTypes(new RefactoringStatus(), testMonitor);
+		testMonitor.assertUsedUp();
+		return r;
 	}
 
 	protected void setSuperclassAsTargetClass(PullUpRefactoringProcessor processor) throws JavaModelException {
@@ -172,10 +190,15 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(members);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setSuperclassAsTargetClass(processor);
 
-		List<IMember> additionalRequired= Arrays.asList(processor.getAdditionalRequiredMembersToPullUp(new NullProgressMonitor()));
+		List<IMember> additionalRequired= Arrays.asList(processor.getAdditionalRequiredMembersToPullUp(testMonitor));
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		List<IMember> required= new ArrayList<>(additionalRequired);
 		required.addAll(Arrays.asList(members));
 		IField[] expectedFields= getFields(type, expectedFieldNames);
@@ -198,10 +221,15 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(fields);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setTargetClass(processor, targetClassIndex);
 
-		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
+		RefactoringStatus checkInputResult= ref.checkFinalConditions(testMonitor);
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		assertFalse("precondition was supposed to pass", checkInputResult.hasError());
 		performChange(ref, false);
 
@@ -218,10 +246,15 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(fields);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setTargetClass(processor, targetClassIndex);
 
-		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
+		RefactoringStatus checkInputResult= ref.checkFinalConditions(testMonitor);
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		assertFalse("precondition was supposed to pass", checkInputResult.hasError());
 		performChange(ref, false);
 
@@ -238,10 +271,15 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(fields);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setTargetClass(processor, targetClassIndex);
 
-		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
+		RefactoringStatus checkInputResult= ref.checkFinalConditions(testMonitor);
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		assertFalse("precondition was supposed to fail", checkInputResult.isOK());
 	}
 
@@ -266,7 +304,10 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(selectedMembers);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 
 		setTargetClass(processor, targetClassIndex);
 
@@ -281,8 +322,11 @@ public class PullUpTests extends GenericRefactoringTest {
 		processor.setAbstractMethods(methodsToDeclareAbstract);
 		if (deleteAllPulledUpMethods && methodsToPullUp.length != 0)
 			processor.setDeletedMethods(methodsToPullUp);
-		if (deleteAllMatchingMethods && methodsToPullUp.length != 0)
-			processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+		if (deleteAllMatchingMethods && methodsToPullUp.length != 0) {
+			processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+			testMonitor.assertUsedUp();
+			testMonitor.prepare();
+		}
 		return ref;
 	}
 
@@ -298,7 +342,10 @@ public class PullUpTests extends GenericRefactoringTest {
 				signaturesOfMethodsToPullUp, namesOfFieldsToPullUp, namesOfTypesToPullUp, namesOfMethodsToDeclareAbstract, signaturesOfMethodsToDeclareAbstract, deleteAllPulledUpMethods,
 				deleteAllMatchingMethods, targetClassIndex, cu);
 
-		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		RefactoringStatus checkInputResult= ref.checkFinalConditions(testMonitor);
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		assertFalse("precondition was supposed to fail", checkInputResult.isOK());
 	}
 
@@ -314,7 +361,10 @@ public class PullUpTests extends GenericRefactoringTest {
 				signaturesOfMethodsToPullUp, namesOfFieldsToPullUp, namesOfTypesToPullUp, namesOfMethodsToDeclareAbstract, signaturesOfMethodsToDeclareAbstract, deleteAllPulledUpMethods,
 				deleteAllMatchingMethods, targetClassIndex, cu);
 
-		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		RefactoringStatus checkInputResult= ref.checkFinalConditions(testMonitor);
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		assertFalse("precondition was supposed to pass", checkInputResult.hasError());
 		performChange(ref, false);
 
@@ -331,16 +381,24 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 
 		setTargetClass(processor, targetClassIndex);
 
 		if (deleteAllInSourceType)
 			processor.setDeletedMethods(methods);
-		if (deleteAllMatchingMethods)
-			processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+		if (deleteAllMatchingMethods) {
+			processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+			testMonitor.assertUsedUp();
+			testMonitor.prepare();
+		}
 
-		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
+		RefactoringStatus checkInputResult= ref.checkFinalConditions(testMonitor);
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		assertFalse("precondition was supposed to pass", checkInputResult.hasError());
 		performChange(ref, false);
 
@@ -357,15 +415,23 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setTargetClass(processor, targetClassIndex);
 
 		if (deleteAllInSourceType)
 			processor.setDeletedMethods(methods);
-		if (deleteAllMatchingMethods)
-			processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+		if (deleteAllMatchingMethods) {
+			processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+			testMonitor.assertUsedUp();
+			testMonitor.prepare();
+		}
 
-		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
+		RefactoringStatus checkInputResult= ref.checkFinalConditions(testMonitor);
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		assertFalse("precondition was supposed to fail", checkInputResult.isOK());
 	}
 
@@ -378,17 +444,25 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertEquals("activation", shouldActivationCheckPass, ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertEquals("activation", shouldActivationCheckPass, ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		if (! shouldActivationCheckPass)
 			return;
 		setTargetClass(processor, targetClassIndex);
 
 		if (deleteAllInSourceType)
 			processor.setDeletedMethods(methods);
-		if (deleteAllMatchingMethods)
-			processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+		if (deleteAllMatchingMethods) {
+			processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+			testMonitor.assertUsedUp();
+			testMonitor.prepare();
+		}
 
-		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
+		RefactoringStatus checkInputResult= ref.checkFinalConditions(testMonitor);
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		assertFalse("precondition was supposed to fail", checkInputResult.isOK());
 	}
 
@@ -428,10 +502,15 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setSuperclassAsTargetClass(processor);
 
-		processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+		processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 
 		RefactoringStatus result= performRefactoring(ref);
 		assertTrue("precondition was supposed to pass", result == null || !result.hasError());
@@ -454,10 +533,15 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setSuperclassAsTargetClass(processor);
 
-		processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+		processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 
 		RefactoringStatus result= performRefactoring(ref);
 		assertTrue("precondition was supposed to pass", result == null || !result.hasError());
@@ -511,10 +595,15 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setSuperclassAsTargetClass(processor);
 
-		processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+		processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 
 		RefactoringStatus result= performRefactoring(ref);
 		assertTrue("precondition was supposed to pass", result == null || !result.hasError());
@@ -1128,7 +1217,10 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setSuperclassAsTargetClass(processor);
 
 		RefactoringStatus result= performRefactoring(ref);
@@ -1185,13 +1277,203 @@ public class PullUpTests extends GenericRefactoringTest {
 
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(fields);
 		Refactoring ref= processor.getRefactoring();
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 
 		setTargetClass(processor, 0);
 		processor.setDestinationType(typeA);
 		processor.setMembersToMove(fields);
 
-		assertTrue("final", ref.checkFinalConditions(new NullProgressMonitor()).isOK());
+		assertTrue("final", ref.checkFinalConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
+
+		performChange(ref, false);
+
+		assertEqualLines("A", getFileContents(getOutputTestFileName("A")), cuA.getSource());
+		assertEqualLines("B", getFileContents(getOutputTestFileName("B")), cuB.getSource());
+		assertEqualLines("C", getFileContents(getOutputTestFileName("C")), cuC.getSource());
+	}
+
+	@Test
+	public void test56() throws Exception {
+		// test for bug 241035
+		ICompilationUnit cuA= createCUfromTestFile(getPackageP(), "A");
+		ICompilationUnit cuB= createCUfromTestFile(getPackageP(), "B");
+		ICompilationUnit cuC= createCUfromTestFile(getPackageP(), "C");
+
+		IType typeA= getType(cuA, "A");
+		IType typeB= getType(cuB, "B");
+		String[] methodNames= new String[] { "m" };
+		String[][] signatures= new String[][] { new String[0] };
+		IMethod[] methods= getMethods(typeB, methodNames, signatures);
+
+		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
+		Refactoring ref= processor.getRefactoring();
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
+
+		setTargetClass(processor, 0);
+		processor.setDestinationType(typeA);
+		processor.setMembersToMove(methods);
+		processor.setDeletedMethods(methods);
+		processor.setReplace(true);
+
+		assertTrue("final", ref.checkFinalConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
+
+		performChange(ref, false);
+
+		assertEqualLines("A", getFileContents(getOutputTestFileName("A")), cuA.getSource());
+		assertEqualLines("B", getFileContents(getOutputTestFileName("B")), cuB.getSource());
+		assertEqualLines("C", getFileContents(getOutputTestFileName("C")), cuC.getSource());
+	}
+
+	@Test
+	public void test57() throws Exception {
+		// test for bug 241035
+		ICompilationUnit cuA= createCUfromTestFile(getPackageP(), "A");
+		ICompilationUnit cuB= createCUfromTestFile(getPackageP(), "B");
+		ICompilationUnit cuC= createCUfromTestFile(getPackageP(), "C");
+
+		IType typeA= getType(cuA, "A");
+		IType typeB= getType(cuB, "B");
+		String[] methodNames= new String[] { "m", "foo2" };
+		String[][] signatures= new String[][] { new String[0], new String[0] };
+		IMethod[] methods= getMethods(typeB, methodNames, signatures);
+
+		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
+		Refactoring ref= processor.getRefactoring();
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
+
+		setTargetClass(processor, 0);
+		processor.setDestinationType(typeA);
+		processor.setMembersToMove(methods);
+		processor.setDeletedMethods(methods);
+		processor.setReplace(true);
+
+		assertTrue("final", ref.checkFinalConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
+
+		performChange(ref, false);
+
+		assertEqualLines("A", getFileContents(getOutputTestFileName("A")), cuA.getSource());
+		assertEqualLines("B", getFileContents(getOutputTestFileName("B")), cuB.getSource());
+		assertEqualLines("C", getFileContents(getOutputTestFileName("C")), cuC.getSource());
+	}
+
+	@Test
+	public void test58() throws Exception {
+		// test for bug 241035
+		ICompilationUnit cuA= createCUfromTestFile(getPackageP(), "A");
+		ICompilationUnit cuB= createCUfromTestFile(getPackageP(), "B");
+		ICompilationUnit cuC= createCUfromTestFile(getPackageP(), "C");
+
+		IType typeA= getType(cuA, "A");
+		IType typeB= getType(cuB, "B");
+		String[] methodNames= new String[] { "m", "foo2" };
+		String[][] signatures= new String[][] { new String[0], new String[0] };
+		IMethod[] methods= getMethods(typeB, methodNames, signatures);
+
+		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
+		Refactoring ref= processor.getRefactoring();
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
+
+		setTargetClass(processor, 0);
+		processor.setDestinationType(typeA);
+		processor.setMembersToMove(methods);
+		processor.setDeletedMethods(methods);
+		processor.setReplace(true);
+
+		assertTrue("final", ref.checkFinalConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
+
+		performChange(ref, false);
+
+		assertEqualLines("A", getFileContents(getOutputTestFileName("A")), cuA.getSource());
+		assertEqualLines("B", getFileContents(getOutputTestFileName("B")), cuB.getSource());
+		assertEqualLines("C", getFileContents(getOutputTestFileName("C")), cuC.getSource());
+	}
+
+	@Test
+	public void test59() throws Exception {
+		// test for bug 241035
+		ICompilationUnit cuA= createCUfromTestFile(getPackageP(), "A");
+		ICompilationUnit cuB= createCUfromTestFile(getPackageP(), "B");
+		ICompilationUnit cuC= createCUfromTestFile(getPackageP(), "C");
+
+		IType typeA= getType(cuA, "A");
+		IType typeB= getType(cuB, "B");
+		String[] methodNames= new String[] { "m", "foo2" };
+		String[][] signatures= new String[][] { new String[0], new String[0] };
+		IMethod[] methods= getMethods(typeB, methodNames, signatures);
+
+		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
+		Refactoring ref= processor.getRefactoring();
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
+
+		setTargetClass(processor, 0);
+		processor.setDestinationType(typeA);
+		processor.setMembersToMove(methods);
+		processor.setDeletedMethods(methods);
+		processor.setReplace(true);
+
+		assertTrue("final", ref.checkFinalConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
+
+		performChange(ref, false);
+
+		assertEqualLines("A", getFileContents(getOutputTestFileName("A")), cuA.getSource());
+		assertEqualLines("B", getFileContents(getOutputTestFileName("B")), cuB.getSource());
+		assertEqualLines("C", getFileContents(getOutputTestFileName("C")), cuC.getSource());
+	}
+
+	@Test
+	public void test60() throws Exception {
+		// test for bug 241035
+		ICompilationUnit cuA= createCUfromTestFile(getPackageP(), "A");
+		ICompilationUnit cuB= createCUfromTestFile(getPackageP(), "B");
+		ICompilationUnit cuC= createCUfromTestFile(getPackageP(), "C");
+
+		IType typeA= getType(cuA, "A");
+		IType typeB= getType(cuB, "B");
+		String[] methodNames= new String[] { "m" };
+		String[][] signatures= new String[][] { new String[0] };
+		IMethod[] methods= getMethods(typeB, methodNames, signatures);
+
+		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
+		Refactoring ref= processor.getRefactoring();
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
+
+		setTargetClass(processor, 0);
+		processor.setDestinationType(typeA);
+		processor.setMembersToMove(methods);
+		processor.setDeletedMethods(methods);
+		processor.setReplace(true);
+
+		assertTrue("final", ref.checkFinalConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 
 		performChange(ref, false);
 
@@ -1972,10 +2254,15 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setSuperclassAsTargetClass(processor);
 
-		processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+		processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 
 		RefactoringStatus result= performRefactoring(ref);
 		assertTrue("precondition was supposed to pass", result == null || !result.hasError());
@@ -1998,10 +2285,15 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setSuperclassAsTargetClass(processor);
 
-		processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+		processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 
 		RefactoringStatus result= performRefactoring(ref);
 		assertTrue("precondition was supposed to pass", result == null || !result.hasError());
@@ -2043,10 +2335,10 @@ public class PullUpTests extends GenericRefactoringTest {
 //		IType type= getType(cuB, "B");
 //		IMethod[] methods= getMethods(type, methodNames, signatures);
 //		PullUpRefactoring ref= createRefactoring(methods);
-//		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+//		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
 //		setSuperclassAsTargetClass(ref);
 //
-//		ref.setMethodsToDelete(getMethods(ref.getMatchingElements(new NullProgressMonitor(), false)));
+//		ref.setMethodsToDelete(getMethods(ref.getMatchingElements(testMonitor, false)));
 //
 //		RefactoringStatus result= performRefactoring(ref);
 //		assertEquals("precondition was supposed to pass", null, result);
@@ -2069,10 +2361,15 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setSuperclassAsTargetClass(processor);
 
-		processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+		processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 
 		RefactoringStatus result= performRefactoring(ref);
 		assertTrue("precondition was supposed to pass", result == null || !result.hasError());
@@ -2127,10 +2424,15 @@ public class PullUpTests extends GenericRefactoringTest {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		FussyProgressMonitor testMonitor= new FussyProgressMonitor();
+		assertTrue("activation", ref.checkInitialConditions(testMonitor).isOK());
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 		setSuperclassAsTargetClass(processor);
 
-		processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
+		processor.setDeletedMethods(getMethods(processor.getMatchingElements(testMonitor, false)));
+		testMonitor.assertUsedUp();
+		testMonitor.prepare();
 
 		RefactoringStatus result= performRefactoring(ref);
 		assertTrue("precondition was supposed to pass", result == null || !result.hasError());

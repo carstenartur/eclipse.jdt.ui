@@ -16,16 +16,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.jarpackager;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -249,14 +248,16 @@ public class JarWriter3 {
 	 */
 	protected void addFile(IFile resource, IPath path) throws IOException, CoreException {
 		JarEntry newEntry= new JarEntry(path.toString().replace(File.separatorChar, '/'));
-		byte[] readBuffer= new byte[4096];
-
-		if (fJarPackage.isCompressed())
+		byte[] allBytes;
+		try (InputStream contents= resource.getContents(false)) {
+			allBytes= contents.readAllBytes();
+		}
+		if (fJarPackage.isCompressed()) {
 			newEntry.setMethod(ZipEntry.DEFLATED);
 			// Entry is filled automatically.
-		else {
+		} else {
 			newEntry.setMethod(ZipEntry.STORED);
-			JarPackagerUtil.calculateCrcAndSize(newEntry, resource.getContents(false), readBuffer);
+			JarPackagerUtil.setCrcAndSize(newEntry, allBytes);
 		}
 
 		long lastModified= System.currentTimeMillis();
@@ -270,9 +271,8 @@ public class JarWriter3 {
 		// Set modification time
 		newEntry.setTime(lastModified);
 
-		InputStream contentStream = resource.getContents(false);
-
-		addEntry(newEntry, contentStream);
+		fJarOutputStream.putNextEntry(newEntry);
+		fJarOutputStream.write(allBytes);
 	}
 
 	/**
@@ -317,32 +317,14 @@ public class JarWriter3 {
 				return -1;
 			return 0;
 		});
-		File file= null;
-		OutputStream output= null;
-		try {
-			file= File.createTempFile("history", null); //$NON-NLS-1$
-			output= new BufferedOutputStream(new FileOutputStream(file));
-			try {
-				RefactoringCore.getHistoryService().writeRefactoringDescriptors(proxies, output, RefactoringDescriptor.NONE, false, monitor);
-				try {
-					output.close();
-					output= null;
-				} catch (IOException exception) {
-					// Do nothing
-				}
-				writeMetaData(data, file, path);
-			} finally {
-				if (output != null) {
-					try {
-						output.close();
-					} catch (IOException exception) {
-						// Do nothing
-					}
-				}
-			}
+		File file= File.createTempFile("history", null); //$NON-NLS-1$
+		try (OutputStream output= new BufferedOutputStream(new FileOutputStream(file))) {
+			RefactoringCore.getHistoryService().writeRefactoringDescriptors(proxies, output, RefactoringDescriptor.NONE, false, monitor);
+			writeMetaData(data, file, path);
+		} catch (IOException exception) {
+			// Do nothing
 		} finally {
-			if (file != null)
-				file.delete();
+			file.delete();
 		}
 	}
 
@@ -465,26 +447,15 @@ public class JarWriter3 {
 		Assert.isNotNull(file);
 		Assert.isNotNull(path);
 		final JarEntry entry= new JarEntry(path.toString().replace(File.separatorChar, '/'));
-		byte[] buffer= new byte[4096];
+		byte[] allBytes= Files.readAllBytes(file.toPath());
 		if (data.isCompressed())
 			entry.setMethod(ZipEntry.DEFLATED);
 		else {
 			entry.setMethod(ZipEntry.STORED);
-			JarPackagerUtil.calculateCrcAndSize(entry, new BufferedInputStream(new FileInputStream(file)), buffer);
+			JarPackagerUtil.setCrcAndSize(entry, allBytes);
 		}
 		entry.setTime(System.currentTimeMillis());
-		final InputStream stream= new BufferedInputStream(new FileInputStream(file));
-		try {
-			fJarOutputStream.putNextEntry(entry);
-			int count;
-			while ((count= stream.read(buffer, 0, buffer.length)) != -1)
-				fJarOutputStream.write(buffer, 0, count);
-		} finally {
-			try {
-				stream.close();
-			} catch (IOException exception) {
-				// Do nothing
-			}
-		}
+		fJarOutputStream.putNextEntry(entry);
+		fJarOutputStream.write(allBytes);
 	}
 }

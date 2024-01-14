@@ -353,15 +353,7 @@ public final class JarImportWizardPage extends WizardPage {
 					setPageComplete(false);
 					return;
 				}
-				ZipFile zip= null;
-				try {
-					try {
-						zip= new ZipFile(file, ZipFile.OPEN_READ);
-					} catch (IOException exception) {
-						setErrorMessage(JarImportMessages.JarImportWizardPage_invalid_location);
-						setPageComplete(false);
-						return;
-					}
+				try (ZipFile zip= new ZipFile(file, ZipFile.OPEN_READ)) {
 					final JarImportData data= fWizard.getImportData();
 					data.setRefactoringFileLocation(URIUtil.toURI(path));
 					ZipEntry entry= zip.getEntry(JarPackagerUtil.getRefactoringsEntry());
@@ -376,10 +368,9 @@ public final class JarImportWizardPage extends WizardPage {
 						setPageComplete(true);
 						return;
 					}
-					InputStream stream= null;
-					try {
-						stream= zip.getInputStream(entry);
-						data.setRefactoringHistory(RefactoringCore.getHistoryService().readRefactoringHistory(stream, JavaRefactoringDescriptor.JAR_MIGRATION | JavaRefactoringDescriptor.JAR_REFACTORING));
+					try (InputStream stream= zip.getInputStream(entry)) {
+						data.setRefactoringHistory(
+								RefactoringCore.getHistoryService().readRefactoringHistory(stream, JavaRefactoringDescriptor.JAR_MIGRATION | JavaRefactoringDescriptor.JAR_REFACTORING));
 					} catch (IOException exception) {
 						setErrorMessage(JarImportMessages.JarImportWizardPage_no_refactorings);
 						setPageComplete(false);
@@ -389,22 +380,11 @@ public final class JarImportWizardPage extends WizardPage {
 						setErrorMessage(JarImportMessages.JarImportWizardPage_no_refactorings);
 						setPageComplete(false);
 						return;
-					} finally {
-						if (stream != null) {
-							try {
-								stream.close();
-							} catch (IOException exception) {
-								// Do nothing
-							}
-						}
 					}
-				} finally {
-					if (zip != null) {
-						try {
-							zip.close();
-						} catch (IOException e) {
-						}
-					}
+				} catch (IOException exception) {
+					setErrorMessage(JarImportMessages.JarImportWizardPage_invalid_location);
+					setPageComplete(false);
+					return;
 				}
 			}
 		}
@@ -447,22 +427,13 @@ public final class JarImportWizardPage extends WizardPage {
 				if (uri != null) {
 					final File file= new File(uri);
 					if (file.exists()) {
-						ZipFile zip= null;
-						try {
-							zip= new ZipFile(file, ZipFile.OPEN_READ);
+						try (ZipFile zip= new ZipFile(file, ZipFile.OPEN_READ)) {
 							ZipEntry entry= zip.getEntry(JarPackagerUtil.getRefactoringsEntry());
 							if (entry != null) {
 								fWizard.getImportData().setExistingTimeStamp(entry.getTime());
 							}
 						} catch (IOException exception) {
 							// Just leave it
-						} finally {
-							if (zip != null) {
-								try {
-									zip.close();
-								} catch (IOException e) {
-								}
-							}
 						}
 					}
 				}

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -35,6 +35,7 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.resources.IResource;
 
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -88,7 +89,9 @@ import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jdt.ui.JavaElementLabelProvider;
 import org.eclipse.jdt.ui.JavaElementLabels;
 import org.eclipse.jdt.ui.JavaUI;
+import org.eclipse.jdt.ui.PreferenceConstants;
 
+import org.eclipse.jdt.internal.ui.JavaPlugin;
 import org.eclipse.jdt.internal.ui.actions.SelectionConverter;
 
 
@@ -214,7 +217,7 @@ public class JUnitLaunchShortcut implements ILaunchShortcut2 {
 		MessageDialog.openInformation(getShell(), JUnitMessages.JUnitLaunchShortcut_dialog_title, JUnitMessages.JUnitLaunchShortcut_message_notests);
 	}
 
-	private IType findTypeToLaunch(ICompilationUnit cu, String mode) throws InterruptedException, InvocationTargetException, JavaModelException {
+	private IType findTypeToLaunch(ICompilationUnit cu, String mode) throws InterruptedException, InvocationTargetException {
 		var types= findTypesToLaunch(cu);
 		if (types.isEmpty()) {
 			return null;
@@ -224,7 +227,7 @@ public class JUnitLaunchShortcut implements ILaunchShortcut2 {
 		return types.iterator().next();
 	}
 
-	private Set<IType> findTypesToLaunch(ICompilationUnit cu) throws InterruptedException, InvocationTargetException, JavaModelException {
+	private Set<IType> findTypesToLaunch(ICompilationUnit cu) throws InterruptedException, InvocationTargetException {
 		ITestKind testKind= TestKindRegistry.getContainerTestKind(cu);
 		return TestSearchEngine.findTests(PlatformUI.getWorkbench().getActiveWorkbenchWindow(), cu, testKind);
 	}
@@ -280,10 +283,10 @@ public class JUnitLaunchShortcut implements ILaunchShortcut2 {
 	}
 
 	private IType chooseType(Set<IType> types, String mode) throws InterruptedException {
-		var dialog = new ElementTreeSelectionDialog(getShell(), new JavaElementLabelProvider(JavaElementLabelProvider.SHOW_POST_QUALIFIED), new TreeProvider(types)) {
+		var dialog= new ElementTreeSelectionDialog(getShell(), new JavaElementLabelProvider(JavaElementLabelProvider.SHOW_POST_QUALIFIED), new TreeProvider(types)) {
 			@Override
 			protected TreeViewer createTreeViewer(Composite parent) {
-				var tree = super.createTreeViewer(parent);
+				var tree= super.createTreeViewer(parent);
 				tree.expandAll();
 				return tree;
 			}
@@ -424,6 +427,7 @@ public class JUnitLaunchShortcut implements ILaunchShortcut2 {
 		String testKindId= TestKindRegistry.getContainerTestKindId(element);
 
 		ILaunchConfigurationType configType= getLaunchManager().getLaunchConfigurationType(getLaunchConfigurationTypeId());
+
 		String configName= getLaunchManager().generateLaunchConfigurationName(suggestLaunchConfigurationName(element, testName));
 		ILaunchConfigurationWorkingCopy wc= configType.newInstance(null, configName);
 
@@ -455,6 +459,8 @@ public class JUnitLaunchShortcut implements ILaunchShortcut2 {
 	 * @since 3.8
 	 */
 	protected String suggestLaunchConfigurationName(IJavaElement element, String fullTestName) {
+		IPreferenceStore preferenceStore= JavaPlugin.getDefault().getPreferenceStore();
+		boolean useQualification= preferenceStore.getBoolean(PreferenceConstants.LAUNCH_NAME_FULLY_QUALIFIED_FOR_JUNIT_TEST);
 		switch (element.getElementType()) {
 			case IJavaElement.JAVA_PROJECT:
 			case IJavaElement.PACKAGE_FRAGMENT_ROOT:
@@ -471,14 +477,14 @@ public class JUnitLaunchShortcut implements ILaunchShortcut2 {
 						String typeName= typeFQNDot >= 0 ? typeFQN.substring(typeFQNDot + 1) : typeFQN;
 						return typeName + " " + testName; //$NON-NLS-1$
 					}
-					return element.getElementName() + " " + fullTestName;//$NON-NLS-1$
+					return (useQualification ? ((IType) element).getFullyQualifiedName('.') : element.getElementName()) + " " + fullTestName;//$NON-NLS-1$
 				}
-				return element.getElementName();
+				return useQualification ? ((IType) element).getFullyQualifiedName('.') : element.getElementName();
 			case IJavaElement.METHOD:
 				IMethod method= (IMethod) element;
 				String methodName= method.getElementName();
 				methodName+= JUnitStubUtility.getParameterTypes(method, true); // use simple names of parameter types
-				return method.getDeclaringType().getElementName() + '.' + methodName;
+				return useQualification ? method.getDeclaringType().getFullyQualifiedName('.') : method.getDeclaringType().getElementName() + '.' + methodName;
 			default:
 				throw new IllegalArgumentException("Invalid element type to create a launch configuration: " + element.getClass().getName()); //$NON-NLS-1$
 		}

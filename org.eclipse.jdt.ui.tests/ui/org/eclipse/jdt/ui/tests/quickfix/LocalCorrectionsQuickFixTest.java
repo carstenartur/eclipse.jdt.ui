@@ -9870,6 +9870,38 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 	}
 
 	@Test
+	public void testNecessaryNLSTag1() throws Exception {
+		Hashtable<String, String> options= JavaCore.getOptions();
+		options.put(JavaCore.COMPILER_PB_NON_NLS_STRING_LITERAL, JavaCore.WARNING);
+		JavaCore.setOptions(options);
+
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test1;\n");
+		buf.append("\n");
+		buf.append("public class E {\n");
+		buf.append("    String e = \"abc\";\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack1.createCompilationUnit("E.java", buf.toString(), false, null);
+
+		CompilationUnit astRoot= getASTRoot(cu);
+		ArrayList<IJavaCompletionProposal> proposals= collectCorrections(cu, astRoot);
+
+		assertCorrectLabels(proposals);
+
+		String[] expected= new String[1];
+		buf= new StringBuilder();
+		buf.append("package test1;\n");
+		buf.append("\n");
+		buf.append("public class E {\n");
+		buf.append("    String e = \"abc\"; //$NON-NLS-1$\n");
+		buf.append("}\n");
+		expected[0]= buf.toString();
+
+		assertExpectedExistInProposals(proposals, expected);
+	}
+
+	@Test
 	public void testUnnessecaryNLSTag1() throws Exception {
 		Hashtable<String, String> options= JavaCore.getOptions();
 		options.put(JavaCore.COMPILER_PB_NON_NLS_STRING_LITERAL, JavaCore.WARNING);
@@ -12044,8 +12076,6 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 	/**
 	 * Tests if the quick fix to loop over a variable name is added correctly. The complete
 	 * functionality of the for loop generation is tested in {@link AssistQuickFixTest}
-	 *
-	 * @throws Exception
 	 */
 	@Ignore("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
 	@Test
@@ -12108,8 +12138,6 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 	/**
 	 * Tests if the quick fix to loop over a method invocation is added correctly. The complete
 	 * functionality of the for loop generation is tested in {@link AssistQuickFixTest}
-	 *
-	 * @throws Exception
 	 */
 	@Ignore("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
 	@Test
@@ -12172,8 +12200,6 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 	/**
 	 * Tests if the quick fix to loop over a method invocation is added correctly. The complete
 	 * functionality of the for loop generation is tested in {@link AssistQuickFixTest}
-	 *
-	 * @throws Exception
 	 */
 	@Ignore("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
 	@Test

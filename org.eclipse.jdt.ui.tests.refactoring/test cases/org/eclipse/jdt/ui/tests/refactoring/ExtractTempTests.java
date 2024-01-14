@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -13,6 +13,13 @@
  *     Nikolay Metchev <nikolaymetchev@gmail.com> - [extract local] Extract to local variable not replacing multiple occurrences in same statement - https://bugs.eclipse.org/406347
  *     Nicolaj Hoess <nicohoess@gmail.com> - [extract local] puts declaration at wrong position - https://bugs.eclipse.org/65875
  *     Xiaye Chi <xychichina@gmail.com> - [extract local] Extract to local variable may result in NullPointerException. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/39
+ *     Xiaye Chi <xychichina@gmail.com> - [extract local] Improve the Safety of Extract Local Variable Refactorings concering ClassCasts. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/331
+ *     Xiaye Chi <xychichina@gmail.com> - [extract local] Improve the Safety of Extract Local Variable Refactorings by Identifying the Side Effect of Selected Expression. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/348
+ *     Xiaye Chi <xychichina@gmail.com> - [extract local] Improve the Safety of Extract Local Variable Refactorings by identifying statements that may change the value of the extracted expressions - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+ *     Taiming Wang <3120205503@bit.edu.cn> - [extract local] Automated Name Recommendation For The Extract Local Variable Refactoring. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/601
+ *     Taiming Wang <3120205503@bit.edu.cn> - [extract local] Context-based Automated Name Recommendation For The Extract Local Variable Refactoring. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/655
+ *     Taiming Wang <3120205503@bit.edu.cn> - [extract local] Extract Similar Expression in All Methods If End-Users Want. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/785
+ *     Taiming Wang <3120205503@bit.edu.cn> - [extract local] Recommend variable name for Extracted Local Variable Refactoring when the extracted expression is a method invocation. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/684
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
@@ -60,16 +67,16 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		return REFACTORING_PATH;
 	}
 
-	protected String getSimpleTestFileName(boolean canExtract, boolean input){
-		StringBuilder fileName = new StringBuilder("A_").append(getName());
+	protected String getSimpleTestFileName(boolean canExtract, boolean input) {
+		StringBuilder fileName= new StringBuilder("A_").append(getName());
 		if (canExtract)
-			fileName.append(input ? "_in": "_out");
+			fileName.append(input ? "_in" : "_out");
 		return fileName.append(".java").toString();
 	}
 
-	protected String getTestFileName(boolean canExtract, boolean input){
+	protected String getTestFileName(boolean canExtract, boolean input) {
 		StringBuilder fileName= new StringBuilder(TEST_PATH_PREFIX).append(getRefactoringPath());
-		fileName.append(canExtract ? "canExtract/": "cannotExtract/");
+		fileName.append(canExtract ? "canExtract/" : "cannotExtract/");
 		return fileName.append(getSimpleTestFileName(canExtract, input)).toString();
 	}
 
@@ -98,7 +105,6 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), true, true);
 		ISourceRange selection= TextRangeUtil.getSelection(cu, startLine, startColumn, endLine, endColumn);
 		ExtractTempRefactoring ref= new ExtractTempRefactoring(cu, selection.getOffset(), selection.getLength());
-
 		RefactoringStatus activationResult= ref.checkInitialConditions(new NullProgressMonitor());
 		assertTrue("activation was supposed to be successful", activationResult.isOK());
 
@@ -106,21 +112,48 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		ref.setDeclareFinal(makeFinal);
 		ref.setTempName(tempName);
 
-		assertEquals("temp name incorrectly guessed", guessedTempName, ref.guessTempName());
+		assertEquals("temp name incorrectly guessed", guessedTempName, ref.guessTempNameWithContext());
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
 		assertTrue("precondition was supposed to pass but was " + checkInputResult.toString(), checkInputResult.isOK());
 
 		performChange(ref, false);
 
-		IPackageFragment pack= (IPackageFragment)cu.getParent();
+		IPackageFragment pack= (IPackageFragment) cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
 		assertTrue(newCuName + " does not exist", newcu.exists());
 		assertEqualLines(getFileContents(getTestFileName(true, false)), newcu.getSource());
 	}
 
-	private void warningHelper1(int startLine, int startColumn, int endLine, int endColumn, boolean replaceAll, boolean makeFinal, String tempName, String guessedTempName, int expectedStatus) throws Exception {
+	protected void helper2(int startLine, int startColumn, int endLine, int endColumn, boolean replaceAll, boolean replaceAllInThisFile,boolean makeFinal, String tempName, String guessedTempName) throws Exception {
+		ICompilationUnit cu= createCUfromTestFile(getPackageP(), true, true);
+		ISourceRange selection= TextRangeUtil.getSelection(cu, startLine, startColumn, endLine, endColumn);
+		ExtractTempRefactoring ref= new ExtractTempRefactoring(cu, selection.getOffset(), selection.getLength());
+		RefactoringStatus activationResult= ref.checkInitialConditions(new NullProgressMonitor());
+		assertTrue("activation was supposed to be successful", activationResult.isOK());
+
+		ref.setReplaceAllOccurrences(replaceAll);
+		ref.setReplaceAllOccurrencesInThisFile(replaceAllInThisFile);
+		ref.setDeclareFinal(makeFinal);
+		ref.setTempName(tempName);
+
+		assertEquals("temp name incorrectly guessed", guessedTempName, ref.guessTempNameWithContext());
+
+		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
+		assertTrue("precondition was supposed to pass but was " + checkInputResult.toString(), checkInputResult.isOK());
+
+		performChange(ref, false);
+
+		IPackageFragment pack= (IPackageFragment) cu.getParent();
+		String newCuName= getSimpleTestFileName(true, true);
+		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
+		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertEqualLines(getFileContents(getTestFileName(true, false)), newcu.getSource());
+	}
+
+	private void warningHelper1(int startLine, int startColumn, int endLine, int endColumn, boolean replaceAll, boolean makeFinal, String tempName, String guessedTempName, int expectedStatus)
+			throws Exception {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), true, true);
 		ISourceRange selection= TextRangeUtil.getSelection(cu, startLine, startColumn, endLine, endColumn);
 		ExtractTempRefactoring ref= new ExtractTempRefactoring(cu, selection.getOffset(), selection.getLength());
@@ -132,14 +165,14 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		ref.setDeclareFinal(makeFinal);
 		ref.setTempName(tempName);
 
-		assertEquals("temp name incorrectly guessed", guessedTempName, ref.guessTempName());
+		assertEquals("temp name incorrectly guessed", guessedTempName, ref.guessTempNameWithContext());
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
 		assertEquals("status", expectedStatus, checkInputResult.getSeverity());
 
 		performChange(ref, false);
 
-		IPackageFragment pack= (IPackageFragment)cu.getParent();
+		IPackageFragment pack= (IPackageFragment) cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
 		assertTrue(newCuName + " does not exist", newcu.exists());
@@ -571,8 +604,7 @@ public class ExtractTempTests extends GenericRefactoringTest {
 	@Test
 	public void test73() throws Exception {
 //		printTestDisabledMessage("test for bug 40353");
-		warningHelper1(6, 39, 6, 40, true, false, "temp", "i2", RefactoringStatus.WARNING);
-		// (warning is superfluous, but detection would need flow analysis)
+		helper1(6, 39, 6, 40, true, false, "temp", "i2");
 	}
 
 	@Test
@@ -661,11 +693,11 @@ public class ExtractTempTests extends GenericRefactoringTest {
 
 	@Test
 	public void test89() throws Exception {
-		IPackageFragment a= getRoot().createPackageFragment("a", true,	null);
+		IPackageFragment a= getRoot().createPackageFragment("a", true, null);
 		ICompilationUnit aA= a.createCompilationUnit("A.java", "package a; public class A {}", true, null);
 		aA.save(null, true);
 
-		IPackageFragment b= getRoot().createPackageFragment("b", true,	null);
+		IPackageFragment b= getRoot().createPackageFragment("b", true, null);
 		ICompilationUnit bA= b.createCompilationUnit("A.java", "package b; public class A {}", true, null);
 		bA.save(null, true);
 
@@ -915,7 +947,7 @@ public class ExtractTempTests extends GenericRefactoringTest {
 	@Test
 	public void test132() throws Exception {
 		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/348
-		warningHelper1(5, 16, 5, 28, true, false, "i", "i",RefactoringStatus.INFO);
+		warningHelper1(5, 16, 5, 28, true, false, "i", "i", RefactoringStatus.INFO);
 	}
 
 	@Test
@@ -947,6 +979,7 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/348
 		warningHelper1(4, 22, 4, 25, true, false, "m", "m", RefactoringStatus.INFO);
 	}
+
 	@Test
 	public void test138() throws Exception {
 		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/348
@@ -957,6 +990,139 @@ public class ExtractTempTests extends GenericRefactoringTest {
 	public void test139() throws Exception {
 		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/348
 		warningHelper1(11, 14, 11, 33, true, false, "valueOf", "valueOf", RefactoringStatus.INFO);
+	}
+
+	@Test
+	public void test140() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(16, 28, 16, 36, true, false, "string", "string");
+	}
+
+	@Test
+	public void test141() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(5, 20, 5, 32, true, false, "value", "value");
+	}
+
+	@Test
+	public void test142() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(9, 42, 9, 48, true, false, "f", "f");
+	}
+
+	@Test
+	public void test143() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(6, 16, 6, 24, true, false, "x", "x");
+	}
+
+	@Test
+	public void test144() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(11, 17, 11, 36, true, false, "charAt", "charAt");
+	}
+
+	@Test
+	public void test145() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(14, 17, 14, 38, true, false, "i", "i");
+	}
+
+	@Test
+	public void test146() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(5, 18, 5, 35, true, false, "x", "x");
+	}
+
+	@Test
+	public void test147() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(10, 22, 10, 32, true, false, "value", "value");
+	}
+
+	@Test
+	public void test148() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(7, 9, 7, 19, true, false, "value", "value");
+	}
+
+	@Test
+	public void test149() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(6, 13, 6, 29, true, false, "calculateCount", "calculateCount");
+	}
+
+	@Test
+	public void test150() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(7, 17, 7, 33, true, false, "calculateCount", "calculateCount");
+	}
+
+	@Test
+	public void test151() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(8, 17, 8, 20, true, false, "f", "f");
+	}
+
+	@Test
+	public void test152() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/432
+		helper1(10, 17, 10, 20, true, false, "f", "f");
+	}
+
+
+	@Test
+	public void test153() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/601
+		helper1(23, 32, 23, 49, true, false, "iterPerson", "iterPerson");
+	}
+
+	@Test
+	public void test154() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/601
+		helper1(23, 32, 23, 45, true, false, "person", "person");
+	}
+
+	@Test
+	public void test155() throws Exception {
+		//test for https://bugs.eclipse.org/bugs/show_bug.cgi?id=573643
+		helper1(11, 13, 11, 32, true, false, "lowerCase", "lowerCase");
+	}
+
+	@Test
+	public void test156() throws Exception {
+		//test for https://bugs.eclipse.org/bugs/show_bug.cgi?id=573643
+		helper1(11, 13, 11, 32, true, false, "lowerCase", "lowerCase");
+	}
+
+	@Test
+	public void test157() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/655
+		helper1(29, 28, 29, 71, true, false, "bootVersion", "bootVersion");
+	}
+
+	@Test
+	public void test158() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/655
+		helper1(17, 28, 17, 71, true, false, "safeParse", "safeParse");
+	}
+
+	@Test
+	public void test159() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/785
+		helper2(32, 16, 32, 45, true, true, false, "computeSelfCost", "computeSelfCost");
+	}
+
+	@Test
+	public void test160() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/785
+		helper2(5, 21, 5, 26, true, true, false, "i", "i");
+	}
+
+	@Test
+	public void test161() throws Exception {
+		//test for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/684
+		helper1(7, 26, 7, 50, true, false, "serverPanel", "serverPanel");
 	}
 
 	@Test

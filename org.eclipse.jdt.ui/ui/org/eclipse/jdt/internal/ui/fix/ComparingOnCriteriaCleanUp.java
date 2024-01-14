@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Fabrice TIERCELIN and others.
+ * Copyright (c) 2021, 2023 Fabrice TIERCELIN and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -26,6 +26,8 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.text.edits.TextEditGroup;
 
 import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IType;
+import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
@@ -53,6 +55,7 @@ import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
+import org.eclipse.jdt.core.dom.rewrite.ImportRewrite.TypeLocation;
 
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
@@ -61,7 +64,7 @@ import org.eclipse.jdt.internal.corext.dom.OrderedInfixExpression;
 import org.eclipse.jdt.internal.corext.fix.CleanUpConstants;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix.CompilationUnitRewriteOperation;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalModel;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 import org.eclipse.jdt.internal.corext.util.ControlWorkflowMatcher;
 import org.eclipse.jdt.internal.corext.util.ControlWorkflowMatcherRunnable;
@@ -70,7 +73,8 @@ import org.eclipse.jdt.internal.corext.util.NodeMatcher;
 
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
-import org.eclipse.jdt.ui.text.java.IProblemLocation;
+
+import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
 
 /**
  * A fix that replaces a plain comparator instance by a lambda expression passed to a <code>Comparator.comparing()</code> method:
@@ -479,12 +483,12 @@ public class ComparingOnCriteriaCleanUp extends AbstractMultiFix {
 	}
 
 	@Override
-	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocation problem) {
+	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocationCore problem) {
 		return false;
 	}
 
 	@Override
-	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocation[] problems) throws CoreException {
+	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocationCore[] problems) throws CoreException {
 		return null;
 	}
 
@@ -507,7 +511,7 @@ public class ComparingOnCriteriaCleanUp extends AbstractMultiFix {
 		}
 
 		@Override
-		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModel linkedModel) throws CoreException {
+		public void rewriteASTInternal(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
 			AST ast= cuRewrite.getRoot().getAST();
 			ImportRewrite importRewrite= cuRewrite.getImportRewrite();
@@ -571,11 +575,37 @@ public class ComparingOnCriteriaCleanUp extends AbstractMultiFix {
 				lambdaExpression.parameters().add(newVariableDeclarationFragment);
 			} else {
 				String comparedClassNameText= importRewrite.addImport(type);
+				String importedName= comparedClassNameText;
 
 				SingleVariableDeclaration newSingleVariableDeclaration= ast.newSingleVariableDeclaration();
-				newSingleVariableDeclaration.setType(ast.newSimpleType(ASTNodeFactory.newName(ast, comparedClassNameText)));
+				if (type.isWildcardType()) {
+					ITypeBinding bound= type.getBound();
+					Type boundType= importRewrite.addImport(bound, ast, importRewrite.getDefaultImportRewriteContext(), TypeLocation.TYPE_BOUND);
+					newSingleVariableDeclaration.setType(boundType);
+					if (bound.isLocal()) {
+						importRewrite.removeImport(bound.getQualifiedName());
+					}
+					importedName= bound.getQualifiedName();
+				} else {
+					newSingleVariableDeclaration.setType(ast.newSimpleType(ASTNodeFactory.newName(ast, comparedClassNameText)));
+				}
+
 				newSingleVariableDeclaration.setName((SimpleName) rewrite.createCopyTarget(name));
 				lambdaExpression.parameters().add(newSingleVariableDeclaration);
+				if (type.isLocal()) {
+					importRewrite.removeImport(importedName);
+				} else {
+					try {
+						IType[] cuTypes= importRewrite.getCompilationUnit().getTypes();
+						for (IType cuType : cuTypes) {
+							if (importedName.startsWith(cuType.getFullyQualifiedName())) {
+								importRewrite.removeImport(importedName);
+							}
+						}
+					} catch (JavaModelException e) {
+						// should not occur
+					}
+				}
 			}
 
 			FieldAccess newFieldAccess= ast.newFieldAccess();

@@ -2014,7 +2014,6 @@ public class PreferenceConstants {
 	 * </p>
 	 *
 	 * @since 3.1
-	 *
 	 */
 	public final static String EDITOR_JAVADOC_KEYWORD_STRIKETHROUGH= IJavaColorConstants.JAVADOC_KEYWORD + EDITOR_STRIKETHROUGH_SUFFIX;
 
@@ -2656,6 +2655,33 @@ public class PreferenceConstants {
 	public static final String EDITOR_SMART_TAB= "smart_tab"; //$NON-NLS-1$
 
 	/**
+	 * A named preference that controls whether a new Java Application launch configuration name be fully qualified or not.
+	 * <p>
+	 * Value is of type <code>Boolean</code>.
+	 * </p>
+	 * @since 3.29
+	 */
+	public final static String LAUNCH_NAME_FULLY_QUALIFIED_FOR_APPLICATION= "launch_name_fully_qualified_for_application"; //$NON-NLS-1$
+
+	/**
+	 * A named preference that controls whether a new Java Applet launch configuration name be fully qualified or not.
+	 * <p>
+	 * Value is of type <code>Boolean</code>.
+	 * </p>
+	 * @since 3.29
+	 */
+	public final static String LAUNCH_NAME_FULLY_QUALIFIED_FOR_APPLET= "launch_name_fully_qualified_for_applet"; //$NON-NLS-1$
+
+	/**
+	 * A named preference that controls whether new JUnit launch configurations names are fully qualified or not.
+	 * <p>
+	 * Value is of type <code>Boolean</code>.
+	 * </p>
+	 * @since 3.29
+	 */
+	public final static String LAUNCH_NAME_FULLY_QUALIFIED_FOR_JUNIT_TEST= "launch_name_fully_qualified_for_junit_test"; //$NON-NLS-1$
+
+	/**
 	 * A named preference that controls whether Java comments should be
 	 * spell checked.
 	 * <p>
@@ -2736,7 +2762,7 @@ public class PreferenceConstants {
 	public final static String SPELLING_IGNORE_SINGLE_LETTERS= "spelling_ignore_single_letters"; //$NON-NLS-1$
 
 	/**
-	 * A named preference that controls whether '&' in
+	 * A named preference that controls whether '&amp;' in
 	 * Java properties files are ignored.
 	 * <p>
 	 * Value is of type <code>Boolean</code>.
@@ -2963,7 +2989,7 @@ public class PreferenceConstants {
 	 * A named preference that controls whether completion processors should be called from the non-UI thread,
 	 * when they declare ability to work from non-UI Thread.
 	 * <p>Completion processors can declare whether they
-	 * require UI Thread or not in their extension description, see {@link org.eclipse.jdt.internal.ui.text.java.CompletionProposalComputerDescriptor#requiresUIThread()}.</p>
+	 * require UI Thread or not in their extension description, see {@link org.eclipse.jdt.internal.ui.text.java.CompletionProposalComputerRegistry#computingCompletionRequiresUIThread()}.</p>
 	 * <p>Value is of type <code>Boolean</code></p>
 	 *
 	 * @since 3.21
@@ -3288,7 +3314,6 @@ public class PreferenceConstants {
 	 * <p>
 	 * Value is of type <code>Boolean</code>.
 	 * </p>
-	 *
 	 */
 	public static final String BROWSING_LINK_VIEW_TO_EDITOR= "org.eclipse.jdt.ui.browsing.linktoeditor"; //$NON-NLS-1$
 
@@ -3366,7 +3391,7 @@ public class PreferenceConstants {
 	 * <li>categoryId is the <code>String</code> holding the category ID</li>
 	 * <li>cycleState is an <code>int</code> which specifies the rank and the enablement:
 	 * <ul>
-	 *		<li>enabled= cycleState < 65535</li>
+	 *		<li>enabled= cycleState &lt; 65535</li>
 	 *		<li>rank= enabled ? cycleState : cycleState - 65535)</li>
 	 * </ul></li>
 	 * </ul>
@@ -4044,6 +4069,11 @@ public class PreferenceConstants {
 		store.setDefault(PreferenceConstants.APPEARANCE_MEMBER_SORT_ORDER, "T,SF,SI,SM,F,I,C,M"); //$NON-NLS-1$
 		store.setDefault(PreferenceConstants.APPEARANCE_VISIBILITY_SORT_ORDER, "B,V,R,D"); //$NON-NLS-1$
 		store.setDefault(PreferenceConstants.APPEARANCE_ENABLE_VISIBILITY_SORT_ORDER, false);
+
+		// LaunchingPreferencePage
+		store.setDefault(PreferenceConstants.LAUNCH_NAME_FULLY_QUALIFIED_FOR_APPLICATION, false);
+		store.setDefault(PreferenceConstants.LAUNCH_NAME_FULLY_QUALIFIED_FOR_APPLET, false);
+		store.setDefault(PreferenceConstants.LAUNCH_NAME_FULLY_QUALIFIED_FOR_JUNIT_TEST, false);
 
 		// JavaEditorPreferencePage
 		store.setDefault(PreferenceConstants.EDITOR_MATCHING_BRACKETS, true);

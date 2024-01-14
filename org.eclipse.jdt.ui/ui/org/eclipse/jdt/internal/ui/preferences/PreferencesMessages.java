@@ -845,6 +845,8 @@ public final class PreferencesMessages extends NLS {
 	public static String ComplianceConfigurationBlock_version_17;
 	public static String ComplianceConfigurationBlock_version_18;
 	public static String ComplianceConfigurationBlock_version_19;
+	public static String ComplianceConfigurationBlock_version_20;
+	public static String ComplianceConfigurationBlock_version_21;
 	public static String ComplianceConfigurationBlock_versionCLDC11;
 	public static String ComplianceConfigurationBlock_src_greater_compliance;
 	public static String ComplianceConfigurationBlock_classfile_greater_compliance;
@@ -914,4 +916,10 @@ public final class PreferencesMessages extends NLS {
 	public static String JavaEditorCodeMiningConfigurationBlock_showReferences_onMethods_label;
 	public static String JavaEditorCodeMiningConfigurationBlock_showImplementations_label;
 	public static String JavaEditorCodeMiningConfigurationBlock_showParameterNames_label;
+
+	public static String JavaLaunchingConfigurationBlock_application_name_fully_qualified_label;
+	public static String JavaLaunchingConfigurationBlock_applet_name_fully_qualified_label;
+	public static String JavaLaunchingConfigurationBlock_junit_name_fully_qualified_label;
+	public static String JavaLaunchingConfigurationBlock_name_description;
+
 }

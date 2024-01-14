@@ -24,8 +24,8 @@ import java.util.Map.Entry;
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.core.runtime.SubProgressMonitor;
 
 import org.eclipse.core.resources.IResource;
 
@@ -73,6 +73,8 @@ import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
 import org.eclipse.jdt.internal.corext.refactoring.util.TextChangeManager;
 import org.eclipse.jdt.internal.corext.util.Messages;
 import org.eclipse.jdt.internal.corext.util.SearchUtils;
+
+import org.eclipse.jdt.internal.ui.util.Progress;
 
 public class RenameAnalyzeUtil {
 
@@ -181,19 +183,19 @@ public class RenameAnalyzeUtil {
 		return null;
 	}
 
-	public static ICompilationUnit[] createNewWorkingCopies(ICompilationUnit[] compilationUnitsToModify, TextChangeManager manager, WorkingCopyOwner owner, SubProgressMonitor pm) throws CoreException {
+	public static ICompilationUnit[] createNewWorkingCopies(ICompilationUnit[] compilationUnitsToModify, TextChangeManager manager, WorkingCopyOwner owner, IProgressMonitor pm) throws CoreException {
 		pm.beginTask("", compilationUnitsToModify.length); //$NON-NLS-1$
 		ICompilationUnit[] newWorkingCopies= new ICompilationUnit[compilationUnitsToModify.length];
 		for (int i= 0; i < compilationUnitsToModify.length; i++) {
 			ICompilationUnit cu= compilationUnitsToModify[i];
-			newWorkingCopies[i]= createNewWorkingCopy(cu, manager, owner, new SubProgressMonitor(pm, 1));
+			newWorkingCopies[i]= createNewWorkingCopy(cu, manager, owner, Progress.subMonitor(pm, 1));
 		}
 		pm.done();
 		return newWorkingCopies;
 	}
 
 	public static ICompilationUnit createNewWorkingCopy(ICompilationUnit cu, TextChangeManager manager,
-			WorkingCopyOwner owner, SubProgressMonitor pm) throws CoreException {
+			WorkingCopyOwner owner, IProgressMonitor pm) throws CoreException {
 		ICompilationUnit newWc= cu.getWorkingCopy(owner, null);
 		String previewContent= manager.get(cu).getPreviewContent(new NullProgressMonitor());
 		newWc.getBuffer().setContents(previewContent);
@@ -307,8 +309,6 @@ public class RenameAnalyzeUtil {
 
 	/**
 	 *
-	 * @param change
-	 * @param oldMatches
 	 * @return Map &lt;Integer updatedOffset, SearchMatch oldMatch&gt;
 	 */
 	private static Map<Integer, SearchMatch> getUpdatedChangeOffsets(TextChange change, SearchMatch[] oldMatches) {
@@ -325,7 +325,6 @@ public class RenameAnalyzeUtil {
 
 	/**
 	 *
-	 * @param change
 	 * @return Map &lt;Integer oldOffset, Integer updatedOffset&gt;
 	 */
 	private static Map<Integer, Integer> getEditChangeOffsetUpdates(TextChange change) {
@@ -407,7 +406,6 @@ public class RenameAnalyzeUtil {
 	 *
 	 * @noreference This method is not intended to be referenced by clients.
 	 */
-	@SuppressWarnings("javadoc")
 	public static RefactoringStatus analyzeCompactConstructorLocalRenames(LocalAnalyzePackage[] analyzePackages, TextChange cuChange, CompilationUnit oldCUNode, boolean recovery) throws CoreException {
 		return analyzeLocalRenames(analyzePackages, cuChange, oldCUNode, true, recovery);
 	}

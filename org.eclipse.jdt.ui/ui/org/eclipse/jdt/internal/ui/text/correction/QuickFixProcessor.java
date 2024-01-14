@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 
+import org.eclipse.swt.graphics.Image;
+
 import org.eclipse.core.runtime.CoreException;
 
 import org.eclipse.jdt.core.IBuffer;
@@ -34,8 +36,18 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.MemberValuePair;
+import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Name;
+import org.eclipse.jdt.core.dom.QualifiedName;
+import org.eclipse.jdt.core.dom.SingleMemberAnnotation;
 
+import org.eclipse.jdt.internal.corext.dom.Bindings;
+import org.eclipse.jdt.internal.corext.fix.FixMessages;
+import org.eclipse.jdt.internal.corext.fix.IProposableFix;
+import org.eclipse.jdt.internal.corext.fix.InlineMethodFixCore;
 import org.eclipse.jdt.internal.corext.fix.NullAnnotationsRewriteOperations.ChangeKind;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 
@@ -45,11 +57,11 @@ import org.eclipse.jdt.ui.text.java.IProblemLocation;
 import org.eclipse.jdt.ui.text.java.IQuickFixProcessor;
 import org.eclipse.jdt.ui.text.java.correction.ICommandAccess;
 
+import org.eclipse.jdt.internal.ui.JavaPluginImages;
+import org.eclipse.jdt.internal.ui.text.correction.proposals.FixCorrectionProposal;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.ReplaceCorrectionProposal;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.TaskMarkerProposal;
 
-/**
-  */
 public class QuickFixProcessor implements IQuickFixProcessor {
 
 
@@ -229,6 +241,7 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 			case IProblem.OverridingTerminallyDeprecatedSinceVersionMethod:
 			case IProblem.MethodMissingDeprecatedAnnotation:
 			case IProblem.TypeMissingDeprecatedAnnotation:
+			case IProblem.UsingDeprecatedMethod:
 			case IProblem.MissingOverrideAnnotation:
 			case IProblem.MissingOverrideAnnotationForInterfaceMethodImplementation:
 			case IProblem.MethodMustOverride:
@@ -324,9 +337,12 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 			case IProblem.DanglingReference:
 			case IProblem.UnclosedCloseable:
 			case IProblem.PotentiallyUnclosedCloseable:
+			case IProblem.EnhancedSwitchMissingDefault:
+			case IProblem.IllegalTotalPatternWithDefault:
+			case IProblem.IllegalFallthroughToPattern:
 				return true;
 			default:
-				return SuppressWarningsSubProcessor.hasSuppressWarningsProposal(cu.getJavaProject(), problemId)
+				return SuppressWarningsSubProcessorCore.hasSuppressWarningsProposal(cu.getJavaProject(), problemId)
 						|| ConfigureProblemSeveritySubProcessor.hasConfigureProblemSeverityProposal(problemId);
 		}
 	}
@@ -355,7 +371,7 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 
 		HashSet<Integer> handledProblems= new HashSet<>(locations.length);
 		ArrayList<ICommandAccess> resultingCollections= new ArrayList<>();
-		for (IProblemLocation curr : locations) {
+		for (IProblemLocationCore curr : locations) {
 			Integer id= curr.getProblemId();
 			if (handledProblems.add(id)) {
 				process(context, curr, resultingCollections);
@@ -364,7 +380,7 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 		return resultingCollections.toArray(new IJavaCompletionProposal[resultingCollections.size()]);
 	}
 
-	private void process(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) throws CoreException {
+	private void process(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) throws CoreException {
 		int id= problem.getProblemId();
 		if (id == 0) { // no proposals for none-problem locations
 			return;
@@ -402,8 +418,22 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 				break;
 			case IProblem.UndefinedField:
 			case IProblem.UndefinedName:
-			case IProblem.UnresolvedVariable:
 				UnresolvedElementsSubProcessor.getVariableProposals(context, problem, null, proposals);
+				break;
+			case IProblem.UnresolvedVariable:
+				CompilationUnit astRoot= context.getASTRoot();
+				ASTNode selectedNode= problem.getCoveredNode(astRoot);
+				if (selectedNode != null) {
+					// type that defines the variable
+					ITypeBinding declaringTypeBinding= Bindings.getBindingOfParentTypeContext(selectedNode);
+					if (declaringTypeBinding == null && selectedNode.getParent() instanceof QualifiedName &&
+								(selectedNode.getParent().getParent() instanceof SingleMemberAnnotation ||
+										selectedNode.getParent().getParent() instanceof MemberValuePair)) {
+						UnresolvedElementsSubProcessor.getTypeProposals(context, problem, proposals);
+					} else {
+						UnresolvedElementsSubProcessor.getVariableProposals(context, problem, null, proposals);
+					}
+				}
 				break;
 			case IProblem.UninitializedBlankFinalField:
 				UnInitializedFinalFieldSubProcessor.getProposals(context, problem, proposals);
@@ -743,6 +773,21 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 			case IProblem.OverridingTerminallyDeprecatedSinceVersionMethod:
 				ModifierCorrectionSubProcessor.addOverridingDeprecatedMethodProposal(context, problem, proposals);
 				break;
+			case IProblem.UsingDeprecatedMethod:
+				ASTNode deprecatedMethodNode= context.getCoveredNode();
+				if (!(deprecatedMethodNode instanceof MethodInvocation)) {
+					deprecatedMethodNode= deprecatedMethodNode.getParent();
+				}
+				if (deprecatedMethodNode instanceof MethodInvocation methodInvocation
+						&& QuickAssistProcessorUtil.isDeprecatedMethodCallWithReplacement(methodInvocation)) {
+					IProposableFix fix= InlineMethodFixCore.create(FixMessages.InlineDeprecatedMethod_msg,
+							(CompilationUnit)methodInvocation.getRoot(), methodInvocation);
+					if (fix != null) {
+						Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
+						proposals.add(new FixCorrectionProposal(fix, null, IProposalRelevance.INLINE_DEPRECATED_METHOD, image, context));
+					}
+				}
+				break;
 			case IProblem.IsClassPathCorrect:
 			case IProblem.IsClassPathCorrectWithReferencingType:
 				ReorgCorrectionsSubProcessor.getIncorrectBuildPathProposals(context, problem, proposals);
@@ -782,7 +827,14 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 				break;
 			case IProblem.MissingDefaultCase:
 			case IProblem.SwitchExpressionsYieldMissingDefaultCase:
+			case IProblem.EnhancedSwitchMissingDefault:
 				LocalCorrectionsSubProcessor.addMissingDefaultCaseProposal(context, problem, proposals);
+				break;
+			case IProblem.IllegalTotalPatternWithDefault:
+				LocalCorrectionsSubProcessor.removeDefaultCaseProposal(context, problem, proposals);
+				break;
+			case IProblem.IllegalFallthroughToPattern:
+				LocalCorrectionsSubProcessor.addFallThroughProposals(context, problem, proposals);
 				break;
 			case IProblem.MissingEnumConstantCaseDespiteDefault:
 				LocalCorrectionsSubProcessor.getMissingEnumConstantCaseProposals(context, problem, proposals);
@@ -821,6 +873,7 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 				//$FALL-THROUGH$
 			case IProblem.RequiredNonNullButProvidedNull:
 			case IProblem.RequiredNonNullButProvidedPotentialNull:
+			case IProblem.NullityUncheckedTypeAnnotation:
 			case IProblem.ParameterLackingNonNullAnnotation:
 			case IProblem.ParameterLackingNullableAnnotation:
 				NullAnnotationsCorrectionProcessor.addReturnAndArgumentTypeProposal(context, problem, ChangeKind.LOCAL, proposals);

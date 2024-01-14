@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -62,6 +62,7 @@ import org.eclipse.jface.viewers.ViewerFilter;
 
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.part.PageBook;
+import org.eclipse.ui.views.WorkbenchViewerSetup;
 
 import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.ILaunchConfiguration;
@@ -243,6 +244,7 @@ public class TestViewer {
 
 		fTreeViewer= new TreeViewer(fViewerbook, SWT.V_SCROLL | SWT.SINGLE);
 		fTreeViewer.setUseHashlookup(true);
+		WorkbenchViewerSetup.setupViewer(fTreeViewer);
 		fTreeContentProvider= new TestSessionTreeContentProvider();
 		fTreeViewer.setContentProvider(fTreeContentProvider);
 		fTreeLabelProvider= new TestSessionLabelProvider(fTestRunnerPart, TestRunnerViewPart.LAYOUT_HIERARCHICAL);
@@ -446,9 +448,17 @@ public class TestViewer {
 		String testName= testSuite.getTestName();
 		ITestElement[] children= testSuite.getChildren();
 
-		if (testName.startsWith("[") && testName.endsWith("]") && children.length > 0 && children[0] instanceof TestCaseElement) { //$NON-NLS-1$ //$NON-NLS-2$
+		if (children.length > 0 && children[0] instanceof TestCaseElement tce && tce.isDynamicTest()) {
 			// a group of parameterized tests
 			return new OpenTestAction(fTestRunnerPart, (TestCaseElement) children[0], null);
+		}
+		if (children.length == 0) {
+			// check if we have applied the workaround for: https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/945
+			TestCaseElement child= testSuite.getSingleDynamicChild();
+			if (child != null) {
+				// a parameterized test that ran only one test
+				return new OpenTestAction(fTestRunnerPart, child, null);
+			}
 		}
 
 		int index= testName.indexOf('(');
@@ -463,11 +473,11 @@ public class TestViewer {
 
 	private void handleSelected() {
 		IStructuredSelection selection= (IStructuredSelection) fSelectionProvider.getSelection();
-		TestElement testElement= null;
-		if (selection.size() == 1) {
-			testElement= (TestElement) selection.getFirstElement();
+		if (selection.size() == 1 && selection.getFirstElement() instanceof TestElement testElement) {
+			fTestRunnerPart.handleTestSelected(testElement);
+		} else {
+			fTestRunnerPart.handleTestSelected(null);
 		}
-		fTestRunnerPart.handleTestSelected(testElement);
 	}
 
 	public synchronized void setShowTime(boolean showTime) {

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -139,8 +139,6 @@ import org.eclipse.jdt.internal.ui.text.correction.proposals.FixCorrectionPropos
 import org.eclipse.jdt.internal.ui.text.correction.proposals.LinkedCorrectionProposal;
 import org.eclipse.jdt.internal.ui.util.ASTHelper;
 
-/**
- */
 public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 	public AdvancedQuickAssistProcessor() {
 		super();
@@ -1817,6 +1815,24 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		IfStatement ifStatement= (IfStatement) node;
 		Statement thenStatement= getSingleStatement(ifStatement.getThenStatement());
 		Statement elseStatement= getSingleStatement(ifStatement.getElseStatement());
+		ReturnStatement followingReturn= null;
+		if (ifStatement.getElseStatement() == null && thenStatement instanceof ReturnStatement) {
+			ASTNode parent= ifStatement.getParent();
+			if (parent instanceof Block block) {
+				List<Statement> statements= block.statements();
+				int i= 0;
+				for (Statement statement : statements) {
+					if (statement.equals(ifStatement)) {
+						break;
+					}
+					++i;
+				}
+				if (++i < statements.size() && statements.get(i) instanceof ReturnStatement) {
+					followingReturn= (ReturnStatement)statements.get(i);
+					elseStatement= followingReturn;
+				}
+			}
+		}
 		if (thenStatement == null || elseStatement == null) {
 			return false;
 		}
@@ -1868,10 +1884,18 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		sourceRangeComputer.addTightSourceNode(ifStatement);
 		rewrite.setTargetSourceRangeComputer(sourceRangeComputer);
 
-		String label= CorrectionMessages.AdvancedQuickAssistProcessor_replaceIfWithConditional;
+		String label= ifStatement.getElseStatement() == null ? CorrectionMessages.AdvancedQuickAssistProcessor_replaceIfNoElseWithConditional : CorrectionMessages.AdvancedQuickAssistProcessor_replaceIfWithConditional;
 		Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
 		ASTRewriteCorrectionProposal proposal= new ASTRewriteCorrectionProposal(label, context.getCompilationUnit(), rewrite, IProposalRelevance.REPLACE_IF_ELSE_WITH_CONDITIONAL, image);
 
+		// don't allow different boxed expressions to be merged into one conditional
+		if (thenExpression.resolveBoxing() && elseExpression.resolveBoxing()) {
+			ITypeBinding thenTypeBinding= thenExpression.resolveTypeBinding();
+			ITypeBinding elseTypeBinding= elseExpression.resolveTypeBinding();
+			if (!thenTypeBinding.isEqualTo(elseTypeBinding)) {
+				return false;
+			}
+		}
 
 		// prepare conditional expression
 		ConditionalExpression conditionalExpression= ast.newConditionalExpression();
@@ -1913,6 +1937,12 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 			ExpressionStatement expressionStatement= ast.newExpressionStatement(assignment);
 			rewrite.replace(ifStatement, expressionStatement, null);
+		}
+
+		// if we have replaced if (a == b) {return x;} return y; with conditional, we need to remove
+		// return y; statement
+		if (followingReturn != null) {
+			rewrite.remove(followingReturn, null);
 		}
 
 		// add correction proposal

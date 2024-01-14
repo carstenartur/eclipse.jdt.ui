@@ -15,7 +15,6 @@ package org.eclipse.jdt.internal.corext.refactoring.rename;
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.SubProgressMonitor;
 
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 import org.eclipse.ltk.core.refactoring.RefactoringStatusContext;
@@ -38,6 +37,8 @@ import org.eclipse.jdt.internal.corext.util.JdtFlags;
 import org.eclipse.jdt.internal.corext.util.Messages;
 import org.eclipse.jdt.internal.corext.util.MethodOverrideTester;
 
+import org.eclipse.jdt.internal.ui.util.Progress;
+
 public class MethodChecks {
 
 	//no instances
@@ -50,7 +51,6 @@ public class MethodChecks {
 	 *
 	 * @param method a method
 	 * @return <code>true</code> iff the method could a virtual method
-	 * @throws JavaModelException
 	 */
 	public static boolean isVirtual(IMethod method) throws JavaModelException {
 		if (method.isConstructor())
@@ -104,7 +104,7 @@ public class MethodChecks {
 
 	public static IMethod isDeclaredInInterface(IMethod method, ITypeHierarchy hierarchy, IProgressMonitor monitor) throws JavaModelException {
 		Assert.isTrue(isVirtual(method));
-		IProgressMonitor subMonitor= new SubProgressMonitor(monitor, 1);
+		IProgressMonitor subMonitor= Progress.subMonitor(monitor, 1);
 		try {
 			IType[] classes= hierarchy.getAllClasses();
 			subMonitor.beginTask("", classes.length); //$NON-NLS-1$
@@ -113,7 +113,7 @@ public class MethodChecks {
 				if (clazz.equals(hierarchy.getType()))
 					superinterfaces= hierarchy.getAllSuperInterfaces(clazz);
 				else
-					superinterfaces= clazz.newSupertypeHierarchy(new SubProgressMonitor(subMonitor, 1)).getAllSuperInterfaces(clazz);
+					superinterfaces= clazz.newSupertypeHierarchy(Progress.subMonitor(subMonitor, 1)).getAllSuperInterfaces(clazz);
 				for (IType superinterface : superinterfaces) {
 					IMethod found= Checks.findSimilarMethod(method, superinterface);
 					if (found != null && !found.equals(method))
@@ -145,7 +145,6 @@ public class MethodChecks {
 	 * @param typeHierarchy a ITypeHierarchy of the declaring type of the method. May be null
 	 * @param monitor an IProgressMonitor
 	 * @return the topmost method of the ripple, or null if none
-	 * @throws JavaModelException
 	 */
 	public static IMethod getTopmostMethod(IMethod method, ITypeHierarchy typeHierarchy, IProgressMonitor monitor) throws JavaModelException {
 

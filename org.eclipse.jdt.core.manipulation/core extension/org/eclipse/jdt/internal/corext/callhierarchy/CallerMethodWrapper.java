@@ -94,7 +94,7 @@ public class CallerMethodWrapper extends MethodWrapper {
 
 	/**
 	 * @return The result of the search for children
-	 * @see org.eclipse.jdt.internal.ui.callhierarchy.MethodWrapper#findChildren(org.eclipse.core.runtime.IProgressMonitor)
+	 * @see org.eclipse.jdt.internal.corext.callhierarchy.MethodWrapper#findChildren(IProgressMonitor)
 	 */
 	@Override
 	protected Map<String, MethodCall> findChildren(IProgressMonitor progressMonitor) {
@@ -163,7 +163,7 @@ public class CallerMethodWrapper extends MethodWrapper {
 	}
 
 	private IJavaSearchScope getAccurateSearchScope(IJavaSearchScope defaultSearchScope, IMember member) throws JavaModelException {
-		if (! JdtFlags.isPrivate(member))
+		if (!JdtFlags.isPrivate(member) || isRecordComponent(member))
 			return defaultSearchScope;
 
 		if (member.getCompilationUnit() != null) {
@@ -213,4 +213,7 @@ public class CallerMethodWrapper extends MethodWrapper {
 		return fIsExpandWithConstructorsSet;
 	}
 
+	private static boolean isRecordComponent(IMember member) throws JavaModelException {
+		return member.getElementType() == IJavaElement.FIELD && member instanceof IField f && f.isRecordComponent();
+	}
 }

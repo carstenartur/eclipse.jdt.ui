@@ -112,9 +112,6 @@ public class RenameNonPrivateFieldTests extends GenericRefactoringTest {
 
 	/**
 	 * Configure options by setting instance fields to non-default values.
-	 * @param fieldName
-	 * @param newFieldName
-	 * @throws Exception
 	 */
 	private void helper2(String fieldName, String newFieldName) throws Exception {
 		helper2(fieldName, newFieldName, false);
@@ -512,7 +509,9 @@ public class RenameNonPrivateFieldTests extends GenericRefactoringTest {
 	private String getExpectedFileConent(String propertyName) throws IOException {
 		String fileName= getOutputTestFileName(propertyName);
 		fileName= fileName.substring(0, fileName.length() - ".java".length()) + ".properties";
-		return getContents(getFileInputStream(fileName));
+		try (InputStream fileInputStream= getFileInputStream(fileName)) {
+			return getContents(fileInputStream);
+		}
 	}
 
 	private IFile createPropertiesFromTestFile(String propertyName) throws IOException, CoreException {
@@ -521,8 +520,9 @@ public class RenameNonPrivateFieldTests extends GenericRefactoringTest {
 
 		String fileName= getInputTestFileName(propertyName);
 		fileName= fileName.substring(0, fileName.length() - ".java".length()) + ".properties";
-		InputStream inputStream= getFileInputStream(fileName);
-		file.create(inputStream, true, null);
+		try (InputStream inputStream= getFileInputStream(fileName)) {
+			file.create(inputStream, true, null);
+		}
 
 		return file;
 	}

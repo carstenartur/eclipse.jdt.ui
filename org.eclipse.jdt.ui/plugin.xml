@@ -330,6 +330,7 @@
 			requiresUIThread="false">
 			<partition type="__dftl_partition_content_type"/>
 			<partition type="__java_string"/>
+			<partition type="__java_multiline_string"/>
 		</javaCompletionProposalComputer>
 	</extension>
 	<extension
@@ -342,6 +343,7 @@
 			requiresUIThread="false">
 			<partition type="__dftl_partition_content_type"/>
 			<partition type="__java_string"/>
+			<partition type="__java_multiline_string"/>
 		</javaCompletionProposalComputer>
 	</extension>
 	<extension
@@ -354,6 +356,7 @@
 			requiresUIThread="false">
 			<partition type="__dftl_partition_content_type"/>
 			<partition type="__java_string"/>
+			<partition type="__java_multiline_string"/>
 		</javaCompletionProposalComputer>
 	</extension>
 	<!-- javadoc completions -->
@@ -432,6 +435,7 @@
             requiresUIThread="false">
             <partition type="__dftl_partition_content_type"/>
 			<partition type="__java_string"/>
+			<partition type="__java_multiline_string"/>
       </javaCompletionProposalComputer>
 	</extension>
 	<extension
@@ -444,6 +448,7 @@
 			<partition type="__java_singleline_comment"/>
 			<partition type="__java_multiline_comment"/>
 			<partition type="__java_string"/>
+			<partition type="__java_multiline_string"/>
 			<partition type="__java_javadoc"/>
 		</javaCompletionProposalComputer>
 	</extension>
@@ -563,6 +568,12 @@
             class="org.eclipse.jdt.internal.ui.text.java.hover.JavaSourceHover"
             id="org.eclipse.jdt.ui.JavaSourceHover">
       </hover>
+       <hover
+            label="%constantHover"
+            description="%constantHoverDescription"
+            class="org.eclipse.jdt.internal.ui.text.java.hover.JavaConstantHover"
+            id="org.eclipse.jdt.ui.JavaConstantHover">
+      </hover>
    </extension>
    <extension
          point="org.eclipse.ui.perspectives">
@@ -610,22 +621,67 @@
          <showInPart id="org.eclipse.jdt.ui.PackageExplorer"/>
       </perspectiveExtension>
 
-      <perspectiveExtension targetID="org.eclipse.jdt.ui.JavaPerspective">
+      <perspectiveExtension
+            editorOnboardingImage="$nl$/icons/full/onboarding_jperspective.png"
+            editorOnboardingText="%perspectiveExtension.editorOnboardingText"
+            targetID="org.eclipse.jdt.ui.JavaPerspective">
          <showInPart id="org.eclipse.jdt.ui.PackageExplorer"/>
          <showInPart id="org.eclipse.team.ui.GenericHistoryView"/>
          <showInPart id="org.eclipse.ui.navigator.ProjectExplorer"/>
+         <editorOnboardingCommand
+               id="org.eclipse.ui.window.quickAccess">
+         </editorOnboardingCommand>
+         <editorOnboardingCommand
+               id="org.eclipse.ui.window.showKeyAssist">
+         </editorOnboardingCommand>
+         <editorOnboardingCommand
+               id="org.eclipse.ui.newWizard">
+         </editorOnboardingCommand>
+         <editorOnboardingCommand
+               id="org.eclipse.jdt.ui.navigate.open.type">
+         </editorOnboardingCommand>         
       </perspectiveExtension>
 
-      <perspectiveExtension targetID="org.eclipse.jdt.ui.JavaBrowsingPerspective">
+      <perspectiveExtension 
+            editorOnboardingImage="$nl$/icons/full/onboarding_browse_persp.png"
+            editorOnboardingText="%perspectiveExtension.editorOnboardingText"
+			targetID="org.eclipse.jdt.ui.JavaBrowsingPerspective">
          <showInPart id="org.eclipse.jdt.ui.PackageExplorer"/>
          <showInPart id="org.eclipse.team.ui.GenericHistoryView"/>
          <showInPart id="org.eclipse.ui.navigator.ProjectExplorer"/>
+         <editorOnboardingCommand
+               id="org.eclipse.ui.window.quickAccess">
+         </editorOnboardingCommand>
+         <editorOnboardingCommand
+               id="org.eclipse.ui.window.showKeyAssist">
+         </editorOnboardingCommand>
+         <editorOnboardingCommand
+               id="org.eclipse.ui.newWizard">
+         </editorOnboardingCommand>
+         <editorOnboardingCommand
+               id="org.eclipse.jdt.ui.navigate.open.type">
+         </editorOnboardingCommand>     
       </perspectiveExtension>
 
-      <perspectiveExtension targetID="org.eclipse.jdt.ui.JavaHierarchyPerspective">
+      <perspectiveExtension
+            editorOnboardingImage="$nl$/icons/full/onboarding_hierch_persp.png"
+            editorOnboardingText="%perspectiveExtension.editorOnboardingText"
+            targetID="org.eclipse.jdt.ui.JavaHierarchyPerspective">
          <showInPart id="org.eclipse.jdt.ui.PackageExplorer"/>
          <showInPart id="org.eclipse.team.ui.GenericHistoryView"/>
          <showInPart id="org.eclipse.ui.navigator.ProjectExplorer"/>
+         <editorOnboardingCommand
+               id="org.eclipse.ui.window.quickAccess">
+         </editorOnboardingCommand>
+         <editorOnboardingCommand
+               id="org.eclipse.ui.window.showKeyAssist">
+         </editorOnboardingCommand>
+         <editorOnboardingCommand
+               id="org.eclipse.ui.newWizard">
+         </editorOnboardingCommand>
+         <editorOnboardingCommand
+               id="org.eclipse.jdt.ui.navigate.open.type">
+         </editorOnboardingCommand>              
       </perspectiveExtension>
    </extension>
 
@@ -1551,6 +1607,12 @@
             targetId="org.eclipse.jdt.ui.javaCode">
       </hyperlinkDetector>
       <hyperlinkDetector
+	        class="org.eclipse.jdt.internal.ui.javaeditor.OpenCallHierarchyHyperlinkDetector"
+            id="org.eclipse.jdt.internal.ui.javaeditor.OpenCallHierarchyHyperlinkDetector"
+            name="%OpenCallHierarchyHyperlinkDetector"
+            targetId="org.eclipse.jdt.ui.javaCode">
+      </hyperlinkDetector>
+      <hyperlinkDetector
             class="org.eclipse.jdt.internal.ui.propertiesfileeditor.PropertyKeyHyperlinkDetector"
             id="org.eclipse.jdt.internal.ui.propertiesfileeditor.PropertyKeyHyperlinkDetector"
             name="%PropertyKeyHyperlinkDetector"
@@ -1642,6 +1704,13 @@
             class="org.eclipse.jdt.internal.ui.preferences.PropertiesFileEditorPreferencePage"
             id="org.eclipse.jdt.ui.preferences.PropertiesFileEditorPreferencePage">
             <keywordReference id="org.eclipse.jdt.ui.propertieseditor"/>
+      </page>
+      <page
+            name="%launchingPrefName"
+            category="org.eclipse.jdt.ui.preferences.JavaBasePreferencePage"
+            class="org.eclipse.jdt.internal.ui.preferences.LaunchingPreferencePage"
+            id="org.eclipse.jdt.ui.preferences.LaunchingPreferencePage">
+            <keywordReference id="org.eclipse.jdt.ui.launching"/>
       </page>
 
       <page
@@ -1847,6 +1916,9 @@
       <keyword
             label="%preferenceKeywords.propertieseditor"
             id="org.eclipse.jdt.ui.propertieseditor"/>
+      <keyword
+            label="%preferenceKeywords.launching"
+            id="org.eclipse.jdt.ui.launching"/>
       <keyword
             label="%preferenceKeywords.folding"
             id="org.eclipse.jdt.ui.folding"/>
@@ -2758,6 +2830,13 @@
                retarget="true"
                menubarPath="org.eclipse.jdt.ui.refactoring.menu/codingGroup2"
                id="org.eclipse.jdt.ui.actions.IntroduceIndirection">
+         </action>
+          <action
+               definitionId="org.eclipse.jdt.ui.edit.text.java.make.static"
+               label="%Refactoring.makeStaticAction.label"
+               retarget="true"
+               menubarPath="org.eclipse.jdt.ui.refactoring.menu/codingGroup2"
+               id="org.eclipse.jdt.ui.actions.makeStatic">
          </action>
 
 <!-- type group 2 -->
@@ -4096,6 +4175,12 @@
             categoryId="org.eclipse.jdt.ui.category.refactoring"
             id="org.eclipse.jdt.ui.edit.text.java.introduce.indirection">
       </command>
+       <command
+            name="%ActionDefinition.makeStatic.name"
+            description="%ActionDefinition.makeStatic.description"
+            categoryId="org.eclipse.jdt.ui.category.refactoring"
+            id="org.eclipse.jdt.ui.edit.text.java.make.static">
+      </command>
       <command
             name="%ActionDefinition.introduceParameter.name"
             description="%ActionDefinition.introduceParameter.description"
@@ -4726,6 +4811,11 @@
             commandId="org.eclipse.jdt.ui.edit.text.java.rename.element"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
       <key
+            sequence="M2+M3+R"
+            contextId="org.eclipse.jdt.ui.javaEditorScope"
+            commandId="org.eclipse.jdt.ui.edit.text.java.rename.element"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+      <key
             platform="carbon"
             sequence="M2+M3+R"
             commandId=""
@@ -4755,6 +4845,7 @@
             sequence="M2+M3+C"
             commandId="org.eclipse.jdt.ui.edit.text.java.modify.method.parameters"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+            
       <key
             platform="carbon"
             sequence="M2+M3+C"
@@ -4765,7 +4856,22 @@
             sequence="COMMAND+ALT+C"
             commandId="org.eclipse.jdt.ui.edit.text.java.modify.method.parameters"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
-
+            
+      <key
+            sequence="M2+M3+K"
+            commandId="org.eclipse.jdt.ui.edit.text.java.make.static"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+      <key
+            platform="carbon"
+            sequence="M2+M3+K"
+            commandId=""
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+      <key
+            platform="carbon"
+            sequence="COMMAND+ALT+K"
+            commandId="org.eclipse.jdt.ui.edit.text.java.make.static"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+            
       <key
             sequence="M2+M3+I"
             commandId="org.eclipse.jdt.ui.edit.text.java.inline"
@@ -4902,6 +5008,13 @@
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
       <key
             sequence="M1+M2+T"
+            commandId="org.eclipse.jdt.ui.navigate.open.type"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+      <!-- Forces M1+M2+T to Open Type inside JDT editor, preventing conflicts with other
+           plugins that provide same binding for other commands in more generic contexts -->
+      <key
+            sequence="M1+M2+T"
+            contextId="org.eclipse.jdt.ui.javaEditorScope"
             commandId="org.eclipse.jdt.ui.navigate.open.type"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
       <key
@@ -5799,128 +5912,6 @@
    </extension>
 
    <extension
-         point="org.eclipse.ltk.core.refactoring.refactoringContributions">
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameCompilationUnitRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.compilationunit"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameEnumConstRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.enum.constant"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameFieldRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.field"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameModuleRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.module"/>      
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameJavaProjectRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.java.project"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameLocalVariableRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.local.variable"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameMethodRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.method"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenamePackageRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.package"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameSourceFolderRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.source.folder"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameTypeParameterRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.type.parameter"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.RenameTypeRefactoringContribution"
-            id="org.eclipse.jdt.ui.rename.type"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ChangeMethodSignatureRefactoringContribution"
-            id="org.eclipse.jdt.ui.change.method.signature"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.MoveMethodRefactoringContribution"
-            id="org.eclipse.jdt.ui.move.method"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.MoveStaticMembersRefactoringContribution"
-            id="org.eclipse.jdt.ui.move.static"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractInterfaceRefactoringContribution"
-            id="org.eclipse.jdt.ui.extract.interface"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.UseSupertypeRefactoringContribution"
-            id="org.eclipse.jdt.ui.use.supertype"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.PullUpRefactoringContribution"
-            id="org.eclipse.jdt.ui.pull.up"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.PushDownRefactoringContribution"
-            id="org.eclipse.jdt.ui.push.down"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ConvertAnonymousRefactoringContribution"
-            id="org.eclipse.jdt.ui.convert.anonymous"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.MoveMemberTypeRefactoringContribution"
-            id="org.eclipse.jdt.ui.move.inner"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.InlineMethodRefactoringContribution"
-            id="org.eclipse.jdt.ui.inline.method"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.InlineTempRefactoringContribution"
-            id="org.eclipse.jdt.ui.inline.temp"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.InlineConstantRefactoringContribution"
-            id="org.eclipse.jdt.ui.inline.constant"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractMethodRefactoringContribution"
-            id="org.eclipse.jdt.ui.extract.method"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractTempRefactoringContribution"
-            id="org.eclipse.jdt.ui.extract.temp"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractConstantRefactoringContribution"
-            id="org.eclipse.jdt.ui.extract.constant"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractClassContribution"
-            id="org.eclipse.jdt.ui.extract.class">
-      </contribution>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.IntroduceParameterRefactoringContribution"
-            id="org.eclipse.jdt.ui.introduce.parameter"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.IntroduceParameterObjectContribution"
-            id="org.eclipse.jdt.ui.introduce.parameter.object"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.IntroduceFactoryRefactoringContribution"
-            id="org.eclipse.jdt.ui.introduce.factory"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.IntroduceIndirectionRefactoringContribution"
-            id="org.eclipse.jdt.ui.introduce.indirection"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.PromoteTempToFieldRefactoringContribution"
-            id="org.eclipse.jdt.ui.promote.temp"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.SelfEncapsulateRefactoringContribution"
-            id="org.eclipse.jdt.ui.self.encapsulate"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.InferTypeArgumentsRefactoringContribution"
-            id="org.eclipse.jdt.ui.infer.typearguments"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ChangeTypeRefactoringContribution"
-            id="org.eclipse.jdt.ui.change.type"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.ExtractSupertypeRefactoringContribution"
-            id="org.eclipse.jdt.ui.extract.superclass"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.DeleteRefactoringContribution"
-            id="org.eclipse.jdt.ui.delete"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.MoveRefactoringContribution"
-            id="org.eclipse.jdt.ui.move"/>
-      <contribution
-            class="org.eclipse.jdt.internal.corext.refactoring.scripting.CopyRefactoringContribution"
-            id="org.eclipse.jdt.ui.copy"/>
-   </extension>
-
-   <extension
          point="org.eclipse.ltk.core.refactoring.renameParticipants">
       <renameParticipant
             class="org.eclipse.jdt.internal.corext.refactoring.nls.NLSAccessorFieldRenameParticipant"
@@ -6160,18 +6151,22 @@
 					id="org.eclipse.jdt.ui.navigator.actions.StandardActions"
 					overrides="org.eclipse.ui.navigator.resources.actions.EditActions">
 				<enablement>
-					<or>
-						<and>
-							<instanceof value="org.eclipse.core.resources.IResource" />
-							<test property="org.eclipse.core.resources.projectNature" value="org.eclipse.jdt.core.javanature" />
-						</and>
-						<instanceof value="org.eclipse.jdt.core.IJavaElement" />
-						<instanceof value="org.eclipse.jdt.core.IJarEntryResource" />
-						<instanceof	value="org.eclipse.jdt.internal.ui.packageview.PackageFragmentRootContainer" />
-						<adapt type="java.util.Collection">
-							<count value="0" />
-						</adapt>
-					</or>
+ 					<with variable="selection">
+						<iterate operator="or" ifEmpty="false">
+							<or>
+								<and>
+									<instanceof value="org.eclipse.core.resources.IResource" />
+									<test property="org.eclipse.core.resources.projectNature" value="org.eclipse.jdt.core.javanature" />
+								</and>
+								<instanceof value="org.eclipse.jdt.core.IJavaElement" />
+								<instanceof value="org.eclipse.jdt.core.IJarEntryResource" />
+								<instanceof	value="org.eclipse.jdt.internal.ui.packageview.PackageFragmentRootContainer" />
+								<adapt type="java.util.Collection">
+									<count value="0" />
+								</adapt>
+							</or>
+						</iterate>
+					</with>
 				</enablement>
 			</actionProvider>
 			<actionProvider
@@ -7127,9 +7122,14 @@
             runAfter="org.eclipse.jdt.ui.cleanup.switch">
       </cleanUp>
       <cleanUp
+            class="org.eclipse.jdt.internal.ui.fix.InlineDeprecatedMethodCleanUp"
+            id="org.eclipse.jdt.ui.cleanup.replace_deprecated_calls"
+            runAfter="org.eclipse.jdt.ui.cleanup.add_all">
+      </cleanUp>
+      <cleanUp
             class="org.eclipse.jdt.internal.ui.fix.VariableDeclarationCleanUp"
             id="org.eclipse.jdt.ui.cleanup.variables"
-            runAfter="org.eclipse.jdt.ui.cleanup.add_all">
+            runAfter="org.eclipse.jdt.ui.cleanup.replace_deprecated_calls">
       </cleanUp>
       <cleanUp
             class="org.eclipse.jdt.internal.ui.fix.ElseIfCleanUp"
@@ -7147,14 +7147,9 @@
             runAfter="org.eclipse.jdt.ui.cleanup.reduce_indentation">
       </cleanUp>
       <cleanUp
-            class="org.eclipse.jdt.internal.ui.fix.LambdaExpressionAndMethodRefCleanUp"
-            id="org.eclipse.jdt.ui.cleanup.lambda_and_method_ref"
-            runAfter="org.eclipse.jdt.ui.cleanup.expressions">
-      </cleanUp>
-      <cleanUp
             class="org.eclipse.jdt.internal.ui.fix.ExtractIncrementCleanUp"
             id="org.eclipse.jdt.ui.cleanup.extract_increment"
-            runAfter="org.eclipse.jdt.ui.cleanup.lambda_and_method_ref">
+            runAfter="org.eclipse.jdt.ui.cleanup.expressions">
       </cleanUp>
       <cleanUp
             class="org.eclipse.jdt.internal.ui.fix.PullUpAssignmentCleanUp"
@@ -7497,9 +7492,14 @@
             runAfter="org.eclipse.jdt.ui.cleanup.var">
       </cleanUp>
       <cleanUp
+            class="org.eclipse.jdt.internal.ui.fix.LambdaExpressionAndMethodRefCleanUp"
+            id="org.eclipse.jdt.ui.cleanup.lambda_and_method_ref"
+            runAfter="org.eclipse.jdt.ui.cleanup.lambda">
+      </cleanUp>
+      <cleanUp
             class="org.eclipse.jdt.internal.ui.fix.ComparingOnCriteriaCleanUp"
             id="org.eclipse.jdt.ui.cleanup.comparing_on_criteria"
-            runAfter="org.eclipse.jdt.ui.cleanup.lambda">
+            runAfter="org.eclipse.jdt.ui.cleanup.lambda_and_method_ref">
       </cleanUp>
       <cleanUp
             class="org.eclipse.jdt.internal.ui.fix.JoinCleanUp"

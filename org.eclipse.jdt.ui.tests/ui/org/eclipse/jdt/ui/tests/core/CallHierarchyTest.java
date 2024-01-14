@@ -223,7 +223,6 @@ public class CallHierarchyTest {
 
     /**
      * Tests calls that origin from an inner class
-     * @throws Exception
      */
 	@Test
 	public void innerClassCallers() throws Exception {
@@ -250,7 +249,6 @@ public class CallHierarchyTest {
 
     /**
      * Tests callees that enter an inner class
-     * @throws Exception
      */
 	@Test
 	public void innerClassCalleesEntering() throws Exception {
@@ -277,7 +275,6 @@ public class CallHierarchyTest {
 
     /**
      * Tests callees that exits an inner class
-     * @throws Exception
      */
 	@Test
 	public void innerClassCalleesExiting() throws Exception {
@@ -304,7 +301,6 @@ public class CallHierarchyTest {
 
     /**
      * Tests calls that origin from an inner class
-     * @throws Exception
      */
 	@Test
 	public void anonymousInnerClassCallers() throws Exception {
@@ -324,7 +320,6 @@ public class CallHierarchyTest {
 
     /**
      * Tests calls that origin from an inner class
-     * @throws Exception
      */
 	@Test
 	public void anonymousInnerClassOnInterfaceCallees() throws Exception {
@@ -345,7 +340,6 @@ public class CallHierarchyTest {
 
     /**
      * Tests calls that origin from an inner class
-     * @throws Exception
      */
 	@Test
 	public void anonymousInnerClassInsideMethodCallees() throws Exception {
@@ -373,7 +367,6 @@ public class CallHierarchyTest {
 
     /**
      * Tests calls that origin from an inner class
-     * @throws Exception
      */
 	@Test
 	public void anonymousInnerClassOnClassCallees() throws Exception {
@@ -394,7 +387,6 @@ public class CallHierarchyTest {
 
     /**
      * Tests calls that origin from a static initializer block.
-     * @throws Exception
      */
 	@Test
 	public void initializerCallers() throws Exception {
@@ -519,6 +511,16 @@ public class CallHierarchyTest {
         assertNotNull(secondLevel);
         assertEquals(2, secondLevel.length);
         helper.assertCalls(Arrays.asList(helper.getAbsI1FooMethod(), helper.getAbsI2FooMethod()), secondLevel);
+    }
+
+    @Test
+    public void record_testGH571_callHierarchyOfComponent() throws Exception {
+		helper.createRecordWithCalleeClasses();
+
+		IType type= helper.getType1();
+		IMember component= (IMember) type.getChildren()[0];
+		IMethod expectedCaller= helper.getType2().getMethods()[0];
+		checkCalls(component, expectedCaller);
     }
 
     private void checkCalls(IMember memberToCheck, IMethod... expectedCallers) {

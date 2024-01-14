@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -148,12 +148,9 @@ public class CleanUpMessages extends NLS {
 	public static String UnnecessaryCodeTabPage_CheckboxName_OverriddenAssignment;
 	public static String UnnecessaryCodeTabPage_CheckboxName_MoveDeclaration;
 	public static String UnnecessaryCodeTabPage_CheckboxName_RedundantModifiers;
-	public static String UnnecessaryCodeTabPage_CheckboxName_RedundantModifiers_description;
 	public static String UnnecessaryCodeTabPage_CheckboxName_EmbeddedIf;
 	public static String UnnecessaryCodeTabPage_CheckboxName_RedundantSemicolons;
-	public static String UnnecessaryCodeTabPage_CheckboxName_RedundantSemicolons_description;
 	public static String UnnecessaryCodeTabPage_CheckboxName_RedundantComparator;
-	public static String UnnecessaryCodeTabPage_CheckboxName_RedundantArrayCreation_description;
 	public static String UnnecessaryCodeTabPage_CheckboxName_ArrayWithCurly;
 	public static String UnnecessaryCodeTabPage_CheckboxName_ReturnExpression;
 	public static String UnnecessaryCodeTabPage_CheckboxName_UselessReturn;
@@ -174,10 +171,13 @@ public class CleanUpMessages extends NLS {
 	public static String SourceFixingTabPage_warning;
 
 	public static String SourceFixingTabPage_GroupName_standardCode;
+	public static String SourceFixingTabPage_GroupName_deprecated;
 
 	public static String SourceFixingTabPage_CheckboxName_InvertEquals;
 	public static String SourceFixingTabPage_CheckboxName_CheckSignOfBitwiseOperation;
 	public static String SourceFixingTabPage_CheckboxName_StandardComparison;
+
+	public static String SourceFixingTabPage_CheckboxName_ReplaceDeprecatedMethodCall;
 
 	public static String DuplicateCodeTabPage_GroupName_DuplicateCode;
 
@@ -210,6 +210,7 @@ public class CleanUpMessages extends NLS {
 	public static String JavaFeatureTabPage_CheckboxName_ConvertFunctionalInterfaces;
 	public static String JavaFeatureTabPage_RadioName_UseLambdaWherePossible;
 	public static String JavaFeatureTabPage_RadioName_UseAnonymous;
+	public static String JavaFeatureTabPage_CheckboxName_AlsoSimplifyLambda;
 	public static String JavaFeatureTabPage_CheckboxName_ComparingOnCriteria;
 	public static String JavaFeatureTabPage_CheckboxName_Join;
 
@@ -234,6 +235,8 @@ public class CleanUpMessages extends NLS {
 	public static String JavaFeatureTabPage_CheckboxName_ConstantsForSystemProperty_LineSeparator;
 	public static String JavaFeatureTabPage_CheckboxName_ConstantsForSystemProperty_FileEncoding;
 	public static String JavaFeatureTabPage_CheckboxName_ConstantsForSystemProperty_BoxedTypeProperty;
+
+	public static String JavaFeatureTabPage_CheckboxName_StringBufferBuilderToTextBlock;
 
 	static {
 		// initialize resource bundle

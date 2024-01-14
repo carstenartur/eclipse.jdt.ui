@@ -31,7 +31,7 @@ import org.eclipse.jdt.internal.corext.fix.Java50FixCore;
 
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
-import org.eclipse.jdt.ui.text.java.IProblemLocation;
+import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
 
 import org.eclipse.jdt.internal.ui.text.correction.ProblemLocationCore;
 
@@ -39,7 +39,6 @@ import org.eclipse.jdt.internal.ui.text.correction.ProblemLocationCore;
 /**
  * Create fixes which can transform pre Java50 code to Java50 code
  * @see org.eclipse.jdt.internal.corext.fix.Java50FixCore
- *
  */
 public class Java50CleanUp extends AbstractMultiFix {
 
@@ -79,7 +78,7 @@ public class Java50CleanUp extends AbstractMultiFix {
 	}
 
 	@Override
-	protected ICleanUpFix createFix(CompilationUnit compilationUnit, IProblemLocation[] problems) throws CoreException {
+	protected ICleanUpFix createFix(CompilationUnit compilationUnit, IProblemLocationCore[] problems) throws CoreException {
 		if (compilationUnit == null)
 			return null;
 
@@ -172,7 +171,7 @@ public class Java50CleanUp extends AbstractMultiFix {
 	}
 
 	@Override
-	public boolean canFix(ICompilationUnit compilationUnit, IProblemLocation problem) {
+	public boolean canFix(ICompilationUnit compilationUnit, IProblemLocationCore problem) {
 		int id= problem.getProblemId();
 
 		if (Java50FixCore.isMissingOverrideAnnotationProblem(id)) {

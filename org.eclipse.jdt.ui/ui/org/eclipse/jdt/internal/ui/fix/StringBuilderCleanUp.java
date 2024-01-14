@@ -68,13 +68,13 @@ import org.eclipse.jdt.internal.corext.dom.VarDefinitionsUsesVisitor;
 import org.eclipse.jdt.internal.corext.fix.CleanUpConstants;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix.CompilationUnitRewriteOperation;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalModel;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
-import org.eclipse.jdt.ui.text.java.IProblemLocation;
+import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
 
 import org.eclipse.jdt.internal.ui.actions.IndentAction;
 
@@ -546,12 +546,12 @@ public class StringBuilderCleanUp extends AbstractMultiFix implements ICleanUpFi
 	}
 
 	@Override
-	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocation problem) {
+	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocationCore problem) {
 		return false;
 	}
 
 	@Override
-	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocation[] problems) throws CoreException {
+	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocationCore[] problems) throws CoreException {
 		return null;
 	}
 
@@ -576,7 +576,7 @@ public class StringBuilderCleanUp extends AbstractMultiFix implements ICleanUpFi
 		}
 
 		@Override
-		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModel linkedModel) throws CoreException {
+		public void rewriteASTInternal(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
 			AST ast= cuRewrite.getRoot().getAST();
 			TextEditGroup group= createTextEditGroup(MultiFixMessages.StringBuilderCleanUp_description, cuRewrite);
@@ -667,8 +667,8 @@ public class StringBuilderCleanUp extends AbstractMultiFix implements ICleanUpFi
 
 				Expression createdExpression= ASTNodes.createMoveTarget(rewrite, assignment.getLeftHandSide());
 
-				for (Object operand : operands) {
-					createdExpression= newAppending(rewrite, ast, createdExpression, (Expression) operand);
+				for (Expression operand : operands) {
+					createdExpression= newAppending(rewrite, ast, createdExpression, operand);
 				}
 
 				ASTNodes.replaceButKeepComment(rewrite, assignment, createdExpression, group);
@@ -730,8 +730,8 @@ public class StringBuilderCleanUp extends AbstractMultiFix implements ICleanUpFi
 
 						Expression appending= ASTNodes.createMoveTarget(rewrite, finalSerialization);
 
-						for (Object operand : nextOperands) {
-							appending= newAppending(rewrite, ast, appending, (Expression) operand);
+						for (Expression operand : nextOperands) {
+							appending= newAppending(rewrite, ast, appending, operand);
 						}
 
 						MethodInvocation toStringMethod= ast.newMethodInvocation();

@@ -34,7 +34,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.junit.After;
 import org.junit.Before;
@@ -81,6 +80,7 @@ import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.JavaCore;
 
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
+import org.eclipse.jdt.internal.junit.util.XmlProcessorFactoryJdtJunit;
 
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jdt.launching.IVMInstall;
@@ -112,7 +112,7 @@ public class FatJarExportTests {
 	@Rule
 	public TestName tn=new TestName();
 
-	private static final int JAVA_RUN_TIMEOUT= 50; // 10th of a second
+	private static final int JAVA_RUN_TIMEOUT= 300; // 10th of a second
 
 	@BeforeClass
 	public static void setUpTest() {
@@ -211,8 +211,7 @@ public class FatJarExportTests {
 		data.setCompress(compressJar);
 
 		//assert archive content as expected
-		try ( //create archive
-			ZipFile generatedArchive = createArchive(data)) {
+		try (ZipFile generatedArchive = createZipFile(data)) {
 			//assert archive content as expected
 			assertNotNull(generatedArchive);
 			assertNotNull(generatedArchive.getEntry("org/eclipse/jdt/ui/test/Main.class")); //$NON-NLS-1$
@@ -241,8 +240,7 @@ public class FatJarExportTests {
 		data.setCompress(compressJar);
 
 		//assert archive content as expected
-		try ( //create archive
-			ZipFile generatedArchive = createArchive(data)) {
+		try (ZipFile generatedArchive = createZipFile(data)) {
 			//assert archive content as expected
 			assertNotNull(generatedArchive);
 			assertNotNull(generatedArchive.getEntry("org/eclipse/jdt/ui/test/Main.class")); //$NON-NLS-1$
@@ -261,7 +259,7 @@ public class FatJarExportTests {
 				majorVersion = ((in.read() << 8) + in.read());
 			}
 			assertEquals("loader is a class file", 0xCAFEBABE, magic); //$NON-NLS-1$
-			assertEquals("loader compiled with JDK 1.6", "50.0", majorVersion + "." + minorVersion); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			assertEquals("loader compiled with JDK 1.8", "52.0", majorVersion + "." + minorVersion); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 		}
 
 		MultiStatus status= new MultiStatus(JavaUI.ID_PLUGIN, 0, "", null); //$NON-NLS-1$
@@ -288,8 +286,7 @@ public class FatJarExportTests {
 		data.setCompress(compressJar);
 
 		//assert archive content as expected
-		try ( //create archive
-			ZipFile generatedArchive = createArchive(data)) {
+		try (ZipFile generatedArchive= createZipFile(data)) {
 			//assert archive content as expected
 			assertNotNull(generatedArchive);
 			assertNotNull(generatedArchive.getEntry("org/eclipse/jdt/ui/test/Main.class")); //$NON-NLS-1$
@@ -384,7 +381,7 @@ public class FatJarExportTests {
 		return config;
 	}
 
-	private static ZipFile createArchive(JarPackageData data) throws Exception, CoreException {
+	private static ZipFile createZipFile(JarPackageData data) throws Exception, CoreException {
 		IWorkbenchWindow window= PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 
 		IJarExportRunnable op= data.createJarExportRunnable(window.getShell());
@@ -394,7 +391,7 @@ public class FatJarExportTests {
 		if (status.getSeverity() == IStatus.ERROR)
 			throw new CoreException(status);
 
-		return JarPackagerUtil.getArchiveFile(data.getJarLocation());
+		return JarPackagerUtil.createZipFile(data.getJarLocation());
 	}
 
 	private static String runJar(IJavaProject project, String jarPath) throws CoreException {
@@ -673,7 +670,7 @@ public class FatJarExportTests {
 	 */
 	private static Element readXML(IPath xmlFilePath) throws Exception {
 		try (InputStream in = new FileInputStream(xmlFilePath.toFile())) {
-			DocumentBuilder parser= DocumentBuilderFactory.newInstance().newDocumentBuilder();
+			DocumentBuilder parser= XmlProcessorFactoryJdtJunit.createDocumentBuilderFactoryWithErrorOnDOCTYPE().newDocumentBuilder();
 			parser.setErrorHandler(new DefaultHandler());
 			Element root= parser.parse(new InputSource(in)).getDocumentElement();
 			in.close();

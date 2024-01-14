@@ -10,14 +10,14 @@ pipeline {
 	}
 	tools {
 		maven 'apache-maven-latest'
-		jdk 'openjdk-jdk17-latest'
+		jdk 'temurin-jdk17-latest'
 	}
 	stages {
 		stage('Build') {
 			steps {
 				wrap([$class: 'Xvnc', useXauthority: true]) {
 					sh """
-					mvn -U -e -Dmaven.compiler.failOnWarning=true -DskipTests=false -Dmaven.repo.local=$WORKSPACE/.m2/repository \
+					mvn -U -e -Dmaven.compiler.failOnWarning=false -DskipTests=false -Dmaven.repo.local=$WORKSPACE/.m2/repository \
 						clean verify --batch-mode -Pbuild-individual-bundles -Pbree-libs -Papi-check -Dcompare-version-with-baselines.skip=false
 					"""
 				}
@@ -25,8 +25,9 @@ pipeline {
 			post {
 				always {
 					archiveArtifacts artifacts: '*.log,*/target/work/data/.metadata/*.log,*/tests/target/work/data/.metadata/*.log,apiAnalyzer-workspace/.metadata/*.log', allowEmptyArchive: true
-					publishIssues issues:[scanForIssues(tool: java()), scanForIssues(tool: mavenConsole())]
 					junit '**/target/surefire-reports/*.xml'
+					discoverGitReferenceBuild referenceJob: 'eclipse.jdt.ui-github/master'
+					recordIssues tools: [eclipse(), mavenConsole(), javaDoc()]
 				}
 			}
 		}

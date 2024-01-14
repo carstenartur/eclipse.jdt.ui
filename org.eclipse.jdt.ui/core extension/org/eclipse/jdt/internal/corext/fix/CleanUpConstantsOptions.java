@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2022 IBM Corporation and others.
+ * Copyright (c) 2018, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -42,7 +42,7 @@ public class CleanUpConstantsOptions extends CleanUpConstants {
 		options.setOption(MEMBER_ACCESSES_STATIC_QUALIFY_WITH_DECLARING_CLASS_INSTANCE_ACCESS, CleanUpOptions.TRUE);
 
 		//Control Statements
-		options.setOption(CONTROL_STATEMENTS_USE_BLOCKS, CleanUpOptions.FALSE);
+		options.setOption(CONTROL_STATEMENTS_USE_BLOCKS, CleanUpOptions.TRUE);
 		options.setOption(CONTROL_STATEMENTS_USE_BLOCKS_ALWAYS, CleanUpOptions.TRUE);
 		options.setOption(CONTROL_STATEMENTS_USE_BLOCKS_NO_FOR_RETURN_AND_THROW, CleanUpOptions.FALSE);
 		options.setOption(CONTROL_STATEMENTS_USE_BLOCKS_NEVER, CleanUpOptions.FALSE);
@@ -168,6 +168,7 @@ public class CleanUpConstantsOptions extends CleanUpConstants {
 		options.setOption(INVERT_EQUALS, CleanUpOptions.FALSE);
 		options.setOption(STANDARD_COMPARISON, CleanUpOptions.FALSE);
 		options.setOption(CHECK_SIGN_OF_BITWISE_OPERATION, CleanUpOptions.FALSE);
+		options.setOption(REPLACE_DEPRECATED_CALLS, CleanUpOptions.FALSE);
 
 		// Duplicate Code
 		options.setOption(OPERAND_FACTORIZATION, CleanUpOptions.FALSE);
@@ -183,11 +184,13 @@ public class CleanUpConstantsOptions extends CleanUpConstants {
 		options.setOption(CONTROL_STATEMENTS_CONVERT_TO_SWITCH_EXPRESSIONS, CleanUpOptions.FALSE);
 		options.setOption(USE_VAR, CleanUpOptions.FALSE);
 		options.setOption(USE_LAMBDA, CleanUpOptions.TRUE);
+		options.setOption(ALSO_SIMPLIFY_LAMBDA, CleanUpOptions.TRUE);
 		options.setOption(USE_ANONYMOUS_CLASS_CREATION, CleanUpOptions.FALSE);
 		options.setOption(COMPARING_ON_CRITERIA, CleanUpOptions.FALSE);
 		options.setOption(JOIN, CleanUpOptions.FALSE);
 		options.setOption(TRY_WITH_RESOURCE, CleanUpOptions.FALSE);
 		options.setOption(STRINGCONCAT_TO_TEXTBLOCK, CleanUpOptions.FALSE);
+		options.setOption(STRINGCONCAT_STRINGBUFFER_STRINGBUILDER, CleanUpOptions.FALSE);
 		options.setOption(MULTI_CATCH, CleanUpOptions.FALSE);
 		options.setOption(REMOVE_REDUNDANT_TYPE_ARGUMENTS, CleanUpOptions.TRUE);
 		options.setOption(USE_AUTOBOXING, CleanUpOptions.FALSE);
@@ -222,7 +225,7 @@ public class CleanUpConstantsOptions extends CleanUpConstants {
 		options.setOption(MEMBER_ACCESSES_STATIC_QUALIFY_WITH_DECLARING_CLASS_INSTANCE_ACCESS, CleanUpOptions.TRUE);
 
 		//Control Statements
-		options.setOption(CONTROL_STATEMENTS_USE_BLOCKS, CleanUpOptions.FALSE);
+		options.setOption(CONTROL_STATEMENTS_USE_BLOCKS, CleanUpOptions.TRUE);
 		options.setOption(CONTROL_STATEMENTS_USE_BLOCKS_ALWAYS, CleanUpOptions.TRUE);
 		options.setOption(CONTROL_STATEMENTS_USE_BLOCKS_NO_FOR_RETURN_AND_THROW, CleanUpOptions.FALSE);
 		options.setOption(CONTROL_STATEMENTS_USE_BLOCKS_NEVER, CleanUpOptions.FALSE);
@@ -350,6 +353,7 @@ public class CleanUpConstantsOptions extends CleanUpConstants {
 		options.setOption(INVERT_EQUALS, CleanUpOptions.FALSE);
 		options.setOption(STANDARD_COMPARISON, CleanUpOptions.FALSE);
 		options.setOption(CHECK_SIGN_OF_BITWISE_OPERATION, CleanUpOptions.FALSE);
+		options.setOption(REPLACE_DEPRECATED_CALLS, CleanUpOptions.FALSE);
 
 		// Duplicate Code
 		options.setOption(OPERAND_FACTORIZATION, CleanUpOptions.FALSE);
@@ -365,11 +369,13 @@ public class CleanUpConstantsOptions extends CleanUpConstants {
 		options.setOption(CONTROL_STATEMENTS_CONVERT_TO_SWITCH_EXPRESSIONS, CleanUpOptions.FALSE);
 		options.setOption(USE_VAR, CleanUpOptions.FALSE);
 		options.setOption(USE_LAMBDA, CleanUpOptions.TRUE);
+		options.setOption(ALSO_SIMPLIFY_LAMBDA, CleanUpOptions.TRUE);
 		options.setOption(USE_ANONYMOUS_CLASS_CREATION, CleanUpOptions.FALSE);
 		options.setOption(COMPARING_ON_CRITERIA, CleanUpOptions.FALSE);
 		options.setOption(JOIN, CleanUpOptions.FALSE);
 		options.setOption(TRY_WITH_RESOURCE, CleanUpOptions.FALSE);
 		options.setOption(STRINGCONCAT_TO_TEXTBLOCK, CleanUpOptions.FALSE);
+		options.setOption(STRINGCONCAT_STRINGBUFFER_STRINGBUILDER, CleanUpOptions.FALSE);
 		options.setOption(MULTI_CATCH, CleanUpOptions.FALSE);
 		options.setOption(REMOVE_REDUNDANT_TYPE_ARGUMENTS, CleanUpOptions.FALSE);
 		options.setOption(USE_AUTOBOXING, CleanUpOptions.FALSE);

@@ -10,6 +10,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Taiming Wang <3120205503@bit.edu.cn> - [extract local] Extract Similar Expression in All Methods If End-Users Want. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/785
  *******************************************************************************/
 package org.eclipse.jdt.internal.ui.refactoring;
 
@@ -22,8 +23,6 @@ public final class RefactoringMessages extends NLS {
 	public static String ChangeExceptionHandler_abort_button;
 
 	public static String ChangeExceptionHandler_dialog_message;
-
-	public static String ChangeExceptionHandler_dialog_title;
 
 	public static String ChangeExceptionHandler_message;
 
@@ -341,6 +340,8 @@ public final class RefactoringMessages extends NLS {
 
 	public static String ExtractTempInputPage_replace_all;
 
+	public static String ExtractTempInputPage_replace_all_in_file;
+
 	public static String ExtractTempInputPage_variable_name;
 
 	public static String ExtractTempWizard_defaultPageTitle;
@@ -540,6 +541,16 @@ public final class RefactoringMessages extends NLS {
 	public static String JavaStatusContextViewer_no_source_found0;
 
 	public static String JavaTypeCompletionProcessor_no_completion;
+
+	public static String MakeStaticAction_description;
+
+	public static String MakeStaticAction_dialog_title;
+
+	public static String MakeStaticAction_title;
+
+	public static String MakeStaticAction_tooltip;
+
+	public static String MakeStaticAction_unknown_exception;
 
 	public static String ModifyParametersAction_unavailable;
 

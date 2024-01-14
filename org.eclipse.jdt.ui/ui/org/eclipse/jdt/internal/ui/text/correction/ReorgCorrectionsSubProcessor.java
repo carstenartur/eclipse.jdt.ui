@@ -30,7 +30,6 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
-import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.core.runtime.jobs.Job;
 
 import org.eclipse.core.resources.IFile;
@@ -99,7 +98,6 @@ import org.eclipse.jdt.ui.JavaElementLabels;
 import org.eclipse.jdt.ui.actions.OrganizeImportsAction;
 import org.eclipse.jdt.ui.cleanup.CleanUpOptions;
 import org.eclipse.jdt.ui.text.java.IInvocationContext;
-import org.eclipse.jdt.ui.text.java.IProblemLocation;
 import org.eclipse.jdt.ui.text.java.correction.CUCorrectionProposal;
 import org.eclipse.jdt.ui.text.java.correction.ChangeCorrectionProposal;
 import org.eclipse.jdt.ui.text.java.correction.ICommandAccess;
@@ -113,16 +111,18 @@ import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 import org.eclipse.jdt.internal.ui.preferences.BuildPathsPropertyPage;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.CorrectMainTypeNameProposal;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.CorrectPackageDeclarationProposal;
+import org.eclipse.jdt.internal.ui.text.correction.proposals.CorrectPackageDeclarationProposalCore;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.FixCorrectionProposal;
 import org.eclipse.jdt.internal.ui.util.BusyIndicatorRunnableContext;
 import org.eclipse.jdt.internal.ui.util.ClasspathVMUtil;
 import org.eclipse.jdt.internal.ui.util.CoreUtility;
+import org.eclipse.jdt.internal.ui.util.Progress;
 import org.eclipse.jdt.internal.ui.wizards.buildpaths.CPListElement;
 import org.eclipse.jdt.internal.ui.wizards.buildpaths.ClasspathFixSelectionDialog;
 
 public class ReorgCorrectionsSubProcessor {
 
-	public static void getWrongTypeNameProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
+	public static void getWrongTypeNameProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
 		ICompilationUnit cu= context.getCompilationUnit();
 		boolean isLinked= cu.getResource().isLinked();
 
@@ -177,13 +177,13 @@ public class ReorgCorrectionsSubProcessor {
 		}
 	}
 
-	public static void getWrongPackageDeclNameProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) throws CoreException {
+	public static void getWrongPackageDeclNameProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) throws CoreException {
 		ICompilationUnit cu= context.getCompilationUnit();
 		boolean isLinked= cu.getResource().isLinked();
 
 		// correct package declaration
 		int relevance= cu.getPackageDeclarations().length == 0 ? IProposalRelevance.MISSING_PACKAGE_DECLARATION : IProposalRelevance.CORRECT_PACKAGE_DECLARATION; // bug 38357
-		if (CorrectPackageDeclarationProposal.isValidProposal(cu)) {
+		if (CorrectPackageDeclarationProposalCore.isValidProposal(cu)) {
 			proposals.add(new CorrectPackageDeclarationProposal(cu, problem, relevance));
 		}
 
@@ -211,7 +211,7 @@ public class ReorgCorrectionsSubProcessor {
 		}
 	}
 
-	public static void removeImportStatementProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
+	public static void removeImportStatementProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
 		IProposableFix fix= UnusedCodeFix.createRemoveUnusedImportFix(context.getASTRoot(), problem);
 		if (fix != null) {
 			Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_DELETE_IMPORT);
@@ -282,6 +282,11 @@ public class ReorgCorrectionsSubProcessor {
 		}
 
 		@Override
+		protected boolean useDelegateToCreateTextChange() {
+			return false;
+		}
+
+		@Override
 		protected void addEdits(IDocument document, TextEdit editRoot) throws CoreException {
 			if (fResultingEdit != null) {
 				editRoot.addChild(fResultingEdit);
@@ -294,12 +299,12 @@ public class ReorgCorrectionsSubProcessor {
 		}
 	}
 
-	public static void addProjectSetupFixProposal(IInvocationContext context, IProblemLocation problem, String missingType, Collection<ICommandAccess> proposals) {
+	public static void addProjectSetupFixProposal(IInvocationContext context, IProblemLocationCore problem, String missingType, Collection<ICommandAccess> proposals) {
 		proposals.add(new ClasspathFixCorrectionProposal(context.getCompilationUnit(), problem.getOffset(), problem.getLength(), missingType));
 	}
 
 	/* answers false if the problem location is not an import declaration, and hence no proposal have been added. */
-	public static boolean importNotFoundProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) throws CoreException {
+	public static boolean importNotFoundProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) throws CoreException {
 		ICompilationUnit cu= context.getCompilationUnit();
 
 		ASTNode selectedNode= problem.getCoveringNode(context.getASTRoot());
@@ -429,12 +434,12 @@ public class ReorgCorrectionsSubProcessor {
 						IVMInstall defaultVM= JavaRuntime.getDefaultVMInstall(); // can be null
 						if (defaultVM != null && !defaultVM.equals(install)) {
 							IPath newPath= new Path(JavaRuntime.JRE_CONTAINER);
-							ClasspathVMUtil.updateClasspath(newPath, fProject, new SubProgressMonitor(monitor, 1));
+							ClasspathVMUtil.updateClasspath(newPath, fProject, Progress.subMonitor(monitor, 1));
 						} else {
 							monitor.worked(1);
 						}
 						if (defaultVM == null || !isRequiredOrGreaterVMInstall(defaultVM)) {
-							JavaRuntime.setDefaultVMInstall(vmInstall, new SubProgressMonitor(monitor, 3), true);
+							JavaRuntime.setDefaultVMInstall(vmInstall, Progress.subMonitor(monitor, 3), true);
 							return false;
 						}
 						return true;
@@ -558,11 +563,11 @@ public class ReorgCorrectionsSubProcessor {
 	 * @param proposals the resulting proposals
 	 * @param requiredVersion the minimal required Java compiler version
 	 */
-	public static void getNeedHigherComplianceProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals, String requiredVersion) {
+	public static void getNeedHigherComplianceProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals, String requiredVersion) {
 		getNeedHigherComplianceProposals(context, problem, proposals, false, requiredVersion);
 	}
 
-	public static void getNeedHigherComplianceProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
+	public static void getNeedHigherComplianceProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
 		String[] args= problem.getProblemArguments();
 		if (args != null && args.length == 2) {
 			ReorgCorrectionsSubProcessor.getNeedHigherComplianceProposals(context, problem, proposals, false, args[1]);
@@ -579,7 +584,7 @@ public class ReorgCorrectionsSubProcessor {
 	 * @param enablePreviews --enable-previews option will be enabled if set to true
 	 * @param requiredVersion the minimal required Java compiler version
 	 */
-	static void getNeedHigherComplianceProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals, boolean enablePreviews, String requiredVersion) {
+	static void getNeedHigherComplianceProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals, boolean enablePreviews, String requiredVersion) {
 		IJavaProject project= context.getCompilationUnit().getJavaProject();
 		String label1= Messages.format(CorrectionMessages.ReorgCorrectionsSubProcessor_change_project_compliance_description, requiredVersion);
 		if (enablePreviews) {
@@ -605,14 +610,14 @@ public class ReorgCorrectionsSubProcessor {
 	 * @param problem the current problem
 	 * @param proposals the resulting proposals
 	 */
-	public static void getIncorrectBuildPathProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
+	public static void getIncorrectBuildPathProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
 		IProject project= context.getCompilationUnit().getJavaProject().getProject();
 		String label= CorrectionMessages.ReorgCorrectionsSubProcessor_configure_buildpath_label;
 		OpenBuildPathCorrectionProposal proposal= new OpenBuildPathCorrectionProposal(project, label, IProposalRelevance.CONFIGURE_BUILD_PATH, null);
 		proposals.add(proposal);
 	}
 
-	public static void getAccessRulesProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
+	public static void getAccessRulesProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
 		IBinding referencedElement= null;
 		ASTNode node= problem.getCoveredNode(context.getASTRoot());
 		if (node instanceof Type) {

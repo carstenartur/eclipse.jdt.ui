@@ -45,7 +45,7 @@ import java.lang.reflect.*;
  */
 public class TestSuite implements Test {
 
-	private Vector<Test> fTests = new Vector<Test>(10);
+	private final Vector<Test> fTests = new Vector<Test>(10);
 	private String fName;
 
 	/**
@@ -248,8 +248,6 @@ public class TestSuite implements Test {
 		return fTests.elements();
 	}
 
-	/**
-	 */
 	public String toString() {
 		if (getName() != null)
 			return getName();

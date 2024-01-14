@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2021 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -41,7 +41,6 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.SubProgressMonitor;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IEncodedStorage;
@@ -140,6 +139,7 @@ import org.eclipse.jdt.internal.corext.refactoring.reorg.JavaElementTransfer;
 import org.eclipse.jdt.internal.corext.refactoring.reorg.ParentChecker;
 import org.eclipse.jdt.internal.corext.refactoring.reorg.ReorgDestinationFactory;
 import org.eclipse.jdt.internal.corext.refactoring.reorg.ReorgUtils;
+import org.eclipse.jdt.internal.corext.refactoring.reorg.ReorgUtilsCore;
 import org.eclipse.jdt.internal.corext.refactoring.structure.ASTNodeSearchUtil;
 import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringFileBuffers;
 import org.eclipse.jdt.internal.corext.refactoring.util.ResourceUtil;
@@ -157,7 +157,7 @@ import org.eclipse.jdt.launching.environments.IExecutionEnvironmentsManager;
 import org.eclipse.jdt.ui.JavaUI;
 import org.eclipse.jdt.ui.PreferenceConstants;
 import org.eclipse.jdt.ui.actions.SelectionDispatchAction;
-import org.eclipse.jdt.ui.refactoring.RefactoringSaveHelper;
+import org.eclipse.jdt.ui.refactoring.IRefactoringSaveModes;
 
 import org.eclipse.jdt.internal.ui.IJavaHelpContextIds;
 import org.eclipse.jdt.internal.ui.IJavaStatusConstants;
@@ -168,6 +168,7 @@ import org.eclipse.jdt.internal.ui.refactoring.RefactoringExecutionHelper;
 import org.eclipse.jdt.internal.ui.refactoring.RefactoringMessages;
 import org.eclipse.jdt.internal.ui.util.BusyIndicatorRunnableContext;
 import org.eclipse.jdt.internal.ui.util.ExceptionHandler;
+import org.eclipse.jdt.internal.ui.util.Progress;
 import org.eclipse.jdt.internal.ui.util.SelectionUtil;
 import org.eclipse.jdt.internal.ui.wizards.buildpaths.BuildPathsBlock;
 import org.eclipse.jdt.internal.ui.workingsets.IWorkingSetIDs;
@@ -260,8 +261,8 @@ public class PasteAction extends SelectionDispatchAction{
 		try {
 			TransferData[] availableTypes= clipboard.getAvailableTypes();
 			List<?> elements= selection.toList();
-			IResource[] resources= ReorgUtils.getResources(elements);
-			IJavaElement[] javaElements= ReorgUtils.getJavaElements(elements);
+			IResource[] resources= ReorgUtilsCore.getResources(elements);
+			IJavaElement[] javaElements= ReorgUtilsCore.getJavaElements(elements);
 			IWorkingSet[] workingSets= ReorgUtils.getWorkingSets(elements);
 			for (Paster paster : createEnabledPasters(availableTypes, clipboard)) {
 				try {
@@ -705,7 +706,7 @@ public class PasteAction extends SelectionDispatchAction{
 							pm.beginTask("", 1 + fParsedCus.length); //$NON-NLS-1$
 
 							if (fDestination == null) {
-								fDestination= createNewProject(new SubProgressMonitor(pm, 1));
+								fDestination= createNewProject(Progress.subMonitor(pm, 1));
 							} else {
 								pm.worked(1);
 							}
@@ -713,7 +714,7 @@ public class PasteAction extends SelectionDispatchAction{
 							for (ParsedCu parsedCu : fParsedCus) {
 								if (pm.isCanceled())
 									break;
-								ICompilationUnit cu= pasteCU(parsedCu, new SubProgressMonitor(pm, 1), confirmQuery);
+								ICompilationUnit cu= pasteCU(parsedCu, Progress.subMonitor(pm, 1), confirmQuery);
 								if (cu != null)
 									cus.add(cu);
 							}
@@ -755,7 +756,7 @@ public class PasteAction extends SelectionDispatchAction{
 									packageName= ReorgMessages.PasteAction_snippet_default_package_name;
 								destinationPack= fDestination.getPackageFragment(packageName);
 								if (!destinationPack.exists()) {
-									JavaModelUtil.getPackageFragmentRoot(destinationPack).createPackageFragment(packageName, true, new SubProgressMonitor(pm, 1));
+									JavaModelUtil.getPackageFragmentRoot(destinationPack).createPackageFragment(packageName, true, Progress.subMonitor(pm, 1));
 								} else {
 									pm.worked(1);
 								}
@@ -783,7 +784,7 @@ public class PasteAction extends SelectionDispatchAction{
 							}
 
 							parsedText= parsedText.replaceAll("\r\n?|\n", StubUtility.getLineDelimiterUsed(cu)); //$NON-NLS-1$
-							destinationPack.createCompilationUnit(cuName, parsedText, true, new SubProgressMonitor(pm, 1));
+							destinationPack.createCompilationUnit(cuName, parsedText, true, Progress.subMonitor(pm, 1));
 
 							if (! alreadyExists) {
 								editorPart[0]= openCu(cu);
@@ -792,20 +793,20 @@ public class PasteAction extends SelectionDispatchAction{
 								if (fDestinationPack.getElementName().length() == 0) {
 									removePackageDeclaration(cu);
 								} else {
-									cu.createPackageDeclaration(fDestinationPack.getElementName(), new SubProgressMonitor(pm, 1));
+									cu.createPackageDeclaration(fDestinationPack.getElementName(), Progress.subMonitor(pm, 1));
 								}
 							} else {
 								String packageName= destinationPack.getElementName();
 								if (packageName.length() > 0) {
-									cu.createPackageDeclaration(packageName, new SubProgressMonitor(pm, 1));
+									cu.createPackageDeclaration(packageName, Progress.subMonitor(pm, 1));
 								}
 							}
 							if (! alreadyExists && editorPart[0] != null)
-								editorPart[0].doSave(new SubProgressMonitor(pm, 1)); //avoid showing error marker due to missing/wrong package declaration
+								editorPart[0].doSave(Progress.subMonitor(pm, 1)); //avoid showing error marker due to missing/wrong package declaration
 							return cu;
 
 						} else if (kind == ASTParser.K_CLASS_BODY_DECLARATIONS || kind == ASTParser.K_STATEMENTS) {
-							return pasteBodyDeclsOrStatements(destinationPack, parsedText, kind, new SubProgressMonitor(pm, 2));
+							return pasteBodyDeclsOrStatements(destinationPack, parsedText, kind, Progress.subMonitor(pm, 2));
 						} else {
 							throw new IllegalStateException("Unexpected kind: " + kind); //$NON-NLS-1$
 						}
@@ -959,7 +960,7 @@ public class PasteAction extends SelectionDispatchAction{
 					return null;
 				}
 
-				private IPackageFragmentRoot createNewProject(SubProgressMonitor pm) throws CoreException {
+				private IPackageFragmentRoot createNewProject(IProgressMonitor pm) throws CoreException {
 					pm.beginTask("", 10); //$NON-NLS-1$
 					IProject project;
 					int i= 1;
@@ -969,8 +970,8 @@ public class PasteAction extends SelectionDispatchAction{
 						i++;
 					} while (project.exists());
 
-					BuildPathsBlock.createProject(project, null, new SubProgressMonitor(pm, 3));
-					BuildPathsBlock.addJavaNature(project, new SubProgressMonitor(pm, 1));
+					BuildPathsBlock.createProject(project, null, Progress.subMonitor(pm, 3));
+					BuildPathsBlock.addJavaNature(project, Progress.subMonitor(pm, 1));
 					IJavaProject javaProject= JavaCore.create(project);
 
 					IResource srcFolder;
@@ -979,7 +980,7 @@ public class PasteAction extends SelectionDispatchAction{
 					if (store.getBoolean(PreferenceConstants.SRCBIN_FOLDERS_IN_NEWPROJ) && sourceFolderName.length() > 0) {
 						IFolder folder= project.getFolder(sourceFolderName);
 						if (! folder.exists()) {
-							folder.create(false, true, new SubProgressMonitor(pm, 1));
+							folder.create(false, true, Progress.subMonitor(pm, 1));
 						}
 						srcFolder= folder;
 					} else {
@@ -996,7 +997,7 @@ public class PasteAction extends SelectionDispatchAction{
 					IClasspathEntry jreEntry= JavaCore.newContainerEntry(fVMPath);
 					IPath outputLocation= BuildPathsBlock.getDefaultOutputLocation(javaProject);
 					IClasspathEntry[] cpes= new IClasspathEntry[] { srcEntry, jreEntry };
-					javaProject.setRawClasspath(cpes, outputLocation, new SubProgressMonitor(pm, 1));
+					javaProject.setRawClasspath(cpes, outputLocation, Progress.subMonitor(pm, 1));
 					return javaProject.getPackageFragmentRoot(srcFolder);
 				}
 
@@ -1158,7 +1159,7 @@ public class PasteAction extends SelectionDispatchAction{
 			IJavaElement[] javaElements= getClipboardJavaElements(availableTypes);
 			if (javaElements != null) {
 				for (IJavaElement javaElement : javaElements) {
-					if (!ReorgUtils.containsElementOrParent(elements, javaElement)) {
+					if (!ReorgUtilsCore.containsElementOrParent(elements, javaElement)) {
 						elements.add(javaElement);
 					}
 				}
@@ -1167,13 +1168,13 @@ public class PasteAction extends SelectionDispatchAction{
 			if (resources != null) {
 				List<IJavaElement> realJavaElements= new ArrayList<>();
 				List<IResource> realResource= new ArrayList<>();
-				ReorgUtils.splitIntoJavaElementsAndResources(resources, realJavaElements, realResource);
+				ReorgUtilsCore.splitIntoJavaElementsAndResources(resources, realJavaElements, realResource);
 				for (IJavaElement element : realJavaElements) {
-					if (!ReorgUtils.containsElementOrParent(elements, element))
+					if (!ReorgUtilsCore.containsElementOrParent(elements, element))
 						elements.add(element);
 				}
 				for (IResource element : realResource) {
-					if (!ReorgUtils.containsElementOrParent(elements, element))
+					if (!ReorgUtilsCore.containsElementOrParent(elements, element))
 						elements.add(element);
 				}
 			}
@@ -1232,7 +1233,7 @@ public class PasteAction extends SelectionDispatchAction{
 			if (resources != null)
 				result.addAll(Arrays.asList(resources));
 			if (javaElements != null)
-				result.addAll(Arrays.asList(ReorgUtils.getNotNulls(ReorgUtils.getResources(javaElements))));
+				result.addAll(Arrays.asList(ReorgUtilsCore.getNotNulls(ReorgUtilsCore.getResources(javaElements))));
 			Assert.isTrue(result.size() > 0);
 			return result.toArray(new IProject[result.size()]);
 		}
@@ -1246,7 +1247,7 @@ public class PasteAction extends SelectionDispatchAction{
 			IJavaElement[] javaElements= getClipboardJavaElements(availableDataTypes);
 			return 	javaElements != null &&
 					javaElements.length != 0 &&
-					! ReorgUtils.hasElementsNotOfType(javaElements, IJavaElement.JAVA_PROJECT);
+					! ReorgUtilsCore.hasElementsNotOfType(javaElements, IJavaElement.JAVA_PROJECT);
 		}
 
 		private boolean canPasteSimpleProjects(TransferData[] availableDataTypes) {
@@ -1449,7 +1450,7 @@ public class PasteAction extends SelectionDispatchAction{
 			IJavaElement ancestorType= element.getAncestor(IJavaElement.TYPE);
 			if (ancestorType != null)
 				return ancestorType;
-			return ReorgUtils.getCompilationUnit(element);
+			return ReorgUtilsCore.getCompilationUnit(element);
 		}
 		private static class ReorgTypedSourcePasteStarter {
 
@@ -1473,7 +1474,7 @@ public class PasteAction extends SelectionDispatchAction{
 
 			public void run(Shell parent) throws InterruptedException, InvocationTargetException {
 				IRunnableContext context= new ProgressMonitorDialog(parent);
-				new RefactoringExecutionHelper(fPasteRefactoring, RefactoringCore.getConditionCheckingFailedSeverity(), RefactoringSaveHelper.SAVE_NOTHING, parent, context).perform(false, false);
+				new RefactoringExecutionHelper(fPasteRefactoring, RefactoringCore.getConditionCheckingFailedSeverity(), IRefactoringSaveModes.SAVE_NOTHING, parent, context).perform(false, false);
 			}
 		}
 		private static class PasteTypedSourcesRefactoring extends Refactoring {
@@ -1488,7 +1489,7 @@ public class PasteAction extends SelectionDispatchAction{
 			}
 			public RefactoringStatus setDestination(IJavaElement destination) {
 				fDestination= destination;
-				if (ReorgUtils.getCompilationUnit(destination) == null)
+				if (ReorgUtilsCore.getCompilationUnit(destination) == null)
 					return RefactoringStatus.createFatalErrorStatus(ReorgMessages.PasteAction_wrong_destination);
 				if (! destination.exists())
 					return RefactoringStatus.createFatalErrorStatus(ReorgMessages.PasteAction_element_doesnot_exist);
@@ -1657,7 +1658,7 @@ public class PasteAction extends SelectionDispatchAction{
 			}
 
 			private ICompilationUnit getDestinationCu() {
-				return ReorgUtils.getCompilationUnit(fDestination);
+				return ReorgUtilsCore.getCompilationUnit(fDestination);
 			}
 
 			@Override
