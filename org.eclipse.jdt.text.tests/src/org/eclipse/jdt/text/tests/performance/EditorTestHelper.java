@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -97,6 +97,7 @@ import org.eclipse.jdt.internal.ui.text.JavaReconciler;
 /**
  * @since 3.1
  */
+@SuppressWarnings("restriction") // org.eclipse.core.filebuffers.tests
 public class EditorTestHelper {
 
 	private static class ImportOverwriteQuery implements IOverwriteQuery {
@@ -119,8 +120,6 @@ public class EditorTestHelper {
 	public static final String OUTLINE_VIEW_ID= "org.eclipse.ui.views.ContentOutline";
 
 	public static final String PACKAGE_EXPLORER_VIEW_ID= "org.eclipse.jdt.ui.PackageExplorer";
-
-	public static final String NAVIGATOR_VIEW_ID= "org.eclipse.ui.views.ResourceNavigator";
 
 	public static final String INTRO_VIEW_ID= "org.eclipse.ui.internal.introview";
 

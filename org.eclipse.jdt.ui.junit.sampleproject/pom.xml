@@ -19,7 +19,7 @@
 	<parent>
 		<artifactId>eclipse.jdt.ui</artifactId>
 		<groupId>eclipse.jdt.ui</groupId>
-		<version>4.25.0-SNAPSHOT</version>
+		<version>4.31.0-SNAPSHOT</version>
 	</parent>
 	<groupId>org.eclipse.jdt.ui</groupId>
 	<artifactId>org.eclipse.jdt.ui.junit.sampleproject</artifactId>
@@ -27,8 +27,7 @@
 	<packaging>jar</packaging>
 	<properties>
 		<!-- Compiler properties -->
-		<maven.compiler.target>1.8</maven.compiler.target>
-		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.release>8</maven.compiler.release>
 		<maven.test.failure.ignore>true</maven.test.failure.ignore>
 		<encoding>UTF-8</encoding>
 		<project.build.sourceEncoding>${encoding}</project.build.sourceEncoding>

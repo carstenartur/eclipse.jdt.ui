@@ -38,12 +38,12 @@ import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.fix.CleanUpConstants;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix.CompilationUnitRewriteOperation;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalModel;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
-import org.eclipse.jdt.ui.text.java.IProblemLocation;
+import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
 
 /**
  * A fix that pushes down the negation into a boolean expression:
@@ -169,12 +169,12 @@ public class PushDownNegationCleanUp extends AbstractMultiFix {
 	}
 
 	@Override
-	public boolean canFix(ICompilationUnit compilationUnit, IProblemLocation problem) {
+	public boolean canFix(ICompilationUnit compilationUnit, IProblemLocationCore problem) {
 		return false;
 	}
 
 	@Override
-	protected ICleanUpFix createFix(CompilationUnit unit, IProblemLocation[] problems) throws CoreException {
+	protected ICleanUpFix createFix(CompilationUnit unit, IProblemLocationCore[] problems) throws CoreException {
 		return null;
 	}
 
@@ -200,7 +200,7 @@ public class PushDownNegationCleanUp extends AbstractMultiFix {
 		}
 
 		@Override
-		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModel linkedModel) throws CoreException {
+		public void rewriteASTInternal(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
 			Expression copyOfReplacement= ASTNodes.createMoveTarget(rewrite, replacement);
 			TextEditGroup group= createTextEditGroup(MultiFixMessages.PushDownNegationCleanup_description, cuRewrite);
@@ -231,7 +231,7 @@ public class PushDownNegationCleanUp extends AbstractMultiFix {
 		}
 
 		@Override
-		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModel linkedModel) throws CoreException {
+		public void rewriteASTInternal(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
 			AST ast= cuRewrite.getRoot().getAST();
 			TextEditGroup group= createTextEditGroup(MultiFixMessages.PushDownNegationCleanup_description, cuRewrite);

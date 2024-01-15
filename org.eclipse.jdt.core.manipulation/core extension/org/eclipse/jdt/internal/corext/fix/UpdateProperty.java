@@ -69,7 +69,6 @@ public enum UpdateProperty {
 	 * <code>System.getProperty("file.encoding");</code>
 	 * to
 	 * <code>Charset.defaultCharset().displayName();</code> since Java 1.5
-	 *
 	 */
 	FILE_ENCODING("file.encoding", //$NON-NLS-1$
 			Charset.class,
@@ -86,7 +85,6 @@ public enum UpdateProperty {
 	 * <code>System.getProperty("path.separator");</code>
 	 * to
 	 * <code>File.pathSeparator;</code>
-	 *
 	 */
 	PATH_SEPARATOR("path.separator", //$NON-NLS-1$
 			null,
@@ -215,7 +213,6 @@ public enum UpdateProperty {
 				 * <code>System.getProperty("path.separator");</code>
 				 * <code>System.getProperty("file.separator");</code>
 				 * <code>System.getProperty("line.separator");</code>
-				 *
 				 */
 				if (ASTNodes.usesGivenSignature(visited, System.class.getCanonicalName(), METHOD_GET_PROPERTY, String.class.getCanonicalName())) {
 					Expression expression= (Expression) visited.arguments().get(0);
@@ -261,7 +258,7 @@ public enum UpdateProperty {
 					Object propertykey2= expression2.resolveConstantExpressionValue();
 					if (propertykey instanceof String && propertykey2 instanceof String && visited.getParent() instanceof MethodInvocation) {
 						MethodInvocation parent=(MethodInvocation) visited.getParent();
-						if (ASTNodes.usesGivenSignature(parent, Boolean.class.getCanonicalName(), METHOD_PARSEBOOLEAN, String.class.getCanonicalName()) && ((String)propertykey2).toLowerCase().equals("false")) { //$NON-NLS-1$
+						if (ASTNodes.usesGivenSignature(parent, Boolean.class.getCanonicalName(), METHOD_PARSEBOOLEAN, String.class.getCanonicalName()) && ((String)propertykey2).equalsIgnoreCase("false")) { //$NON-NLS-1$
 							operations.add(upp.rewrite(parent, (String) propertykey,expression, UNUSED));
 							nodesprocessed.add(visited);
 							return false;
@@ -303,7 +300,7 @@ public enum UpdateProperty {
 					Object propertykey2= expression2.resolveConstantExpressionValue();
 					if (propertykey instanceof String && propertykey2 instanceof String && visited.getParent() instanceof MethodInvocation) {
 						MethodInvocation parent=(MethodInvocation) visited.getParent();
-						if (ASTNodes.usesGivenSignature(parent, Integer.class.getCanonicalName(), METHOD_PARSEINTEGER, String.class.getCanonicalName())&& ((String)propertykey2).toLowerCase().equals("0")) { //$NON-NLS-1$
+						if (ASTNodes.usesGivenSignature(parent, Integer.class.getCanonicalName(), METHOD_PARSEINTEGER, String.class.getCanonicalName())&& ((String)propertykey2).equalsIgnoreCase("0")) { //$NON-NLS-1$
 							operations.add(upp.rewrite(parent, (String) propertykey,expression, UNUSED));
 							nodesprocessed.add(visited);
 							return false;
@@ -349,7 +346,7 @@ public enum UpdateProperty {
 					Object propertykey2= expression2.resolveConstantExpressionValue();
 					if (propertykey instanceof String && propertykey2 instanceof String && visited.getParent() instanceof MethodInvocation) {
 						MethodInvocation parent=(MethodInvocation) visited.getParent();
-						if (ASTNodes.usesGivenSignature(parent, Long.class.getCanonicalName(), METHOD_PARSELONG, String.class.getCanonicalName()) && ((String)propertykey2).toLowerCase().equals("0")) { //$NON-NLS-1$
+						if (ASTNodes.usesGivenSignature(parent, Long.class.getCanonicalName(), METHOD_PARSELONG, String.class.getCanonicalName()) && ((String)propertykey2).equalsIgnoreCase("0")) { //$NON-NLS-1$
 							operations.add(upp.rewrite(parent, (String) propertykey,expression, UNUSED));
 							nodesprocessed.add(visited);
 							return false;

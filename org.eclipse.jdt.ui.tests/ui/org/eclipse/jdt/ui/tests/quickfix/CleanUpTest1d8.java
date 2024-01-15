@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 IBM Corporation and others.
+ * Copyright (c) 2020, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -190,6 +190,231 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		enable(CleanUpConstants.USE_ANONYMOUS_CLASS_CREATION);
 
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { original }, null);
+	}
+
+	@Test
+	public void testConvertToLambda04() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= "" //
+				+ "package test1;\n" //
+				+ "public class E {\n" //
+				+ "    private class K {\n" //
+				+ "        public void routine(int i) {\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "    private interface J {\n" //
+				+ "        public void routine(K k, int i //\n" //
+				+ "    }\n" //
+				+ "    public void foo2() {\n" //
+				+ "    }\n" //
+				+ "    public void foo() {\n" //
+				+ "        Runnable r = new Runnable() {\n" //
+				+ "            @Override\n" //
+				+ "            public void run() {\n" //
+				+ "                foo2();\n" //
+				+ "            }\n" //
+				+ "        };\n" //
+				+ "        J c = new J() {\n" //
+				+ "            @Override\n" //
+				+ "            public void routine(K k, int i) {\n" //
+				+ "                k.routine(i);\n" //
+				+ "            }\n" //
+				+ "        };\n" //
+				+ "    }\n" //
+				+ "}\n"; //
+		String original= sample;
+		ICompilationUnit cu1= pack1.createCompilationUnit("E.java", original, false, null);
+
+		enable(CleanUpConstants.CONVERT_FUNCTIONAL_INTERFACES);
+		enable(CleanUpConstants.USE_LAMBDA);
+		disable(CleanUpConstants.ALSO_SIMPLIFY_LAMBDA);
+
+		sample= "" //
+				+ "package test1;\n" //
+				+ "public class E {\n" //
+				+ "    private class K {\n" //
+				+ "        public void routine(int i) {\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "    private interface J {\n" //
+				+ "        public void routine(K k, int i //\n" //
+				+ "    }\n" //
+				+ "    public void foo2() {\n" //
+				+ "    }\n" //
+				+ "    public void foo() {\n" //
+				+ "        Runnable r = () -> foo2();\n" //
+				+ "        J c = (k, i) -> k.routine(i);\n" //
+				+ "    }\n" //
+				+ "}\n"; //
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { expected1 }, null);
+
+		disable(CleanUpConstants.USE_LAMBDA);
+		enable(CleanUpConstants.USE_ANONYMOUS_CLASS_CREATION);
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { original }, null);
+	}
+
+	@Test
+	public void testConvertToLambda05() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= "" //
+				+ "package test1;\n" //
+				+ "public class E {\n" //
+				+ "    private class K {\n" //
+				+ "        public void routine(int i) {\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "    private interface J {\n" //
+				+ "        public void routine(K k, int i //\n" //
+				+ "    }\n" //
+				+ "    public void foo2() {\n" //
+				+ "    }\n" //
+				+ "    public void foo() {\n" //
+				+ "        Runnable r = new Runnable() {\n" //
+				+ "            @Override\n" //
+				+ "            public void run() {\n" //
+				+ "                foo2();\n" //
+				+ "            }\n" //
+				+ "        };\n" //
+				+ "        J c = new J() {\n" //
+				+ "            @Override\n" //
+				+ "            public void routine(K k, int i) {\n" //
+				+ "                k.routine(i);\n" //
+				+ "            }\n" //
+				+ "        };\n" //
+				+ "    }\n" //
+				+ "}\n"; //
+		String original= sample;
+		ICompilationUnit cu1= pack1.createCompilationUnit("E.java", original, false, null);
+
+		enable(CleanUpConstants.CONVERT_FUNCTIONAL_INTERFACES);
+		enable(CleanUpConstants.USE_LAMBDA);
+		enable(CleanUpConstants.ALSO_SIMPLIFY_LAMBDA);
+
+		sample= "" //
+				+ "package test1;\n" //
+				+ "public class E {\n" //
+				+ "    private class K {\n" //
+				+ "        public void routine(int i) {\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "    private interface J {\n" //
+				+ "        public void routine(K k, int i //\n" //
+				+ "    }\n" //
+				+ "    public void foo2() {\n" //
+				+ "    }\n" //
+				+ "    public void foo() {\n" //
+				+ "        Runnable r = this::foo2;\n" //
+				+ "        J c = K::routine;\n" //
+				+ "    }\n" //
+				+ "}\n"; //
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { expected1 }, null);
+	}
+
+	@Test
+	public void testConvertToLambda06() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= "" //
+				+ "package test1;\n" //
+				+ "public class E {\n" //
+				+ "    private class K {\n" //
+				+ "        public void routine(int i) {\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "    private interface J {\n" //
+				+ "        public void routine(K k, int i //\n" //
+				+ "    }\n" //
+				+ "    public void foo2() {\n" //
+				+ "    }\n" //
+				+ "    public void foo() {\n" //
+				+ "        Runnable r = new Runnable() {\n" //
+				+ "            @Override\n" //
+				+ "            public void run() {\n" //
+				+ "                foo2();\n" //
+				+ "            }\n" //
+				+ "        };\n" //
+				+ "        J c = new J() {\n" //
+				+ "            @Override\n" //
+				+ "            public void routine(K k, int i) {\n" //
+				+ "                k.routine(i);\n" //
+				+ "            }\n" //
+				+ "        };\n" //
+				+ "    }\n" //
+				+ "}\n"; //
+		String original= sample;
+		ICompilationUnit cu1= pack1.createCompilationUnit("E.java", original, false, null);
+
+		enable(CleanUpConstants.CONVERT_FUNCTIONAL_INTERFACES);
+		enable(CleanUpConstants.USE_LAMBDA);
+		disable(CleanUpConstants.ALSO_SIMPLIFY_LAMBDA);
+		enable(CleanUpConstants.SIMPLIFY_LAMBDA_EXPRESSION_AND_METHOD_REF);
+
+		sample= "" //
+				+ "package test1;\n" //
+				+ "public class E {\n" //
+				+ "    private class K {\n" //
+				+ "        public void routine(int i) {\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "    private interface J {\n" //
+				+ "        public void routine(K k, int i //\n" //
+				+ "    }\n" //
+				+ "    public void foo2() {\n" //
+				+ "    }\n" //
+				+ "    public void foo() {\n" //
+				+ "        Runnable r = this::foo2;\n" //
+				+ "        J c = K::routine;\n" //
+				+ "    }\n" //
+				+ "}\n"; //
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { expected1 }, null);
+	}
+
+	@Test
+	public void testConvertToLambda07() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= "" //
+				+ "package test1;\n" //
+				+ "public class E {\n" //
+				+ "    private interface Blah {\n" //
+				+ "        public boolean isCorrect(Object z //\n" //
+				+ "    }\n" //
+				+ "    public boolean foo() {\n" //
+				+ "        Blah x = new Blah() {\n" //
+				+ "            @Override\n" //
+				+ "            public boolean isCorrect(Object z) {\n" //
+				+ "                return z instanceof String;\n" //
+				+ "            }\n" //
+				+ "        }; // comment 1\n" //
+				+ "        return x.isCorrect(this //\n" //
+				+ "    }\n" //
+				+ "}\n";
+		String original= sample;
+		ICompilationUnit cu1= pack1.createCompilationUnit("E.java", original, false, null);
+
+		enable(CleanUpConstants.CONVERT_FUNCTIONAL_INTERFACES);
+		enable(CleanUpConstants.USE_LAMBDA);
+		enable(CleanUpConstants.ALSO_SIMPLIFY_LAMBDA);
+
+		sample= "" //
+				+ "package test1;\n" //
+				+ "public class E {\n" //
+				+ "    private interface Blah {\n" //
+				+ "        public boolean isCorrect(Object z //\n" //
+				+ "    }\n" //
+				+ "    public boolean foo() {\n" //
+				+ "        Blah x = String.class::isInstance; // comment 1\n" //
+				+ "        return x.isCorrect(this //\n" //
+				+ "    }\n" //
+				+ "}\n"; //
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { expected1 }, null);
 	}
 
 	@Test
@@ -1779,6 +2004,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "import java.util.Date;\n" //
 				+ "import java.util.List;\n" //
 				+ "import java.util.Locale;\n" //
+				+ "import java.util.TreeSet;\n" //
 				+ "\n" //
 				+ "public class E {\n" //
 				+ "    private Comparator<Date> refactorField = new Comparator<Date>() {\n" //
@@ -2179,6 +2405,13 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "\n" //
 				+ "        return listToSort;\n" //
 				+ "    }\n" //
+				+ "\n" //
+				+ "    public class FooBar {\n" //
+				+ "        public String value;\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    private final TreeSet<FooBar> foo = new TreeSet<>((a,b) -> b.value.compareTo(a.value));\n" //
+				+ "\n" //
 				+ "}\n";
 
 		String expected= "" //
@@ -2190,6 +2423,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "import java.util.Date;\n" //
 				+ "import java.util.List;\n" //
 				+ "import java.util.Locale;\n" //
+				+ "import java.util.TreeSet;\n" //
 				+ "\n" //
 				+ "public class E {\n" //
 				+ "    private Comparator<Date> refactorField = Comparator.comparing(Date::toString);\n" //
@@ -2383,6 +2617,13 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "\n" //
 				+ "        return listToSort;\n" //
 				+ "    }\n" //
+				+ "\n" //
+				+ "    public class FooBar {\n" //
+				+ "        public String value;\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    private final TreeSet<FooBar> foo = new TreeSet<>(Comparator.comparing((FooBar a) -> a.value).reversed());\n" //
+				+ "\n" //
 				+ "}\n";
 
 		// When
@@ -3983,6 +4224,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 		String sample= "" //
 				+ "package test1;\n" //
+				+ "import java.io.StringWriter;\n"
 				+ "\n" //
 				+ "public class TestStringBuilderCleanup extends SuperClass {\n" //
 				+ "    StringBuffer field1;\n" //
@@ -4022,6 +4264,12 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "            a.append(\"abc\");\n" //
 				+ "        };\n" //
 				+ "    }\n" //
+				+ "    public void changeStringWriterInLambda(StringBuffer parm) {\n" //
+				+ "        Runnable r = () -> {\n" //
+				+ "            StringWriter a = new StringWriter();\n" //
+				+ "            StringBuffer k = a.getBuffer().append(\"abc\");\n" //
+				+ "        };\n" //
+				+ "    }\n" //
 				+ "}\n";
 		ICompilationUnit cu1= pack1.createCompilationUnit("TestStringBuilderCleanup.java", sample, false, null);
 
@@ -4040,6 +4288,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 		String expected1= "" //
 				+ "package test1;\n" //
+				+ "import java.io.StringWriter;\n"
 				+ "\n" //
 				+ "public class TestStringBuilderCleanup extends SuperClass {\n" //
 				+ "    StringBuilder field1;\n" //
@@ -4077,6 +4326,12 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "            StringBuilder a = new StringBuilder();\n" //
 				+ "            super.method0(a);\n" //
 				+ "            a.append(\"abc\");\n" //
+				+ "        };\n" //
+				+ "    }\n" //
+				+ "    public void changeStringWriterInLambda(StringBuilder parm) {\n" //
+				+ "        Runnable r = () -> {\n" //
+				+ "            StringWriter a = new StringWriter();\n" //
+				+ "            StringBuilder k = new StringBuilder(a.getBuffer().toString()).append(\"abc\");\n" //
 				+ "        };\n" //
 				+ "    }\n" //
 				+ "}\n";
@@ -4403,8 +4658,6 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 	/**
 	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/109
-	 *
-	 * @throws CoreException
 	 */
 	@Test
 	public void testWhileIssue109_EntrySet() throws CoreException {
@@ -4445,8 +4698,6 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 	/**
 	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/109
-	 *
-	 * @throws CoreException
 	 */
 	@Test
 	public void testWhileIssue109_EntrySet_2() throws CoreException {
@@ -4485,8 +4736,6 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 	/**
 	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/109
-	 *
-	 * @throws CoreException
 	 */
 	@Test
 	public void testWhileIssue109_EntrySet_3() throws CoreException {
@@ -4525,8 +4774,6 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 	/**
 	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/120
-	 *
-	 * @throws CoreException
 	 */
 	@Test
 	public void testWhileIssue120_CollectionTypeResolution() throws CoreException {
@@ -4560,6 +4807,114 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 				+ "        return results;\n"
 				+ "    }"
 				+ "}\n";
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
+				new HashSet<>(Arrays.asList(FixMessages.Java50Fix_ConvertToEnhancedForLoop_description)));
+	}
+
+	/**
+	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/190
+	 */
+	@Test
+	public void testWhileIssue190_MultipleWhileLoops() throws CoreException {
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= "" //
+				+ "package test;\n"
+				+ "import java.util.*;\n"
+				+ "public class Test {\n"
+				+ "    void m(List<String> strings) {\n"
+				+ "        Iterator<String> it = strings.iterator();\n"
+				+ "        while (it.hasNext()) {\n"
+				+ "            String s = (String) it.next();\n"
+				+ "            System.out.println(s);\n"
+				+ "            System.err.println(s);\n"
+				+ "        }\n"
+				+ "        Iterator<String> it2 = strings.iterator();\n"
+				+ "        while (it2.hasNext()) {\n"
+				+ "            String s = (String) it2.next();\n"
+				+ "            System.out.println(s);\n"
+				+ "            System.err.println(s);\n"
+				+ "        }\n"
+				+ "    }\n"
+				+ "}\n";
+		ICompilationUnit cu= pack.createCompilationUnit("Test.java", sample, false, null);
+
+		enable(CleanUpConstants.CONTROL_STATEMENTS_CONVERT_FOR_LOOP_TO_ENHANCED);
+
+		String expected= "" //
+				+ "package test;\n"
+				+ "import java.util.*;\n"
+				+ "public class Test {\n"
+				+ "    void m(List<String> strings) {\n"
+				+ "        for (String s : strings) {\n"
+				+ "            System.out.println(s);\n"
+				+ "            System.err.println(s);\n"
+				+ "        }\n"
+				+ "        for (String s : strings) {\n"
+				+ "            System.out.println(s);\n"
+				+ "            System.err.println(s);\n"
+				+ "        }\n"
+				+ "    }\n"
+				+ "}\n";
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
+				new HashSet<>(Arrays.asList(FixMessages.Java50Fix_ConvertToEnhancedForLoop_description)));
+	}
+
+	/**
+	 * https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/798
+	 *
+	 * @throws CoreException on failure
+	 */
+	@Test
+	public void testWhileIssue798() throws CoreException {
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= "" //
+				+ "package test;\n" //
+				+ "import java.util.HashSet;\n" //
+				+ "import java.util.Iterator;\n" //
+				+ "\n" //
+				+ "public class Test {\n" //
+				+ "    \n" //
+				+ "    public class Element {\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public class ElementOccurrenceResult {\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public void foo(Element element, HashSet<ElementOccurrenceResult> hashSet) {\n" //
+				+ "        Iterator<ElementOccurrenceResult> minIterator= hashSet.iterator();\n" //
+				+ "        while (minIterator.hasNext()) {\n" //
+				+ "            reportProblem(element, minIterator.next(), null);\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    private void reportProblem(Element element, ElementOccurrenceResult next, Object object) {}\n" //
+				+ "\n" //
+				+ "}\n"; //
+		ICompilationUnit cu= pack.createCompilationUnit("Test.java", sample, false, null);
+
+		enable(CleanUpConstants.CONTROL_STATEMENTS_CONVERT_FOR_LOOP_TO_ENHANCED);
+
+		String expected= "" //
+				+ "package test;\n"
+				+ "import java.util.HashSet;\n" //
+				+ "\n" //
+				+ "public class Test {\n" //
+				+ "    \n" //
+				+ "    public class Element {\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public class ElementOccurrenceResult {\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public void foo(Element element, HashSet<ElementOccurrenceResult> hashSet) {\n" //
+				+ "        for (ElementOccurrenceResult element2 : hashSet) {\n" //
+				+ "            reportProblem(element, element2, null);\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    private void reportProblem(Element element, ElementOccurrenceResult next, Object object) {}\n" //
+				+ "\n" //
+				+ "}\n"; //
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(FixMessages.Java50Fix_ConvertToEnhancedForLoop_description)));
 	}
@@ -5042,6 +5397,88 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 	}
 
 	@Test
+	public void testDoNotWhileIssue373() throws Exception {
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= "" //
+				+ "package test;\n"
+				        + "import java.util.*;\n"
+				        + "public class Test {\n"
+				        + "    void m(List<String> strings) {\n"
+				        + "        Iterator it = strings.iterator();\n"
+				        + "        while (it.hasNext()) {\n"
+				        + "            String s = (String) it.next();\n"
+				        + "            System.out.println(s);\n"
+				        + "            System.err.println(it);\n"
+				        + "        }\n"
+				        + "    }\n"
+				        + "}\n";
+		ICompilationUnit cu= pack.createCompilationUnit("Test.java", sample, false, null);
+
+		enable(CleanUpConstants.CONTROL_STATEMENTS_CONVERT_FOR_LOOP_TO_ENHANCED);
+
+		assertRefactoringHasNoChange(new ICompilationUnit[] { cu });
+	}
+
+	@Test
+	public void testDoNotWhileIssue190_1() throws Exception {
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= "" //
+				+ "package test;\n"
+				        + "import java.util.*;\n"
+				        + "public class Test {\n"
+				        + "    void m(List<String> strings) {\n"
+				        + "        Iterator<String> it = strings.iterator();\n"
+				        + "        while (it.hasNext()) {\n"
+				        + "            String s = (String) it.next();\n"
+				        + "            System.out.println(s);\n"
+				        + "            System.err.println(s);\n"
+				        + "        }\n"
+				        + "        it = strings.iterator();\n"
+				        + "        while (it.hasNext()) {\n"
+				        + "            String s = (String) it.next();\n"
+				        + "            System.out.println(s);\n"
+				        + "            System.err.println(s);\n"
+				        + "        }\n"
+			        + "    }\n"
+				        + "}\n";
+		ICompilationUnit cu= pack.createCompilationUnit("Test.java", sample, false, null);
+
+		enable(CleanUpConstants.CONTROL_STATEMENTS_CONVERT_FOR_LOOP_TO_ENHANCED);
+
+		assertRefactoringHasNoChange(new ICompilationUnit[] { cu });
+
+	}
+
+	@Test
+	public void testDoNotWhileIssue190_2() throws Exception {
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= "" //
+				+ "package test;\n"
+				+ "import java.util.*;\n"
+				+ "public class Test {\n"
+				+ "    void m(List<String> strings) {\n"
+				+ "        Iterator<String> it = strings.iterator();\n"
+				+ "        while (it.hasNext()) {\n"
+				+ "            String s = (String) it.next();\n"
+				+ "            System.out.println(s);\n"
+				+ "            System.err.println(s);\n"
+				+ "        }\n"
+				+ "        while (it.hasNext()) {\n"
+				+ "            String s = (String) it.next();\n"
+				+ "            System.out.println(s);\n"
+				+ "            System.err.println(s);\n"
+				+ "        }\n"
+				+ "    }\n"
+				+ "}\n";
+		ICompilationUnit cu= pack.createCompilationUnit("Test.java", sample, false, null);
+
+		enable(CleanUpConstants.CONTROL_STATEMENTS_CONVERT_FOR_LOOP_TO_ENHANCED);
+
+		assertRefactoringHasNoChange(new ICompilationUnit[] { cu });
+
+	}
+
+	@Test
 	public void testDoNotWhileNotIterable() throws Exception {
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
 		String sample= "" //
@@ -5089,4 +5526,587 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 
 		assertRefactoringHasNoChange(new ICompilationUnit[] { cu });
 	}
+
+	@Test
+	public void testDoNotAddFinalForFieldUsedBeforeInitialized() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/769
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= "" //
+				+ "package test;\n" //
+				+ "import java.util.ArrayList;\n" //
+				+ "import java.util.List;\n" //
+				+ "\n" //
+				+ "public class E {\n" //
+				+ "    \n" //
+				+ "    public interface I1 {\n" //
+				+ "        public void run();\n" //
+				+ "    }\n" //
+				+ "    private class E1 {\n" //
+				+ "        public void foo2(I1 k) {}\n" //
+				+ "    }\n" //
+				+ "    private E1 fField;\n" //
+				+ "    private List<String> fList;\n" //
+				+ "    \n" //
+				+ "    public E() {\n" //
+				+ "        fField = new E1();\n" //
+				+ "        fField.foo2(() -> {\n" //
+				+ "            fList.clear();\n" //
+				+ "        });\n" //
+				+ "        fList = new ArrayList<>();\n" //
+				+ "    }\n" //
+				+ "}\n"; //
+		ICompilationUnit cu1= pack1.createCompilationUnit("E.java", sample, false, null);
+
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_PARAMETERS);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_PRIVATE_FIELDS);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_LOCAL_VARIABLES);
+
+		sample= "" //
+				+ "package test;\n" //
+				+ "import java.util.ArrayList;\n" //
+				+ "import java.util.List;\n" //
+				+ "\n" //
+				+ "public class E {\n" //
+				+ "    \n" //
+				+ "    public interface I1 {\n" //
+				+ "        public void run();\n" //
+				+ "    }\n" //
+				+ "    private class E1 {\n" //
+				+ "        public void foo2(final I1 k) {}\n" //
+				+ "    }\n" //
+				+ "    private final E1 fField;\n" //
+				+ "    private List<String> fList;\n" //
+				+ "    \n" //
+				+ "    public E() {\n" //
+				+ "        fField = new E1();\n" //
+				+ "        fField.foo2(() -> {\n" //
+				+ "            fList.clear();\n" //
+				+ "        });\n" //
+				+ "        fList = new ArrayList<>();\n" //
+				+ "    }\n" //
+				+ "}\n"; //
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu1}, new String[] {expected1},
+				new HashSet<>(Arrays.asList(FixMessages.VariableDeclarationFix_changeModifierOfUnknownToFinal_description)));
+	}
+
+	@Test
+	public void testDoNotAddFinalForFieldUsedInLambdaFieldInitializer() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/769
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= "" //
+				+ "package test;\n" //
+				+ "public class E {\n" //
+				+ "    interface I {\n" //
+				+ "        void run( //\n" //
+				+ "    }\n" //
+				+ "    private String f;\n" //
+				+ "    private String g;\n" //
+				+ "    I x = () -> {\n" //
+				+ "        g.concat(\"abc\");\n" //
+				+ "    };\n" //
+				+ "    public E() {\n" //
+				+ "        this.f= \"abc\";\n" //
+				+ "        this.g= \"def\";\n" //
+				+ "    }\n" //
+				+ "    public void foo() {\n" //
+				+ "        x.run( //\n" //
+				+ "        System.out.println(f //\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n" //
+				+ "\n";
+		ICompilationUnit cu1= pack1.createCompilationUnit("E.java", sample, false, null);
+
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_PARAMETERS);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_PRIVATE_FIELDS);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_LOCAL_VARIABLES);
+
+		sample= "" //
+				+ "package test;\n" //
+				+ "public class E {\n" //
+				+ "    interface I {\n" //
+				+ "        void run( //\n" //
+				+ "    }\n" //
+				+ "    private final String f;\n" //
+				+ "    private String g;\n" //
+				+ "    I x = () -> {\n" //
+				+ "        g.concat(\"abc\");\n" //
+				+ "    };\n" //
+				+ "    public E() {\n" //
+				+ "        this.f= \"abc\";\n" //
+				+ "        this.g= \"def\";\n" //
+				+ "    }\n" //
+				+ "    public void foo() {\n" //
+				+ "        x.run( //\n" //
+				+ "        System.out.println(f //\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n" //
+				+ "\n";
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu1}, new String[] {expected1},
+				new HashSet<>(Arrays.asList(FixMessages.VariableDeclarationFix_changeModifierOfUnknownToFinal_description)));
+	}
+
+	@Test
+	public void testDeprecatedCleanup1() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/722
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= ""
+				+ "package test;\n" //
+				+ "public class E1 {\n" //
+				+ "\n" //
+				+ "    String blah = \"blah\";\n" //
+				+ "    \n" //
+				+ "    class Blah {\n" //
+				+ "        public static String blah2 = \"blah2\";\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public int foo(String a, String b) {\n" //
+				+ "        System.out.println(a + b);\n" //
+				+ "        return a.length() + b.length();\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    /**\n" //
+				+ "     * @deprecated use {@link #foo(String, String)}\n" //
+				+ "     * @param a\n" //
+				+ "     * @param b\n" //
+				+ "     * @param c\n" //
+				+ "     * @return int\n" //
+				+ "     */\n" //
+				+ "    @Deprecated\n" //
+				+ "    public int foo(String a, String b, Object c) {\n" //
+				+ "        String k = a.toLowerCase() + Blah.blah2;\n" //
+				+ "        return foo(k, b);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n"; //
+		pack1.createCompilationUnit("E1.java", sample, false, null);
+
+		sample= "" //
+				+ "package test;\n" //
+				+ "public class E {\n" //
+				+ "\n" //
+				+ "    public static void depfunc(String a, String b, Object c) {\n" //
+				+ "        E1 d = new E1();\n" //
+				+ "        int k1= 8;\n" //
+				+ "        int y = d.foo(a, b, c);\n" //
+				+ "        System.out.println(y);\n" //
+				+ "        E1 e = new E1();\n" //
+				+ "        int z = e.foo(a, b, c);\n" //
+				+ "        System.out.println(z);\n" //
+				+ "        int v = e.foo(a, b, c);\n" //
+				+ "        System.out.println(v);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public static void depfunc2(String x, String y, Object z) {\n" //
+				+ "        E1 k = new E1();\n" //
+				+ "        k.foo(x, y, z);\n" //
+				+ "        { E1 e = new E1();\n" //
+				+ "        e.foo(x, y, z); }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n";
+		ICompilationUnit cu2= pack1.createCompilationUnit("E.java", sample, false, null);
+		enable(CleanUpConstants.REPLACE_DEPRECATED_CALLS);
+
+		sample= "" //
+				+ "package test;\n" //
+				+ "public class E {\n" //
+				+ "\n" //
+				+ "    public static void depfunc(String a, String b, Object c) {\n" //
+				+ "        E1 d = new E1();\n" //
+				+ "        int k1= 8;\n" //
+				+ "        String k1_1 = a.toLowerCase() + Blah.blah2;\n"
+				+ "        int y = d.foo(k1_1, b);\n"
+				+ "        System.out.println(y);\n" //
+				+ "        E1 e = new E1();\n" //
+				+ "        String k2 = a.toLowerCase() + Blah.blah2;\n"
+				+ "        int z = e.foo(k2, b);\n"
+				+ "        System.out.println(z);\n" //
+				+ "        String k = a.toLowerCase() + Blah.blah2;\n"
+				+ "        int v = e.foo(k, b);\n"
+				+ "        System.out.println(v);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public static void depfunc2(String x, String y, Object z) {\n" //
+				+ "        E1 k = new E1();\n" //
+				+ "        String k1_1 = x.toLowerCase() + Blah.blah2;\n" //
+				+ "        k.foo(k1_1, y);\n" //
+				+ "        { E1 e = new E1();\n" //
+				+ "        String k1 = x.toLowerCase() + Blah.blah2;\n" //
+				+ "        e.foo(k1, y); }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n";
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu2}, new String[] {expected1},
+				new HashSet<>(Arrays.asList(FixMessages.InlineDeprecatedMethod_msg)));
+	}
+
+	@Test
+	public void testDeprecatedCleanup2() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/722
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample1= ""
+				+ "package test;\n" //
+				+ "public class E1 {\n" //
+				+ "\n" //
+				+ "    String blah = \"blah\";\n" //
+				+ "    \n" //
+				+ "    public class Blah {\n" //
+				+ "        public static String blah2 = \"blah2\";\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public int foo(String a, String b) {\n" //
+				+ "        System.out.println(a + b);\n" //
+				+ "        return a.length() + b.length();\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    /**\n" //
+				+ "     * @deprecated use {@link #foo(String, String)}\n" //
+				+ "     * @param a\n" //
+				+ "     * @param b\n" //
+				+ "     * @param c\n" //
+				+ "     * @return int\n" //
+				+ "     */\n" //
+				+ "    @Deprecated\n" //
+				+ "    public int foo(String a, String b, Object c) {\n" //
+				+ "        String k = a.toLowerCase() + Blah.blah2;\n" //
+				+ "        return foo(k, b);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n"; //
+		ICompilationUnit cu1= pack1.createCompilationUnit("E1.java", sample1, false, null);
+
+		IPackageFragment pack2= fSourceFolder.createPackageFragment("test2", true, null);
+		String sample= "" //
+				+ "package test2;\n" //
+				+ "import test.E1;\n" //
+				+ "public class E {\n" //
+				+ "\n" //
+				+ "    public static void depfunc(String a, String b, Object c) {\n" //
+				+ "        E1 d = new E1();\n" //
+				+ "        int k1= 8;\n" //
+				+ "        int y = d.foo(a, b, c);\n" //
+				+ "        System.out.println(y);\n" //
+				+ "        E1 e = new E1();\n" //
+				+ "        int z = e.foo(a, b, c);\n" //
+				+ "        System.out.println(z);\n" //
+				+ "        int v = e.foo(a, b, c);\n" //
+				+ "        System.out.println(v);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public static void depfunc2(String x, String y, Object z) {\n" //
+				+ "        E1 k = new E1();\n" //
+				+ "        k.foo(x, y, z);\n" //
+				+ "        { E1 e = new E1();\n" //
+				+ "        e.foo(x, y, z); }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n";
+		ICompilationUnit cu2= pack2.createCompilationUnit("E.java", sample, false, null);
+		enable(CleanUpConstants.REPLACE_DEPRECATED_CALLS);
+
+		sample= "" //
+				+ "package test2;\n" //
+				+ "import test.E1;\n" //
+				+ "import test.E1.Blah;\n" //
+				+ "public class E {\n" //
+				+ "\n" //
+				+ "    public static void depfunc(String a, String b, Object c) {\n" //
+				+ "        E1 d = new E1();\n" //
+				+ "        int k1= 8;\n" //
+				+ "        String k1_1 = a.toLowerCase() + Blah.blah2;\n"
+				+ "        int y = d.foo(k1_1, b);\n"
+				+ "        System.out.println(y);\n" //
+				+ "        E1 e = new E1();\n" //
+				+ "        String k2 = a.toLowerCase() + Blah.blah2;\n"
+				+ "        int z = e.foo(k2, b);\n"
+				+ "        System.out.println(z);\n" //
+				+ "        String k = a.toLowerCase() + Blah.blah2;\n"
+				+ "        int v = e.foo(k, b);\n"
+				+ "        System.out.println(v);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public static void depfunc2(String x, String y, Object z) {\n" //
+				+ "        E1 k = new E1();\n" //
+				+ "        String k1_1 = x.toLowerCase() + Blah.blah2;\n" //
+				+ "        k.foo(k1_1, y);\n" //
+				+ "        { E1 e = new E1();\n" //
+				+ "        String k1 = x.toLowerCase() + Blah.blah2;\n" //
+				+ "        e.foo(k1, y); }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n";
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu1, cu2}, new String[] {sample1, expected1},
+				new HashSet<>(Arrays.asList(FixMessages.InlineDeprecatedMethod_msg)));
+	}
+
+	@Test
+	public void testDoNotDoDeprecatedCleanup1() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/722
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= ""
+				+ "package test;\n" //
+				+ "public class E1 {\n" //
+				+ "\n" //
+				+ "    String blah = \"blah\";\n" //
+				+ "    \n" //
+				+ "    private static class Blah {\n" //
+				+ "        public static String blah2 = \"blah2\";\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public int foo(String a, String b) {\n" //
+				+ "        System.out.println(a + b);\n" //
+				+ "        return a.length() + b.length();\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    /**\n" //
+				+ "     * @deprecated use {@link #foo(String, String)}\n" //
+				+ "     * @param a\n" //
+				+ "     * @param b\n" //
+				+ "     * @param c\n" //
+				+ "     * @return int\n" //
+				+ "     */\n" //
+				+ "    @Deprecated\n" //
+				+ "    public int foo(String a, String b, Object c) {\n" //
+				+ "        String k = a.toLowerCase() + Blah.blah2;\n" //
+				+ "        return foo(k, b);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n"; //
+		ICompilationUnit cu1= pack1.createCompilationUnit("E1.java", sample, false, null);
+
+		sample= "" //
+				+ "package test;\n" //
+				+ "public class E {\n" //
+				+ "\n" //
+				+ "    public static void depfunc(String a, String b, Object c) {\n" //
+				+ "        E1 d = new E1();\n" //
+				+ "        int k1= 8;\n" //
+				+ "        int y = d.foo(a, b, c);\n" //
+				+ "        System.out.println(y);\n" //
+				+ "        E1 e = new E1();\n" //
+				+ "        int z = e.foo(a, b, c);\n" //
+				+ "        System.out.println(z);\n" //
+				+ "        int v = e.foo(a, b, c);\n" //
+				+ "        System.out.println(v);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public static void depfunc2(String x, String y, Object z) {\n" //
+				+ "        E1 k = new E1();\n" //
+				+ "        k.foo(x, y, z);\n" //
+				+ "        { E1 e = new E1();\n" //
+				+ "        e.foo(x, y, z); }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n";
+		ICompilationUnit cu2= pack1.createCompilationUnit("E.java", sample, false, null);
+		enable(CleanUpConstants.REPLACE_DEPRECATED_CALLS);
+
+		assertRefactoringHasNoChange(new ICompilationUnit[] { cu1, cu2 });
+	}
+
+	@Test
+	public void testDoNotDoDeprecatedCleanup2() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/722
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample1= ""
+				+ "package test;\n" //
+				+ "public class E1 {\n" //
+				+ "\n" //
+				+ "    String blah = \"blah\";\n" //
+				+ "    \n" //
+				+ "    protected static class Blah {\n" //
+				+ "        public static String blah2 = \"blah2\";\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public int foo(String a, String b) {\n" //
+				+ "        System.out.println(a + b);\n" //
+				+ "        return a.length() + b.length();\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    /**\n" //
+				+ "     * @deprecated use {@link #foo(String, String)}\n" //
+				+ "     * @param a\n" //
+				+ "     * @param b\n" //
+				+ "     * @param c\n" //
+				+ "     * @return int\n" //
+				+ "     */\n" //
+				+ "    @Deprecated\n" //
+				+ "    public int foo(String a, String b, Object c) {\n" //
+				+ "        String k = a.toLowerCase() + Blah.blah2;\n" //
+				+ "        return foo(k, b);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n"; //
+		ICompilationUnit cu1= pack1.createCompilationUnit("E1.java", sample1, false, null);
+
+		IPackageFragment pack2= fSourceFolder.createPackageFragment("test2", true, null);
+		String sample= "" //
+				+ "package test2;\n" //
+				+ "import test.E1;\n" //
+				+ "public class E {\n" //
+				+ "\n" //
+				+ "    public static void depfunc(String a, String b, Object c) {\n" //
+				+ "        E1 d = new E1();\n" //
+				+ "        int k1= 8;\n" //
+				+ "        int y = d.foo(a, b, c);\n" //
+				+ "        System.out.println(y);\n" //
+				+ "        E1 e = new E1();\n" //
+				+ "        int z = e.foo(a, b, c);\n" //
+				+ "        System.out.println(z);\n" //
+				+ "        int v = e.foo(a, b, c);\n" //
+				+ "        System.out.println(v);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public static void depfunc2(String x, String y, Object z) {\n" //
+				+ "        E1 k = new E1();\n" //
+				+ "        k.foo(x, y, z);\n" //
+				+ "        { E1 e = new E1();\n" //
+				+ "        e.foo(x, y, z); }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n";
+		ICompilationUnit cu2= pack2.createCompilationUnit("E.java", sample, false, null);
+		enable(CleanUpConstants.REPLACE_DEPRECATED_CALLS);
+
+		assertRefactoringHasNoChange(new ICompilationUnit[] { cu1, cu2 });
+	}
+
+	@Test
+	public void testDoNotDoDeprecatedCleanup3() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/722
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample1= ""
+				+ "package test;\n" //
+				+ "public class E1 {\n" //
+				+ "\n" //
+				+ "    String blah = \"blah\";\n" //
+				+ "    \n" //
+				+ "    static class Blah {\n" //
+				+ "        public static String blah2 = \"blah2\";\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public int foo(String a, String b) {\n" //
+				+ "        System.out.println(a + b);\n" //
+				+ "        return a.length() + b.length();\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    /**\n" //
+				+ "     * @deprecated use {@link #foo(String, String)}\n" //
+				+ "     * @param a\n" //
+				+ "     * @param b\n" //
+				+ "     * @param c\n" //
+				+ "     * @return int\n" //
+				+ "     */\n" //
+				+ "    @Deprecated\n" //
+				+ "    public int foo(String a, String b, Object c) {\n" //
+				+ "        String k = a.toLowerCase() + Blah.blah2;\n" //
+				+ "        return foo(k, b);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n"; //
+		ICompilationUnit cu1= pack1.createCompilationUnit("E1.java", sample1, false, null);
+
+		IPackageFragment pack2= fSourceFolder.createPackageFragment("test2", true, null);
+		String sample= "" //
+				+ "package test2;\n" //
+				+ "import test.E1;\n" //
+				+ "public class E {\n" //
+				+ "\n" //
+				+ "    public static void depfunc(String a, String b, Object c) {\n" //
+				+ "        E1 d = new E1();\n" //
+				+ "        int k1= 8;\n" //
+				+ "        int y = d.foo(a, b, c);\n" //
+				+ "        System.out.println(y);\n" //
+				+ "        E1 e = new E1();\n" //
+				+ "        int z = e.foo(a, b, c);\n" //
+				+ "        System.out.println(z);\n" //
+				+ "        int v = e.foo(a, b, c);\n" //
+				+ "        System.out.println(v);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public static void depfunc2(String x, String y, Object z) {\n" //
+				+ "        E1 k = new E1();\n" //
+				+ "        k.foo(x, y, z);\n" //
+				+ "        { E1 e = new E1();\n" //
+				+ "        e.foo(x, y, z); }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n";
+		ICompilationUnit cu2= pack2.createCompilationUnit("E.java", sample, false, null);
+		enable(CleanUpConstants.REPLACE_DEPRECATED_CALLS);
+
+		assertRefactoringHasNoChange(new ICompilationUnit[] { cu1, cu2 });
+	}
+
+	@Test
+	public void testDoNotDoDeprecatedCleanup4() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/722
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample1= ""
+				+ "package test;\n" //
+				+ "public class E1 {\n" //
+				+ "\n" //
+				+ "    String blah = \"blah\";\n" //
+				+ "    \n" //
+				+ "    static class Blah {\n" //
+				+ "        public static String blah2 = \"blah2\";\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public int foo(String a, String b) {\n" //
+				+ "        System.out.println(a + b);\n" //
+				+ "        return a.length() + b.length();\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    /**\n" //
+				+ "     * @deprecated use {@link #foo(String, String)}\n" //
+				+ "     * @param a\n" //
+				+ "     * @param b\n" //
+				+ "     * @param c\n" //
+				+ "     * @return int\n" //
+				+ "     */\n" //
+				+ "    @Deprecated\n" //
+				+ "    public int foo(String a, String b, Object c) {\n" //
+				+ "        String k = a.toLowerCase() + this.blah;\n" //
+				+ "        return foo(k, b);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n"; //
+		ICompilationUnit cu1= pack1.createCompilationUnit("E1.java", sample1, false, null);
+
+		IPackageFragment pack2= fSourceFolder.createPackageFragment("test2", true, null);
+		String sample= "" //
+				+ "package test2;\n" //
+				+ "import test.E1;\n" //
+				+ "public class E {\n" //
+				+ "\n" //
+				+ "    public static void depfunc(String a, String b, Object c) {\n" //
+				+ "        E1 d = new E1();\n" //
+				+ "        int k1= 8;\n" //
+				+ "        int y = d.foo(a, b, c);\n" //
+				+ "        System.out.println(y);\n" //
+				+ "        E1 e = new E1();\n" //
+				+ "        int z = e.foo(a, b, c);\n" //
+				+ "        System.out.println(z);\n" //
+				+ "        int v = e.foo(a, b, c);\n" //
+				+ "        System.out.println(v);\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "    public static void depfunc2(String x, String y, Object z) {\n" //
+				+ "        E1 k = new E1();\n" //
+				+ "        k.foo(x, y, z);\n" //
+				+ "        { E1 e = new E1();\n" //
+				+ "        e.foo(x, y, z); }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n";
+		ICompilationUnit cu2= pack2.createCompilationUnit("E.java", sample, false, null);
+		enable(CleanUpConstants.REPLACE_DEPRECATED_CALLS);
+
+		assertRefactoringHasNoChange(new ICompilationUnit[] { cu1, cu2 });
+	}
+
 }

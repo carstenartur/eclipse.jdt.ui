@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -294,6 +294,9 @@ public final class PreferencesMessages extends NLS {
 	public static String ProblemSeveritiesConfigurationBlock_pb_redundant_type_arguments_label;
 	public static String ProblemSeveritiesConfigurationBlock_pb_resource_leak_label;
 	public static String ProblemSeveritiesConfigurationBlock_pb_resource_not_managed_via_twr_label;
+	public static String ProblemSeveritiesConfigurationBlock_enable_annotation_resource_analysis;
+	public static String ProblemSeveritiesConfigurationBlock_pb_incompatible_owning_contract_label;
+	public static String ProblemSeveritiesConfigurationBlock_pb_recommended_resource_management_label;
 	public static String ProblemSeveritiesConfigurationBlock_include_assert_in_null_analysis;
 	public static String ProblemSeveritiesConfigurationBlock_treat_optional_as_fatal;
 	public static String SourceAttachmentPropertyPage_error_title;
@@ -405,9 +408,10 @@ public final class PreferencesMessages extends NLS {
 	public static String ProblemSeveritiesConfigurationBlock_needsbuild_title;
 	public static String ProblemSeveritiesConfigurationBlock_needsfullbuild_message;
 	public static String ProblemSeveritiesConfigurationBlock_needsprojectbuild_message;
+	public static String ProblemSeveritiesConfigurationBlock_missing_nonnull_by_default_annotation;
+
 	public static String NullAnnotationsConfigurationDialog_nonnull_annotations_label;
 	public static String NullAnnotationsConfigurationDialog_nonnull_annotations_description;
-	public static String ProblemSeveritiesConfigurationBlock_missing_nonnull_by_default_annotation;
 	public static String NullAnnotationsConfigurationDialog_nonnullbydefault_annotation_error;
 	public static String NullAnnotationsConfigurationDialog_nonnullbydefault_annotations_label;
 	public static String NullAnnotationsConfigurationDialog_nonnullbydefault_annotations_description;
@@ -420,6 +424,19 @@ public final class PreferencesMessages extends NLS {
 	public static String NullAnnotationsConfigurationDialog_notFound_info;
 	public static String NullAnnotationsConfigurationDialog_primary_label;
 	public static String NullAnnotationsConfigurationDialog_secondary_label;
+
+	public static String OwningAnnotationsConfigurationDialog_title;
+	public static String OwningAnnotationsConfigurationDialog_owning_annotation_error;
+	public static String OwningAnnotationsConfigurationDialog_notowning_annotation_error;
+
+	public static String OwningAnnotationsConfigurationDialog_owning_annotation_label;
+	public static String OwningAnnotationsConfigurationDialog_owning_annotation_description;
+	public static String OwningAnnotationsConfigurationDialog_owning_annotations_description;
+	public static String OwningAnnotationsConfigurationDialog_notowning_annotation_label;
+	public static String OwningAnnotationsConfigurationDialog_notowning_annotation_description;
+	public static String OwningAnnotationsConfigurationDialog_annotation_label;
+	public static String OwningAnnotationsConfigurationDialog_use_default_annotations_for_owning;
+
 	public static String ProblemSeveritiesConfigurationBlock_common_description;
 	public static String ProblemSeveritiesConfigurationBlock_pb_unavoidable_generic_type_problems;
 	public static String ProblemSeveritiesConfigurationBlock_pb_unsafe_type_op_label;
@@ -844,6 +861,9 @@ public final class PreferencesMessages extends NLS {
 	public static String ComplianceConfigurationBlock_version_16;
 	public static String ComplianceConfigurationBlock_version_17;
 	public static String ComplianceConfigurationBlock_version_18;
+	public static String ComplianceConfigurationBlock_version_19;
+	public static String ComplianceConfigurationBlock_version_20;
+	public static String ComplianceConfigurationBlock_version_21;
 	public static String ComplianceConfigurationBlock_versionCLDC11;
 	public static String ComplianceConfigurationBlock_src_greater_compliance;
 	public static String ComplianceConfigurationBlock_classfile_greater_compliance;
@@ -904,6 +924,7 @@ public final class PreferencesMessages extends NLS {
 
 	public static String JavaEditorCodeMiningConfigurationBlock_common_description;
 	public static String JavaEditorCodeMiningConfigurationBlock_enableCodeMining_label;
+	public static String JavaEditorCodeMiningConfigurationBlock_ignoreInexactMatches_label;
 	public static String JavaEditorCodeMiningConfigurationBlock_showCodeMining_atLeastOne_label;
 	public static String JavaEditorCodeMiningConfigurationBlock_section_general;
 	public static String JavaEditorCodeMiningConfigurationBlock_showReferences_label;
@@ -912,4 +933,9 @@ public final class PreferencesMessages extends NLS {
 	public static String JavaEditorCodeMiningConfigurationBlock_showReferences_onMethods_label;
 	public static String JavaEditorCodeMiningConfigurationBlock_showImplementations_label;
 	public static String JavaEditorCodeMiningConfigurationBlock_showParameterNames_label;
+
+	public static String JavaLaunchingConfigurationBlock_application_name_fully_qualified_label;
+	public static String JavaLaunchingConfigurationBlock_applet_name_fully_qualified_label;
+	public static String JavaLaunchingConfigurationBlock_junit_name_fully_qualified_label;
+	public static String JavaLaunchingConfigurationBlock_name_description;
 }

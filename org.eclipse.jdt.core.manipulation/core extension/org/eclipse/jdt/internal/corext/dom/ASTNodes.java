@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.Assert;
@@ -101,6 +102,7 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.InstanceofExpression;
 import org.eclipse.jdt.core.dom.LabeledStatement;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MemberValuePair;
@@ -120,6 +122,7 @@ import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.PrimitiveType;
 import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.QualifiedType;
+import org.eclipse.jdt.core.dom.RecordDeclaration;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SimpleType;
@@ -2476,6 +2479,30 @@ public class ASTNodes {
 	}
 
 	/**
+	 * Returns the first ancestor of the provided node which has any of the required types.
+	 *
+	 * @param node the start node
+	 * @param ancestorClass the required ancestor's type
+	 * @return the first ancestor of the provided node which has any of the required type, or
+	 *         {@code null}
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T extends ASTNode> T getFirstAncestorOrNull(final ASTNode node, final Class<T> ancestorClass) {
+		if (node == null || node.getParent() == null) {
+			return null;
+		}
+
+		ASTNode parent= node.getParent();
+
+		if (ancestorClass.isAssignableFrom(parent.getClass())
+				) {
+			return (T) parent;
+		}
+
+		return getFirstAncestorOrNull(parent, ancestorClass);
+	}
+
+	/**
 	 * Returns the closest ancestor of <code>node</code> that is an instance of <code>parentClass</code>, or <code>null</code> if none.
 	 * <p>
 	 * <b>Warning:</b> This method does not stop at any boundaries like parentheses, statements, body declarations, etc.
@@ -3995,6 +4022,7 @@ public class ASTNodes {
 	 * Should match the last NLS comment before end of the line
 	 */
 	static final Pattern comment= Pattern.compile("([ ]*\\/\\/\\$NON-NLS-[0-9]\\$) *$"); //$NON-NLS-1$
+
 	/**
 	 * Should match leading whitespaces - not sure why eclipse does not allow to use \h instead of [ \t]
 	 */
@@ -4040,6 +4068,48 @@ public class ASTNodes {
 			throw new CoreException(Status.CANCEL_STATUS);
 		}
 	}
+
+	/**
+	 * Replaces the provided node from the AST with the provided replacement call string.
+	 * Remove a specified number of NLS comments at the same time.
+	 *
+	 * @param rewrite	The AST Rewriter
+	 * @param visited	The node to remove
+	 * @param replace_with_Call	The replacement node
+	 * @param count		Number of NLS comments to remove
+	 * @param editGroup	The edit group
+	 * @param cuRewrite	The cu rewrite
+	 * @throws CoreException Exception to be thrown to allow error handling in case of problem to compute the replacement
+	 */
+	public static void replaceAndRemoveNLSByCount(final ASTRewrite rewrite, final ASTNode visited, final String replace_with_Call, final int count, final TextEditGroup editGroup, final CompilationUnitRewrite cuRewrite) throws CoreException {
+		String original= null;
+		ASTNode replacement= null;
+		try {
+			ASTNode st=getFirstAncestorOrNull(visited, Statement.class, FieldDeclaration.class);
+			CompilationUnit cu= (CompilationUnit)st.getRoot();
+			String buffer= cuRewrite.getCu().getBuffer().getContents();
+			int origStart= cu.getExtendedStartPosition(st);
+			int origLength= cu.getExtendedLength(st);
+			original= buffer.substring(origStart, origStart + origLength);
+			Matcher commentMatcher= comment.matcher(original);
+			int i= count;
+			while (i-- > 0) {
+				original= commentMatcher.replaceFirst(""); //$NON-NLS-1$
+				commentMatcher= comment.matcher(original);
+			}
+			original= leadingspaces_start.matcher(original).replaceAll(""); //$NON-NLS-1$
+			original= leadingspaces.matcher(original).replaceAll("\n"); //$NON-NLS-1$
+			String visitedString= buffer.substring(visited.getStartPosition(), visited.getStartPosition() + visited.getLength());
+			// we are using the toString() method to get string representation of replace_with_Call so tweak string to
+			// add spaces between parameters
+			String originalmodified= original.replace(visitedString, replace_with_Call);
+			replacement= rewrite.createStringPlaceholder(originalmodified, st.getNodeType());
+			rewrite.replace(st, replacement, editGroup);
+		} catch (JavaModelException e) {
+			throw new CoreException(Status.CANCEL_STATUS);
+		}
+	}
+
 	/**
 	 * Returns a list of local variable names which are visible at the given node.
 	 *
@@ -4156,10 +4226,10 @@ public class ASTNodes {
 		List<Comment> comments= new ArrayList<>();
 		CompilationUnit cu= (CompilationUnit)node.getRoot();
 		List<Comment> commentList= cu.getCommentList();
-		for (Comment comment : commentList) {
-			if (comment.getStartPosition() >= cu.getExtendedStartPosition(node)
-					&& comment.getStartPosition() + comment.getLength() < node.getStartPosition()) {
-				comments.add(comment);
+		for (Comment commentFromList : commentList) {
+			if (commentFromList.getStartPosition() >= cu.getExtendedStartPosition(node)
+					&& commentFromList.getStartPosition() + commentFromList.getLength() < node.getStartPosition()) {
+				comments.add(commentFromList);
 			}
 		}
 		return comments;
@@ -4177,12 +4247,143 @@ public class ASTNodes {
 		List<Comment> commentList= cu.getCommentList();
 		int extendedStart= cu.getExtendedStartPosition(node);
 		int extendedLength= cu.getExtendedLength(node);
-		for (Comment comment : commentList) {
-			if (comment.getStartPosition() > node.getStartPosition()
-					&& comment.getStartPosition() < extendedStart + extendedLength) {
-				comments.add(comment);
+		for (Comment commentFromList : commentList) {
+			if (commentFromList.getStartPosition() > node.getStartPosition()
+					&& commentFromList.getStartPosition() < extendedStart + extendedLength) {
+				comments.add(commentFromList);
 			}
 		}
 		return comments;
+	}
+
+	/**
+	 * Return a list of comments for a region
+	 *
+	 * @param cu - CompilationUnit
+	 * @param start - start of region
+	 * @param length - length of region
+	 * @return list of Comment nodes
+	 */
+	public static List<Comment> getCommentsForRegion(CompilationUnit cu, int start, int length) {
+		List<Comment> comments= new ArrayList<>();
+		List<Comment> commentList= cu.getCommentList();
+		for (Comment commentFromList : commentList) {
+			if (commentFromList.getStartPosition() > start
+					&& commentFromList.getStartPosition() < start + length) {
+				comments.add(commentFromList);
+			}
+		}
+		return comments;
+	}
+
+	/**
+	 * Get the number of Type references in a Compilation Unit - used for determining
+	 * if an import can be removed.
+	 *
+	 * @param typeBinding - binding of the type in question
+	 * @param cu - compilation unit
+	 * @return integer count of times type is referenced (may be 0 if bindings cannot be resolved)
+	 */
+	public static int getNumberOfTypeReferences(ITypeBinding typeBinding, CompilationUnit cu) {
+		class CounterVisitor extends ASTVisitor {
+			private int counter= 0;
+			private void checkType(Type type) {
+				if (type != null && !type.isParameterizedType()) {
+					ITypeBinding binding= type.resolveBinding();
+					if (binding != null) {
+						if (binding.isArray()) {
+							binding= binding.getElementType();
+						}
+						if (binding.isEqualTo(typeBinding)) {
+							++counter;
+						}
+					}
+				}
+			}
+			public int getCounter() {
+				return counter;
+			}
+			@Override
+			public boolean visit(ArrayCreation node) {
+				Type type= node.getType();
+				checkType(type);
+				return true;
+			}
+			@Override
+			public boolean visit(MethodDeclaration node) {
+				Type type= node.getReturnType2();
+				checkType(type);
+				List<Type> exceptions= node.thrownExceptionTypes();
+				for (Type t : exceptions) {
+					checkType(t);
+				}
+				return true;
+			}
+			@Override
+			public boolean visit(ClassInstanceCreation node) {
+				Type type= node.getType();
+				checkType(type);
+				return true;
+			}
+			@Override
+			public boolean visit(SingleVariableDeclaration node) {
+				Type type= node.getType();
+				checkType(type);
+				return true;
+			}
+			@Override
+			public boolean visit(CastExpression node) {
+				Type type= node.getType();
+				checkType(type);
+				return true;
+			}
+			@Override
+			public boolean visit(VariableDeclarationExpression node) {
+				Type type= node.getType();
+				checkType(type);
+				return true;
+			}
+			@Override
+			public boolean visit(InstanceofExpression node) {
+				Type type= node.getRightOperand();
+				checkType(type);
+				return true;
+			}
+			@Override
+			public boolean visit(FieldDeclaration node) {
+				Type type= node.getType();
+				checkType(type);
+				return true;
+			}
+			@Override
+			public boolean visit(ParameterizedType node) {
+				Type type= node.getType();
+				checkType(type);
+				List<Type> types= node.typeArguments();
+				for (Type t : types) {
+					checkType(t);
+				}
+				return true;
+			}
+			@Override
+			public boolean visit(TypeDeclaration node) {
+				List<Type> types= node.typeParameters();
+				for (Type t : types) {
+					checkType(t);
+				}
+				return true;
+			}
+			@Override
+			public boolean visit(RecordDeclaration node) {
+				List<Type> types= node.typeParameters();
+				for (Type t : types) {
+					checkType(t);
+				}
+				return true;
+			}
+		}
+		CounterVisitor visitor= new CounterVisitor();
+		cu.accept(visitor);
+		return visitor.getCounter();
 	}
 }

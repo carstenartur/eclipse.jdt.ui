@@ -37,7 +37,7 @@ public class TestCaseClassLoader extends ClassLoader {
 	/** scanned class path */
 	private Vector<String> fPathItems;
 	/** default excluded paths */
-	private String[] defaultExclusions = { "junit.framework.", "junit.extensions.", "junit.runner." };
+	private final String[] defaultExclusions = { "junit.framework.", "junit.extensions.", "junit.runner." };
 	/** name of excluded properties file */
 	static final String EXCLUDED_FILE = "excluded.properties";
 	/** excluded paths */
@@ -143,15 +143,12 @@ public class TestCaseClassLoader extends ClassLoader {
 	}
 
 	private byte[] getClassData(File f) {
-		try {
-			FileInputStream stream = new FileInputStream(f);
-			ByteArrayOutputStream out = new ByteArrayOutputStream(1000);
+		try (FileInputStream stream = new FileInputStream(f);
+			ByteArrayOutputStream out = new ByteArrayOutputStream(1000)){
 			byte[] b = new byte[1000];
 			int n;
 			while ((n = stream.read(b)) != -1)
 				out.write(b, 0, n);
-			stream.close();
-			out.close();
 			return out.toByteArray();
 
 		} catch (IOException e) {

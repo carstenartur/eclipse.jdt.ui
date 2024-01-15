@@ -35,12 +35,12 @@ import org.eclipse.jdt.internal.corext.dom.ASTSemanticMatcher;
 import org.eclipse.jdt.internal.corext.fix.CleanUpConstants;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix.CompilationUnitRewriteOperation;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalModel;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
-import org.eclipse.jdt.ui.text.java.IProblemLocation;
+import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
 
 /**
  * A fix that removes a condition on an else that is negative to the condition of the previous if.
@@ -131,12 +131,12 @@ public class RedundantIfConditionCleanUp extends AbstractMultiFix implements ICl
 	}
 
 	@Override
-	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocation problem) {
+	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocationCore problem) {
 		return false;
 	}
 
 	@Override
-	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocation[] problems) throws CoreException {
+	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocationCore[] problems) throws CoreException {
 		return null;
 	}
 
@@ -148,7 +148,7 @@ public class RedundantIfConditionCleanUp extends AbstractMultiFix implements ICl
 		}
 
 		@Override
-		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModel linkedModel) throws CoreException {
+		public void rewriteASTInternal(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
 			TextEditGroup group= createTextEditGroup(MultiFixMessages.RedundantIfConditionCleanup_description, cuRewrite);
 

@@ -13,13 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.ui.javaeditor;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -47,7 +46,6 @@ import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.SafeRunner;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.core.runtime.jobs.ISchedulingRule;
 
 import org.eclipse.core.resources.IEncodedStorage;
@@ -130,6 +128,7 @@ import org.eclipse.jdt.internal.ui.javaeditor.saveparticipant.SaveParticipantReg
 import org.eclipse.jdt.internal.ui.text.correction.JavaCorrectionProcessor;
 import org.eclipse.jdt.internal.ui.text.java.IProblemRequestorExtension;
 import org.eclipse.jdt.internal.ui.text.spelling.JavaSpellingReconcileStrategy;
+import org.eclipse.jdt.internal.ui.util.Progress;
 
 
 public class CompilationUnitDocumentProvider extends TextFileDocumentProvider implements ICompilationUnitDocumentProvider, IAnnotationModelFactory {
@@ -434,83 +433,86 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 	}
 
 	/**
-	 * Internal structure for mapping positions to some value.
+	 * Internal structure for mapping positions to JavaMarkerAnnotations.
 	 * The reason for this specific structure is that positions can
 	 * change over time. Thus a lookup is based on value and not
 	 * on hash value.
 	 */
-	protected static class ReverseMap {
+	private static class ReverseJavaMarkerAnnotationsMap {
 
 		static class Entry {
-			Position fPosition;
-			Object fValue;
-		}
+			private final Position position;
 
-		private List<Entry> fList= new ArrayList<>(2);
-		private int fAnchor= 0;
+			final List<JavaMarkerAnnotation> annotations= new ArrayList<>();
 
-		public ReverseMap() {
-		}
-
-		public Object get(Position position) {
-
-			Entry entry;
-
-			// behind anchor
-			int length= fList.size();
-			for (int i= fAnchor; i < length; i++) {
-				entry= fList.get(i);
-				if (entry.fPosition.equals(position)) {
-					fAnchor= i;
-					return entry.fValue;
-				}
+			public Entry(Position position) {
+				this.position= position;
 			}
 
-			// before anchor
-			for (int i= 0; i < fAnchor; i++) {
-				entry= fList.get(i);
-				if (entry.fPosition.equals(position)) {
-					fAnchor= i;
-					return entry.fValue;
+			public boolean isFor(Position positionToCheck) {
+				return position.equals(positionToCheck);
+			}
+		}
+
+		private List<Entry> entries= new ArrayList<>(2);
+
+		private int anchorIndex= 0;
+
+		public Iterable<JavaMarkerAnnotation> get(Position position) {
+			// Start behind and store anchor because usually retrieval is performed sequentially over positions
+			Entry entry= getEntry(position, true);
+			if (entry != null) {
+				return entry.annotations;
+			} else {
+				return Collections.emptyList();
+			}
+		}
+
+		private Entry getEntry(Position position, boolean useAndStoreAnchor) {
+			int startIndex= useAndStoreAnchor ? anchorIndex : 0;
+			int numberOfIndices= entries.size();
+			for (int i= 0; i < numberOfIndices; i++) {
+				int indexToCheck= (i + startIndex) % numberOfIndices;
+				Entry entry= entries.get(indexToCheck);
+				if (entry.isFor(position)) {
+					if (useAndStoreAnchor) {
+						anchorIndex= indexToCheck;
+					}
+					return entry;
 				}
 			}
-
 			return null;
 		}
 
-		private int getIndex(Position position) {
-			Entry entry;
-			int length= fList.size();
-			for (int i= 0; i < length; i++) {
-				entry= fList.get(i);
-				if (entry.fPosition.equals(position))
-					return i;
-			}
-			return -1;
+		public void put(Position position, JavaMarkerAnnotation annotation) {
+			Entry entry= getOrCreateEntry(position);
+			entry.annotations.add(annotation);
 		}
 
-		public void put(Position position,  Object value) {
-			int index= getIndex(position);
-			if (index == -1) {
-				Entry entry= new Entry();
-				entry.fPosition= position;
-				entry.fValue= value;
-				fList.add(entry);
-			} else {
-				Entry entry= fList.get(index);
-				entry.fValue= value;
+		private Entry getOrCreateEntry(Position position) {
+			Entry entry= getEntry(position, false);
+			if (entry == null) {
+				entry= new Entry(position);
+				entries.add(entry);
 			}
+			return entry;
 		}
 
-		public void remove(Position position) {
-			int index= getIndex(position);
-			if (index > -1)
-				fList.remove(index);
+		public void remove(Position position, JavaMarkerAnnotation annotation) {
+			Entry entry= getEntry(position, false);
+			if (entry != null) {
+				if (entry.annotations.size() == 1) {
+					entries.remove(entry);
+				} else {
+					entry.annotations.remove(annotation);
+				}
+			}
 		}
 
 		public void clear() {
-			fList.clear();
+			entries.clear();
 		}
+
 	}
 
 	/**
@@ -534,7 +536,7 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 		private boolean fIsActive= false;
 		private boolean fIsHandlingTemporaryProblems;
 
-		private ReverseMap fReverseMap= new ReverseMap();
+		private ReverseJavaMarkerAnnotationsMap fReverseMap= new ReverseJavaMarkerAnnotationsMap();
 		private List<JavaMarkerAnnotation> fPreviouslyOverlaid= null;
 		private List<JavaMarkerAnnotation> fCurrentlyOverlaid= new ArrayList<>();
 		private Thread fActiveThread;
@@ -738,31 +740,22 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 		}
 
 		/**
-		 * Overlays value with problem annotation.
+		 * Overlays Java marker annotation with problem annotation.
 		 *
-		 * @param value the value
+		 * @param annotation the Java marker annotation to attach a problem annotation to
 		 * @param problemAnnotation the problem annotation
 		 */
-		private void setOverlay(Object value, ProblemAnnotation problemAnnotation) {
-			if (value instanceof  JavaMarkerAnnotation) {
-				JavaMarkerAnnotation annotation= (JavaMarkerAnnotation) value;
-				if (annotation.isProblem()) {
-					annotation.setOverlay(problemAnnotation);
-					fPreviouslyOverlaid.remove(annotation);
-					fCurrentlyOverlaid.add(annotation);
-				}
-			} else {
+		private void setOverlay(JavaMarkerAnnotation annotation, ProblemAnnotation problemAnnotation) {
+			if (annotation.isProblem()) {
+				annotation.setOverlay(problemAnnotation);
+				fPreviouslyOverlaid.remove(annotation);
+				fCurrentlyOverlaid.add(annotation);
 			}
 		}
 
-		private void  overlayMarkers(Position position, ProblemAnnotation problemAnnotation) {
-			Object value= getAnnotations(position);
-			if (value instanceof List) {
-				List<?> list= (List<?>) value;
-				for (Object name : list)
-					setOverlay(name, problemAnnotation);
-			} else {
-				setOverlay(value, problemAnnotation);
+		private void overlayMarkers(Position position, ProblemAnnotation problemAnnotation) {
+			for (JavaMarkerAnnotation annotation : getJavaMarkerAnnotations(position)) {
+				setOverlay(annotation, problemAnnotation);
 			}
 		}
 
@@ -826,7 +819,7 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 
 		}
 
-		private Object getAnnotations(Position position) {
+		private Iterable<JavaMarkerAnnotation> getJavaMarkerAnnotations(Position position) {
 			synchronized (getLockObject()) {
 				return fReverseMap.get(position);
 			}
@@ -839,19 +832,9 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 		protected void addAnnotation(Annotation annotation, Position position, boolean fireModelChanged) throws BadLocationException {
 			super.addAnnotation(annotation, position, fireModelChanged);
 
-			synchronized (getLockObject()) {
-				Object cached= fReverseMap.get(position);
-				if (cached == null)
-					fReverseMap.put(position, annotation);
-				else if (cached instanceof List) {
-					@SuppressWarnings("unchecked")
-					List<Object> list= (List<Object>) cached;
-					list.add(annotation);
-				} else if (cached instanceof Annotation) {
-					List<Object> list= new ArrayList<>(2);
-					list.add(cached);
-					list.add(annotation);
-					fReverseMap.put(position, list);
+			if (annotation instanceof JavaMarkerAnnotation javaAnnotation) {
+				synchronized (getLockObject()) {
+					fReverseMap.put(position, javaAnnotation);
 				}
 			}
 		}
@@ -873,18 +856,9 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 		@Override
 		protected void removeAnnotation(Annotation annotation, boolean fireModelChanged) {
 			Position position= getPosition(annotation);
-			synchronized (getLockObject()) {
-				Object cached= fReverseMap.get(position);
-				if (cached instanceof List) {
-					@SuppressWarnings("unchecked")
-					List<Object> list= (List<Object>) cached;
-					list.remove(annotation);
-					if (list.size() == 1) {
-						fReverseMap.put(position, list.get(0));
-						list.clear();
-					}
-				} else if (cached instanceof Annotation) {
-					fReverseMap.remove(position);
+			if (annotation instanceof JavaMarkerAnnotation javaAnnotation) {
+				synchronized (getLockObject()) {
+					fReverseMap.remove(position, javaAnnotation);
 				}
 			}
 			super.removeAnnotation(annotation, fireModelChanged);
@@ -1035,8 +1009,16 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 		}
 
 		IResource resource= original.getResource();
-		if (JavaModelUtil.isPrimary(original) && (resource == null || resource.exists()))
-			original.becomeWorkingCopy(requestor, getProgressMonitor());
+		if (JavaModelUtil.isPrimary(original) && (resource == null || resource.exists())) {
+			IProgressMonitor progressMonitor= getProgressMonitor();
+			try {
+				original.becomeWorkingCopy(requestor, progressMonitor);
+			} finally {
+				if (progressMonitor!=null) {
+					progressMonitor.done();
+				}
+			}
+		}
 		cuInfo.fCopy= original;
 
 		if (cuInfo.fModel instanceof CompilationUnitAnnotationModel)   {
@@ -1075,6 +1057,7 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 	 * @since 3.2
 	 */
 	private ICompilationUnit createFakeCompiltationUnit(IStorageEditorInput editorInput, boolean setContents) {
+		IProgressMonitor progressMonitor= getProgressMonitor();
 		try {
 			final IStorage storage= editorInput.getStorage();
 			final IPath storagePath= storage.getFullPath();
@@ -1108,51 +1091,32 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 			if (cpEntries == null || cpEntries.length == 0)
 				cpEntries= new IClasspathEntry[] { JavaRuntime.getDefaultJREContainerEntry() };
 
-			final ICompilationUnit cu= woc.newWorkingCopy(storage.getName(), cpEntries, getProgressMonitor());
+			final ICompilationUnit cu= woc.newWorkingCopy(storage.getName(), cpEntries, progressMonitor);
 			if (setContents) {
-				int READER_CHUNK_SIZE= 2048;
-				int BUFFER_SIZE= 8 * READER_CHUNK_SIZE;
-
 				String charsetName= null;
 				if (storage instanceof IEncodedStorage)
 					charsetName= ((IEncodedStorage)storage).getCharset();
 				if (charsetName == null)
 					charsetName= getDefaultEncoding();
 
-				Reader in= null;
-				InputStream contents= storage.getContents();
-				try {
-					in= new BufferedReader(new InputStreamReader(contents, charsetName));
-					StringBuilder buffer= new StringBuilder(BUFFER_SIZE);
-					char[] readBuffer= new char[READER_CHUNK_SIZE];
-					int n;
-					n= in.read(readBuffer);
-					while (n > 0) {
-						buffer.append(readBuffer, 0, n);
-						n= in.read(readBuffer);
-					}
-					cu.getBuffer().setContents(buffer.toString());
+				try (InputStream contents= storage.getContents()) {
+					cu.getBuffer().setContents(new String(contents.readAllBytes(), Charset.forName(charsetName)));
 				} catch (IOException e) {
 					JavaPlugin.log(e);
 					return null;
-				} finally {
-					try {
-						if (in != null)
-							in.close();
-						else
-							contents.close();
-					} catch (IOException x) {
-					}
 				}
 			}
 
 			if (!isModifiable(editorInput))
 				JavaModelUtil.reconcile(cu);
-
 			return cu;
 		} catch (CoreException ex) {
 			JavaPlugin.log(ex.getStatus());
 			return null;
+		} finally {
+			if (progressMonitor!=null) {
+				progressMonitor.done();
+			}
 		}
 	}
 
@@ -1185,6 +1149,7 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 	 * @since 3.3
 	 */
 	private ICompilationUnit createFakeCompiltationUnit(IURIEditorInput editorInput) {
+		IProgressMonitor progressMonitor= getProgressMonitor();
 		try {
 			final URI uri= editorInput.getURI();
 			final IFileStore fileStore= EFS.getStore(uri);
@@ -1212,7 +1177,7 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 			if (cpEntries == null || cpEntries.length == 0)
 				cpEntries= new IClasspathEntry[] { JavaRuntime.getDefaultJREContainerEntry() };
 
-			final ICompilationUnit cu= woc.newWorkingCopy(fileStoreName, cpEntries, getProgressMonitor());
+			final ICompilationUnit cu= woc.newWorkingCopy(fileStoreName, cpEntries, progressMonitor);
 
 			if (!isModifiable(editorInput))
 				JavaModelUtil.reconcile(cu);
@@ -1220,6 +1185,10 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 			return cu;
 		} catch (CoreException ex) {
 			return null;
+		} finally {
+			if (progressMonitor!=null) {
+				progressMonitor.done();
+			}
 		}
 	}
 
@@ -1354,7 +1323,7 @@ public class CompilationUnitDocumentProvider extends TextFileDocumentProvider im
 	 */
 	private IProgressMonitor getSubProgressMonitor(IProgressMonitor monitor, int ticks) {
 		if (monitor != null)
-			return new SubProgressMonitor(monitor, ticks, SubProgressMonitor.PREPEND_MAIN_LABEL_TO_SUBTASK);
+			return Progress.subMonitorPrepend(monitor, ticks);
 
 		return new NullProgressMonitor();
 	}

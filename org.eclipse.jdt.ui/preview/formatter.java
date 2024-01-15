@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2022 Mateusz Matela and others.
+ * Copyright (c) 2018, 2024 Mateusz Matela and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -99,6 +99,13 @@ class Example {
 			str = i + str;
 			object = Arrays.asList(str);
 			i += 2;
+		}
+		
+		switch(i){
+			case 0 -> theInt++;
+			case 22, 33 -> theInt--;
+			case 1234567890 -> theInt = 0;
+			default -> theInt = -1;
 		}
 	}
 }
@@ -850,6 +857,10 @@ class Example extends OtherClass {}
 //--PREVIEW--START--org.eclipse.jdt.core.formatter.alignment_for_superinterfaces_in_type_declaration
 class Example implements I1, I2, I3 {}
 //--PREVIEW--END--org.eclipse.jdt.core.formatter.alignment_for_superinterfaces_in_type_declaration
+
+//--PREVIEW--START--org.eclipse.jdt.core.formatter.alignment_for_permitted_types_in_type_declaration
+sealed class Example permits C1, C2, C3 {}
+//--PREVIEW--END--org.eclipse.jdt.core.formatter.alignment_for_permitted_types_in_type_declaration
 
 //--PREVIEW--START--org.eclipse.jdt.core.formatter.alignment_for_parameters_in_constructor_declaration
 class Example {Example(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) { this();}Example() {}}

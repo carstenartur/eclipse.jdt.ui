@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Fabrice TIERCELIN and others.
+ * Copyright (c) 2020, 2022 Fabrice TIERCELIN and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -67,13 +67,13 @@ import org.eclipse.jdt.internal.corext.dom.VarDefinitionsUsesVisitor;
 import org.eclipse.jdt.internal.corext.fix.CleanUpConstants;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix.CompilationUnitRewriteOperation;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalModel;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
-import org.eclipse.jdt.ui.text.java.IProblemLocation;
+import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
 
 /**
  * A fix that replaces for loops to use String.join() where possible.
@@ -693,12 +693,12 @@ public class JoinCleanUp extends AbstractMultiFix implements ICleanUpFix {
 	}
 
 	@Override
-	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocation problem) {
+	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocationCore problem) {
 		return false;
 	}
 
 	@Override
-	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocation[] problems) throws CoreException {
+	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocationCore[] problems) throws CoreException {
 		return null;
 	}
 
@@ -726,12 +726,12 @@ public class JoinCleanUp extends AbstractMultiFix implements ICleanUpFix {
 		}
 
 		@Override
-		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModel linkedModel) throws CoreException {
+		public void rewriteASTInternal(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
 			AST ast= cuRewrite.getRoot().getAST();
 			TextEditGroup group= createTextEditGroup(MultiFixMessages.JoinCleanup_description, cuRewrite);
 
-			Expression copyOfDelimiter= ASTNodes.createMoveTarget(rewrite, ASTNodes.getUnparenthesedExpression(delimiter));
+			Expression copyOfDelimiter= null;
 
 			if (ASTNodes.hasType(delimiter, char.class.getCanonicalName()) && ASTNodes.is(delimiter, CharacterLiteral.class)) {
 				StringLiteral delimiterAsStringLiteral= ast.newStringLiteral();
@@ -741,8 +741,10 @@ public class JoinCleanUp extends AbstractMultiFix implements ICleanUpFix {
 				MethodInvocation valueOfMethod= ast.newMethodInvocation();
 				valueOfMethod.setExpression(ast.newSimpleName(String.class.getSimpleName()));
 				valueOfMethod.setName(ast.newSimpleName("valueOf")); //$NON-NLS-1$
-				valueOfMethod.arguments().add(copyOfDelimiter);
+				valueOfMethod.arguments().add(ASTNodes.createMoveTarget(rewrite, ASTNodes.getUnparenthesedExpression(delimiter)));
 				copyOfDelimiter= valueOfMethod;
+			} else {
+				copyOfDelimiter= ASTNodes.createMoveTarget(rewrite, ASTNodes.getUnparenthesedExpression(delimiter));
 			}
 
 			MethodInvocation joinMethod= ast.newMethodInvocation();

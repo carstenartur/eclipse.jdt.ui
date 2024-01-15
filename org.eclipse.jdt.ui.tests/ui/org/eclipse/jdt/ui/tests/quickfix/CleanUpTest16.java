@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Red Hat Inc. and others.
+ * Copyright (c) 2020, 2023 Red Hat Inc. and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -131,6 +131,7 @@ public class CleanUpTest16 extends CleanUpTestCase {
 				+ "    public long matchPatternForInstanceof(Object object) {\n" //
 				+ "        // Keep this comment\n" //
 				+ "        if (object instanceof Date) {\n" //
+				+ "            // Keep this comment too\n" //
 				+ "            Date date = (Date) object;\n" //
 				+ "            return date.getTime();\n" //
 				+ "        }\n" //
@@ -141,6 +142,7 @@ public class CleanUpTest16 extends CleanUpTestCase {
 				+ "    public long matchPatternForInstanceofOnFinalVariable(Object object) {\n" //
 				+ "        // Keep this comment\n" //
 				+ "        if (object instanceof Date) {\n" //
+				+ "            // Keep this comment too\n" //
 				+ "            final Date date = (Date) object;\n" //
 				+ "            return date.getTime();\n" //
 				+ "        }\n" //
@@ -150,6 +152,7 @@ public class CleanUpTest16 extends CleanUpTestCase {
 				+ "\n" //
 				+ "    public long matchPatternInConditionalAndExpression(Object object, boolean isValid) {\n" //
 				+ "        if (isValid && object instanceof Date) {\n" //
+				+ "            // Keep this comment\n" //
 				+ "            Date date = (Date) object;\n" //
 				+ "            return date.getTime();\n" //
 				+ "        }\n" //
@@ -160,6 +163,7 @@ public class CleanUpTest16 extends CleanUpTestCase {
 				+ "\n" //
 				+ "    public long matchPatternInAndExpression(Object object, boolean isValid) {\n" //
 				+ "        if (object instanceof Date & isValid) {\n" //
+				+ "            // Keep this comment\n" //
 				+ "            Date date = (Date) object;\n" //
 				+ "            return date.getTime();\n" //
 				+ "        }\n" //
@@ -224,6 +228,7 @@ public class CleanUpTest16 extends CleanUpTestCase {
 				+ "    public long matchPatternForInstanceof(Object object) {\n" //
 				+ "        // Keep this comment\n" //
 				+ "        if (object instanceof Date date) {\n" //
+				+ "            // Keep this comment too\n" //
 				+ "            return date.getTime();\n" //
 				+ "        }\n" //
 				+ "\n" //
@@ -232,7 +237,8 @@ public class CleanUpTest16 extends CleanUpTestCase {
 				+ "\n" //
 				+ "    public long matchPatternForInstanceofOnFinalVariable(Object object) {\n" //
 				+ "        // Keep this comment\n" //
-				+ "        if (object instanceof Date date) {\n" //
+				+ "        if (object instanceof final Date date) {\n" //
+				+ "            // Keep this comment too\n" //
 				+ "            return date.getTime();\n" //
 				+ "        }\n" //
 				+ "\n" //
@@ -241,6 +247,7 @@ public class CleanUpTest16 extends CleanUpTestCase {
 				+ "\n" //
 				+ "    public long matchPatternInConditionalAndExpression(Object object, boolean isValid) {\n" //
 				+ "        if (isValid && object instanceof Date date) {\n" //
+				+ "            // Keep this comment\n" //
 				+ "            return date.getTime();\n" //
 				+ "        }\n" //
 				+ "\n" //
@@ -250,6 +257,7 @@ public class CleanUpTest16 extends CleanUpTestCase {
 				+ "\n" //
 				+ "    public long matchPatternInAndExpression(Object object, boolean isValid) {\n" //
 				+ "        if (object instanceof Date date & isValid) {\n" //
+				+ "            // Keep this comment\n" //
 				+ "            return date.getTime();\n" //
 				+ "        }\n" //
 				+ "\n" //
@@ -298,6 +306,66 @@ public class CleanUpTest16 extends CleanUpTestCase {
 				+ "}\n";
 
 		assertNotEquals("The class must be changed", given, expected);
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
+				new HashSet<>(Arrays.asList(MultiFixMessages.PatternMatchingForInstanceofCleanup_description)));
+	}
+
+	@Test
+	public void testPatternMatchingForInstanceof2() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/780
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= "" //
+				+ "package test1;\n" //
+				+ "\n" //
+				+ "public class E1 {\n" //
+				+ "    \n" //
+				+ "    static class InternalStaticClass {\n" //
+				+ "        private int k;\n" //
+				+ "        \n" //
+				+ "        public InternalStaticClass(int val) {\n" //
+				+ "            this.k= val;\n" //
+				+ "        }\n" //
+				+ "        \n" //
+				+ "        public int getK() {\n" //
+				+ "            return k;\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n"; //
+		pack.createCompilationUnit("E1.java", sample, false, null);
+
+		sample= "" //
+				+ "package test1;\n" //
+				+ "\n" //
+				+ "import test1.E1.InternalStaticClass;\n" //
+				+ "\n" //
+				+ "public class E {\n" //
+				+ "    \n" //
+				+ "    public void foo(Object x) {\n" //
+				+ "        if (x instanceof E1.InternalStaticClass) {\n" //
+				+ "            // comment 1\n" //
+				+ "            InternalStaticClass t = (InternalStaticClass)x;\n" //
+				+ "            System.out.println(t.getK());\n" //
+				+ "        }\n" //
+				+ "    }\n" //
+				+ "\n" //
+				+ "}\n"; //
+		ICompilationUnit cu= pack.createCompilationUnit("E.java", sample, false, null);
+
+		enable(CleanUpConstants.USE_PATTERN_MATCHING_FOR_INSTANCEOF);
+
+		String expected= "" //
+		+ "package test1;\n" //
+		+ "\n" //
+		+ "public class E {\n" //
+		+ "    \n" //
+		+ "    public void foo(Object x) {\n" //
+		+ "        if (x instanceof E1.InternalStaticClass t) {\n" //
+		+ "            // comment 1\n" //
+		+ "            System.out.println(t.getK());\n" //
+		+ "        }\n" //
+		+ "    }\n" //
+		+ "\n" //
+		+ "}\n"; //
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.PatternMatchingForInstanceofCleanup_description)));
 	}

@@ -31,11 +31,13 @@ import org.w3c.dom.NodeList;
 
 import org.eclipse.core.runtime.Assert;
 
+import org.eclipse.jdt.internal.ui.util.XmlProcessorFactoryJdtUi;
+
 
 /**
  * Reads data from an InputStream and returns a JarPackage
  */
-public class JavadocReader extends Object {
+public class JavadocReader implements AutoCloseable {
 
 	private InputStream fInputStream;
 
@@ -55,6 +57,7 @@ public class JavadocReader extends Object {
 	 *
 	 * @exception IOException if the stream cannot be closed
 	 */
+	@Override
 	public void close() throws IOException {
 		if (fInputStream != null)
 			fInputStream.close();
@@ -62,7 +65,7 @@ public class JavadocReader extends Object {
 
 	public Element readXML() throws IOException, SAXException {
 
-		DocumentBuilderFactory factory= DocumentBuilderFactory.newInstance();
+		DocumentBuilderFactory factory= XmlProcessorFactoryJdtUi.createDocumentBuilderFactoryWithErrorOnDOCTYPE();
 		factory.setValidating(false);
 		DocumentBuilder parser= null;
 		try {

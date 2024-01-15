@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corporation and others.
+ * Copyright (c) 2000, 2022 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -54,7 +54,7 @@ public class SurroundWithTests extends AbstractJunit4SelectionTestCase {
 	}
 
 	protected SurroundWithTryCatchRefactoring createRefactoring(ICompilationUnit unit) {
-		return SurroundWithTryCatchRefactoring.create(unit, getTextSelection());
+		return SurroundWithTryCatchRefactoring.create(unit, getTextSelection().getOffset(), getTextSelection().getLength());
 	}
 
 	protected void tryCatchInvalidTest() throws Exception {
@@ -242,6 +242,11 @@ public class SurroundWithTests extends AbstractJunit4SelectionTestCase {
 
 	@Test
 	public void testMethodThrowsException1() throws Exception {
+		tryCatchTest();
+	}
+
+	@Test
+	public void testIssue353() throws Exception {
 		tryCatchTest();
 	}
 }

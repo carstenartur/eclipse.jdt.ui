@@ -48,7 +48,7 @@ import org.eclipse.jdt.internal.corext.dom.VarDefinitionsUsesVisitor;
 import org.eclipse.jdt.internal.corext.fix.CleanUpConstants;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix.CompilationUnitRewriteOperation;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalModel;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 
 import org.eclipse.jdt.ui.cleanup.CleanUpContext;
@@ -181,7 +181,7 @@ public class OverriddenAssignmentCleanUp extends AbstractCleanUp {
 				if (node instanceof Statement) {
 					stmt= (Statement)node;
 				} else {
-					stmt= (Statement)ASTNodes.getFirstAncestorOrNull(node, Statement.class);
+					stmt= ASTNodes.getFirstAncestorOrNull(node, Statement.class);
 				}
 				if (stmt == null) {
 					return false;
@@ -230,7 +230,7 @@ public class OverriddenAssignmentCleanUp extends AbstractCleanUp {
 		}
 
 		@Override
-		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModel linkedModel) throws CoreException {
+		public void rewriteASTInternal(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
 			rewrite.setTargetSourceRangeComputer(new TargetSourceRangeComputer() {
 				@Override

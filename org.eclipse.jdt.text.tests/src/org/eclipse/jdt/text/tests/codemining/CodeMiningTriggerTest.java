@@ -32,13 +32,13 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.core.expressions.PropertyTester;
 
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 
-import org.eclipse.jface.internal.text.codemining.CodeMiningLineHeaderAnnotation;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import org.eclipse.jface.text.BadLocationException;
@@ -148,11 +148,6 @@ public class CodeMiningTriggerTest {
 	/**
 	 * Disables Java reconciler (after AST is parsed) but keeps the default code mining
 	 * mechanics working.
-	 * @param editor
-	 * @throws NoSuchMethodException
-	 * @throws IllegalAccessException
-	 * @throws InvocationTargetException
-	 *
 	 */
 	private void disableCodeMiningReconciler(JavaEditor editor) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 		Method method = JavaEditor.class.getDeclaredMethod("uninstallJavaCodeMining");
@@ -163,14 +158,15 @@ public class CodeMiningTriggerTest {
 	private void assertCodeMiningAnnotation(ISourceViewer viewer, String message, int timeout) throws Exception {
 		assertTrue("Cannot find CodeMining header line annotation with text `" + message + "`",
 			new DisplayHelper() {
+				@SuppressWarnings("restriction")
 				@Override
 				protected boolean condition() {
 					for (Iterator<Annotation> itr = viewer.getAnnotationModel().getAnnotationIterator(); itr.hasNext();) {
 						Annotation a = itr.next();
-						if (a instanceof CodeMiningLineHeaderAnnotation) {
+						if (a instanceof org.eclipse.jface.internal.text.codemining.CodeMiningLineHeaderAnnotation) {
 							Field f;
 							try {
-								f= CodeMiningLineHeaderAnnotation.class.getDeclaredField("fMinings");
+								f= org.eclipse.jface.internal.text.codemining.CodeMiningLineHeaderAnnotation.class.getDeclaredField("fMinings");
 								f.setAccessible(true);
 								List<ICodeMining> minings = (List<ICodeMining>)f.get(a);
 								for (ICodeMining m : minings) {
@@ -181,7 +177,7 @@ public class CodeMiningTriggerTest {
 									}
 								}
 							} catch (Exception e) {
-								Platform.getLog(Platform.getBundle("org.eclipse.jdt.text.tests")).log(
+								ILog.of(Platform.getBundle("org.eclipse.jdt.text.tests")).log(
 									new Status(IStatus.ERROR, "org.eclipse.jdt.text.tests", e.getMessage(), e)
 								);
 								return false;

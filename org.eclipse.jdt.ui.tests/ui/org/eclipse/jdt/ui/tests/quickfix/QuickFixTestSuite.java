@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2021 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -30,10 +30,13 @@ import org.junit.runners.Suite;
 	UnresolvedVariablesQuickFixTest.class,
 	UnresolvedMethodsQuickFixTest.class,
 	UnresolvedMethodsQuickFixTest1d8.class,
+	UnresolvedMethodsQuickFixTest16.class,
 	ReturnTypeQuickFixTest.class,
 	LocalCorrectionsQuickFixTest.class,
 	LocalCorrectionsQuickFixTest1d7.class,
 	LocalCorrectionsQuickFixTest1d8.class,
+	LocalCorrectionsQuickFixTest10.class,
+	LocalCorrectionsQuickFixTest15.class,
 	TypeMismatchQuickFixTests.class,
 	ReorgQuickFixTest.class,
 	ModifierCorrectionsQuickFixTest.class,
@@ -67,6 +70,7 @@ import org.junit.runners.Suite;
 	NullAnnotationsQuickFixTest.class,
 	NullAnnotationsQuickFixTest1d8.class,
 	NullAnnotationsQuickFixTest1d8Mix.class,
+	NullAnnotationsQuickFixTest9.class,
 	AnnotateAssistTest1d5.class,
 	AnnotateAssistTest1d8.class,
 	TypeAnnotationQuickFixTest.class

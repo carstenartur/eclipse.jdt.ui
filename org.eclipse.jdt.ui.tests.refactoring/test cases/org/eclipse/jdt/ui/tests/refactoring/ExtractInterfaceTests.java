@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -102,7 +102,13 @@ public class ExtractInterfaceTests extends GenericRefactoringTest {
 		return getType(createCUfromTestFile(pack, getTopLevelTypeName(className)), className);
 	}
 
-	protected void validatePassingTest(String className, String[] cuNames, String newInterfaceName, boolean replaceOccurrences, String[] extractedMethodNames, String[][] extractedSignatures, String[] extractedFieldNames) throws Exception {
+	protected void validatePassingTest(String className, String[] cuNames, String newInterfaceName, boolean replaceOccurrences, String[] extractedMethodNames, String[][] extractedSignatures,
+			String[] extractedFieldNames) throws Exception {
+		validatePassingTest(className, cuNames, newInterfaceName, replaceOccurrences, extractedMethodNames, extractedSignatures, extractedFieldNames, null);
+	}
+
+	protected void validatePassingTest(String className, String[] cuNames, String newInterfaceName, boolean replaceOccurrences, String[] extractedMethodNames, String[][] extractedSignatures,
+			String[] extractedFieldNames, IPackageFragment newPackageFragment) throws Exception {
 		IType clas= getClassFromTestFile(getPackageP(), className);
 
 		ExtractInterfaceProcessor processor= new ExtractInterfaceProcessor(clas, JavaPreferencesSettings.getCodeGenerationSettings(clas.getJavaProject()));
@@ -121,17 +127,22 @@ public class ExtractInterfaceTests extends GenericRefactoringTest {
 		processor.setReplace(replaceOccurrences);
 		processor.setAnnotations(fGenerateAnnotations);
 		IMethod[] extractedMethods= getMethods(clas, extractedMethodNames, extractedSignatures);
-	    IField[] extractedFields= getFields(clas, extractedFieldNames);
+		IField[] extractedFields= getFields(clas, extractedFieldNames);
 		processor.setExtractedMembers(merge(extractedMethods, extractedFields));
+		if (newPackageFragment != null) {
+			processor.setPackageFragment(newPackageFragment);
+		}
 		assertNull("was supposed to pass", performRefactoring(ref));
 
 		for (int i= 0; i < cus.length; i++) {
 			String expected= getFileContents(getOutputTestFileName(cuNames[i]));
 			String actual= cus[i].getSource();
-			assertEqualLines("(" + cus[i].getElementName() +")", expected, actual);
+			assertEqualLines("(" + cus[i].getElementName() + ")", expected, actual);
 		}
 
-		ICompilationUnit interfaceCu= clas.getPackageFragment().getCompilationUnit(newInterfaceName + ".java");
+		ICompilationUnit interfaceCu= newPackageFragment != null
+				? newPackageFragment.getCompilationUnit(newInterfaceName + ".java")
+				: clas.getPackageFragment().getCompilationUnit(newInterfaceName + ".java");
 		assertEqualLines("(interface cu)", getFileContents(getOutputTestFileName(newInterfaceName)), interfaceCu.getSource());
 	}
 
@@ -1079,6 +1090,21 @@ public class ExtractInterfaceTests extends GenericRefactoringTest {
 		String[][] signatures= {new String[0], new String[0], new String[0], new String[0]};
 		String[] fieldNames= null;
 		validatePassingTest("A", new String[]{"A"}, "I", true, methodNames, signatures, fieldNames);
+	}
+
+	@Test
+	public void testInterface7() throws Exception{
+		String[] methodNames= {"foo0", "foo1", "foo2", "foo3"};
+		String[][] signatures= {new String[0], new String[0], new String[0], new String[0]};
+		String[] fieldNames= null;
+		validatePassingTest("A", new String[]{"A"}, "I", true, methodNames, signatures, fieldNames, getPackageQ());
+	}
+
+	@Test
+	public void testDeprecated1() throws Exception{
+		String[] names= new String[]{"foo", "foo2"};
+		String[][] signatures= new String[][]{new String[0], new String[0]};
+		validatePassingTest("A", new String[]{"A"},"I", true, names, signatures, null);
 	}
 
 	@Test

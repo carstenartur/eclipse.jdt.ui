@@ -17,12 +17,10 @@ package org.eclipse.jdt.text.tests.performance;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Reader;
 import java.io.Writer;
 import java.net.URL;
 import java.util.Enumeration;
@@ -45,48 +43,26 @@ public class FileTool {
 	 * Unzips the given zip file to the given destination directory extracting only those entries
 	 * the pass through the given filter.
 	 *
-	 * @param zipFile the zip file to unzip
+	 * @param zFile the zip file to unzip
 	 * @param dstDir the destination directory
 	 * @throws IOException if an I/O error occurs
 	 */
-	public static void unzip(ZipFile zipFile, File dstDir) throws IOException {
-
-		Enumeration<? extends ZipEntry> entries = zipFile.entries();
-
-		try {
-			while(entries.hasMoreElements()){
-				ZipEntry entry = entries.nextElement();
-				if(entry.isDirectory()){
+	public static void unzip(File zFile, File dstDir) throws IOException {
+		try (ZipFile zipFile= new ZipFile(zFile)) {
+			Enumeration<? extends ZipEntry> entries= zipFile.entries();
+			while (entries.hasMoreElements()) {
+				ZipEntry entry= entries.nextElement();
+				if (entry.isDirectory()) {
 					continue;
 				}
-				String entryName = entry.getName();
-				File file = new File(dstDir, changeSeparator(entryName, '/', File.separatorChar));
+				String entryName= entry.getName();
+				File file= new File(dstDir, changeSeparator(entryName, '/', File.separatorChar));
 				file.getParentFile().mkdirs();
-				InputStream src = null;
-				OutputStream dst = null;
-				try {
-					src = zipFile.getInputStream(entry);
-					dst = new FileOutputStream(file);
+				try (InputStream src= zipFile.getInputStream(entry);
+						OutputStream dst= new FileOutputStream(file)) {
 					transferData(src, dst);
-				} finally {
-					if(dst != null){
-						try {
-							dst.close();
-						} catch(IOException e){
-						}
-					}
-					if(src != null){
-						try {
-							src.close();
-						} catch(IOException e){
-						}
-					}
+				} catch (IOException e) {
 				}
-			}
-		} finally {
-			try {
-				zipFile.close();
-			} catch(IOException e){
 			}
 		}
 	}
@@ -115,25 +91,9 @@ public class FileTool {
 	 */
 	public static void transferData(File source, File destination) throws IOException {
 		destination.getParentFile().mkdirs();
-		InputStream is = null;
-		OutputStream os = null;
-		try {
-			is = new FileInputStream(source);
-			os = new FileOutputStream(destination);
+		try (InputStream is = new FileInputStream(source);
+			OutputStream os = new FileOutputStream(destination)) {
 			transferData(is, os);
-		} finally {
-			if(os != null){
-				try {
-					os.close();
-				} catch(IOException e){
-				}
-			}
-			if(is != null){
-				try {
-					is.close();
-				} catch(IOException e){
-				}
-			}
 		}
 	}
 
@@ -183,37 +143,9 @@ public class FileTool {
 		}
 	}
 
-	public static StringBuffer read(String fileName) throws IOException {
-		return read(new FileReader(fileName));
-	}
-
-	public static StringBuffer read(Reader reader) throws IOException {
-		StringBuffer s= new StringBuffer();
-		try {
-			char[] buffer= new char[8196];
-			int chars= reader.read(buffer);
-			while (chars != -1) {
-				s.append(buffer, 0, chars);
-				chars= reader.read(buffer);
-			}
-		} finally {
-			try {
-				reader.close();
-			} catch (IOException e) {
-			}
-		}
-		return s;
-	}
-
 	public static void write(String fileName, StringBuffer content) throws IOException {
-		Writer writer= new FileWriter(fileName);
-		try {
+		try (Writer writer= new FileWriter(fileName)) {
 			writer.write(content.toString());
-		} finally {
-			try {
-				writer.close();
-			} catch (IOException e) {
-			}
 		}
 	}
 }

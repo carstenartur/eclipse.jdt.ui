@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2006, 2020 IBM Corporation and others.
+ * Copyright (c) 2006, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -13,10 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.search;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
-import java.io.StringReader;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.Charset;
 
 import org.junit.After;
 import org.junit.Before;
@@ -45,6 +43,8 @@ import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IPackageFragmentRoot;
 
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
+
+import org.eclipse.jdt.internal.ui.refactoring.nls.search.NLSSearchQuery;
 
 public class NLSSearchTest {
 
@@ -77,13 +77,7 @@ public class NLSSearchTest {
 	}
 
 	private IFile write(IFolder folder, final String content, final String fileName) throws CoreException {
-		InputStream stream= new InputStream() {
-			private final Reader fReader= new StringReader(content);
-			@Override
-			public int read() throws IOException {
-				return fReader.read();
-			}
-		};
+		ByteArrayInputStream stream= new ByteArrayInputStream(content.getBytes(Charset.defaultCharset()));
 		IFile file= fJProject1.getProject().getFile(folder.getProjectRelativePath().append(fileName));
 		file.create(stream, true, null);
 		return file;
@@ -263,6 +257,45 @@ public class NLSSearchTest {
 		NLSSearchTestHelper.assertNumberOfProblems(accessor, propertiesFile, 1);
 
 		NLSSearchTestHelper.assertHasDuplicateKey(accessor, propertiesFile, "Client_s1", propertiesFile);
+	}
+
+	@Test
+	public void test07() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("import org.eclipse.osgi.util.NLS;\n");
+		buf.append("public class Accessor extends NLS {\n");
+		buf.append("\n");
+		buf.append("    public static String Client_s1;\n");
+		buf.append("    public static String Client_s2;\n");
+		buf.append("\n");
+		buf.append("    private Accessor() {}\n");
+		buf.append("    private static final String BUNDLE_NAME = \"test.Accessor\"; //$NON-NLS-1$\n");
+		buf.append("    static {NLS.initializeMessages(BUNDLE_NAME, Accessor.class);}\n");
+		buf.append("}\n");
+		ICompilationUnit accessor= pack1.createCompilationUnit("Accessor.java", buf.toString(), false, null);
+
+		buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Client {\n");
+		buf.append("}\n");
+		pack1.createCompilationUnit("Client.java", buf.toString(), false, null);
+
+		buf= new StringBuilder();
+		buf.append("Client_s1=foo\n");
+		buf.append("Client_s2=foo2\n");
+		IFile propertiesFile= write((IFolder)pack1.getCorrespondingResource(), buf.toString(), "Accessor.properties");
+
+		// mark Client_s1 as used so it won't be flagged
+		buf= new StringBuilder();
+		buf.append("Client_s1=foo\n");
+		write((IFolder)pack1.getCorrespondingResource(), buf.toString(), "Accessor" + NLSSearchQuery.NLS_USED_PROPERTIES_EXT);
+
+		NLSSearchTestHelper.assertNumberOfProblems(accessor, propertiesFile, 2);
+
+		NLSSearchTestHelper.assertHasUnusedKey(accessor, propertiesFile, "Client_s2", (IFile)accessor.getCorrespondingResource(), true);
+		NLSSearchTestHelper.assertHasUnusedKey(accessor, propertiesFile, "Client_s2", propertiesFile, false);
 	}
 
 	@Test

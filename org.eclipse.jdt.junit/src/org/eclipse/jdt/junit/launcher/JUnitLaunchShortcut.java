@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -16,14 +16,15 @@ package org.eclipse.jdt.junit.launcher;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
@@ -34,9 +35,12 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.resources.IResource;
 
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.ITreeContentProvider;
+import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.window.Window;
 
 import org.eclipse.jface.text.ITextSelection;
@@ -44,6 +48,7 @@ import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.dialogs.ElementListSelectionDialog;
+import org.eclipse.ui.dialogs.ElementTreeSelectionDialog;
 
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunchConfiguration;
@@ -55,7 +60,6 @@ import org.eclipse.debug.ui.DebugUITools;
 import org.eclipse.debug.ui.IDebugModelPresentation;
 import org.eclipse.debug.ui.ILaunchShortcut2;
 
-import org.eclipse.jdt.core.Flags;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaProject;
@@ -85,7 +89,9 @@ import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jdt.ui.JavaElementLabelProvider;
 import org.eclipse.jdt.ui.JavaElementLabels;
 import org.eclipse.jdt.ui.JavaUI;
+import org.eclipse.jdt.ui.PreferenceConstants;
 
+import org.eclipse.jdt.internal.ui.JavaPlugin;
 import org.eclipse.jdt.internal.ui.actions.SelectionConverter;
 
 
@@ -211,28 +217,19 @@ public class JUnitLaunchShortcut implements ILaunchShortcut2 {
 		MessageDialog.openInformation(getShell(), JUnitMessages.JUnitLaunchShortcut_dialog_title, JUnitMessages.JUnitLaunchShortcut_message_notests);
 	}
 
-	private IType findTypeToLaunch(ICompilationUnit cu, String mode) throws InterruptedException, InvocationTargetException, JavaModelException {
-		IType[] types= findTypesToLaunch(cu);
-		if (types.length == 0) {
+	private IType findTypeToLaunch(ICompilationUnit cu, String mode) throws InterruptedException, InvocationTargetException {
+		var types= findTypesToLaunch(cu);
+		if (types.isEmpty()) {
 			return null;
-		} else if (types.length > 1) {
+		} else if (types.size() > 1) {
 			return chooseType(types, mode);
 		}
-		return types[0];
+		return types.iterator().next();
 	}
 
-	private IType[] findTypesToLaunch(ICompilationUnit cu) throws InterruptedException, InvocationTargetException, JavaModelException {
+	private Set<IType> findTypesToLaunch(ICompilationUnit cu) throws InterruptedException, InvocationTargetException {
 		ITestKind testKind= TestKindRegistry.getContainerTestKind(cu);
-		IType[] foundTests= TestSearchEngine.findTests(PlatformUI.getWorkbench().getActiveWorkbenchWindow(), cu, testKind);
-
-		Set<IType> tests= new LinkedHashSet<>(Arrays.asList(foundTests));
-		for (IType type : foundTests) {
-			if (!Flags.isStatic(type.getFlags()) && tests.contains(type.getDeclaringType())) {
-				tests.remove(type);
-			}
-		}
-
-		return tests.toArray(new IType[0]);
+		return TestSearchEngine.findTests(PlatformUI.getWorkbench().getActiveWorkbenchWindow(), cu, testKind);
 	}
 
 	private void performLaunch(IJavaElement element, String mode) throws InterruptedException, CoreException {
@@ -245,16 +242,63 @@ public class JUnitLaunchShortcut implements ILaunchShortcut2 {
 		DebugUITools.launch(config, mode);
 	}
 
-	private IType chooseType(IType[] types, String mode) throws InterruptedException {
-		ElementListSelectionDialog dialog= new ElementListSelectionDialog(getShell(), new JavaElementLabelProvider(JavaElementLabelProvider.SHOW_POST_QUALIFIED));
-		dialog.setElements(types);
+	static class TreeProvider implements ITreeContentProvider {
+		private final static Object ROOT= new Object();
+
+		private final Map<Object, List<IType>> tree= new HashMap<>();
+
+		public TreeProvider(Set<IType> types) {
+			for (var type : types) {
+				var parent= type.getParent();
+				var parentInTree= types.contains(parent) ? parent : ROOT;
+				tree.compute(parentInTree, (key, value) -> {
+					var list= value != null ? value : new ArrayList<IType>();
+					list.add(type);
+					return list;
+				});
+			}
+		}
+
+		@Override
+		public Object[] getElements(Object inputElement) {
+			return tree.get(ROOT).toArray();
+		}
+
+		@Override
+		public Object[] getChildren(Object parentElement) {
+			var children= tree.get(parentElement);
+			return children != null ? children.toArray() : new Object[0];
+		}
+
+		@Override
+		public Object getParent(Object element) {
+			return null;
+		}
+
+		@Override
+		public boolean hasChildren(Object element) {
+			var children= tree.get(element);
+			return children != null && !children.isEmpty();
+		}
+	}
+
+	private IType chooseType(Set<IType> types, String mode) throws InterruptedException {
+		var dialog= new ElementTreeSelectionDialog(getShell(), new JavaElementLabelProvider(JavaElementLabelProvider.SHOW_POST_QUALIFIED), new TreeProvider(types)) {
+			@Override
+			protected TreeViewer createTreeViewer(Composite parent) {
+				var tree= super.createTreeViewer(parent);
+				tree.expandAll();
+				return tree;
+			}
+		};
 		dialog.setTitle(JUnitMessages.JUnitLaunchShortcut_dialog_title2);
+		dialog.setAllowMultiple(false);
+		dialog.setInput(TreeProvider.ROOT);
 		if (ILaunchManager.DEBUG_MODE.equals(mode)) {
 			dialog.setMessage(JUnitMessages.JUnitLaunchShortcut_message_selectTestToDebug);
 		} else {
 			dialog.setMessage(JUnitMessages.JUnitLaunchShortcut_message_selectTestToRun);
 		}
-		dialog.setMultipleSelection(false);
 		if (dialog.open() == Window.OK) {
 			return (IType) dialog.getFirstResult();
 		}
@@ -383,6 +427,7 @@ public class JUnitLaunchShortcut implements ILaunchShortcut2 {
 		String testKindId= TestKindRegistry.getContainerTestKindId(element);
 
 		ILaunchConfigurationType configType= getLaunchManager().getLaunchConfigurationType(getLaunchConfigurationTypeId());
+
 		String configName= getLaunchManager().generateLaunchConfigurationName(suggestLaunchConfigurationName(element, testName));
 		ILaunchConfigurationWorkingCopy wc= configType.newInstance(null, configName);
 
@@ -414,6 +459,8 @@ public class JUnitLaunchShortcut implements ILaunchShortcut2 {
 	 * @since 3.8
 	 */
 	protected String suggestLaunchConfigurationName(IJavaElement element, String fullTestName) {
+		IPreferenceStore preferenceStore= JavaPlugin.getDefault().getPreferenceStore();
+		boolean useQualification= preferenceStore.getBoolean(PreferenceConstants.LAUNCH_NAME_FULLY_QUALIFIED_FOR_JUNIT_TEST);
 		switch (element.getElementType()) {
 			case IJavaElement.JAVA_PROJECT:
 			case IJavaElement.PACKAGE_FRAGMENT_ROOT:
@@ -430,14 +477,14 @@ public class JUnitLaunchShortcut implements ILaunchShortcut2 {
 						String typeName= typeFQNDot >= 0 ? typeFQN.substring(typeFQNDot + 1) : typeFQN;
 						return typeName + " " + testName; //$NON-NLS-1$
 					}
-					return element.getElementName() + " " + fullTestName;//$NON-NLS-1$
+					return (useQualification ? ((IType) element).getFullyQualifiedName('.') : element.getElementName()) + " " + fullTestName;//$NON-NLS-1$
 				}
-				return element.getElementName();
+				return useQualification ? ((IType) element).getFullyQualifiedName('.') : element.getElementName();
 			case IJavaElement.METHOD:
 				IMethod method= (IMethod) element;
 				String methodName= method.getElementName();
 				methodName+= JUnitStubUtility.getParameterTypes(method, true); // use simple names of parameter types
-				return method.getDeclaringType().getElementName() + '.' + methodName;
+				return useQualification ? method.getDeclaringType().getFullyQualifiedName('.') : method.getDeclaringType().getElementName() + '.' + methodName;
 			default:
 				throw new IllegalArgumentException("Invalid element type to create a launch configuration: " + element.getClass().getName()); //$NON-NLS-1$
 		}

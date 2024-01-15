@@ -110,7 +110,7 @@ public abstract class BaseTestRunner implements TestListener {
 		}
 		Method suiteMethod = null;
 		try {
-			suiteMethod = testClass.getMethod(SUITE_METHODNAME, new Class[0]);
+			suiteMethod = testClass.getMethod(SUITE_METHODNAME, new Class<?>[0]);
 		} catch (Exception e) {
 			// try to extract a test suite automatically
 			clearStatus();
@@ -122,7 +122,7 @@ public abstract class BaseTestRunner implements TestListener {
 		}
 		Test test = null;
 		try {
-			test = (Test) suiteMethod.invoke(null, new Class[0]); // static method
+			test = (Test) suiteMethod.invoke(null, new Object[0]); // static method
 			if (test == null)
 				return test;
 		} catch (InvocationTargetException e) {
@@ -230,17 +230,11 @@ public abstract class BaseTestRunner implements TestListener {
 	}
 
 	private static void readPreferences() {
-		InputStream is = null;
-		try {
-			is = new FileInputStream(getPreferencesFile());
+		try (InputStream is = new FileInputStream(getPreferencesFile())) {
 			setPreferences(new Properties(getPreferences()));
 			getPreferences().load(is);
 		} catch (IOException e) {
-			try {
-				if (is != null)
-					is.close();
-			} catch (IOException e1) {
-			}
+			// ignore
 		}
 	}
 

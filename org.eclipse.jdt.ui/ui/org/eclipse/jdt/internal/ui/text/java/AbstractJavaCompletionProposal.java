@@ -151,7 +151,6 @@ public abstract class AbstractJavaCompletionProposal implements IJavaCompletionP
 		 * @param document the document on which to track the reference position.
 		 * @param offset the offset
 		 * @throws BadLocationException if the offset describes an invalid range in this document
-		 *
 		 */
 		public void preReplace(IDocument document, int offset) throws BadLocationException {
 			fPosition.setOffset(offset);
@@ -1334,6 +1333,9 @@ public abstract class AbstractJavaCompletionProposal implements IJavaCompletionP
 			return true;
 		}
 		IDocument document = fInvocationContext.getDocument();
+		if (document == null) {
+			return false;
+		}
 		try {
 			String documentString = document.get(getReplacementOffset(), getReplacementLength());
 			if(documentString == null) {

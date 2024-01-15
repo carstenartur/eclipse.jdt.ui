@@ -17,8 +17,6 @@ package org.eclipse.jdt.text.tests.performance;
 
 import java.lang.reflect.Method;
 
-import junit.framework.Test;
-
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
 import org.eclipse.swt.SWT;
@@ -30,8 +28,6 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.PreferenceConverter;
 
 import org.eclipse.jface.text.source.AnnotationPainter;
-
-import org.eclipse.ui.internal.editors.text.EditorsPlugin;
 
 import org.eclipse.ui.texteditor.AbstractTextEditor;
 import org.eclipse.ui.texteditor.AnnotationPreference;
@@ -46,6 +42,8 @@ import org.eclipse.jdt.core.JavaCore;
 
 import org.eclipse.jdt.ui.actions.FindAction;
 import org.eclipse.jdt.ui.actions.FindReferencesAction;
+
+import junit.framework.Test;
 
 /**
  * Counts number of repaints ({@link AnnotationPainter#paintControl(PaintEvent)})
@@ -75,7 +73,8 @@ public abstract class TypingInvocationCountTest extends TextPerformanceTestCase 
 
 		@Override
 		protected void setUp() throws Exception {
-			AnnotationPreference preference= EditorsPlugin.getDefault().getAnnotationPreferenceLookup().getAnnotationPreference(SEARCH_ANNOTATION_TYPE);
+			@SuppressWarnings("restriction")
+			AnnotationPreference preference= org.eclipse.ui.internal.editors.text.EditorsPlugin.getDefault().getAnnotationPreferenceLookup().getAnnotationPreference(SEARCH_ANNOTATION_TYPE);
 			IPreferenceStore store= EditorsUI.getPreferenceStore();
 			store.setValue(preference.getHighlightPreferenceKey(), false);
 			store.setValue(preference.getOverviewRulerPreferenceKey(), true);
@@ -121,7 +120,8 @@ public abstract class TypingInvocationCountTest extends TextPerformanceTestCase 
 			if (fShownPerspective != null)
 				EditorTestHelper.showPerspective(fShownPerspective);
 
-			AnnotationPreference preference= EditorsPlugin.getDefault().getAnnotationPreferenceLookup().getAnnotationPreference(SEARCH_ANNOTATION_TYPE);
+			@SuppressWarnings("restriction")
+			AnnotationPreference preference= org.eclipse.ui.internal.editors.text.EditorsPlugin.getDefault().getAnnotationPreferenceLookup().getAnnotationPreference(SEARCH_ANNOTATION_TYPE);
 			IPreferenceStore store= EditorsUI.getPreferenceStore();
 			store.setToDefault(preference.getHighlightPreferenceKey());
 			store.setToDefault(preference.getOverviewRulerPreferenceKey());
@@ -155,8 +155,6 @@ public abstract class TypingInvocationCountTest extends TextPerformanceTestCase 
 	/**
 	 * Counts number of repaints when typing before one annotation on the
 	 * same line.
-	 *
-	 * @throws Exception
 	 */
 	public void test00() throws Exception {
 		measure(4, 22, ' ');
@@ -165,8 +163,6 @@ public abstract class TypingInvocationCountTest extends TextPerformanceTestCase 
 	/**
 	 * Counts number of repaints when typing after one annotation on the
 	 * same line while a matching bracket is shown.
-	 *
-	 * @throws Exception
 	 */
 	public void test01() throws Exception {
 		measure(4, 23, SWT.BS, true);
@@ -175,8 +171,6 @@ public abstract class TypingInvocationCountTest extends TextPerformanceTestCase 
 	/**
 	 * Counts number of repaints when typing after one annotation on the
 	 * same line.
-	 *
-	 * @throws Exception
 	 */
 	public void test02() throws Exception {
 		measure(4, 32, ' ');
@@ -185,8 +179,6 @@ public abstract class TypingInvocationCountTest extends TextPerformanceTestCase 
 	/**
 	 * Counts number of repaints when typing after one annotation on the
 	 * same line while a matching bracket is shown.
-	 *
-	 * @throws Exception
 	 */
 	public void test03() throws Exception {
 		measure(4, 33, SWT.BS, true);
@@ -195,8 +187,6 @@ public abstract class TypingInvocationCountTest extends TextPerformanceTestCase 
 	/**
 	 * Counts number of repaints when typing before two annotations on the
 	 * same line.
-	 *
-	 * @throws Exception
 	 */
 	public void test10() throws Exception {
 		measure(6, 22, ' ');
@@ -205,8 +195,6 @@ public abstract class TypingInvocationCountTest extends TextPerformanceTestCase 
 	/**
 	 * Counts number of repaints when typing after two annotations on the
 	 * same line while a matching bracket is shown.
-	 *
-	 * @throws Exception
 	 */
 	public void test11() throws Exception {
 		measure(6, 23, SWT.BS, true);
@@ -215,8 +203,6 @@ public abstract class TypingInvocationCountTest extends TextPerformanceTestCase 
 	/**
 	 * Counts number of repaints when typing after two annotations on the
 	 * same line.
-	 *
-	 * @throws Exception
 	 */
 	public void test12() throws Exception {
 		measure(6, 40, ' ');
@@ -225,8 +211,6 @@ public abstract class TypingInvocationCountTest extends TextPerformanceTestCase 
 	/**
 	 * Counts number of repaints when typing after two annotations on the
 	 * same line while a matching bracket is shown.
-	 *
-	 * @throws Exception
 	 */
 	public void test13() throws Exception {
 		measure(6, 41, SWT.BS, true);

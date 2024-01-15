@@ -46,6 +46,7 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
+import org.eclipse.jdt.core.manipulation.CUCorrectionProposalCore;
 
 import org.eclipse.jdt.internal.core.manipulation.CodeTemplateContextType;
 import org.eclipse.jdt.internal.core.manipulation.StubUtility;
@@ -59,7 +60,7 @@ import org.eclipse.jdt.ui.text.java.correction.ASTRewriteCorrectionProposal;
 import org.eclipse.jdt.ui.text.java.correction.CUCorrectionProposal;
 
 import org.eclipse.jdt.internal.ui.JavaPlugin;
-import org.eclipse.jdt.internal.ui.text.correction.proposals.TypeChangeCorrectionProposal;
+import org.eclipse.jdt.internal.ui.text.correction.proposals.TypeChangeCorrectionProposalCore;
 import org.eclipse.jdt.internal.ui.viewsupport.BindingLabelProvider;
 
 public class TypeMismatchQuickFixTests extends QuickFixTest {
@@ -803,8 +804,12 @@ public class TypeMismatchQuickFixTests extends QuickFixTest {
 
 		assertEqualStringsIgnoreOrder(new String[] { preview1 }, new String[] { expected1 });
 
-		Accessor accessor= new Accessor(proposal, TypeChangeCorrectionProposal.class);
-		ITypeBinding[] typeProposals= (ITypeBinding[]) accessor.get("fTypeProposals");
+
+		Accessor accessor= new Accessor(proposal, CUCorrectionProposal.class);
+		CUCorrectionProposalCore proposalCore = (CUCorrectionProposalCore) accessor.get("fProposalCore");
+
+		Accessor accessor2= new Accessor(proposalCore, TypeChangeCorrectionProposalCore.class);
+		ITypeBinding[] typeProposals= (ITypeBinding[]) accessor2.get("fTypeProposals");
 		String[] typeNames= new String[typeProposals.length];
 		for (int i= 0; i < typeNames.length; i++) {
 			typeNames[i]= BindingLabelProvider.getBindingLabel(typeProposals[i], JavaElementLabels.T_TYPE_PARAMETERS | JavaElementLabels.T_FULLY_QUALIFIED);
@@ -1692,7 +1697,7 @@ public class TypeMismatchQuickFixTests extends QuickFixTest {
 
 		buf= new StringBuilder();
 		buf.append("package test1;\n");
-		buf.append("import java.io.IOException;\n");
+		buf.append("\n");
 		buf.append("public class E implements IBase {\n");
 		buf.append("    public String[] getValues() {\n");
 		buf.append("        return null;\n");
@@ -1752,7 +1757,6 @@ public class TypeMismatchQuickFixTests extends QuickFixTest {
 		buf= new StringBuilder();
 		buf.append("package test1;\n");
 		buf.append("import java.io.EOFException;\n");
-		buf.append("import java.text.ParseException;\n");
 		buf.append("public class E extends Base {\n");
 		buf.append("    public String[] getValues() throws EOFException {\n");
 		buf.append("        return null;\n");
@@ -1834,7 +1838,6 @@ public class TypeMismatchQuickFixTests extends QuickFixTest {
 		buf= new StringBuilder();
 		buf.append("package test1;\n");
 		buf.append("import java.io.EOFException;\n");
-		buf.append("import java.text.ParseException;\n");
 		buf.append("public class E extends Base {\n");
 		buf.append("    /**\n");
 		buf.append("     * @param i The parameter\n");
@@ -1894,7 +1897,7 @@ public class TypeMismatchQuickFixTests extends QuickFixTest {
 
 		buf= new StringBuilder();
 		buf.append("package test1;\n");
-		buf.append("import java.io.IOException;\n");
+		buf.append("\n");
 		buf.append("public class E implements IBase<String> {\n");
 		buf.append("    public String[] getValues() {\n");
 		buf.append("        return null;\n");

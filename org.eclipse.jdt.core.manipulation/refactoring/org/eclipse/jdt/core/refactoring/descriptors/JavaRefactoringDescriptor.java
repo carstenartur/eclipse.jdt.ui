@@ -18,8 +18,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 
 import org.eclipse.core.resources.IResource;
@@ -261,7 +261,7 @@ public abstract class JavaRefactoringDescriptor extends RefactoringDescriptor {
 	 *            the unique id of the refactoring
 	 */
 	protected JavaRefactoringDescriptor(final String id) {
-		this(id, null, DescriptorMessages.JavaRefactoringDescriptor_not_available, null, new HashMap<String, String>(), RefactoringDescriptor.STRUCTURAL_CHANGE | RefactoringDescriptor.MULTI_CHANGE);
+		this(id, null, DescriptorMessages.JavaRefactoringDescriptor_not_available, null, new HashMap<>(), RefactoringDescriptor.STRUCTURAL_CHANGE | RefactoringDescriptor.MULTI_CHANGE);
 	}
 
 	/**
@@ -303,7 +303,7 @@ public abstract class JavaRefactoringDescriptor extends RefactoringDescriptor {
 				JavaRefactoringContribution javaContribution= (JavaRefactoringContribution) contribution;
 				refactoring= javaContribution.createRefactoring(this, status);
 			} else
-				Platform.getLog(this.getClass()).log(new Status(IStatus.ERROR, JavaManipulation.ID_PLUGIN, 0, MessageFormat.format(DescriptorMessages.JavaRefactoringDescriptor_no_resulting_descriptor, id), null));
+				ILog.of(this.getClass()).log(new Status(IStatus.ERROR, JavaManipulation.ID_PLUGIN, 0, MessageFormat.format(DescriptorMessages.JavaRefactoringDescriptor_no_resulting_descriptor, id), null));
 		}
 		return refactoring;
 	}

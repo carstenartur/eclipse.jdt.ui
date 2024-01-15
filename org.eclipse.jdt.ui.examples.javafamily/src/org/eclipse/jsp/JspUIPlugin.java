@@ -43,8 +43,6 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.eclipse.ui.editors.text.TextEditorPreferenceConstants;
 
 
-/**
- */
 public class JspUIPlugin extends AbstractUIPlugin implements IResourceChangeListener {
 
 	/**
@@ -58,7 +56,7 @@ public class JspUIPlugin extends AbstractUIPlugin implements IResourceChangeList
 	private static JspUIPlugin fgDefault;
 	private static boolean fgJSPIndexingIsEnabled= false;
 
-	private SearchEngine fSearchEngine;
+	private final SearchEngine fSearchEngine;
 
 	public JspUIPlugin() {
 		super();

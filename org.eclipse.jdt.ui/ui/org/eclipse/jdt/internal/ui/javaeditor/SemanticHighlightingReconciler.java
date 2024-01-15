@@ -34,11 +34,13 @@ import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.ui.IWorkbenchPartSite;
 
 import org.eclipse.jdt.core.ITypeRoot;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ConstructorInvocation;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.GuardedPattern;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Modifier.ModifierKeyword;
@@ -297,6 +299,28 @@ public class SemanticHighlightingReconciler implements IJavaReconcilingListener,
 				}
 			}
 		}
+
+		@Override
+		public boolean visit(GuardedPattern node) {
+			try {
+				if (node != null) {
+					int offset= node.getRestrictedIdentifierStartPosition();
+					int length= 4; // length of 'when'
+					if (offset > -1) {
+						for (int i= 0; i < fJobSemanticHighlightings.length; i++) {
+							SemanticHighlighting semanticHighlighting= fJobSemanticHighlightings[i];
+							if (semanticHighlighting instanceof RestrictedIdentifiersHighlighting) {
+								addPosition(offset, length, fJobHighlightings[i]);
+								return true;
+							}
+						}
+					}
+				}
+			} catch (UnsupportedOperationException e) {
+				// do nothing
+			}
+			return true;
+		}
 	}
 
 	/** Position collector */
@@ -514,11 +538,31 @@ public class SemanticHighlightingReconciler implements IJavaReconcilingListener,
 		fSourceViewer= sourceViewer;
 
 		if (fEditor instanceof CompilationUnitEditor) {
-			((CompilationUnitEditor)fEditor).addReconcileListener(this);
-		} else if (fEditor == null) {
-			fSourceViewer.addTextInputListener(this);
+			if (registerAsEditorReconcilingListener()) {
+				((CompilationUnitEditor)fEditor).addReconcileListener(this);
+			}
+		} else if (fEditor != null) {
+			if (registerAsSourceViewerTextInputListener()) {
+				fSourceViewer.addTextInputListener(this);
+			}
 			scheduleJob();
 		}
+	}
+
+	/**
+	 * Decides if this reconciler should also register itself as a reconciling listener on the editor as part of {@link #install} process.
+	 * @return whether this instance should register itself as a reconciling listener on the editor
+	 */
+	protected boolean registerAsEditorReconcilingListener() {
+		return true;
+	}
+
+	/**
+	 * Decides if this reconciler should also register itself as a text input listener on the source viewer as part of {@link #install} process.
+	 * @return whether this instance should register itself as a text input listener on the source viewer
+	 */
+	protected boolean registerAsSourceViewerTextInputListener() {
+		return true;
 	}
 
 	/**
@@ -543,10 +587,19 @@ public class SemanticHighlightingReconciler implements IJavaReconcilingListener,
 	}
 
 	/**
+	 * Get the type root java element for which reconciling job should be scheduled.
+	 *
+	 * @return root element for reconciling
+	 */
+	protected ITypeRoot getElement() {
+		return fEditor.getInputJavaElement();
+	}
+
+	/**
 	 * Schedule a background job for retrieving the AST and reconciling the Semantic Highlighting model.
 	 */
 	private void scheduleJob() {
-		final ITypeRoot element= fEditor.getInputJavaElement();
+		final ITypeRoot element= getElement();
 
 		synchronized (fJobLock) {
 			final Job oldJob= fJob;
@@ -569,8 +622,10 @@ public class SemanticHighlightingReconciler implements IJavaReconcilingListener,
 						}
 						if (monitor.isCanceled())
 							return Status.CANCEL_STATUS;
-						CompilationUnit ast= SharedASTProviderCore.getAST(element, SharedASTProviderCore.WAIT_YES, monitor);
-						reconciled(ast, false, monitor);
+						JavaCore.runReadOnly(() -> {
+							CompilationUnit ast= SharedASTProviderCore.getAST(element, SharedASTProviderCore.WAIT_YES, monitor);
+							reconciled(ast, false, monitor);
+						});
 						synchronized (fJobLock) {
 							// allow the job to be gc'ed
 							if (fJob == this)

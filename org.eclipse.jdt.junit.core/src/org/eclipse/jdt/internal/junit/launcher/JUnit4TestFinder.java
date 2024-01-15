@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2006, 2021 IBM Corporation and others.
+ * Copyright (c) 2006, 2022 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -14,14 +14,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.junit.launcher;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.core.runtime.SubProgressMonitor;
+import org.eclipse.core.runtime.SubMonitor;
 
 import org.eclipse.jdt.core.Flags;
 import org.eclipse.jdt.core.IJavaElement;
@@ -122,32 +123,38 @@ public class JUnit4TestFinder implements ITestFinder {
 			}
 		}
 
-		if (pm == null)
-			pm= new NullProgressMonitor();
-
+		SubMonitor subMon= SubMonitor.convert(pm, JUnitMessages.JUnit4TestFinder_searching_description, 4);
 		try {
-			pm.beginTask(JUnitMessages.JUnit4TestFinder_searching_description, 4);
 
 			IRegion region= CoreTestSearchEngine.getRegion(element);
-			ITypeHierarchy hierarchy= JavaCore.newTypeHierarchy(region, null, new SubProgressMonitor(pm, 1));
+			ITypeHierarchy hierarchy= JavaCore.newTypeHierarchy(region, null, subMon.newChild(1));
 			IType[] allClasses= hierarchy.getAllClasses();
 
+			// filter out anonymous classes which have no name
+			List<IType> nonAnonymousClasses= new ArrayList<>();
+			for (IType t : allClasses) {
+				if (!t.getElementName().isEmpty()) {
+					nonAnonymousClasses.add(t);
+				}
+			}
+			IType[] filteredClasses= nonAnonymousClasses.toArray(new IType[0]);
+
 			// search for all types with references to RunWith and Test and all subclasses
-			HashSet<IType> candidates= new HashSet<>(allClasses.length);
+			HashSet<IType> candidates= new HashSet<>(filteredClasses.length);
 			SearchRequestor requestor= new AnnotationSearchRequestor(hierarchy, candidates);
 
-			IJavaSearchScope scope= SearchEngine.createJavaSearchScope(allClasses, IJavaSearchScope.SOURCES);
+			IJavaSearchScope scope= SearchEngine.createJavaSearchScope(filteredClasses, IJavaSearchScope.SOURCES);
 			int matchRule= SearchPattern.R_EXACT_MATCH | SearchPattern.R_CASE_SENSITIVE;
 			SearchPattern runWithPattern= SearchPattern.createPattern(Annotation.RUN_WITH.getName(), IJavaSearchConstants.ANNOTATION_TYPE, IJavaSearchConstants.ANNOTATION_TYPE_REFERENCE, matchRule);
 			SearchPattern testPattern= SearchPattern.createPattern(Annotation.TEST.getName(), IJavaSearchConstants.ANNOTATION_TYPE, IJavaSearchConstants.ANNOTATION_TYPE_REFERENCE, matchRule);
 
 			SearchPattern annotationsPattern= SearchPattern.createOrPattern(runWithPattern, testPattern);
 			SearchParticipant[] searchParticipants= new SearchParticipant[] { SearchEngine.getDefaultSearchParticipant() };
-			new SearchEngine().search(annotationsPattern, searchParticipants, scope, requestor, new SubProgressMonitor(pm, 2));
+			new SearchEngine().search(annotationsPattern, searchParticipants, scope, requestor, subMon.newChild(2));
 
 			// find all classes in the region
 			for (IType curr : candidates) {
-				if (CoreTestSearchEngine.isAccessibleClass(curr) && !Flags.isAbstract(curr.getFlags()) && region.contains(curr)) {
+				if (!Flags.isAbstract(curr.getFlags()) && CoreTestSearchEngine.isAccessibleClass(curr) && region.contains(curr)) {
 					result.add(curr);
 				}
 			}
@@ -159,9 +166,9 @@ public class JUnit4TestFinder implements ITestFinder {
 			}
 
 			//JUnit 4.3 can also run JUnit-3.8-style public static Test suite() methods:
-			CoreTestSearchEngine.findSuiteMethods(element, result, new SubProgressMonitor(pm, 1));
+			CoreTestSearchEngine.findSuiteMethods(element, result, subMon.newChild(1));
 		} finally {
-			pm.done();
+			subMon.done();
 		}
 	}
 

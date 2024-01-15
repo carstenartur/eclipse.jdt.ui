@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -102,16 +102,16 @@ public class GenerateConstructorUsingFieldsSelectionDialog extends SourceActionD
 
 	int fWidth= 60;
 
-	final String OMIT_SUPER= "OmitCallToSuper"; //$NON-NLS-1$
+	static final String OMIT_SUPER= "OmitCallToSuper"; //$NON-NLS-1$
 
-	final String SETTINGS_SECTION= "GenerateConstructorUsingFieldsSelectionDialog"; //$NON-NLS-1$
+	static final String SETTINGS_SECTION= "GenerateConstructorUsingFieldsSelectionDialog"; //$NON-NLS-1$
 
 	private static final int DOWN_INDEX= 1;
 
 	private static final int UP_INDEX= 0;
 
 	public GenerateConstructorUsingFieldsSelectionDialog(Shell parent, ILabelProvider labelProvider, GenerateConstructorUsingFieldsContentProvider contentProvider, CompilationUnitEditor editor, IType type, IMethodBinding[] superConstructors) throws JavaModelException {
-		super(parent, labelProvider, contentProvider, editor, type, true);
+		super(parent, labelProvider, contentProvider, editor, type, true, true);
 		fTreeViewerAdapter= new GenerateConstructorUsingFieldsTreeViewerAdapter();
 
 		fSuperConstructors= superConstructors;

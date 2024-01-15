@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -16,6 +16,8 @@
  *     Red Hat Inc. - copied to jdt.core.manipulation
  *     Pierre-Yves B. <pyvesdev@gmail.com> - [inline] Allow inlining of local variable initialized to null. - https://bugs.eclipse.org/93850
  *     Nikolay Metchev - <nikolaymetchev@gmail.com> - [inline] Inline Local Variable does not qualify accesses to obscured types - https://bugs.eclipse.org/367536
+ *     Xiaye Chi <xychichina@gmail.com> - [extract local] Improve the Safety of "Extract Local Variable" Refactorings by Identifying the Side Effect of Selected Expression - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/348
+ *     Taiming Wang <3120205503@bit.edu.cn> - [extract local] Extract Similar Expression in All Methods If End-Users Want. - https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/785
  ********************************************************************************/
 package org.eclipse.jdt.internal.corext.refactoring;
 
@@ -453,6 +455,8 @@ public final class RefactoringCoreMessages extends NLS {
 
 	public static String ExtractConstantRefactoring_name;
 
+	public static String ExtractConstantRefactoring_no_type;
+
 	public static String ExtractConstantRefactoring_no_void;
 
 	public static String ExtractConstantRefactoring_not_load_time_constant;
@@ -701,9 +705,13 @@ public final class RefactoringCoreMessages extends NLS {
 
 	public static String ExtractTempRefactoring_replace_occurrences;
 
+	public static String ExtractTempRefactoring_replace_occurrences_in_this_file;
+
 	public static String ExtractTempRefactoring_resource_in_try_with_resources;
 
 	public static String ExtractTempRefactoring_select_expression;
+
+	public static String ExtractTempRefactoring_side_effcts_in_selected_expression;
 
 	public static String FlowAnalyzer_execution_flow;
 
@@ -1026,6 +1034,52 @@ public final class RefactoringCoreMessages extends NLS {
 	public static String IntroduceIndirectionRefactoring_original_pattern;
 
 	public static String IntroduceIndirectionRefactoring_unable_determine_declaring_type;
+
+	public static String MakeStaticRefactoring_name;
+
+	public static String MakeStaticRefactoring_checking_activation;
+
+	public static String MakeStaticRefactoring_checking_preconditions;
+
+	public static String MakeStaticRefactoring_checking_conditions;
+
+	public static String MakeStaticRefactoring_creating_changes;
+
+	public static String MakeStaticRefactoring_not_available_on_this_selection;
+
+	public static String MakeStaticRefactoring_not_available_on_annotation;
+
+	public static String MakeStaticRefactoring_not_available_for_local_or_anonymous_types;
+
+	public static String MakeStaticRefactoring_not_available_for_constructors;
+
+	public static String MakeStaticRefactoring_not_available_for_super_method_invocations;
+
+	public static String MakeStaticRefactoring_duplicate_method_signature;
+
+	public static String MakeStaticRefactoring_method_already_static;
+
+	public static String MakeStaticRefactoring_method_is_overridden_in_subtype;
+
+	public static String MakeStaticRefactoring_hiding_method_of_parent_type;
+
+	public static String MakeStaticRefactoring_not_available_for_recursive_methods;
+
+	public static String MakeStaticRefactoring_unexpected_binding_error;
+
+	public static String MakeStaticRefactoring_not_available_for_parametrized_methods;
+
+	public static String MakeStaticRefactoring_not_available_for_wildCardTypes_as_bound;
+
+	public static String MakeStaticRefactoring_not_available_for_method_references;
+
+	public static String MakeStaticRefactoring_explicit_super_method_invocation;
+
+	public static String MakeStaticRefactoring_selected_method_uses_super_field_access;
+
+	public static String MakeStaticRefactoring_source_not_available_for_selected_method;
+
+	public static String MakeStaticRefactoring_change_name;
 
 	public static String IntroduceParameterObjectRefactoring_cannotalanyzemethod_mappingerror;
 
@@ -2294,6 +2348,8 @@ public final class RefactoringCoreMessages extends NLS {
 	public static String SelfEncapsulateField_searching_for_cunits;
 
 	public static String SelfEncapsulateField_setter_pattern;
+
+	public static String SelfEncapsulateField_subtype_method_exists;
 
 	public static String SelfEncapsulateField_type_not_resolveable;
 

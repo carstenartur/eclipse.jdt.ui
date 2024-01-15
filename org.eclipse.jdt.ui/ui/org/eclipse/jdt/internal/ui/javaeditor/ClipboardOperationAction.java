@@ -30,6 +30,7 @@ import org.eclipse.swt.custom.BusyIndicator;
 import org.eclipse.swt.dnd.ByteArrayTransfer;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.HTMLTransfer;
 import org.eclipse.swt.dnd.RTFTransfer;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
@@ -152,16 +153,13 @@ public final class ClipboardOperationAction extends TextEditorAction {
 		}
 
 		public byte[] serialize() throws IOException {
-			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			try (DataOutputStream dataOut = new DataOutputStream(out)) {
+			try (ByteArrayOutputStream out= new ByteArrayOutputStream();
+					DataOutputStream dataOut= new DataOutputStream(out)) {
 				dataOut.writeUTF(fOriginHandle);
 				writeArray(dataOut, fTypeImports);
 				writeArray(dataOut, fStaticImports);
-			} finally {
-				out.close();
+				return out.toByteArray();
 			}
-
-			return out.toByteArray();
 		}
 	}
 
@@ -425,8 +423,8 @@ public final class ClipboardOperationAction extends TextEditorAction {
 				if (textData == null)
 					return;
 
-				ArrayList<Object> datas= new ArrayList<>(3);
-				ArrayList<ByteArrayTransfer> transfers= new ArrayList<>(3);
+				ArrayList<Object> datas= new ArrayList<>(4);
+				ArrayList<ByteArrayTransfer> transfers= new ArrayList<>(4);
 				datas.add(textData);
 				transfers.add(TextTransfer.getInstance());
 
@@ -434,6 +432,12 @@ public final class ClipboardOperationAction extends TextEditorAction {
 				if (rtfData != null) {
 					datas.add(rtfData);
 					transfers.add(RTFTransfer.getInstance());
+				}
+
+				Object htmlData= clipboard.getContents(HTMLTransfer.getInstance());
+				if (htmlData != null) {
+					datas.add(htmlData);
+					transfers.add(HTMLTransfer.getInstance());
 				}
 
 				datas.add(clipboardData);

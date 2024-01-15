@@ -49,6 +49,7 @@ import org.junit.runners.Suite;
 	IntroduceParameterTests1d7.class,
 	IntroduceFactoryTests.class,
 	IntroduceFactoryTests16.class,
+	MakeStaticRefactoringTests.class,
 
 	//-- structure
 	ChangeSignatureTests.class,
@@ -65,6 +66,7 @@ import org.junit.runners.Suite;
 	ExtractSupertypeTests.class,
 	MoveInnerToTopLevelTests.class,
 	MoveInnerToTopLevelTests16.class,
+	MoveInnerToNewTests10.class,
 	MoveInnerToNewTests16.class,
 	UseSupertypeWherePossibleTests.class,
 	UseSupertypeWherePossibleTests16.class,

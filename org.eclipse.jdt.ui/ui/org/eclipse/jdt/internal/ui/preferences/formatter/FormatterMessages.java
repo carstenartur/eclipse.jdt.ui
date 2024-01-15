@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -93,10 +93,12 @@ final class FormatterMessages extends NLS {
 	public static String FormatterModifyDialog_comments_pref_javadoc_align_names_and_descriptions;
 	public static String FormatterModifyDialog_comments_pref_javadoc_align_descriptions_grouped;
 	public static String FormatterModifyDialog_comments_pref_javadoc_align_descriptions_to_tag;
+	public static String FormatterModifyDialog_comments_pref_javadoc_do_not_put_block_tags_on_separate_lines;
 	public static String FormatterModifyDialog_comments_pref_line_width;
 	public static String FormatterModifyDialog_comments_pref_line_width_count_from_starting_position;
 	public static String FormatterModifyDialog_comments_pref_never_indent_block_comments_on_first_column;
 	public static String FormatterModifyDialog_comments_pref_never_indent_line_comments_on_first_column;
+	public static String FormatterModifyDialog_comments_pref_never_join_line_comments;
 	public static String FormatterModifyDialog_comments_pref_never_join_lines;
 	public static String FormatterModifyDialog_comments_pref_new_line_after_param_tags;
 	public static String FormatterModifyDialog_comments_pref_new_lines_at_comment_boundaries;
@@ -109,6 +111,7 @@ final class FormatterMessages extends NLS {
 	public static String FormatterModifyDialog_indentation_info_blank_lines_before_field;
 	public static String FormatterModifyDialog_indentation_info_blank_lines_before_field_delete;
 	public static String FormatterModifyDialog_indentation_info_blank_lines_to_preserve;
+	public static String FormatterModifyDialog_indentation_pref_align_arrows_in_switch_on_columns;
 	public static String FormatterModifyDialog_indentation_pref_align_assignment_statements_on_columns;
 	public static String FormatterModifyDialog_indentation_pref_align_fields_in_columns;
 	public static String FormatterModifyDialog_indentation_pref_align_variable_declarations_on_columns;
@@ -180,6 +183,7 @@ final class FormatterMessages extends NLS {
 	public static String FormatterModifyDialog_lineWrap_pref_param_type_parameters;
 	public static String FormatterModifyDialog_lineWrap_pref_param_type_ref;
 	public static String FormatterModifyDialog_lineWrap_pref_parameters;
+	public static String FormatterModifyDialog_lineWrap_pref_permits_clause;
 	public static String FormatterModifyDialog_lineWrap_pref_qualified_invocations;
 	public static String FormatterModifyDialog_lineWrap_pref_qualified_invocations_indent_from_base_expression_first_line;
 	public static String FormatterModifyDialog_lineWrap_pref_qualified_object_allocation_arguments;
@@ -514,10 +518,8 @@ final class FormatterMessages extends NLS {
 	public static String ModifyDialog_modifyAll_summary;
 	public static String ModifyDialog_modifyAll_tooltip;
 	public static String ModifyDialog_previewMissing_comment;
-	public static String ModifyDialogTabPage_defaults_text;
 	public static String ModifyDialogTabPage_deselectAll_text;
 	public static String ModifyDialogTabPage_preview_label_text;
-	public static String ModifyDialogTabPage_reset_text;
 	public static String ModifyDialogTabPage_selectAll_text;
 
 	public static String ProfileManager_unmanaged_profile;

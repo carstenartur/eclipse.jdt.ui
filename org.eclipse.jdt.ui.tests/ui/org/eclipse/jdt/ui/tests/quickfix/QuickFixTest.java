@@ -64,13 +64,13 @@ import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 import org.eclipse.jdt.internal.core.manipulation.dom.ASTResolving;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalModel;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalPositionGroup;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalPositionGroup.Proposal;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalPositionGroupCore;
+import org.eclipse.jdt.internal.corext.fix.LinkedProposalPositionGroupCore.ProposalCore;
 
 import org.eclipse.jdt.ui.text.java.IInvocationContext;
 import org.eclipse.jdt.ui.text.java.IJavaCompletionProposal;
-import org.eclipse.jdt.ui.text.java.IProblemLocation;
+import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
 import org.eclipse.jdt.ui.text.java.correction.CUCorrectionProposal;
 import org.eclipse.jdt.ui.text.java.correction.ICommandAccess;
 
@@ -85,8 +85,6 @@ import org.eclipse.jdt.internal.ui.text.correction.proposals.NewCUUsingWizardPro
 import org.eclipse.jdt.internal.ui.text.correction.proposals.RenameRefactoringProposal;
 import org.eclipse.jdt.internal.ui.text.template.contentassist.SurroundWithTemplateProposal;
 
-/**
- */
 public class QuickFixTest {
 
 	protected static String MODULE_INFO_FILE_CONTENT = ""
@@ -197,11 +195,6 @@ public class QuickFixTest {
 
 	/**
 	 * Bad design: only collects corrections for the <b>first</b> problem!
-	 * @param cu
-	 * @param astRoot
-	 * @param nProblems
-	 * @return
-	 * @throws CoreException
 	 */
 	protected static final ArrayList<IJavaCompletionProposal> collectCorrections(ICompilationUnit cu, CompilationUnit astRoot, int nProblems) throws CoreException {
 		return collectCorrections(cu, astRoot, nProblems, null);
@@ -213,12 +206,6 @@ public class QuickFixTest {
 
 	/**
 	 * Bad design: only collects corrections for the <b>first</b> problem!
-	 * @param cu
-	 * @param astRoot
-	 * @param nProblems
-	 * @param context
-	 * @return
-	 * @throws CoreException
 	 */
 	protected static final ArrayList<IJavaCompletionProposal> collectCorrections(ICompilationUnit cu, CompilationUnit astRoot, int nProblems, AssistContext context) throws CoreException {
 		return collectCorrections(cu, astRoot, nProblems, 0, context);
@@ -257,10 +244,6 @@ public class QuickFixTest {
 
 	/**
 	 * Bad design: only collects corrections for the <b>first</b> problem!
-	 * @param cu
-	 * @param nProblems
-	 * @return
-	 * @throws CoreException
 	 */
 	protected static final ArrayList<IJavaCompletionProposal> collectCorrections2(ICompilationUnit cu, int nProblems) throws CoreException {
 
@@ -315,9 +298,9 @@ public class QuickFixTest {
 		return proposals;
 	}
 
-	protected static ArrayList<IJavaCompletionProposal> collectCorrections(IInvocationContext context, IProblemLocation problem) throws CoreException {
+	protected static ArrayList<IJavaCompletionProposal> collectCorrections(IInvocationContext context, IProblemLocationCore problem) throws CoreException {
 		ArrayList<IJavaCompletionProposal> proposals= new ArrayList<>();
-		IStatus status= JavaCorrectionProcessor.collectCorrections(context, new IProblemLocation[] { problem }, proposals);
+		IStatus status= JavaCorrectionProcessor.collectCorrections(context, new IProblemLocationCore[] { problem }, proposals);
 		assertStatusOk(status);
 		return proposals;
 	}
@@ -336,7 +319,7 @@ public class QuickFixTest {
 
 	protected static final ArrayList<IJavaCompletionProposal> collectAssists(IInvocationContext context, Class<?>[] filteredTypes) throws CoreException {
 		ArrayList<IJavaCompletionProposal> proposals= new ArrayList<>();
-		IStatus status= JavaCorrectionProcessor.collectAssists(context, new IProblemLocation[0], proposals);
+		IStatus status= JavaCorrectionProcessor.collectAssists(context, new IProblemLocationCore[0], proposals);
 		assertStatusOk(status);
 
 		if (!proposals.isEmpty()) {
@@ -356,8 +339,8 @@ public class QuickFixTest {
 	protected static final ArrayList<IJavaCompletionProposal> collectAssistsWithProblems(IInvocationContext context) throws CoreException {
 		ArrayList<IJavaCompletionProposal> proposals= new ArrayList<>();
 		IProblem[] problems= context.getASTRoot().getProblems();
-		IProblemLocation firstProblemLocation= new ProblemLocation(problems[0]);
-		IStatus status= JavaCorrectionProcessor.collectAssists(context, new IProblemLocation[] { firstProblemLocation }, proposals);
+		IProblemLocationCore firstProblemLocation= new ProblemLocation(problems[0]);
+		IStatus status= JavaCorrectionProcessor.collectAssists(context, new IProblemLocationCore[] { firstProblemLocation }, proposals);
 		assertStatusOk(status);
 
 		if (!proposals.isEmpty()) {
@@ -602,13 +585,13 @@ public class QuickFixTest {
 		assertTrue("Not a LinkedCorrectionProposal", proposal instanceof LinkedCorrectionProposal);
 		LinkedCorrectionProposal linkedProposal = (LinkedCorrectionProposal)proposal;
 
-		LinkedProposalModel linkedProposalModel = linkedProposal.getLinkedProposalModel();
-		LinkedProposalPositionGroup positionGroup = linkedProposalModel.getPositionGroup(linkedGroup, false);
-		Proposal[] choices = positionGroup.getProposals();
+		LinkedProposalModelCore linkedProposalModel = linkedProposal.getLinkedProposalModel();
+		LinkedProposalPositionGroupCore positionGroup = linkedProposalModel.getPositionGroup(linkedGroup, false);
+		ProposalCore[] choices = positionGroup.getProposals();
 		assertEquals("Not same number of choices", expectedChoices.length, choices.length);
 		Arrays.sort(expectedChoices);
 		List<String> sortedChoices= Arrays.stream(choices)
-									.map(Proposal::getDisplayString)
+									.map(ProposalCore::getDisplayString)
 									.sorted()
 									.collect(Collectors.toList());
 		for (int i=0; i<expectedChoices.length; i++) {
@@ -619,12 +602,12 @@ public class QuickFixTest {
 		assertTrue("Not a LinkedCorrectionProposal", proposal instanceof LinkedCorrectionProposal);
 		LinkedCorrectionProposal linkedProposal = (LinkedCorrectionProposal)proposal;
 		linkedProposal.getChange(); // force computing the proposal details
-		LinkedProposalModel linkedProposalModel = linkedProposal.getLinkedProposalModel();
-		LinkedProposalPositionGroup positionGroup = linkedProposalModel.getPositionGroup(linkedGroup, false);
-		Proposal[] choices = positionGroup.getProposals();
+		LinkedProposalModelCore linkedProposalModel = linkedProposal.getLinkedProposalModel();
+		LinkedProposalPositionGroupCore positionGroup = linkedProposalModel.getPositionGroup(linkedGroup, false);
+		ProposalCore[] choices = positionGroup.getProposals();
 		assertTrue("Contains less number of choices", choices.length >= expectedChoices.length);
 		List<String> sortedChoices= Arrays.stream(choices)
-									.map(Proposal::getDisplayString)
+									.map(ProposalCore::getDisplayString)
 									.sorted()
 									.collect(Collectors.toList());
 		for (int i=0; i<expectedChoices.length; i++) {
@@ -636,13 +619,6 @@ public class QuickFixTest {
 	 * Computes the number of warnings the java file "filename" has.
 	 * Then check if the "preview" source code has the same number of warnings.
 	 * Throw error if the number changes.
-	 *
-	 * @param pack
-	 * @param preview
-	 * @param className
-	 * @param filename
-	 * @param fSourceFolder
-	 * @throws JavaModelException
 	 */
 	protected void assertNoAdditionalProblems(IPackageFragment pack, String preview, String className, String filename, IPackageFragmentRoot fSourceFolder) throws JavaModelException {
 		Hashtable<String, String> options= JavaCore.getOptions();

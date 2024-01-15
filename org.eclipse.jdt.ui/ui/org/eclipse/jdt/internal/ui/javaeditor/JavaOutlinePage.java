@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -88,6 +88,7 @@ import org.eclipse.ui.part.IShowInTarget;
 import org.eclipse.ui.part.IShowInTargetList;
 import org.eclipse.ui.part.Page;
 import org.eclipse.ui.part.ShowInContext;
+import org.eclipse.ui.views.WorkbenchViewerSetup;
 import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
 
 import org.eclipse.ui.texteditor.ITextEditorActionConstants;
@@ -109,6 +110,7 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.formatter.CodeFormatter;
 
+import org.eclipse.jdt.internal.core.manipulation.MembersOrderPreferenceCacheCommon;
 import org.eclipse.jdt.internal.corext.util.CodeFormatterUtil;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 
@@ -137,7 +139,6 @@ import org.eclipse.jdt.internal.ui.actions.CollapseAllAction;
 import org.eclipse.jdt.internal.ui.actions.CompositeActionGroup;
 import org.eclipse.jdt.internal.ui.dnd.JdtViewerDragSupport;
 import org.eclipse.jdt.internal.ui.dnd.JdtViewerDropSupport;
-import org.eclipse.jdt.internal.ui.preferences.MembersOrderPreferenceCache;
 import org.eclipse.jdt.internal.ui.preferences.formatter.FormatterProfileManager;
 import org.eclipse.jdt.internal.ui.util.ElementValidator;
 import org.eclipse.jdt.internal.ui.viewsupport.AppearanceAwareLabelProvider;
@@ -829,7 +830,7 @@ public class JavaOutlinePage extends Page implements IContentOutlinePage, IAdapt
 
 	private void doPropertyChange(PropertyChangeEvent event) {
 		if (fOutlineViewer != null) {
-			if (MembersOrderPreferenceCache.isMemberOrderProperty(event.getProperty())) {
+			if (MembersOrderPreferenceCacheCommon.isMemberOrderProperty(event.getProperty())) {
 				fOutlineViewer.refresh(false);
 			}
 		}
@@ -929,15 +930,20 @@ public class JavaOutlinePage extends Page implements IContentOutlinePage, IAdapt
 	 */
 	@Override
 	public void createControl(Composite parent) {
+		JavaCore.runReadOnly(() -> createControlCached(parent));
+	}
+
+	private void createControlCached(Composite parent) {
 
 		Tree tree= new Tree(parent, SWT.MULTI);
 
 		AppearanceAwareLabelProvider lprovider= new AppearanceAwareLabelProvider(
-			AppearanceAwareLabelProvider.DEFAULT_TEXTFLAGS |  JavaElementLabels.F_APP_TYPE_SIGNATURE | JavaElementLabels.ALL_CATEGORY,
+			AppearanceAwareLabelProvider.DEFAULT_TEXTFLAGS |  JavaElementLabels.F_APP_TYPE_SIGNATURE | JavaElementLabels.ALL_CATEGORY2,
 			AppearanceAwareLabelProvider.DEFAULT_IMAGEFLAGS
 		);
 
 		fOutlineViewer= new JavaOutlineViewer(tree);
+		WorkbenchViewerSetup.setupViewer(fOutlineViewer);
 		initDragAndDrop();
 		fOutlineViewer.setContentProvider(new ChildrenProvider());
 		fOutlineViewer.setLabelProvider(new DecoratingJavaLabelProvider(lprovider));

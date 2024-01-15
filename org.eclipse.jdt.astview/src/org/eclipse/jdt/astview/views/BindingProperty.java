@@ -20,9 +20,6 @@ import org.eclipse.swt.graphics.Image;
 
 import org.eclipse.jdt.core.dom.IBinding;
 
-/**
- *
- */
 public class BindingProperty extends ASTAttribute {
 
 	private final String fName;
@@ -39,7 +36,7 @@ public class BindingProperty extends ASTAttribute {
 				fName= name + ": " + Binding.getEscapedStringLiteral((String) value); //$NON-NLS-1$
 			}
 		} else if (value instanceof Character) {
-			fName= name + ": " + Binding.getEscapedCharLiteral(((Character) value)); //$NON-NLS-1$
+			fName= name + ": " + Binding.getEscapedCharLiteral(((Character) value).charValue()); //$NON-NLS-1$
 		} else {
 			fName= name + ": " + String.valueOf(value); //$NON-NLS-1$
 		}

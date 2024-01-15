@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2019 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -41,13 +41,11 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Path;
-import org.eclipse.core.runtime.SubProgressMonitor;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -74,7 +72,6 @@ import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaModelStatus;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaConventions;
-import org.eclipse.jdt.core.JavaCore;
 
 import org.eclipse.jdt.internal.core.manipulation.util.BasicElementLabels;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
@@ -89,6 +86,9 @@ import org.eclipse.jdt.internal.ui.JavaPluginImages;
 import org.eclipse.jdt.internal.ui.dialogs.StatusInfo;
 import org.eclipse.jdt.internal.ui.dialogs.StatusUtil;
 import org.eclipse.jdt.internal.ui.util.CoreUtility;
+import org.eclipse.jdt.internal.ui.util.JavaProjectUtilities;
+import org.eclipse.jdt.internal.ui.util.Progress;
+import org.eclipse.jdt.internal.ui.util.ResourcesUtility;
 import org.eclipse.jdt.internal.ui.viewsupport.ImageDisposer;
 import org.eclipse.jdt.internal.ui.wizards.IStatusChangeListener;
 import org.eclipse.jdt.internal.ui.wizards.NewWizardMessages;
@@ -451,7 +451,7 @@ public class BuildPathsBlock {
 	// -------- public api --------
 
 	/**
-	 * @return Returns the Java project. Can return <code>null<code> if the page has not
+	 * @return Returns the Java project. Can return <code>null</code> if the page has not
 	 * been initialized.
 	 */
 	public IJavaProject getJavaProject() {
@@ -704,50 +704,11 @@ public class BuildPathsBlock {
 	// -------- creation -------------------------------
 
 	public static void createProject(IProject project, URI locationURI, IProgressMonitor monitor) throws CoreException {
-		if (monitor == null) {
-			monitor= new NullProgressMonitor();
-		}
-		monitor.beginTask(NewWizardMessages.BuildPathsBlock_operationdesc_project, 10);
-
-		// create the project
-		try {
-			if (!project.exists()) {
-				IProjectDescription desc= project.getWorkspace().newProjectDescription(project.getName());
-				if (locationURI != null && ResourcesPlugin.getWorkspace().getRoot().getLocationURI().equals(locationURI)) {
-					locationURI= null;
-				}
-				desc.setLocationURI(locationURI);
-				project.create(desc, monitor);
-				monitor= null;
-			}
-			if (!project.isOpen()) {
-				project.open(monitor);
-				monitor= null;
-			}
-		} finally {
-			if (monitor != null) {
-				monitor.done();
-			}
-		}
+		ResourcesUtility.createProject(project, locationURI, monitor);
 	}
 
 	public static void addJavaNature(IProject project, IProgressMonitor monitor) throws CoreException {
-		if (monitor != null && monitor.isCanceled()) {
-			throw new OperationCanceledException();
-		}
-		if (!project.hasNature(JavaCore.NATURE_ID)) {
-			IProjectDescription description = project.getDescription();
-			String[] prevNatures= description.getNatureIds();
-			String[] newNatures= new String[prevNatures.length + 1];
-			System.arraycopy(prevNatures, 0, newNatures, 0, prevNatures.length);
-			newNatures[prevNatures.length]= JavaCore.NATURE_ID;
-			description.setNatureIds(newNatures);
-			project.setDescription(description, monitor);
-		} else {
-			if (monitor != null) {
-				monitor.worked(1);
-			}
-		}
+		JavaProjectUtilities.addJavaNature(project, monitor);
 	}
 
 	public void configureJavaProject(IProgressMonitor monitor) throws CoreException, OperationCanceledException {
@@ -817,7 +778,7 @@ public class BuildPathsBlock {
 			//create and set the output path first
 			if (!fWorkspaceRoot.exists(outputLocation)) {
 				IFolder folder= fWorkspaceRoot.getFolder(outputLocation);
-				CoreUtility.createDerivedFolder(folder, true, true, new SubProgressMonitor(monitor, 1));
+				CoreUtility.createDerivedFolder(folder, true, true, Progress.subMonitor(monitor, 1));
 			} else {
 				monitor.worked(1);
 			}
@@ -839,7 +800,7 @@ public class BuildPathsBlock {
 				IResource res= entry.getResource();
 				//1 tick
 				if (res instanceof IFolder && entry.getLinkTarget() == null && !res.exists()) {
-					CoreUtility.createFolder((IFolder)res, true, true, new SubProgressMonitor(monitor, 1));
+					CoreUtility.createFolder((IFolder)res, true, true, Progress.subMonitor(monitor, 1));
 				} else {
 					monitor.worked(1);
 				}
@@ -849,7 +810,7 @@ public class BuildPathsBlock {
 					IPath folderOutput= (IPath) entry.getAttribute(CPListElement.OUTPUT);
 					if (folderOutput != null && folderOutput.segmentCount() > 1) {
 						IFolder folder= fWorkspaceRoot.getFolder(folderOutput);
-						CoreUtility.createDerivedFolder(folder, true, true, new SubProgressMonitor(monitor, 1));
+						CoreUtility.createDerivedFolder(folder, true, true, Progress.subMonitor(monitor, 1));
 					} else {
 						monitor.worked(1);
 					}
@@ -869,9 +830,9 @@ public class BuildPathsBlock {
 						if (!folder.exists()) {
 							//New source folder needs to be created
 							if (entry.getLinkTarget() == null) {
-								CoreUtility.createFolder(folder, true, true, new SubProgressMonitor(monitor, 2));
+								CoreUtility.createFolder(folder, true, true, Progress.subMonitor(monitor, 2));
 							} else {
-								folder.createLink(entry.getLinkTarget(), IResource.ALLOW_MISSING_LOCAL, new SubProgressMonitor(monitor, 2));
+								folder.createLink(entry.getLinkTarget(), IResource.ALLOW_MISSING_LOCAL, Progress.subMonitor(monitor, 2));
 							}
 						}
 					} else {
@@ -889,19 +850,19 @@ public class BuildPathsBlock {
 								if (parentPath.segmentCount() > 0) {
 									IFolder parentFolder= project.getFolder(parentPath);
 									if (!parentFolder.exists()) {
-										CoreUtility.createFolder(parentFolder, true, true, new SubProgressMonitor(monitor, 1));
+										CoreUtility.createFolder(parentFolder, true, true, Progress.subMonitor(monitor, 1));
 									} else {
 										monitor.worked(1);
 									}
 								} else {
 									monitor.worked(1);
 								}
-								orginalFolder.move(entry.getPath(), true, true, new SubProgressMonitor(monitor, 1));
+								orginalFolder.move(entry.getPath(), true, true, Progress.subMonitor(monitor, 1));
 							}
 						} else {
 							if (!folder.exists() || !entry.getLinkTarget().equals(entry.getOrginalLinkTarget())) {
-								orginalFolder.delete(true, new SubProgressMonitor(monitor, 1));
-								folder.createLink(entry.getLinkTarget(), IResource.ALLOW_MISSING_LOCAL, new SubProgressMonitor(monitor, 1));
+								orginalFolder.delete(true, Progress.subMonitor(monitor, 1));
+								folder.createLink(entry.getLinkTarget(), IResource.ALLOW_MISSING_LOCAL, Progress.subMonitor(monitor, 1));
 							}
 						}
 					}
@@ -929,7 +890,7 @@ public class BuildPathsBlock {
 				}
 			}
 
-			javaProject.setRawClasspath(classpath, outputLocation, new SubProgressMonitor(monitor, 2));
+			javaProject.setRawClasspath(classpath, outputLocation, Progress.subMonitor(monitor, 2));
 		} finally {
 			monitor.done();
 		}

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Fabrice TIERCELIN and others.
+ * Copyright (c) 2021, 2023 Fabrice TIERCELIN and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -30,11 +30,14 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.InfixExpression;
 import org.eclipse.jdt.core.dom.InstanceofExpression;
+import org.eclipse.jdt.core.dom.Modifier;
+import org.eclipse.jdt.core.dom.Modifier.ModifierKeyword;
 import org.eclipse.jdt.core.dom.PatternInstanceofExpression;
 import org.eclipse.jdt.core.dom.PrefixExpression;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.TypePattern;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
@@ -43,6 +46,7 @@ import org.eclipse.jdt.core.manipulation.ICleanUpFixCore;
 
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
+import org.eclipse.jdt.internal.corext.refactoring.structure.ImportRemover;
 
 import org.eclipse.jdt.internal.ui.fix.MultiFixMessages;
 
@@ -183,6 +187,7 @@ public class PatternMatchingForInstanceofFixCore extends CompilationUnitRewriteO
 		@Override
 		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
+			ImportRemover importRemover= cuRewrite.getImportRemover();
 			AST ast= cuRewrite.getRoot().getAST();
 			TextEditGroup group= createTextEditGroup(MultiFixMessages.PatternMatchingForInstanceofCleanup_description, cuRewrite);
 			rewrite.setTargetSourceRangeComputer(new TargetSourceRangeComputer() {
@@ -201,15 +206,25 @@ public class PatternMatchingForInstanceofFixCore extends CompilationUnitRewriteO
 			SingleVariableDeclaration newSVDecl= ast.newSingleVariableDeclaration();
 			newSVDecl.setName(ASTNodes.createMoveTarget(rewrite, expressionToMove));
 			newSVDecl.setType(ASTNodes.createMoveTarget(rewrite, nodeToComplete.getRightOperand()));
-			newInstanceof.setRightOperand(newSVDecl);
+			if (Modifier.isFinal(statementToRemove.getModifiers())) {
+				newSVDecl.modifiers().add(ast.newModifier(ModifierKeyword.fromFlagValue(Modifier.FINAL)));
+			}
+			if ((ast.apiLevel() == AST.JLS20 && ast.isPreviewEnabled()) || ast.apiLevel() > AST.JLS20) {
+				TypePattern newTypePattern= ast.newTypePattern();
+				newTypePattern.setPatternVariable(newSVDecl);
+				newInstanceof.setPattern(newTypePattern);
+			} else {
+				newInstanceof.setRightOperand(newSVDecl);
+			}
 
 			ASTNodes.replaceButKeepComment(rewrite, nodeToComplete, newInstanceof, group);
 
 			if (ASTNodes.canHaveSiblings(statementToRemove) || statementToRemove.getLocationInParent() == IfStatement.ELSE_STATEMENT_PROPERTY) {
-				rewrite.remove(statementToRemove, group);
+				ASTNodes.removeButKeepComment(rewrite, statementToRemove, group);
 			} else {
 				ASTNodes.replaceButKeepComment(rewrite, statementToRemove, ast.newBlock(), group);
 			}
+			importRemover.registerRemovedNode(statementToRemove);
 		}
 	}
 

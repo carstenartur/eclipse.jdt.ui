@@ -1,27 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
       id="org.eclipse.jdt.astview.feature"
-      label="AST View"
-      version="1.1.14.qualifier"
+      label="Java AST View"
+      version="1.2.200.qualifier"
       provider-name="Eclipse.org"
       license-feature="org.eclipse.license"
       license-feature-version="0.0.0">
 
    <description>
-      AST View for Eclipse 2021-12 and later (jdt.core 3.28)
+      Java AST View
    </description>
 
    <license url="%licenseURL">
       %license
    </license>
 
-   <url>
-      <update label="JDT UI Tools" url="http://www.eclipse.org/jdt/ui/update-site"/>
-   </url>
-
    <requires>
-      <import plugin="org.eclipse.jdt.core" version="3.28.0" match="compatible"/>
-      <import plugin="org.eclipse.jdt.ui" version="3.25.0" match="compatible"/>
+      <import plugin="org.eclipse.jdt.core" version="3.31.0" match="compatible"/>
+      <import plugin="org.eclipse.jdt.ui" version="3.27.0" match="compatible"/>
       <import plugin="org.eclipse.core.runtime"/>
       <import plugin="org.eclipse.ui.ide"/>
       <import plugin="org.eclipse.ui.views"/>
@@ -35,9 +31,6 @@
 
    <plugin
          id="org.eclipse.jdt.astview"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
+         version="0.0.0"/>
 
 </feature>

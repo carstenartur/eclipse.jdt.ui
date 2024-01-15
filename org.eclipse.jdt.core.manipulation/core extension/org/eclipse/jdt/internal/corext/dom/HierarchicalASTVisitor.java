@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2021 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -54,7 +54,6 @@ import org.eclipse.jdt.core.dom.*;
  * exactly analogous to the dispatching behaviour obtained when method implementations are added to
  * the same ASTNode descendant classes.
  * </p>
- *
  */
 // @see JDTUIHelperClasses
 /*
@@ -63,7 +62,6 @@ import org.eclipse.jdt.core.dom.*;
  * The structure and behaviour of this class is
  * verified reflectively by
  * org.eclipse.jdt.ui.tests.core.HierarchicalASTVisitorTest
- *
  */
 public abstract class HierarchicalASTVisitor extends ASTVisitor {
 //TODO: check callers for handling of comments
@@ -612,6 +610,16 @@ public abstract class HierarchicalASTVisitor extends ASTVisitor {
 	//---- End Name Hierarchy ------------------------------------
 
 	@Override
+	public boolean visit(RecordPattern node) {
+		return visit((Pattern)node);
+	}
+
+	@Override
+	public void endVisit(RecordPattern node) {
+		endVisit((Pattern)node);
+	}
+
+	@Override
 	public boolean visit(GuardedPattern node) {
 		return visit((Pattern)node);
 	}
@@ -697,6 +705,36 @@ public abstract class HierarchicalASTVisitor extends ASTVisitor {
 	@Override
 	public void endVisit(StringLiteral node) {
 		endVisit((Expression)node);
+	}
+
+	@Override
+	public boolean visit(StringTemplateExpression node) {
+		return visit((Expression) node);
+	}
+
+	@Override
+	public boolean visit(StringTemplateComponent node) {
+		return visit((Expression) node);
+	}
+
+	@Override
+	public boolean visit(StringFragment node) {
+		return visit((Expression) node);
+	}
+
+	@Override
+	public void endVisit(StringTemplateExpression node) {
+		endVisit((Expression) node);
+	}
+
+	@Override
+	public void endVisit(StringTemplateComponent node) {
+		endVisit((Expression) node);
+	}
+
+	@Override
+	public void endVisit(StringFragment node) {
+		endVisit((Expression) node);
 	}
 
 	@Override
@@ -1026,6 +1064,16 @@ public abstract class HierarchicalASTVisitor extends ASTVisitor {
 	}
 
 	@Override
+	public boolean visit(EnhancedForWithRecordPattern node) {
+		return visit((Statement)node);
+	}
+
+	@Override
+	public void endVisit(EnhancedForWithRecordPattern node) {
+		endVisit((Statement)node);
+	}
+
+	@Override
 	public boolean visit(ExpressionStatement node) {
 		return visit((Statement)node);
 	}
@@ -1185,14 +1233,32 @@ public abstract class HierarchicalASTVisitor extends ASTVisitor {
 		endVisit((AbstractTagElement)node);
 	}
 
+	public boolean visit(AbstractTextElement node) {
+		return visit((ASTNode)node);
+	}
+
+	public void endVisit(AbstractTextElement node) {
+		endVisit((ASTNode)node);
+	}
+
 	@Override
 	public boolean visit(TextElement node) {
-		return visit((ASTNode)node);
+		return visit((AbstractTextElement)node);
 	}
 
 	@Override
 	public void endVisit(TextElement node) {
-		endVisit((ASTNode)node);
+		endVisit((AbstractTextElement)node);
+	}
+
+	@Override
+	public boolean visit(JavaDocTextElement node) {
+		return visit((AbstractTextElement)node);
+	}
+
+	@Override
+	public void endVisit(JavaDocTextElement node) {
+		endVisit((AbstractTextElement)node);
 	}
 
 	@Override

@@ -28,7 +28,6 @@ import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.TextUtilities;
-import org.eclipse.jface.text.contentassist.ICompletionProposalExtension4;
 
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
@@ -54,14 +53,14 @@ import org.eclipse.jdt.internal.core.manipulation.StubUtility;
 import org.eclipse.jdt.internal.core.manipulation.dom.ASTResolving;
 import org.eclipse.jdt.internal.corext.codemanipulation.CodeGenerationSettings;
 import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRewriteContext;
-import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility2;
+import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility2Core;
 import org.eclipse.jdt.internal.corext.dom.Bindings;
 import org.eclipse.jdt.internal.corext.dom.IASTSharedValues;
 
 import org.eclipse.jdt.internal.ui.JavaPlugin;
 import org.eclipse.jdt.internal.ui.preferences.JavaPreferencesSettings;
 
-public class OverrideCompletionProposal extends JavaTypeCompletionProposal implements ICompletionProposalExtension4 {
+public class OverrideCompletionProposal extends JavaTypeCompletionProposal {
 
 	private String fMethodName;
 	private String[] fParamTypes;
@@ -161,7 +160,7 @@ public class OverrideCompletionProposal extends JavaTypeCompletionProposal imple
 			}
 			if (methodToOverride != null) {
 				CodeGenerationSettings settings= JavaPreferencesSettings.getCodeGenerationSettings(fCompilationUnit);
-				MethodDeclaration stub= StubUtility2.createImplementationStub(fCompilationUnit, rewrite, importRewrite, context, methodToOverride, declaringType, settings, declaringType.isInterface(), astNode);
+				MethodDeclaration stub= StubUtility2Core.createImplementationStub(fCompilationUnit, rewrite, importRewrite, context, methodToOverride, declaringType, settings, declaringType.isInterface(), astNode);
 				ListRewrite rewriter= rewrite.getListRewrite(node, descriptor);
 				rewriter.insertFirst(stub, null);
 

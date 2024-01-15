@@ -1,21 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <component id="org.eclipse.jdt.ui" version="2">
-    <resource path="core refactoring/org/eclipse/jdt/internal/corext/refactoring/code/ReplaceInvocationsRefactoring.java" type="org.eclipse.jdt.internal.corext.refactoring.code.ReplaceInvocationsRefactoring">
-        <filter id="571519004">
-            <message_arguments>
-                <message_argument value="org.eclipse.jdt.internal.corext.refactoring.code.ReplaceInvocationsRefactoring.createChange(IProgressMonitor)"/>
-                <message_argument value="JavaRefactoringDescriptor"/>
-            </message_arguments>
-        </filter>
-    </resource>
-    <resource path="core refactoring/org/eclipse/jdt/internal/corext/refactoring/scripting/JavaUIRefactoringContribution.java" type="org.eclipse.jdt.internal.corext.refactoring.scripting.JavaUIRefactoringContribution">
-        <filter id="571473929">
-            <message_arguments>
-                <message_argument value="JavaRefactoringContribution"/>
-                <message_argument value="JavaUIRefactoringContribution"/>
-            </message_arguments>
-        </filter>
-    </resource>
     <resource path="internal compatibility/org/eclipse/jdt/internal/corext/SourceRange.java" type="org.eclipse.jdt.internal.corext.SourceRange">
         <filter id="574619656">
             <message_arguments>
@@ -112,6 +96,15 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="ui/org/eclipse/jdt/internal/ui/javaeditor/SemanticHighlightingReconciler.java" type="org.eclipse.jdt.internal.ui.javaeditor.SemanticHighlightingReconciler$PositionCollector">
+        <filter comment="This is a Java 19 preview feature" id="640712815">
+            <message_arguments>
+                <message_argument value="GuardedPattern"/>
+                <message_argument value="PositionCollector"/>
+                <message_argument value="getRestrictedIdentifierStartPosition()"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="ui/org/eclipse/jdt/internal/ui/text/JavaOutlineInformationControl.java" type="org.eclipse.jdt.internal.ui.text.JavaOutlineInformationControl$OutlineTreeViewer">
         <filter id="571473929">
             <message_arguments>
@@ -120,36 +113,11 @@
             </message_arguments>
         </filter>
     </resource>
-    <resource path="ui/org/eclipse/jdt/internal/ui/text/correction/LocalCorrectionsSubProcessor.java" type="org.eclipse.jdt.internal.ui.text.correction.LocalCorrectionsSubProcessor">
-        <filter comment="Sealed types preview feature" id="640712815">
-            <message_arguments>
-                <message_argument value="IType"/>
-                <message_argument value="LocalCorrectionsSubProcessor"/>
-                <message_argument value="isSealed()"/>
-            </message_arguments>
-        </filter>
-    </resource>
     <resource path="ui/org/eclipse/jdt/internal/ui/util/ViewerPane.java" type="org.eclipse.jdt.internal.ui.util.ViewerPane">
         <filter id="571473929">
             <message_arguments>
                 <message_argument value="ViewForm"/>
                 <message_argument value="ViewerPane"/>
-            </message_arguments>
-        </filter>
-    </resource>
-    <resource path="ui/org/eclipse/jdt/internal/ui/viewsupport/JavaElementImageProvider.java" type="org.eclipse.jdt.internal.ui.viewsupport.JavaElementImageProvider">
-        <filter comment="This is a Java 15 preview feature" id="640712815">
-            <message_arguments>
-                <message_argument value="Flags"/>
-                <message_argument value="JavaElementImageProvider"/>
-                <message_argument value="isNonSealed(int)"/>
-            </message_arguments>
-        </filter>
-        <filter comment="This is a Java 15 preview feature" id="640712815">
-            <message_arguments>
-                <message_argument value="Flags"/>
-                <message_argument value="JavaElementImageProvider"/>
-                <message_argument value="isSealed(int)"/>
             </message_arguments>
         </filter>
     </resource>
@@ -169,6 +137,38 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="ui/org/eclipse/jdt/ui/JavaUI.java" type="org.eclipse.jdt.ui.JavaUI">
+        <filter comment="View ID constants should be final." id="388100214">
+            <message_arguments>
+                <message_argument value="org.eclipse.jdt.ui.JavaUI"/>
+                <message_argument value="ID_BROWSING_PERSPECTIVE"/>
+            </message_arguments>
+        </filter>
+        <filter comment="View ID constants should be final." id="388100214">
+            <message_arguments>
+                <message_argument value="org.eclipse.jdt.ui.JavaUI"/>
+                <message_argument value="ID_MEMBERS_VIEW"/>
+            </message_arguments>
+        </filter>
+        <filter comment="View ID constants should be final." id="388100214">
+            <message_arguments>
+                <message_argument value="org.eclipse.jdt.ui.JavaUI"/>
+                <message_argument value="ID_PACKAGES_VIEW"/>
+            </message_arguments>
+        </filter>
+        <filter comment="View ID constants should be final." id="388100214">
+            <message_arguments>
+                <message_argument value="org.eclipse.jdt.ui.JavaUI"/>
+                <message_argument value="ID_PROJECTS_VIEW"/>
+            </message_arguments>
+        </filter>
+        <filter comment="View ID constants should be final." id="388100214">
+            <message_arguments>
+                <message_argument value="org.eclipse.jdt.ui.JavaUI"/>
+                <message_argument value="ID_TYPES_VIEW"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="ui/org/eclipse/jdt/ui/StandardJavaElementContentProvider.java" type="org.eclipse.jdt.ui.StandardJavaElementContentProvider">
         <filter comment="For Java 13 Enable Preview feature" id="576725006">
             <message_arguments>
@@ -185,36 +185,19 @@
             </message_arguments>
         </filter>
     </resource>
-    <resource path="ui/org/eclipse/jdt/ui/wizards/NewRecordWizardPage.java" type="org.eclipse.jdt.ui.wizards.NewRecordWizardPage">
-        <filter comment="this was not an api( in a noreference class), so can be removed" id="338792546">
+    <resource path="ui/org/eclipse/jdt/ui/text/java/IInvocationContext.java" type="org.eclipse.jdt.ui.text.java.IInvocationContext">
+        <filter id="576720909">
             <message_arguments>
-                <message_argument value="org.eclipse.jdt.ui.wizards.NewRecordWizardPage"/>
-                <message_argument value="setMethodStubSelection(boolean, boolean)"/>
-            </message_arguments>
-        </filter>
-        <filter comment="@since not required for overridden methods" id="1143996420">
-            <message_arguments>
-                <message_argument value="createControl(Composite)"/>
+                <message_argument value="IInvocationContextCore"/>
+                <message_argument value="IInvocationContext"/>
             </message_arguments>
         </filter>
     </resource>
-    <resource path="ui/org/eclipse/jdt/ui/wizards/NewTypeWizardPage.java" type="org.eclipse.jdt.ui.wizards.NewTypeWizardPage">
-        <filter id="336658481">
+    <resource path="ui/org/eclipse/jdt/ui/text/java/IProblemLocation.java" type="org.eclipse.jdt.ui.text.java.IProblemLocation">
+        <filter id="576720909">
             <message_arguments>
-                <message_argument value="org.eclipse.jdt.ui.wizards.NewTypeWizardPage"/>
-                <message_argument value="SEALEDMODIFIERS"/>
-            </message_arguments>
-        </filter>
-        <filter id="336658481">
-            <message_arguments>
-                <message_argument value="org.eclipse.jdt.ui.wizards.NewTypeWizardPage"/>
-                <message_argument value="fSealedModifierStatus"/>
-            </message_arguments>
-        </filter>
-        <filter id="336658481">
-            <message_arguments>
-                <message_argument value="org.eclipse.jdt.ui.wizards.NewTypeWizardPage"/>
-                <message_argument value="fSealedSuperClassStatus"/>
+                <message_argument value="IProblemLocationCore"/>
+                <message_argument value="IProblemLocation"/>
             </message_arguments>
         </filter>
     </resource>

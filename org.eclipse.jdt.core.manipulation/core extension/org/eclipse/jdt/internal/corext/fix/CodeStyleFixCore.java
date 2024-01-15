@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2022 IBM Corporation and others.
+ * Copyright (c) 2019, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -360,8 +360,19 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		private boolean hasConflict(int startPosition, SimpleName name, int flag) {
 			ScopeAnalyzer analyzer= new ScopeAnalyzer(fCompilationUnit);
 			for (IBinding decl : analyzer.getDeclarationsInScope(startPosition, flag)) {
-				if (decl.getName().equals(name.getIdentifier()) && name.resolveBinding() != decl)
+				IBinding nameBinding= name.resolveBinding();
+				if (decl.getName().equals(name.getIdentifier()) && nameBinding != decl) {
+					if ((decl instanceof IVariableBinding) && (nameBinding instanceof IVariableBinding)) {
+						IVariableBinding declVarBinding= (IVariableBinding)decl;
+						IVariableBinding nameVarBinding= (IVariableBinding)nameBinding;
+						if (declVarBinding.isField() && nameVarBinding.isField()) {
+							if (declVarBinding.getVariableDeclaration().isEqualTo(nameVarBinding.getVariableDeclaration())) {
+								return false;
+							}
+						}
+					}
 					return true;
+				}
 			}
 			return false;
 		}
@@ -522,7 +533,7 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		if (!isNonStaticAccess(problem))
 			return null;
 
-		ToStaticAccessOperation operations[]= createToStaticAccessOperations(compilationUnit, new HashMap<ASTNode, Block>(), problem, false);
+		ToStaticAccessOperation operations[]= createToStaticAccessOperations(compilationUnit, new HashMap<>(), problem, false);
 		if (operations == null)
 			return null;
 
@@ -553,7 +564,7 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		if (!isIndirectStaticAccess(problem))
 			return null;
 
-		ToStaticAccessOperation operations[]= createToStaticAccessOperations(compilationUnit, new HashMap<ASTNode, Block>(), problem, false);
+		ToStaticAccessOperation operations[]= createToStaticAccessOperations(compilationUnit, new HashMap<>(), problem, false);
 		if (operations == null)
 			return null;
 

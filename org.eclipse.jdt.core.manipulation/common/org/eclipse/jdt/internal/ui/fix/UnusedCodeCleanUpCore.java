@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 IBM Corporation and others.
+ * Copyright (c) 2019, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -37,7 +37,6 @@ import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
 /**
  * Create fixes which can remove unused code
  * see org.eclipse.jdt.internal.corext.fix.UnusedCodeFix
- *
  */
 public class UnusedCodeCleanUpCore extends AbstractMultiFixCore {
 
@@ -80,7 +79,7 @@ public class UnusedCodeCleanUpCore extends AbstractMultiFixCore {
 				isEnabled(CleanUpConstants.REMOVE_UNUSED_CODE_LOCAL_VARIABLES),
 				isEnabled(CleanUpConstants.REMOVE_UNUSED_CODE_IMPORTS) && !isEnabled(CleanUpConstants.ORGANIZE_IMPORTS),
 				false,
-				true);
+				isEnabled(CleanUpConstants.REMOVE_UNUSED_CODE_METHOD_PARAMETERS));
 	}
 
 	@Override
@@ -95,7 +94,7 @@ public class UnusedCodeCleanUpCore extends AbstractMultiFixCore {
 				isEnabled(CleanUpConstants.REMOVE_UNUSED_CODE_LOCAL_VARIABLES),
 				isEnabled(CleanUpConstants.REMOVE_UNUSED_CODE_IMPORTS) && !isEnabled(CleanUpConstants.ORGANIZE_IMPORTS),
 				false,
-				true);
+				isEnabled(CleanUpConstants.REMOVE_UNUSED_CODE_METHOD_PARAMETERS));
 	}
 
 	public Map<String, String> getRequiredOptions() {

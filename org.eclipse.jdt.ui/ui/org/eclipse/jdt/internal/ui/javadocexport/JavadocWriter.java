@@ -26,7 +26,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
@@ -45,6 +44,8 @@ import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IPackageFragment;
 
+import org.eclipse.jdt.internal.ui.util.XmlProcessorFactoryJdtUi;
+
 public class JavadocWriter {
 
 	private static final char PATH_SEPARATOR= '/'; // use forward slash for all platforms
@@ -56,7 +57,6 @@ public class JavadocWriter {
 	 * Create a JavadocWriter.
 	 * @param basePath The base path to which all path will be made relative (if
 	 * possible). If <code>null</code>, paths are not made relative.
-	 * @param projects
 	 */
 	public JavadocWriter(IPath basePath, IJavaProject[] projects) {
 		fBasePath= basePath;
@@ -64,7 +64,7 @@ public class JavadocWriter {
 	}
 
 	public Element createXML(JavadocOptionsManager store) throws ParserConfigurationException {
-		DocumentBuilderFactory factory= DocumentBuilderFactory.newInstance();
+		DocumentBuilderFactory factory= XmlProcessorFactoryJdtUi.createDocumentBuilderFactoryWithErrorOnDOCTYPE();
 		factory.setValidating(false);
 		DocumentBuilder docBuilder= factory.newDocumentBuilder();
 		Document document= docBuilder.newDocument();
@@ -101,7 +101,7 @@ public class JavadocWriter {
 	public static void writeDocument(Element javadocElement, String encoding, OutputStream outputStream) throws TransformerException {
 
 		// Write the document to the stream
-		Transformer transformer=TransformerFactory.newInstance().newTransformer();
+		Transformer transformer= XmlProcessorFactoryJdtUi.createTransformerFactoryWithErrorOnDOCTYPE().newTransformer();
 		transformer.setOutputProperty(OutputKeys.METHOD, "xml"); //$NON-NLS-1$
 		transformer.setOutputProperty(OutputKeys.ENCODING, encoding);
 		transformer.setOutputProperty(OutputKeys.INDENT, "yes"); //$NON-NLS-1$

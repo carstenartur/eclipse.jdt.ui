@@ -13,11 +13,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.ui.javaeditor;
 
+import java.text.Bidi;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-
-import com.ibm.icu.text.Bidi;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
@@ -158,6 +157,10 @@ public class JavaSourceViewer extends ProjectionViewer implements IPropertyChang
 	 */
 	@Override
 	public void doOperation(int operation) {
+		JavaCore.runReadOnly(()->doOperationCached(operation));
+	}
+
+	private void doOperationCached(int operation) {
 		if (getTextWidget() == null)
 			return;
 
@@ -540,7 +543,6 @@ public class JavaSourceViewer extends ProjectionViewer implements IPropertyChang
 
 		int segmentIndex= 1;
 		int[] segments= new int[lineLength + 1];
-		byte[] levels= bidi.getLevels();
 		int nPartitions= linePartitioning.length;
 		for (int partitionIndex= 0; partitionIndex < nPartitions; partitionIndex++) {
 
@@ -549,8 +551,8 @@ public class JavaSourceViewer extends ProjectionViewer implements IPropertyChang
 			//Assert.isTrue(lineOffset >= 0 && lineOffset < lineLength);
 
 			if (lineOffset > 0
-					&& isMismatchingLevel(levels[lineOffset], baseLevel)
-					&& isMismatchingLevel(levels[lineOffset - 1], baseLevel)) {
+					&& isMismatchingLevel(bidi.getLevelAt(lineOffset), baseLevel)
+					&& isMismatchingLevel(bidi.getLevelAt(lineOffset - 1), baseLevel)) {
 				// Indicate a Bidi segment at the partition start - provided
 				// levels of both character at the current offset and its
 				// preceding character mismatch the base paragraph level.
@@ -561,7 +563,7 @@ public class JavaSourceViewer extends ProjectionViewer implements IPropertyChang
 			if (IDocument.DEFAULT_CONTENT_TYPE.equals(partition.getType())) {
 				int partitionEnd= Math.min(lineLength, lineOffset + partition.getLength());
 				while (++lineOffset < partitionEnd) {
-					if (isMismatchingLevel(levels[lineOffset], baseLevel)
+					if (isMismatchingLevel(bidi.getLevelAt(lineOffset), baseLevel)
 							&& String.valueOf(lineText.charAt(lineOffset)).matches(BIDI_DELIMITERS)) {
 						// For default content types, indicate a segment before
 						// a delimiting character with a mismatching embedding

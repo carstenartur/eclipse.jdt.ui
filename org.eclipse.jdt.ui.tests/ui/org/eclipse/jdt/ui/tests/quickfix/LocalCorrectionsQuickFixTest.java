@@ -1423,7 +1423,6 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 		buf= new StringBuilder();
 		buf.append("package test1;\n");
 		buf.append("import java.io.IOException;\n");
-		buf.append("import java.net.SocketException;\n");
 		buf.append("public class E {\n");
 		buf.append("    public void goo() throws IOException {\n");
 		buf.append("        return;\n");
@@ -6842,7 +6841,7 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 
 		buf= new StringBuilder();
 		buf.append("package test1;\n");
-		buf.append("import java.io.IOException;\n");
+		buf.append("\n");
 		buf.append("public class E {\n");
 		buf.append("    public void foo(String b) {\n");
 		buf.append("        if  (b != null) {\n");
@@ -6903,7 +6902,6 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 		buf= new StringBuilder();
 		buf.append("package test1;\n");
 		buf.append("import java.io.IOException;\n");
-		buf.append("import java.text.ParseException;\n");
 		buf.append("public class E {\n");
 		buf.append("    /**\n");
 		buf.append("     * @throws IOException\n");
@@ -6973,7 +6971,6 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 		buf= new StringBuilder();
 		buf.append("package test1;\n");
 		buf.append("import java.io.IOException;\n");
-		buf.append("import java.text.ParseException;\n");
 		buf.append("public class E {\n");
 		buf.append("    /**\n");
 		buf.append("     * @param i\n");
@@ -6988,6 +6985,86 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 		assertEqualString(preview, buf.toString());
 	}
 
+	@Test
+	public void testUnnecessaryThrownException4() throws Exception {
+		Hashtable<String, String> hashtable= JavaCore.getOptions();
+		hashtable.put(JavaCore.COMPILER_PB_UNUSED_DECLARED_THROWN_EXCEPTION, JavaCore.ERROR);
+		JavaCore.setOptions(hashtable);
+
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test1;\n");
+		buf.append("import java.io.IOException;\n");
+		buf.append("import java.text.ParseException;\n");
+		buf.append("public class E {\n");
+		buf.append("    /**\n");
+		buf.append("     * @throws IOException\n");
+		buf.append("     */\n");
+		buf.append("    public E(int i) throws IOException, ParseException {\n");
+		buf.append("        if  (i == 0) {\n");
+		buf.append("            throw new IOException();\n");
+		buf.append("        }\n");
+		buf.append("    }\n");
+		buf.append("    public void foo(int i) throws ParseException {\n");
+		buf.append("        if  (i == 0) {\n");
+		buf.append("            throw new ParseException(null, 4);\n");
+		buf.append("        }\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack1.createCompilationUnit("E.java", buf.toString(), false, null);
+
+		CompilationUnit astRoot= getASTRoot(cu);
+		ArrayList<IJavaCompletionProposal> proposals= collectCorrections(cu, astRoot);
+		assertNumberOfProposals(proposals, 3);
+		assertCorrectLabels(proposals);
+
+		String[] expected= new String[2];
+
+		buf= new StringBuilder();
+		buf.append("package test1;\n");
+		buf.append("import java.io.IOException;\n");
+		buf.append("import java.text.ParseException;\n");
+		buf.append("public class E {\n");
+		buf.append("    /**\n");
+		buf.append("     * @throws IOException\n");
+		buf.append("     */\n");
+		buf.append("    public E(int i) throws IOException {\n");
+		buf.append("        if  (i == 0) {\n");
+		buf.append("            throw new IOException();\n");
+		buf.append("        }\n");
+		buf.append("    }\n");
+		buf.append("    public void foo(int i) throws ParseException {\n");
+		buf.append("        if  (i == 0) {\n");
+		buf.append("            throw new ParseException(null, 4);\n");
+		buf.append("        }\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		expected[0]= buf.toString();
+
+		buf= new StringBuilder();
+		buf.append("package test1;\n");
+		buf.append("import java.io.IOException;\n");
+		buf.append("import java.text.ParseException;\n");
+		buf.append("public class E {\n");
+		buf.append("    /**\n");
+		buf.append("     * @throws IOException\n");
+		buf.append("     * @throws ParseException \n");
+		buf.append("     */\n");
+		buf.append("    public E(int i) throws IOException, ParseException {\n");
+		buf.append("        if  (i == 0) {\n");
+		buf.append("            throw new IOException();\n");
+		buf.append("        }\n");
+		buf.append("    }\n");
+		buf.append("    public void foo(int i) throws ParseException {\n");
+		buf.append("        if  (i == 0) {\n");
+		buf.append("            throw new ParseException(null, 4);\n");
+		buf.append("        }\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		expected[1]= buf.toString();
+
+		assertExpectedExistInProposals(proposals, expected);
+	}
 
 	@Test
 	public void testUnqualifiedFieldAccess1() throws Exception {
@@ -9793,6 +9870,38 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 	}
 
 	@Test
+	public void testNecessaryNLSTag1() throws Exception {
+		Hashtable<String, String> options= JavaCore.getOptions();
+		options.put(JavaCore.COMPILER_PB_NON_NLS_STRING_LITERAL, JavaCore.WARNING);
+		JavaCore.setOptions(options);
+
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test1;\n");
+		buf.append("\n");
+		buf.append("public class E {\n");
+		buf.append("    String e = \"abc\";\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack1.createCompilationUnit("E.java", buf.toString(), false, null);
+
+		CompilationUnit astRoot= getASTRoot(cu);
+		ArrayList<IJavaCompletionProposal> proposals= collectCorrections(cu, astRoot);
+
+		assertCorrectLabels(proposals);
+
+		String[] expected= new String[1];
+		buf= new StringBuilder();
+		buf.append("package test1;\n");
+		buf.append("\n");
+		buf.append("public class E {\n");
+		buf.append("    String e = \"abc\"; //$NON-NLS-1$\n");
+		buf.append("}\n");
+		expected[0]= buf.toString();
+
+		assertExpectedExistInProposals(proposals, expected);
+	}
+
+	@Test
 	public void testUnnessecaryNLSTag1() throws Exception {
 		Hashtable<String, String> options= JavaCore.getOptions();
 		options.put(JavaCore.COMPILER_PB_NON_NLS_STRING_LITERAL, JavaCore.WARNING);
@@ -11967,8 +12076,6 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 	/**
 	 * Tests if the quick fix to loop over a variable name is added correctly. The complete
 	 * functionality of the for loop generation is tested in {@link AssistQuickFixTest}
-	 *
-	 * @throws Exception
 	 */
 	@Ignore("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
 	@Test
@@ -12031,8 +12138,6 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 	/**
 	 * Tests if the quick fix to loop over a method invocation is added correctly. The complete
 	 * functionality of the for loop generation is tested in {@link AssistQuickFixTest}
-	 *
-	 * @throws Exception
 	 */
 	@Ignore("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
 	@Test
@@ -12095,8 +12200,6 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 	/**
 	 * Tests if the quick fix to loop over a method invocation is added correctly. The complete
 	 * functionality of the for loop generation is tested in {@link AssistQuickFixTest}
-	 *
-	 * @throws Exception
 	 */
 	@Ignore("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
 	@Test

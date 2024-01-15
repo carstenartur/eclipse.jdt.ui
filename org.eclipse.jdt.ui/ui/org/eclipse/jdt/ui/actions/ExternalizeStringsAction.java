@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2016 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -36,7 +36,6 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.SubProgressMonitor;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -68,7 +67,7 @@ import org.eclipse.jdt.internal.corext.refactoring.RefactoringAvailabilityTester
 import org.eclipse.jdt.internal.corext.refactoring.nls.NLSElement;
 import org.eclipse.jdt.internal.corext.refactoring.nls.NLSLine;
 import org.eclipse.jdt.internal.corext.refactoring.nls.NLSScanner;
-import org.eclipse.jdt.internal.corext.refactoring.reorg.ReorgUtils;
+import org.eclipse.jdt.internal.corext.refactoring.reorg.ReorgUtilsCore;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 import org.eclipse.jdt.internal.corext.util.Messages;
 
@@ -83,6 +82,7 @@ import org.eclipse.jdt.internal.ui.actions.SelectionConverter;
 import org.eclipse.jdt.internal.ui.javaeditor.CompilationUnitEditor;
 import org.eclipse.jdt.internal.ui.refactoring.nls.ExternalizeWizard;
 import org.eclipse.jdt.internal.ui.util.ExceptionHandler;
+import org.eclipse.jdt.internal.ui.util.Progress;
 
 
 /**
@@ -237,16 +237,16 @@ public class ExternalizeStringsAction extends SelectionDispatchAction {
 			int elementType= element.getElementType();
 
 			if (elementType == IJavaElement.PACKAGE_FRAGMENT) {
-				return analyze((IPackageFragment) element, new SubProgressMonitor(pm, 1));
+				return analyze((IPackageFragment) element, Progress.subMonitor(pm, 1));
 			} else if (elementType == IJavaElement.PACKAGE_FRAGMENT_ROOT) {
 				IPackageFragmentRoot root= (IPackageFragmentRoot)element;
-				if (!root.isExternal() && !ReorgUtils.isClassFolder(root)) {
-					return analyze((IPackageFragmentRoot) element, new SubProgressMonitor(pm, 1));
+				if (!root.isExternal() && !ReorgUtilsCore.isClassFolder(root)) {
+					return analyze((IPackageFragmentRoot) element, Progress.subMonitor(pm, 1));
 				} else {
 					pm.worked(1);
 				}
 			} else if (elementType == IJavaElement.JAVA_PROJECT) {
-				return analyze((IJavaProject) element, new SubProgressMonitor(pm, 1));
+				return analyze((IJavaProject) element, Progress.subMonitor(pm, 1));
 			} else if (elementType == IJavaElement.COMPILATION_UNIT) {
 				ICompilationUnit cu= (ICompilationUnit)element;
 				if (cu.exists()) {
@@ -351,7 +351,7 @@ public class ExternalizeStringsAction extends SelectionDispatchAction {
 				if (iJavaElement.getElementType() == IJavaElement.PACKAGE_FRAGMENT){
 					IPackageFragment pack= (IPackageFragment)iJavaElement;
 					if (! pack.isReadOnly())
-						result.addAll(analyze(pack, new SubProgressMonitor(pm, 1)));
+						result.addAll(analyze(pack, Progress.subMonitor(pm, 1)));
 					else
 						pm.worked(1);
 				} else
@@ -373,7 +373,7 @@ public class ExternalizeStringsAction extends SelectionDispatchAction {
 			List<NonNLSElement> result= new ArrayList<>();
 			for (IPackageFragment pack : packs) {
 				if (!pack.isReadOnly()) {
-					result.addAll(analyze(pack, new SubProgressMonitor(pm, 1)));
+					result.addAll(analyze(pack, Progress.subMonitor(pm, 1)));
 				} else {
 					pm.worked(1);
 				}

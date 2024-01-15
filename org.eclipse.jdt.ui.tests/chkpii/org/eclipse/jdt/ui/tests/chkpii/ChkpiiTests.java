@@ -158,8 +158,12 @@ public class ChkpiiTests {
 		Process process= null;
 		try {
 			process= aRuntime.exec(chkpiiString);
-			err= new StreamConsumer(process.getErrorStream());
-			out= new StreamConsumer(process.getInputStream());
+			@SuppressWarnings("resource") // do not close process streams
+			InputStream errorStream= process.getErrorStream();
+			err= new StreamConsumer(errorStream);
+			@SuppressWarnings("resource") // do not close process streams
+			InputStream inputStream= process.getInputStream();
+			out= new StreamConsumer(inputStream);
 			err.start();
 			out.start();
 			process.waitFor();
@@ -355,7 +359,6 @@ public class ChkpiiTests {
 
 	/**
 	 * Constructor for EmptyDirectoriesTest.
-	 *
 	 */
 	public ChkpiiTests() {
 		fLogDirectoryName= getPluginDirectory() + "chkpiiResults" + File.separator; //$NON-NLS-1$

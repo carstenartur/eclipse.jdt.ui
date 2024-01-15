@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2019 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -110,6 +110,7 @@ import org.eclipse.jdt.core.ITypeRoot;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 
+import org.eclipse.jdt.internal.core.manipulation.MembersOrderPreferenceCacheCommon;
 import org.eclipse.jdt.internal.corext.util.Messages;
 
 import org.eclipse.jdt.ui.IContextMenuConstants;
@@ -136,7 +137,6 @@ import org.eclipse.jdt.internal.ui.javaeditor.EditorUtility;
 import org.eclipse.jdt.internal.ui.packageview.FileTransferDragAdapter;
 import org.eclipse.jdt.internal.ui.packageview.PluginTransferDropAdapter;
 import org.eclipse.jdt.internal.ui.packageview.SelectionTransferDragAdapter;
-import org.eclipse.jdt.internal.ui.preferences.MembersOrderPreferenceCache;
 import org.eclipse.jdt.internal.ui.util.ExceptionHandler;
 import org.eclipse.jdt.internal.ui.util.JavaUIHelp;
 import org.eclipse.jdt.internal.ui.util.SelectionUtil;
@@ -357,7 +357,7 @@ public class TypeHierarchyViewPart extends ViewPart implements ITypeHierarchyVie
 	protected void doPropertyChange(PropertyChangeEvent event) {
 		String property= event.getProperty();
 		if (fMethodsViewer != null) {
-			if (MembersOrderPreferenceCache.isMemberOrderProperty(event.getProperty())) {
+			if (MembersOrderPreferenceCacheCommon.isMemberOrderProperty(event.getProperty())) {
 				fMethodsViewer.refresh();
 			}
 		}
@@ -572,7 +572,6 @@ public class TypeHierarchyViewPart extends ViewPart implements ITypeHierarchyVie
 
 	/*
 	 * Changes the input to a new type
-	 * @param inputElement
 	 */
 	private void updateInput(IJavaElement[] inputElements) {
 		IJavaElement[] prevInput= fInputElements;
@@ -1202,7 +1201,7 @@ public class TypeHierarchyViewPart extends ViewPart implements ITypeHierarchyVie
 
 	/*
 	 * When the input changed or the hierarchy pane becomes visible,
-	 * <code>updateHierarchyViewer<code> brings up the correct view and refreshes
+	 * <code>updateHierarchyViewer</code> brings up the correct view and refreshes
 	 * the current tree
 	 */
 	private void updateHierarchyViewer(final boolean doExpand) {
@@ -1211,7 +1210,7 @@ public class TypeHierarchyViewPart extends ViewPart implements ITypeHierarchyVie
 			fPagebook.showPage(fNoHierarchyShownLabel);
 		} else {
 			if (getCurrentViewer().containsElements() != null) {
-				Runnable runnable= () -> getCurrentViewer().updateContent(doExpand);
+				Runnable runnable= () -> JavaCore.runReadOnly(() -> getCurrentViewer().updateContent(doExpand));
 				BusyIndicator.showWhile(getDisplay(), runnable);
 				if (!isChildVisible(fViewerbook, getCurrentViewer().getControl())) {
 					setViewerVisibility(true);
@@ -1687,7 +1686,7 @@ public class TypeHierarchyViewPart extends ViewPart implements ITypeHierarchyVie
 			Display.getDefault().asyncExec(() -> {
 				// running async: check first if view still exists
 				if (fPagebook != null && !fPagebook.isDisposed()) {
-					doRestoreState(memento, hierarchyInput);
+					JavaCore.runReadOnly(() -> doRestoreState(memento, hierarchyInput));
 				}
 			});
 		}

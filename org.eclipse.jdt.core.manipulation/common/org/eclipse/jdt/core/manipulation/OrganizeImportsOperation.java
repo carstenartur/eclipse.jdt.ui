@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2021 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -74,6 +74,7 @@ import org.eclipse.jdt.internal.core.manipulation.util.Strings;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.dom.Bindings;
 import org.eclipse.jdt.internal.corext.dom.ScopeAnalyzer;
+import org.eclipse.jdt.internal.corext.util.StaticImportFavoritesCompletionInvoker;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 import org.eclipse.jdt.internal.corext.util.JdtFlags;
 
@@ -499,6 +500,7 @@ public class OrganizeImportsOperation implements IWorkspaceRunnable {
 	private boolean fDoSave;
 
 	private boolean fIgnoreLowerCaseNames;
+	private boolean fRestoreExistingImports;
 
 	private IChooseImportQuery fChooseImportQuery;
 
@@ -511,6 +513,7 @@ public class OrganizeImportsOperation implements IWorkspaceRunnable {
 	private CompilationUnit fASTRoot;
 
 	private final boolean fAllowSyntaxErrors;
+	private Collection<String> fResolvedStaticFavoriteImports;
 
 	/**
 	 * Creates a new OrganizeImportsOperation operation.
@@ -528,6 +531,7 @@ public class OrganizeImportsOperation implements IWorkspaceRunnable {
 
 		fDoSave= save;
 		fIgnoreLowerCaseNames= ignoreLowerCaseNames;
+		fRestoreExistingImports= false;
 		fAllowSyntaxErrors= allowSyntaxErrors;
 		fChooseImportQuery= chooseImportQuery;
 
@@ -535,6 +539,24 @@ public class OrganizeImportsOperation implements IWorkspaceRunnable {
 		fNumberOfImportsRemoved= 0;
 
 		fParsingError= null;
+		fResolvedStaticFavoriteImports = new HashSet<>();
+	}
+
+	/**
+	 * Creates a new OrganizeImportsOperation operation.
+	 *
+	 * @param cu The compilation unit
+	 * @param astRoot the compilation unit AST node
+	 * @param ignoreLowerCaseNames when true, type names starting with a lower case are ignored
+	 * @param save If set, the result will be saved
+	 * @param allowSyntaxErrors If set, the operation will only proceed when the compilation unit has no syntax errors
+	 * @param chooseImportQuery Query element to be used for UI interaction or <code>null</code> to not select anything
+	 * @param restoreExistingImports when true, the operation will restore existing imports
+	 * @since 1.17
+	 */
+	public OrganizeImportsOperation(ICompilationUnit cu, CompilationUnit astRoot, boolean ignoreLowerCaseNames, boolean save, boolean allowSyntaxErrors, IChooseImportQuery chooseImportQuery, boolean restoreExistingImports) {
+		this(cu, astRoot, ignoreLowerCaseNames, save, allowSyntaxErrors, chooseImportQuery);
+		fRestoreExistingImports= restoreExistingImports;
 	}
 
 	/**
@@ -564,7 +586,7 @@ public class OrganizeImportsOperation implements IWorkspaceRunnable {
 		}
 		subMonitor.setWorkRemaining(7);
 
-		ImportRewrite importsRewrite= CodeStyleConfiguration.createImportRewrite(astRoot, false);
+		ImportRewrite importsRewrite= CodeStyleConfiguration.createImportRewrite(astRoot, fRestoreExistingImports);
 		if (astRoot.getAST().hasResolvedBindings()) {
 			importsRewrite.setUseContextToFilterImplicitImports(true);
 		}
@@ -654,8 +676,20 @@ public class OrganizeImportsOperation implements IWorkspaceRunnable {
 			Collection<SimpleName> staticReferences,
 			ImportRewrite importRewrite,
 			UnresolvableImportMatcher unresolvableImportMatcher) {
+
+		String pref= JavaManipulation.getPreference(JavaManipulationPlugin.CODEASSIST_FAVORITE_STATIC_MEMBERS, importRewrite.getCompilationUnit().getJavaProject());
+		String[] favourites= new String [0];
+		if (pref != null && !pref.isBlank()) {
+			favourites= pref.split(";"); //$NON-NLS-1$
+		}
+
+		ICompilationUnit cu= importRewrite.getCompilationUnit().getPrimary();
+		StaticImportFavoritesCompletionInvoker ex= new StaticImportFavoritesCompletionInvoker(cu, favourites);
+
 		for (SimpleName name : staticReferences) {
+			boolean isMethod= name.getParent() instanceof MethodInvocation;
 			IBinding binding= name.resolveBinding();
+
 			if (binding != null) {
 				importRewrite.addStaticImport(binding);
 			} else {
@@ -674,16 +708,19 @@ public class OrganizeImportsOperation implements IWorkspaceRunnable {
 					}
 				}
 				if (unresolvableImports.isEmpty()) {
-					String pref= JavaManipulation.getPreference(JavaManipulationPlugin.CODEASSIST_FAVORITE_STATIC_MEMBERS, importRewrite.getCompilationUnit().getJavaProject());
-					String[] favourites= pref.split(";"); //$NON-NLS-1$
+					if (pref == null  || pref.isBlank()) {
+						continue;
+					}
 					if (favourites.length == 0) {
-						return;
+						continue;
 					}
 					try {
 						// check favourite static imports
-						boolean isMethod= name.getParent() instanceof MethodInvocation;
-						ICompilationUnit cu= importRewrite.getCompilationUnit().getPrimary();
-						String[] staticFavourites= JavaModelUtil.getStaticImportFavorites(cu, identifier, isMethod, favourites);
+						if (fResolvedStaticFavoriteImports.contains(identifier)) {
+							continue;
+						}
+						String[] staticFavourites= ex.getStaticImportFavorites(identifier, isMethod);
+						fResolvedStaticFavoriteImports.add(identifier);
 						if (staticFavourites.length > 0) {
 							String qualifiedTypeName= Signature.getQualifier(staticFavourites[0]);
 							importRewrite.addStaticImport(qualifiedTypeName, identifier, !isMethod);
@@ -693,6 +730,11 @@ public class OrganizeImportsOperation implements IWorkspaceRunnable {
 					}
 				}
 			}
+		}
+		try {
+			ex.destroy();
+		} catch (JavaModelException e) {
+			// ignore
 		}
 	}
 

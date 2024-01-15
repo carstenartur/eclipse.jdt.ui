@@ -29,7 +29,6 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Platform;
-import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.core.runtime.content.IContentType;
 
 import org.eclipse.core.resources.IFile;
@@ -44,9 +43,10 @@ import org.eclipse.ltk.core.refactoring.resource.ResourceChange;
 import org.eclipse.jdt.core.IJavaModelStatusConstants;
 import org.eclipse.jdt.core.JavaModelException;
 
+import org.eclipse.jdt.internal.core.manipulation.util.BasicElementLabels;
 import org.eclipse.jdt.internal.corext.util.Messages;
 
-import org.eclipse.jdt.internal.core.manipulation.util.BasicElementLabels;
+import org.eclipse.jdt.internal.ui.util.Progress;
 
 public class CreateFileChange extends ResourceChange {
 
@@ -115,7 +115,7 @@ public class CreateFileChange extends ResourceChange {
 		fPath= path;
 	}
 
-	protected IPath getPath() {
+	public IPath getPath() {
 		return fPath;
 	}
 
@@ -149,29 +149,26 @@ public class CreateFileChange extends ResourceChange {
 
 	@Override
 	public Change perform(IProgressMonitor pm) throws CoreException, OperationCanceledException {
-
-		InputStream is= null;
 		try {
 			pm.beginTask(NLSChangesMessages.createFile_creating_resource, 3);
 
 			initializeEncoding();
-			IFile file= getOldFile(new SubProgressMonitor(pm, 1));
+			IFile file= getOldFile(Progress.subMonitor(pm, 1));
 			/*
 			if (file.exists()) {
 				CompositeChange composite= new CompositeChange(getName());
 				composite.add(new DeleteFileChange(file));
 				composite.add(new CreateFileChange(fPath, fSource, fEncoding, fStampToRestore, fExplicitEncoding));
 				pm.worked(1);
-				return composite.perform(new SubProgressMonitor(pm, 1));
+				return composite.perform(Progress.subMonitor(pm, 1));
 			} else { */
-			try {
-				is= new ByteArrayInputStream(fSource.getBytes(fEncoding));
-				file.create(is, false, new SubProgressMonitor(pm, 1));
+			try (InputStream is= new ByteArrayInputStream(fSource.getBytes(fEncoding))) {
+				file.create(is, false, Progress.subMonitor(pm, 1));
 				if (fStampToRestore != IResource.NULL_STAMP) {
 					file.revertModificationStamp(fStampToRestore);
 				}
 				if (fExplicitEncoding) {
-					file.setCharset(fEncoding, new SubProgressMonitor(pm, 1));
+					file.setCharset(fEncoding, Progress.subMonitor(pm, 1));
 				} else {
 					pm.worked(1);
 				}
@@ -179,17 +176,12 @@ public class CreateFileChange extends ResourceChange {
 			} catch (UnsupportedEncodingException e) {
 				throw new JavaModelException(e, IJavaModelStatusConstants.IO_EXCEPTION);
 			}
-		} finally {
-			try {
-				if (is != null)
-					is.close();
-			} catch (IOException ioe) {
+		} catch (IOException ioe) {
 				throw new JavaModelException(ioe, IJavaModelStatusConstants.IO_EXCEPTION);
-			} finally {
-				pm.done();
-			}
+		} finally {
+			pm.done();
 		}
-	}
+}
 
 	protected IFile getOldFile(IProgressMonitor pm) throws OperationCanceledException {
 		pm.beginTask("", 1); //$NON-NLS-1$

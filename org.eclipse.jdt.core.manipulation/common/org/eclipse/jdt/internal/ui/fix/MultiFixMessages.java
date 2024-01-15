@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -118,6 +118,7 @@ public class MultiFixMessages extends NLS {
 	public static String VarCleanUp_description;
 	public static String PatternMatchingForInstanceofCleanup_description;
 	public static String LambdaExpressionsCleanUp_use_lambda_where_possible;
+	public static String LambdaExpressionsCleanUp_use_lambda_and_simplify;
 	public static String LambdaExpressionsCleanUp_use_anonymous;
 	public static String LambdaExpressionAndMethodRefCleanUp_description;
 	public static String PatternCleanup_description;
@@ -155,6 +156,7 @@ public class MultiFixMessages extends NLS {
 
 	public static String RedundantModifiersCleanup_description;
 	public static String SubstringCleanUp_description;
+	public static String InlineDeprecatedMethodCleanUp_description;
 	public static String JoinCleanup_description;
 	public static String ArraysFillCleanUp_description;
 	public static String EvaluateNullableCleanUp_description;
@@ -204,6 +206,7 @@ public class MultiFixMessages extends NLS {
 	public static String ConstantsCleanUp_description;
 	public static String StringBufferToStringBuilderCleanUp_description;
 	public static String StringConcatToTextBlockCleanUp_description;
+	public static String StringConcatToTextBlockStringBuffer_description;
 	public static String StringBuilderForLocalVarsOnlyCleanUp_description;
 	public static String PlatformStatusCleanUp_description;
 	public static String PlatformStatusCleanUpFix_refactor;

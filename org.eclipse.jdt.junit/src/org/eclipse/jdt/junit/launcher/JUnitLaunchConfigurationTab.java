@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -46,6 +46,7 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 
 import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.ILabelProvider;
@@ -72,19 +73,15 @@ import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 
 import org.eclipse.debug.ui.AbstractLaunchConfigurationTab;
 
-import org.eclipse.jdt.core.IAnnotation;
 import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaModel;
 import org.eclipse.jdt.core.IJavaProject;
-import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.ISourceReference;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
-import org.eclipse.jdt.core.Signature;
-import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.search.IJavaSearchScope;
 import org.eclipse.jdt.core.search.SearchEngine;
 
@@ -114,10 +111,12 @@ import org.eclipse.jdt.ui.IJavaElementSearchConstants;
 import org.eclipse.jdt.ui.JavaElementComparator;
 import org.eclipse.jdt.ui.JavaElementLabelProvider;
 import org.eclipse.jdt.ui.JavaUI;
+import org.eclipse.jdt.ui.PreferenceConstants;
 import org.eclipse.jdt.ui.StandardJavaElementContentProvider;
 import org.eclipse.jdt.ui.dialogs.ITypeInfoFilterExtension;
 import org.eclipse.jdt.ui.dialogs.TypeSelectionExtension;
 
+import org.eclipse.jdt.internal.ui.JavaPlugin;
 import org.eclipse.jdt.internal.ui.util.SWTUtil;
 import org.eclipse.jdt.internal.ui.wizards.TypedElementSelectionValidator;
 import org.eclipse.jdt.internal.ui.wizards.TypedViewerFilter;
@@ -128,6 +127,7 @@ import org.eclipse.jdt.internal.ui.wizards.TypedViewerFilter;
  * <p>
  * This class may be instantiated but is not intended to be subclassed.
  * </p>
+ *
  * @since 3.3
  *
  * @noextend This class is not intended to be subclassed by clients.
@@ -136,28 +136,44 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 
 	// Project UI widgets
 	private Label fProjLabel;
+
 	private Text fProjText;
+
 	private Button fProjButton;
+
 	private Button fKeepRunning;
 
 	// Test class UI widgets
 	private Text fTestText;
+
 	private Button fSearchButton;
+
 	private final Image fTestIcon= createImage("obj16/test.png"); //$NON-NLS-1$
+
 	private String fOriginalTestMethodName;
+
 	private Label fTestMethodLabel;
+
 	private Text fTestMethodText;
+
 	private Button fTestMethodSearchButton;
+
 	private Text fContainerText;
+
 	private IJavaElement fContainerElement;
+
 	private final ILabelProvider fJavaElementLabelProvider= new JavaElementLabelProvider();
 
 	private Button fContainerSearchButton;
+
 	private Button fTestContainerRadioButton;
+
 	private Button fTestRadioButton;
+
 	private Label fTestLabel;
 
 	private Label fIncludeExcludeTagsLabel;
+
 	private Button fIncludeExcludeTagsButton;
 
 	private ComboViewer fTestLoaderViewer;
@@ -166,8 +182,7 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 
 	private boolean fIsValid= true;
 
-	private Set<String> fMethodsCache;
-	private String fMethodsCacheKey;
+	private TestMethodsCache fTestMethodsCache= new TestMethodsCache();
 
 	/**
 	 * Creates a JUnit launch configuration tab.
@@ -178,10 +193,10 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 
 	@Override
 	public void createControl(Composite parent) {
-		Composite comp = new Composite(parent, SWT.NONE);
+		Composite comp= new Composite(parent, SWT.NONE);
 		setControl(comp);
 
-		GridLayout topLayout = new GridLayout();
+		GridLayout topLayout= new GridLayout();
 		topLayout.numColumns= 3;
 		comp.setLayout(topLayout);
 
@@ -250,7 +265,10 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 		fTestLoaderViewer.setInput(items);
 		fTestLoaderViewer.addSelectionChangedListener(event -> {
 			setEnableTagsGroup(event);
-			validatePage();
+			try (var __= fTestMethodsCache.runNestedCancelable()) {
+				calculateMethodsCache();
+				validatePage();
+			}
 			updateLaunchConfigurationDialog();
 		});
 	}
@@ -279,8 +297,8 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 	private void createSingleTestSection(Composite comp) {
 		fTestRadioButton= new Button(comp, SWT.RADIO);
 		fTestRadioButton.setText(JUnitMessages.JUnitLaunchConfigurationTab_label_oneTest);
-		GridData gd = new GridData();
-		gd.horizontalSpan = 3;
+		GridData gd= new GridData();
+		gd.horizontalSpan= 3;
 		fTestRadioButton.setLayoutData(gd);
 		fTestRadioButton.addSelectionListener(new SelectionAdapter() {
 			@Override
@@ -290,21 +308,24 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 			}
 		});
 
-		fProjLabel = new Label(comp, SWT.NONE);
+		fProjLabel= new Label(comp, SWT.NONE);
 		fProjLabel.setText(JUnitMessages.JUnitLaunchConfigurationTab_label_project);
 		gd= new GridData();
-		gd.horizontalIndent = 25;
+		gd.horizontalIndent= 25;
 		fProjLabel.setLayoutData(gd);
 
 		fProjText= new Text(comp, SWT.SINGLE | SWT.BORDER);
 		fProjText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 		fProjText.addModifyListener(evt -> {
-			validatePage();
+			try (var __= fTestMethodsCache.runNestedCancelable()) {
+				calculateMethodsCache();
+				validatePage();
+			}
 			updateLaunchConfigurationDialog();
 			fSearchButton.setEnabled(fTestRadioButton.getSelection() && fProjText.getText().length() > 0);
 		});
 
-		fProjButton = new Button(comp, SWT.PUSH);
+		fProjButton= new Button(comp, SWT.PUSH);
 		fProjButton.setText(JUnitMessages.JUnitLaunchConfigurationTab_label_browse);
 		fProjButton.addSelectionListener(new SelectionAdapter() {
 			@Override
@@ -314,22 +335,24 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 		});
 		setButtonGridData(fProjButton);
 
-		fTestLabel = new Label(comp, SWT.NONE);
-		gd = new GridData();
-		gd.horizontalIndent = 25;
+		fTestLabel= new Label(comp, SWT.NONE);
+		gd= new GridData();
+		gd.horizontalIndent= 25;
 		fTestLabel.setLayoutData(gd);
 		fTestLabel.setText(JUnitMessages.JUnitLaunchConfigurationTab_label_test);
 
 
-		fTestText = new Text(comp, SWT.SINGLE | SWT.BORDER);
+		fTestText= new Text(comp, SWT.SINGLE | SWT.BORDER);
 		fTestText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 		fTestText.addModifyListener(evt -> {
-			fTestMethodSearchButton.setEnabled(fTestText.getText().length() > 0);
-			validatePage();
+			try (var __= fTestMethodsCache.runNestedCancelable()) {
+				calculateMethodsCache();
+				validatePage();
+			}
 			updateLaunchConfigurationDialog();
 		});
 
-		fSearchButton = new Button(comp, SWT.PUSH);
+		fSearchButton= new Button(comp, SWT.PUSH);
 		fSearchButton.setEnabled(fProjText.getText().length() > 0);
 		fSearchButton.setText(JUnitMessages.JUnitLaunchConfigurationTab_label_search);
 		fSearchButton.addSelectionListener(new SelectionAdapter() {
@@ -340,9 +363,9 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 		});
 		setButtonGridData(fSearchButton);
 
-		fTestMethodLabel = new Label(comp, SWT.NONE);
-		gd = new GridData();
-		gd.horizontalIndent = 25;
+		fTestMethodLabel= new Label(comp, SWT.NONE);
+		gd= new GridData();
+		gd.horizontalIndent= 25;
 		fTestMethodLabel.setLayoutData(gd);
 		fTestMethodLabel.setText(JUnitMessages.JUnitLaunchConfigurationTab_label_method);
 
@@ -358,8 +381,7 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 		fTestMethodText.setMessage(JUnitMessages.JUnitLaunchConfigurationTab_all_methods_text);
 
 
-		fTestMethodSearchButton = new Button(comp, SWT.PUSH);
-		fTestMethodSearchButton.setEnabled(fTestText.getText().length() > 0);
+		fTestMethodSearchButton= new Button(comp, SWT.PUSH);
 		fTestMethodSearchButton.setText(JUnitMessages.JUnitLaunchConfigurationTab_label_search_method);
 		fTestMethodSearchButton.addSelectionListener(new SelectionAdapter() {
 			@Override
@@ -374,8 +396,8 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 	private void createTestContainerSelectionGroup(Composite comp) {
 		fTestContainerRadioButton= new Button(comp, SWT.RADIO);
 		fTestContainerRadioButton.setText(JUnitMessages.JUnitLaunchConfigurationTab_label_containerTest);
-		GridData gd = new GridData();
-		gd.horizontalSpan = 3;
+		GridData gd= new GridData();
+		gd.horizontalSpan= 3;
 		fTestContainerRadioButton.setLayoutData(gd);
 		fTestContainerRadioButton.addSelectionListener(new SelectionListener() {
 			@Override
@@ -383,20 +405,21 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 				if (fTestContainerRadioButton.getSelection())
 					testModeChanged();
 			}
+
 			@Override
 			public void widgetDefaultSelected(SelectionEvent e) {
 			}
 		});
 
-		fContainerText = new Text(comp, SWT.SINGLE | SWT.BORDER | SWT.READ_ONLY);
+		fContainerText= new Text(comp, SWT.SINGLE | SWT.BORDER | SWT.READ_ONLY);
 		SWTUtil.fixReadonlyTextBackground(fContainerText);
-		gd = new GridData(GridData.FILL_HORIZONTAL);
+		gd= new GridData(GridData.FILL_HORIZONTAL);
 		gd.horizontalIndent= 25;
-		gd.horizontalSpan = 2;
+		gd.horizontalSpan= 2;
 		fContainerText.setLayoutData(gd);
 		fContainerText.addModifyListener(evt -> updateLaunchConfigurationDialog());
 
-		fContainerSearchButton = new Button(comp, SWT.PUSH);
+		fContainerSearchButton= new Button(comp, SWT.PUSH);
 		fContainerSearchButton.setText(JUnitMessages.JUnitLaunchConfigurationTab_label_search);
 		fContainerSearchButton.addSelectionListener(new SelectionAdapter() {
 			@Override
@@ -422,7 +445,7 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 
 	private void createKeepAliveGroup(Composite comp) {
 		GridData gd;
-		fKeepRunning = new Button(comp, SWT.CHECK);
+		fKeepRunning= new Button(comp, SWT.CHECK);
 		fKeepRunning.addSelectionListener(new SelectionListener() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -446,23 +469,27 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 
 	@Override
 	public void initializeFrom(ILaunchConfiguration config) {
-		fLaunchConfiguration= config;
+		try (var __= fTestMethodsCache.runNestedCancelable()) {
+			fLaunchConfiguration= config;
 
-		updateProjectFromConfig(config);
-		String containerHandle= ""; //$NON-NLS-1$
-		try {
-			containerHandle = config.getAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_CONTAINER, ""); //$NON-NLS-1$
-		} catch (CoreException ce) {
+			updateProjectFromConfig(config);
+			String containerHandle= ""; //$NON-NLS-1$
+			try {
+				containerHandle= config.getAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_CONTAINER, ""); //$NON-NLS-1$
+			} catch (CoreException ce) {
+			}
+
+			if (containerHandle.length() > 0) {
+				updateTestContainerFromConfig(config);
+			} else {
+				updateTestTypeFromConfig(config);
+			}
+			updateKeepRunning(config);
+			updateTestLoaderFromConfig(config);
+
+			calculateMethodsCache();
+			validatePage();
 		}
-
-		if (containerHandle.length() > 0)
-			updateTestContainerFromConfig(config);
-		else
-			updateTestTypeFromConfig(config);
-		updateKeepRunning(config);
-		updateTestLoaderFromConfig(config);
-
-		validatePage();
 	}
 
 
@@ -476,7 +503,9 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 				testKind= TestKindRegistry.getDefault().getKind(TestKindRegistry.JUNIT3_TEST_KIND_ID);
 			}
 		}
-		fTestLoaderViewer.setSelection(new StructuredSelection(testKind));
+		try (var __= fTestMethodsCache.runNestedCancelable()) {
+			fTestLoaderViewer.setSelection(new StructuredSelection(testKind));
+		}
 	}
 
 	private TestKind getSelectedTestKind() {
@@ -496,48 +525,56 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 	private void updateProjectFromConfig(ILaunchConfiguration config) {
 		String projectName= ""; //$NON-NLS-1$
 		try {
-			projectName = config.getAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, ""); //$NON-NLS-1$
+			projectName= config.getAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, ""); //$NON-NLS-1$
 		} catch (CoreException ce) {
 		}
-		fProjText.setText(projectName);
+		try (var __= fTestMethodsCache.runNestedCancelable()) {
+			fProjText.setText(projectName);
+		}
 	}
 
 	private void updateTestTypeFromConfig(ILaunchConfiguration config) {
 		String testTypeName= ""; //$NON-NLS-1$
 		fOriginalTestMethodName= ""; //$NON-NLS-1$
 		try {
-			testTypeName = config.getAttribute(IJavaLaunchConfigurationConstants.ATTR_MAIN_TYPE_NAME, ""); //$NON-NLS-1$
-			fOriginalTestMethodName = config.getAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_NAME, ""); //$NON-NLS-1$
+			testTypeName= config.getAttribute(IJavaLaunchConfigurationConstants.ATTR_MAIN_TYPE_NAME, ""); //$NON-NLS-1$
+			fOriginalTestMethodName= config.getAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_NAME, ""); //$NON-NLS-1$
 		} catch (CoreException ce) {
 		}
 		fTestRadioButton.setSelection(true);
 		setEnableSingleTestGroup(true);
 		setEnableContainerTestGroup(false);
 		fTestContainerRadioButton.setSelection(false);
-		fTestText.setText(testTypeName);
-		fContainerText.setText(""); //$NON-NLS-1$
-		fTestMethodText.setText(fOriginalTestMethodName);
+
+		try (var __= fTestMethodsCache.runNestedCancelable()) {
+			fTestText.setText(testTypeName);
+			fContainerText.setText(""); //$NON-NLS-1$
+			fTestMethodText.setText(fOriginalTestMethodName);
+		}
 	}
 
 	private void updateTestContainerFromConfig(ILaunchConfiguration config) {
 		String containerHandle= ""; //$NON-NLS-1$
-		IJavaElement containerElement = null;
+		IJavaElement containerElement= null;
 		try {
-			containerHandle = config.getAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_CONTAINER, ""); //$NON-NLS-1$
+			containerHandle= config.getAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_CONTAINER, ""); //$NON-NLS-1$
 			if (containerHandle.length() > 0) {
 				containerElement= JavaCore.create(containerHandle);
 			}
 		} catch (CoreException ce) {
 		}
 		if (containerElement != null)
-			fContainerElement = containerElement;
+			fContainerElement= containerElement;
 		fTestContainerRadioButton.setSelection(true);
 		setEnableSingleTestGroup(false);
 		setEnableContainerTestGroup(true);
 		fTestRadioButton.setSelection(false);
 		if (fContainerElement != null)
 			fContainerText.setText(getPresentationName(fContainerElement));
-		fTestText.setText(""); //$NON-NLS-1$
+
+		try (var __= fTestMethodsCache.runNestedCancelable()) {
+			fTestText.setText(""); //$NON-NLS-1$
+		}
 	}
 
 	@Override
@@ -546,7 +583,7 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 			config.setAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, fContainerElement.getJavaProject().getElementName());
 			config.setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_CONTAINER, fContainerElement.getHandleIdentifier());
 			config.setAttribute(IJavaLaunchConfigurationConstants.ATTR_MAIN_TYPE_NAME, ""); //$NON-NLS-1$
-			 //workaround for bug 65399
+			//workaround for bug 65399
 			config.setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_NAME, ""); //$NON-NLS-1$
 		} else {
 			config.setAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, fProjText.getText());
@@ -561,13 +598,13 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 			JUnitPlugin.log(e.getStatus());
 		}
 		IStructuredSelection testKindSelection= (IStructuredSelection) fTestLoaderViewer.getSelection();
-		if (! testKindSelection.isEmpty()) {
+		if (!testKindSelection.isEmpty()) {
 			TestKind testKind= (TestKind) testKindSelection.getFirstElement();
 			config.setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_RUNNER_KIND, testKind.getId());
 		}
 	}
 
-	private void mapResources(ILaunchConfigurationWorkingCopy config)  throws CoreException {
+	private void mapResources(ILaunchConfigurationWorkingCopy config) throws CoreException {
 		JUnitMigrationDelegate.mapResources(config);
 	}
 
@@ -588,11 +625,11 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 	 * Show a dialog that lists all main types
 	 */
 	private void handleSearchButtonSelected() {
-		Shell shell = getShell();
+		Shell shell= getShell();
 
-		IJavaProject javaProject = getJavaProject();
+		IJavaProject javaProject= getJavaProject();
 
-		IType[] types= new IType[0];
+		final Set<IType> types;
 		boolean[] radioSetting= new boolean[2];
 		try {
 			// fix for 66922 Wrong radio behaviour when switching
@@ -649,16 +686,18 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 			return;
 		}
 
-		Object[] results = dialog.getResult();
+		Object[] results= dialog.getResult();
 		if ((results == null) || (results.length < 1)) {
 			return;
 		}
-		IType type = (IType)results[0];
+		IType type= (IType) results[0];
 
 		if (type != null) {
-			fTestText.setText(type.getFullyQualifiedName('.'));
-			javaProject = type.getJavaProject();
-			fProjText.setText(javaProject.getElementName());
+			try (var __= fTestMethodsCache.runNestedCancelable()) {
+				fTestText.setText(type.getFullyQualifiedName('.'));
+				javaProject= type.getJavaProject();
+				fProjText.setText(javaProject.getElementName());
+			}
 		}
 	}
 
@@ -668,147 +707,113 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 	 * constraining the search for main types to the specified project.
 	 */
 	private void handleProjectButtonSelected() {
-		IJavaProject project = chooseJavaProject();
+		IJavaProject project= chooseJavaProject();
 		if (project == null) {
 			return;
 		}
 
-		String projectName = project.getElementName();
-		fProjText.setText(projectName);
+		try (var __= fTestMethodsCache.runNestedCancelable()) {
+			String projectName= project.getElementName();
+			fProjText.setText(projectName);
+		}
 	}
 
 	private void handleTestMethodSearchButtonSelected() {
-		try {
-			IJavaProject javaProject = getJavaProject();
+		try (var __= fTestMethodsCache.runNestedCancelable()) {
+			IJavaProject javaProject= getJavaProject();
 			IType testType= javaProject.findType(fTestText.getText());
 			Set<String> methodNames= getMethodsForType(javaProject, testType, getSelectedTestKind());
+
+			// I can't put this logic inside getMethodsForType because that would cause
+			// a bug, making it necessary to cancel the search twice when first opening
+			// a JUnit configuration
+			if (methodNames.isEmpty()) {
+				calculateMethodsCache();
+				methodNames= getMethodsForType(javaProject, testType, getSelectedTestKind());
+			}
+
+			if (fTestMethodsCache.isCanceled()) {
+				return;
+			}
+
 			String methodName= chooseMethodName(methodNames);
 
 			if (methodName != null) {
 				fTestMethodText.setText(methodName);
-				validatePage();
-				updateLaunchConfigurationDialog();
 			}
+			validatePage();
+			updateLaunchConfigurationDialog();
 		} catch (JavaModelException e) {
 			JUnitPlugin.log(e.getStatus());
 		}
 	}
 
-	private Set<String> getMethodsForType(IJavaProject javaProject, IType type, TestKind testKind) throws JavaModelException {
+	private Set<String> getMethodsForType(IJavaProject javaProject, IType type, TestKind testKind) {
 		if (javaProject == null || type == null || testKind == null)
 			return Collections.emptySet();
 
 		String testKindId= testKind.getId();
-		String methodsCacheKey= javaProject.getElementName() + '\n' + type.getFullyQualifiedName() + '\n' + testKindId;
-		if (methodsCacheKey.equals(fMethodsCacheKey))
-			return fMethodsCache;
+		String methodsCacheKey= getMethodsCacheKey(javaProject, type, testKindId);
+		if (fTestMethodsCache.containsKey(methodsCacheKey)) {
+			return fTestMethodsCache.get(methodsCacheKey);
+		}
 
-		Set<String> methodNames= new HashSet<>();
-		fMethodsCache= methodNames;
-		fMethodsCacheKey= methodsCacheKey;
-
-		collectMethodNames(type, javaProject, testKindId, methodNames);
-
-		return methodNames;
+		return Collections.emptySet();
 	}
 
-	private void collectMethodNames(IType type, IJavaProject javaProject, String testKindId, Set<String> methodNames) throws JavaModelException {
-		if (type == null) {
+	private void calculateMethodsCache() {
+		fTestMethodText.setEnabled(false);
+
+		if (fTestMethodsCache.isCanceled()) {
 			return;
 		}
-		collectDeclaredMethodNames(type, javaProject, testKindId, methodNames);
 
-		String superclassName= type.getSuperclassName();
-		IType superType= getResolvedType(superclassName, type, javaProject);
-		collectMethodNames(superType, javaProject, testKindId, methodNames);
+		try {
+			IJavaProject javaProject= getJavaProject();
 
-		String[] superInterfaceNames= type.getSuperInterfaceNames();
-		for (String interfaceName : superInterfaceNames) {
-			superType= getResolvedType(interfaceName, type, javaProject);
-			collectMethodNames(superType, javaProject, testKindId, methodNames);
+			if (javaProject == null) {
+				// can't find methods if the project
+				return;
+			}
+
+			IType testClass= javaProject.findType(fTestText.getText());
+
+			if (testClass == null) {
+				// can't find methods if the class doesn't exist
+				return;
+			}
+
+			TestKind testKind= getSelectedTestKind();
+
+			if (testKind == null) {
+				// no need to search for methods if the type (JUnit3/4/5) is not set
+				return;
+			}
+
+			String methodsCacheKey= getMethodsCacheKey(javaProject, testClass, testKind.getId());
+
+			if (fTestMethodsCache.containsKey(methodsCacheKey)) {
+				// no need to recalculate since the source code can't change while the dialog is open.
+				fTestMethodText.setEnabled(true);
+				return;
+			}
+
+			fTestMethodsCache.put(methodsCacheKey, //
+					TestSearchEngine.findTestMethods(getLaunchConfigurationDialog(), javaProject, testClass, testKind));
+
+			// calculation successful, reactivate the UI
+			fTestMethodText.setEnabled(true);
+		} catch (InvocationTargetException | JavaModelException e) {
+			JUnitPlugin.log(e);
+		} catch (InterruptedException e) {
+			// the user probably canceled the operation. Sadly there is no way to know it for sure since ModalContext::run
+			// doesn't throw the original OperationCanceledException, it throws a new InterruptedException.
+			fTestMethodsCache.setCanceled(true);
 		}
 	}
 
-	private IType getResolvedType(String typeName, IType type, IJavaProject javaProject) throws JavaModelException {
-		IType resolvedType= null;
-		if (typeName != null) {
-			int pos= typeName.indexOf('<');
-			if (pos != -1) {
-				typeName= typeName.substring(0, pos);
-			}
-			String[][] resolvedTypeNames= type.resolveType(typeName);
-			if (resolvedTypeNames != null && resolvedTypeNames.length > 0) {
-				String[] resolvedTypeName= resolvedTypeNames[0];
-				resolvedType= javaProject.findType(resolvedTypeName[0], resolvedTypeName[1]); // secondary types not found by this API
-			}
-		}
-		return resolvedType;
-	}
-
-	private void collectDeclaredMethodNames(IType type, IJavaProject javaProject, String testKindId, Set<String> methodNames) throws JavaModelException {
-		IMethod[] methods= type.getMethods();
-		for (IMethod method : methods) {
-			String methodName= method.getElementName();
-			int flags= method.getFlags();
-			// Only include public, non-static, no-arg methods that return void and start with "test":
-			if (Modifier.isPublic(flags) && !Modifier.isStatic(flags) &&
-					method.getNumberOfParameters() == 0 && Signature.SIG_VOID.equals(method.getReturnType()) &&
-					methodName.startsWith("test")) { //$NON-NLS-1$
-				methodNames.add(methodName);
-			}
-			boolean isJUnit3= TestKindRegistry.JUNIT3_TEST_KIND_ID.equals(testKindId);
-			boolean isJUnit5= TestKindRegistry.JUNIT5_TEST_KIND_ID.equals(testKindId);
-			if (!isJUnit3 && !Modifier.isPrivate(flags) && !Modifier.isStatic(flags)) {
-				IAnnotation annotation= method.getAnnotation("Test"); //$NON-NLS-1$
-				if (annotation.exists()) {
-					methodNames.add(methodName + JUnitStubUtility.getParameterTypes(method, false));
-				} else if (isJUnit5) {
-					boolean hasAnyTestAnnotation= method.getAnnotation("TestFactory").exists() //$NON-NLS-1$
-							|| method.getAnnotation("Testable").exists() //$NON-NLS-1$
-							|| method.getAnnotation("TestTemplate").exists() //$NON-NLS-1$
-							|| method.getAnnotation("ParameterizedTest").exists() //$NON-NLS-1$
-							|| method.getAnnotation("RepeatedTest").exists(); //$NON-NLS-1$
-					if (hasAnyTestAnnotation || isAnnotatedWithTestable(method, type, javaProject)) {
-						methodNames.add(methodName + JUnitStubUtility.getParameterTypes(method, false));
-					}
-				}
-			}
-		}
-	}
-
-	// See JUnit5TestFinder.Annotation#annotates also.
-	private boolean isAnnotatedWithTestable(IMethod method, IType declaringType, IJavaProject javaProject) throws JavaModelException {
-		for (IAnnotation annotation : method.getAnnotations()) {
-			IType annotationType= getResolvedType(annotation.getElementName(), declaringType, javaProject);
-			if (annotationType != null) {
-				if (matchesTestable(annotationType)) {
-					return true;
-				}
-				Set<IType> hierarchy= new HashSet<>();
-				if (matchesTestableInAnnotationHierarchy(annotationType, javaProject, hierarchy)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	private boolean matchesTestable(IType annotationType) {
-		return annotationType != null && JUnitCorePlugin.JUNIT5_TESTABLE_ANNOTATION_NAME.equals(annotationType.getFullyQualifiedName());
-	}
-
-	private boolean matchesTestableInAnnotationHierarchy(IType annotationType, IJavaProject javaProject, Set<IType> hierarchy) throws JavaModelException {
-		if (annotationType != null) {
-			for (IAnnotation annotation : annotationType.getAnnotations()) {
-				IType annType= getResolvedType(annotation.getElementName(), annotationType, javaProject);
-				if (annType != null && hierarchy.add(annType)) {
-					if (matchesTestable(annType) || matchesTestableInAnnotationHierarchy(annType, javaProject, hierarchy)) {
-						return true;
-					}
-				}
-			}
-		}
-		return false;
+	private String getMethodsCacheKey(IJavaProject javaProject, IType type, String testKindId) {
+		return javaProject.getElementName() + '\n' + type.getFullyQualifiedName() + '\n' + testKindId;
 	}
 
 	private String chooseMethodName(Set<String> methodNames) {
@@ -834,9 +839,10 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 		dialog.setAllowDuplicates(false);
 		dialog.setMultipleSelection(false);
 		if (dialog.open() == Window.OK) {
-			String result= (String)dialog.getFirstResult();
+			String result= (String) dialog.getFirstResult();
 			return (result == null || result.equals(JUnitMessages.JUnitLaunchConfigurationTab_all_methods_text))
-					? "" : result; //$NON-NLS-1$
+					? "" //$NON-NLS-1$
+					: result;
 		}
 		return null;
 	}
@@ -860,7 +866,7 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 		dialog.setMessage(JUnitMessages.JUnitLaunchConfigurationTab_projectdialog_message);
 		dialog.setElements(projects);
 
-		IJavaProject javaProject = getJavaProject();
+		IJavaProject javaProject= getJavaProject();
 		if (javaProject != null) {
 			dialog.setInitialSelections(javaProject);
 		}
@@ -875,7 +881,7 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 	 * text field, or null if the text does not match a project name.
 	 */
 	private IJavaProject getJavaProject() {
-		String projectName = fProjText.getText().trim();
+		String projectName= fProjText.getText().trim();
 		if (projectName.length() < 1) {
 			return null;
 		}
@@ -926,7 +932,12 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 	@Override
 	protected void setErrorMessage(String errorMessage) {
 		fIsValid= errorMessage == null;
-		super.setErrorMessage(errorMessage);
+		if (fTestMethodsCache.isCanceled()) {
+			super.setErrorMessage(JUnitMessages.JUnitLaunchConfigurationTab_error_operation_canceled +
+					(errorMessage != null ? (" " + errorMessage) : "")); //$NON-NLS-1$ //$NON-NLS-2$
+		} else {
+			super.setErrorMessage(errorMessage);
+		}
 	}
 
 	private void validatePage() {
@@ -981,7 +992,7 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 				if (methodName.length() > 0) {
 					Set<String> methodsForType= getMethodsForType(javaProject, type, getSelectedTestKind());
 					if (!methodsForType.contains(methodName)) {
-						super.setErrorMessage(Messages.format(JUnitMessages.JUnitLaunchConfigurationTab_error_test_method_not_found, new String[] { className, methodName, projectName }));
+						setErrorMessage(Messages.format(JUnitMessages.JUnitLaunchConfigurationTab_error_test_method_not_found, new String[] { className, methodName, projectName }));
 						return;
 					}
 				}
@@ -994,7 +1005,7 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 	}
 
 	private void validateJavaProject(IJavaProject javaProject) {
-		TestKind testKind = getSelectedTestKind();
+		TestKind testKind= getSelectedTestKind();
 		if (testKind != null) {
 			if (!TestKindRegistry.JUNIT5_TEST_KIND_ID.equals(testKind.getId()) && !CoreTestSearchEngine.hasTestCaseType(javaProject)) {
 				setErrorMessage(JUnitMessages.JUnitLaunchConfigurationTab_error_testcasenotonpath);
@@ -1018,15 +1029,15 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 		if (fLaunchConfiguration == null)
 			return;
 
-		TestKind testKind = getSelectedTestKind();
+		TestKind testKind= getSelectedTestKind();
 		if (testKind == null || TestKindRegistry.JUNIT3_TEST_KIND_ID.equals(testKind.getId()))
 			return;
 		try {
-			String path = fLaunchConfiguration.getAttribute(IJavaLaunchConfigurationConstants.ATTR_JRE_CONTAINER_PATH, (String)null);
+			String path= fLaunchConfiguration.getAttribute(IJavaLaunchConfigurationConstants.ATTR_JRE_CONTAINER_PATH, (String) null);
 			if (path != null) {
-				IVMInstall vm = JavaRuntime.getVMInstall(Path.fromPortableString(path));
+				IVMInstall vm= JavaRuntime.getVMInstall(Path.fromPortableString(path));
 				if (vm instanceof AbstractVMInstall) {
-					String compliance= ((AbstractVMInstall)vm).getJavaVersion();
+					String compliance= ((AbstractVMInstall) vm).getJavaVersion();
 					if (compliance != null) {
 						String testKindId= testKind.getId();
 						if (TestKindRegistry.JUNIT4_TEST_KIND_ID.equals(testKindId) && !JUnitStubUtility.is50OrHigher(compliance)) {
@@ -1055,13 +1066,11 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 		boolean projectTextHasContents= fProjText.getText().length() > 0;
 		fSearchButton.setEnabled(enabled && projectTextHasContents);
 		fTestMethodLabel.setEnabled(enabled);
-		fTestMethodText.setEnabled(enabled);
-		fTestMethodSearchButton.setEnabled(enabled && projectTextHasContents &&  fTestText.getText().length() > 0);
 	}
 
 	@Override
 	public void setDefaults(ILaunchConfigurationWorkingCopy config) {
-		IJavaElement javaElement = getContext();
+		IJavaElement javaElement= getContext();
 		if (javaElement != null) {
 			initializeJavaProject(javaElement, config);
 		} else {
@@ -1093,9 +1102,13 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 			name= ""; //$NON-NLS-1$
 		}
 		if (name.length() > 0) {
-			int index = name.lastIndexOf('.');
-			if (index > 0) {
-				name = name.substring(index + 1);
+			IPreferenceStore preferenceStore= JavaPlugin.getDefault().getPreferenceStore();
+			boolean useQualification= preferenceStore.getBoolean(PreferenceConstants.LAUNCH_NAME_FULLY_QUALIFIED_FOR_JUNIT_TEST);
+			if (!useQualification) {
+				int index= name.lastIndexOf('.');
+				if (index > 0) {
+					name= name.substring(index + 1);
+				}
 			}
 			name= getLaunchConfigurationDialog().generateName(name);
 			config.rename(name);
@@ -1115,12 +1128,12 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 				ITestKind testKind= TestKindRegistry.getContainerTestKind(javaElement);
 				testKindId= testKind.getId();
 
-				IType[] types = TestSearchEngine.findTests(getLaunchConfigurationDialog(), javaElement, testKind);
-				if ((types == null) || (types.length < 1)) {
+				var types= TestSearchEngine.findTests(getLaunchConfigurationDialog(), javaElement, testKind);
+				if ((types == null) || (types.isEmpty())) {
 					return;
 				}
 				// Simply grab the first main type found in the searched element
-				name= types[0].getFullyQualifiedName('.');
+				name= types.iterator().next().getFullyQualifiedName('.');
 
 			}
 		} catch (InterruptedException | InvocationTargetException ite) {
@@ -1153,20 +1166,21 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 		ViewerFilter filter= new TypedViewerFilter(acceptedClasses) {
 			@Override
 			public boolean select(Viewer viewer, Object parent, Object element) {
-			    if (element instanceof IPackageFragmentRoot && ((IPackageFragmentRoot)element).isArchive())
-			        return false;
-			    try {
-					if (element instanceof IPackageFragment && !((IPackageFragment) element).hasChildren()) {
-						return false;
-					}
-				} catch (JavaModelException e) {
+				if (element instanceof IPackageFragmentRoot && ((IPackageFragmentRoot) element).isArchive())
 					return false;
-				}
 				return super.select(viewer, parent, element);
 			}
 		};
 
-		StandardJavaElementContentProvider provider= new StandardJavaElementContentProvider();
+		StandardJavaElementContentProvider provider= new StandardJavaElementContentProvider() {
+			@Override
+			public boolean hasChildren(Object element) {
+				if (element instanceof IPackageFragment) {
+					return false;
+				}
+				return super.hasChildren(element);
+			}
+		};
 		ILabelProvider labelProvider= new JavaElementLabelProvider(JavaElementLabelProvider.SHOW_DEFAULT);
 		ElementTreeSelectionDialog dialog= new ElementTreeSelectionDialog(getShell(), labelProvider, provider);
 		dialog.setValidator(validator);
@@ -1180,7 +1194,7 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 
 		if (dialog.open() == Window.OK) {
 			Object element= dialog.getFirstResult();
-			return (IJavaElement)element;
+			return (IJavaElement) element;
 		}
 		return null;
 	}
@@ -1200,21 +1214,21 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 		if (activeWorkbenchWindow == null) {
 			return null;
 		}
-		IWorkbenchPage page = activeWorkbenchWindow.getActivePage();
+		IWorkbenchPage page= activeWorkbenchWindow.getActivePage();
 		if (page != null) {
-			ISelection selection = page.getSelection();
+			ISelection selection= page.getSelection();
 			if (selection instanceof IStructuredSelection) {
-				IStructuredSelection ss = (IStructuredSelection)selection;
+				IStructuredSelection ss= (IStructuredSelection) selection;
 				if (!ss.isEmpty()) {
-					Object obj = ss.getFirstElement();
+					Object obj= ss.getFirstElement();
 					if (obj instanceof IJavaElement) {
-						return (IJavaElement)obj;
+						return (IJavaElement) obj;
 					}
 					if (obj instanceof IResource) {
-						IJavaElement je = JavaCore.create((IResource)obj);
+						IJavaElement je= JavaCore.create((IResource) obj);
 						if (je == null) {
-							IProject pro = ((IResource)obj).getProject();
-							je = JavaCore.create(pro);
+							IProject pro= ((IResource) obj).getProject();
+							je= JavaCore.create(pro);
 						}
 						if (je != null) {
 							return je;
@@ -1222,9 +1236,9 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 					}
 				}
 			}
-			IEditorPart part = page.getActiveEditor();
+			IEditorPart part= page.getActiveEditor();
 			if (part != null) {
-				IEditorInput input = part.getEditorInput();
+				IEditorInput input= part.getEditorInput();
 				return input.getAdapter(IJavaElement.class);
 			}
 		}
@@ -1232,10 +1246,10 @@ public class JUnitLaunchConfigurationTab extends AbstractLaunchConfigurationTab 
 	}
 
 	private void initializeJavaProject(IJavaElement javaElement, ILaunchConfigurationWorkingCopy config) {
-		IJavaProject javaProject = javaElement.getJavaProject();
-		String name = null;
+		IJavaProject javaProject= javaElement.getJavaProject();
+		String name= null;
 		if (javaProject != null && javaProject.exists()) {
-			name = javaProject.getElementName();
+			name= javaProject.getElementName();
 		}
 		config.setAttribute(IJavaLaunchConfigurationConstants.ATTR_PROJECT_NAME, name);
 	}

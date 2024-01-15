@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 IBM Corporation and others.
+ * Copyright (c) 2021, 2022 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -103,9 +103,9 @@ import org.eclipse.jdt.internal.ui.text.correction.QuickAssistProcessorUtil;
  */
 public class SurroundWithTryWithResourcesRefactoringCore extends Refactoring {
 
-	public final String GROUP_EXC_TYPE= "exc_type"; //$NON-NLS-1$
-	public final String GROUP_EXC_NAME= "exc_name"; //$NON-NLS-1$
-	public final String GROUP_TRY_STATEMENT= "try_stmt"; //$NON-NLS-1$
+	public static final String GROUP_EXC_TYPE= "exc_type"; //$NON-NLS-1$
+	public static final String GROUP_EXC_NAME= "exc_name"; //$NON-NLS-1$
+	public static final String GROUP_TRY_STATEMENT= "try_stmt"; //$NON-NLS-1$
 
 	private Selection fSelection;
 	private SurroundWithTryWithResourcesAnalyzer fAnalyzer;
@@ -216,7 +216,10 @@ public class SurroundWithTryWithResourcesRefactoringCore extends Refactoring {
 
 			fLinkedProposalModel= createLinkedProposalModel();
 
-			fScope= CodeScopeBuilder.perform(fAnalyzer.getEnclosingBodyDeclaration(), fSelection).
+			BodyDeclaration enclosingBodyDeclaration= fAnalyzer.getEnclosingBodyDeclaration();
+			Selection ignoreSelection= Selection.createFromStartEnd(fSelection.getOffset(),
+					enclosingBodyDeclaration.getStartPosition() + enclosingBodyDeclaration.getLength());
+			fScope= CodeScopeBuilder.perform(enclosingBodyDeclaration, ignoreSelection).
 				findScope(fSelection.getOffset(), fSelection.getLength());
 			fScope.setCursor(fSelection.getOffset());
 

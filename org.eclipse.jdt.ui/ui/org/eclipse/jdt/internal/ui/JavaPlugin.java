@@ -66,7 +66,6 @@ import org.eclipse.jface.text.templates.TemplateContextType;
 import org.eclipse.jface.text.templates.TemplateVariableResolver;
 import org.eclipse.jface.text.templates.persistence.TemplateStore;
 
-import org.eclipse.ui.IPageLayout;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.IWorkingSet;
@@ -142,13 +141,6 @@ import org.eclipse.jdt.internal.ui.workingsets.WorkingSetMessages;
 public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener {
 
 	/**
-	 * The view id for the workbench's Resource Navigator standard component.
-	 * @since 3.6
-	 */
-	@Deprecated
-	public static final String ID_RES_NAV= IPageLayout.ID_RES_NAV;
-
-	/**
 	 * The key to store customized templates.
 	 * @since 3.0
 	 */
@@ -163,13 +155,11 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 
 	public static boolean DEBUG_BREADCRUMB_ITEM_DROP_DOWN;
 
-	public static boolean DEBUG_TYPE_CONSTRAINTS;
-
 	public static boolean DEBUG_RESULT_COLLECTOR;
 
 	private static JavaPlugin fgJavaPlugin;
 
-	private static LinkedHashMap<String, Long> fgRepeatedMessages= new LinkedHashMap<String, Long>(20, 0.75f, true) {
+	private static LinkedHashMap<String, Long> fgRepeatedMessages= new LinkedHashMap<>(20, 0.75f, true) {
 		private static final long serialVersionUID= 1L;
 		@Override
 		protected boolean removeEldestEntry(java.util.Map.Entry<String, Long> eldest) {
@@ -1133,7 +1123,6 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 	public void optionsChanged(DebugOptions options) {
 		DEBUG_AST_PROVIDER= options.getBooleanOption("org.eclipse.jdt.ui/debug/ASTProvider", false); //$NON-NLS-1$
 		DEBUG_BREADCRUMB_ITEM_DROP_DOWN= options.getBooleanOption("org.eclipse.jdt.ui/debug/BreadcrumbItemDropDown", false); //$NON-NLS-1$
-		DEBUG_TYPE_CONSTRAINTS= options.getBooleanOption("org.eclipse.jdt.ui/debug/TypeConstraints", false); //$NON-NLS-1$
 		DEBUG_RESULT_COLLECTOR= options.getBooleanOption("org.eclipse.jdt.ui/debug/ResultCollector", false); //$NON-NLS-1$
 	}
 

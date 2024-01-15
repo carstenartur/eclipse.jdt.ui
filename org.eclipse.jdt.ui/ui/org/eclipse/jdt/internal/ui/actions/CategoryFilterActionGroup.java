@@ -14,6 +14,7 @@
 package org.eclipse.jdt.internal.ui.actions;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -21,8 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.ibm.icu.text.Collator;
-import java.util.Arrays;
+import java.text.Collator;
 
 import org.eclipse.swt.custom.BusyIndicator;
 import org.eclipse.swt.graphics.Image;
@@ -247,7 +247,7 @@ public class CategoryFilterActionGroup extends ActionGroup {
 	private static int COUNTER= 0;//WORKAROUND for Bug 132669 https://bugs.eclipse.org/bugs/show_bug.cgi?id=132669
 
 	private static final String FILTER_CATEGORY_ACTION_ID= "FilterCategoryActionId"; //$NON-NLS-1$
-	private final String CATEGORY_MENU_GROUP_NAME= "CategoryMenuGroup" + (COUNTER++); //$NON-NLS-1$
+	private static final String CATEGORY_MENU_GROUP_NAME= "CategoryMenuGroup" + (COUNTER++); //$NON-NLS-1$
 	private static final int MAX_NUMBER_OF_CATEGORIES_IN_MENU= 5;
 
 	private final StructuredViewer fViewer;
@@ -266,7 +266,7 @@ public class CategoryFilterActionGroup extends ActionGroup {
 		Assert.isLegal(viewerId != null);
 		Assert.isLegal(input != null);
 
-		fLRUList= new LinkedHashMap<String, String>(MAX_NUMBER_OF_CATEGORIES_IN_MENU * 2, 0.75f, true) {
+		fLRUList= new LinkedHashMap<>(MAX_NUMBER_OF_CATEGORIES_IN_MENU * 2, 0.75f, true) {
 			private static final long serialVersionUID= 1L;
 			@Override
 			protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
