@@ -16,6 +16,7 @@ package org.eclipse.jdt.internal.corext.fix;
 import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
+
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.Assignment;
@@ -41,9 +42,11 @@ import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
+
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.dom.Bindings;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
+
 import org.eclipse.jdt.internal.ui.text.correction.CorrectionMessages;
 import org.eclipse.jdt.internal.ui.text.correction.QuickAssistProcessorUtil;
 
@@ -62,6 +65,9 @@ public class AddMissingMethodDeclarationFixCore extends CompilationUnitRewriteOp
 		}
 
 		TypeDeclaration typeDeclaration= ASTNodes.getParent(methodReferenceNode, TypeDeclaration.class);
+		if (typeDeclaration == null) {
+			return null;
+		}
 
 		if (QuickAssistProcessorUtil.isTypeReferenceToInstanceMethod(methodReferenceNode)) {
 			String methodReferenceQualifiedName= ((Name) methodReferenceNode.getExpression()).getFullyQualifiedName();
@@ -91,6 +97,7 @@ public class AddMissingMethodDeclarationFixCore extends CompilationUnitRewriteOp
 				type= variableDeclarationStatement.getType();
 				returnType= getReturnType(type);
 			} else {
+				@SuppressWarnings("null") // variableAssignment != null
 				Expression leftHandSide= variableAssignment.getLeftHandSide();
 				ITypeBinding assignmentTypeBinding= leftHandSide.resolveTypeBinding();
 				if (assignmentTypeBinding == null) {
@@ -104,7 +111,10 @@ public class AddMissingMethodDeclarationFixCore extends CompilationUnitRewriteOp
 			}
 			return new AddMissingMethodDeclarationFixCore(label, compilationUnit, new AddMissingMethodDeclarationProposalOperation(methodReferenceNode, returnType, null));
 		} else {
-			IMethodBinding methodBinding= methodInvocationNode == null ? null : methodInvocationNode.resolveMethodBinding();
+			if (methodInvocationNode == null) {
+				return null;
+			}
+			IMethodBinding methodBinding= methodInvocationNode.resolveMethodBinding();
 			if (methodBinding == null) {
 				return null;
 			}
