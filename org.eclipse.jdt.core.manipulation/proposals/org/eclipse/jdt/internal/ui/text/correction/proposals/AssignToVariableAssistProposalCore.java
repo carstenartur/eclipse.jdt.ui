@@ -164,7 +164,7 @@ public class AssignToVariableAssistProposalCore extends LinkedCorrectionProposal
 		fNodesToAssign.addAll(parameters);
 		fTypeBinding= null;
 		fParamNames= new ArrayList<>();
-		fAddFinal = addFinal;
+		fAddFinal= addFinal;
 		populateNames(parameters);
 		setDisplayName(CorrectionMessages.AssignToVariableAssistProposal_assignallparamstofields_description);
 	}

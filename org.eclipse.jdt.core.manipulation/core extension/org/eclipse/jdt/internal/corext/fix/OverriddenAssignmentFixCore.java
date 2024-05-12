@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Fabrice TIERCELIN and others.
+ * Copyright (c) 2024 Fabrice TIERCELIN and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -10,19 +10,20 @@
  *
  * Contributors:
  *     Fabrice TIERCELIN - initial API and implementation
+ *     Red Hat Inc. - code extracted from OverriddenAssignmentCleanUp
  *******************************************************************************/
-package org.eclipse.jdt.internal.ui.fix;
+package org.eclipse.jdt.internal.corext.fix;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Hashtable;
 import java.util.List;
-import java.util.Map;
 
 import org.eclipse.core.runtime.CoreException;
 
 import org.eclipse.text.edits.TextEditGroup;
 
 import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -41,178 +42,20 @@ import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.TargetSourceRangeComputer;
+import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
 
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.dom.InterruptibleVisitor;
 import org.eclipse.jdt.internal.corext.dom.VarDefinitionsUsesVisitor;
-import org.eclipse.jdt.internal.corext.fix.CleanUpConstants;
-import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix;
-import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFix.CompilationUnitRewriteOperation;
-import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 
-import org.eclipse.jdt.ui.cleanup.CleanUpContext;
-import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
 
-/**
- * A fix that removes passive assignment when the variable is reassigned before being read.
- */
-public class OverriddenAssignmentCleanUp extends AbstractCleanUp {
+import org.eclipse.jdt.internal.ui.fix.MultiFixMessages;
+
+public class OverriddenAssignmentFixCore extends CompilationUnitRewriteOperationsFixCore {
+
 	private static final String IGNORE_LEADING_COMMENT= "ignoreLeadingComment"; //$NON-NLS-1$
-
-	public OverriddenAssignmentCleanUp() {
-		this(Collections.emptyMap());
-	}
-
-	public OverriddenAssignmentCleanUp(Map<String, String> options) {
-		super(options);
-	}
-
-	@Override
-	public CleanUpRequirements getRequirements() {
-		boolean requireAST= isEnabled(CleanUpConstants.OVERRIDDEN_ASSIGNMENT);
-		return new CleanUpRequirements(requireAST, false, false, null);
-	}
-
-	@Override
-	public String[] getStepDescriptions() {
-		if (isEnabled(CleanUpConstants.OVERRIDDEN_ASSIGNMENT)) {
-			return new String[] { MultiFixMessages.OverriddenAssignmentCleanUp_description };
-		}
-
-		return new String[0];
-	}
-
-	@Override
-	public String getPreview() {
-		StringBuilder bld= new StringBuilder();
-
-		if (isEnabled(CleanUpConstants.OVERRIDDEN_ASSIGNMENT)) {
-			if (isEnabled(CleanUpConstants.OVERRIDDEN_ASSIGNMENT_MOVE_DECL)) {
-				bld.append("String separator = System.lineSeparator();\n"); //$NON-NLS-1$
-				bld.append("long time = System.currentTimeMillis();\n"); //$NON-NLS-1$
-			} else {
-				bld.append("long time;\n"); //$NON-NLS-1$
-				bld.append("String separator = System.lineSeparator();\n"); //$NON-NLS-1$
-				bld.append("time = System.currentTimeMillis();\n"); //$NON-NLS-1$
-			}
-		} else {
-			bld.append("long time = 0;\n"); //$NON-NLS-1$
-			bld.append("String separator = \"\";\n"); //$NON-NLS-1$
-			bld.append("separator = System.lineSeparator();\n"); //$NON-NLS-1$
-			bld.append("time = System.currentTimeMillis();\n"); //$NON-NLS-1$
-		}
-
-
-		return bld.toString();
-	}
-
-	@Override
-	public ICleanUpFix createFix(CleanUpContext context) throws CoreException {
-		if (!isEnabled(CleanUpConstants.OVERRIDDEN_ASSIGNMENT)) {
-			return null;
-		}
-
-		CompilationUnit unit= context.getAST();
-
-		final List<CompilationUnitRewriteOperation> rewriteOperations= new ArrayList<>();
-
-		unit.accept(new ASTVisitor() {
-			@Override
-			public boolean visit(final VariableDeclarationStatement node) {
-				VariableDeclarationFragment fragment= ASTNodes.getUniqueFragment(node);
-
-				if (fragment != null
-						&& fragment.getInitializer() != null
-						&& ASTNodes.isPassiveWithoutFallingThrough(fragment.getInitializer())) {
-					SimpleName varName= fragment.getName();
-					IVariableBinding variable= fragment.resolveBinding();
-					if (variable != null) {
-						Statement stmtToInspect= ASTNodes.getNextSibling(node);
-						Statement firstSibling= stmtToInspect;
-						Assignment overridingAssignment= null;
-
-						boolean shouldMoveDown= true;
-						while (stmtToInspect != null) {
-							VarDefinitionsUsesVisitor varDefinitionsUsesVisitor= new VarDefinitionsUsesVisitor(variable, stmtToInspect, true);
-							if (!varDefinitionsUsesVisitor.getReads().isEmpty()) {
-								return true;
-							}
-
-
-							Assignment assignment= ASTNodes.asExpression(stmtToInspect, Assignment.class);
-
-							if (assignment != null && ASTNodes.isSameVariable(varName, assignment.getLeftHandSide())) {
-								if (!ASTNodes.hasOperator(assignment, Assignment.Operator.ASSIGN)) {
-									return true;
-								}
-
-								overridingAssignment= assignment;
-								break;
-							} else {
-								// it's not an assignment, but it writes to the variable: for example assignments
-								// inside an if statement.
-								shouldMoveDown &= varDefinitionsUsesVisitor.getWrites().isEmpty();
-							}
-
-							stmtToInspect= ASTNodes.getNextSibling(stmtToInspect);
-						}
-
-						if (overridingAssignment != null && doesNotShareLines(node) && doesNotShareLines(overridingAssignment)) {
-							rewriteOperations.add(new OverriddenAssignmentOperation(node, fragment, overridingAssignment, firstSibling == stmtToInspect,
-									shouldMoveDown && isEnabled(CleanUpConstants.OVERRIDDEN_ASSIGNMENT_MOVE_DECL)));
-							return false;
-						}
-					}
-				}
-
-				return true;
-			}
-
-			/**
-			 * Check that statement containing ASTNode does not share lines with other statements
-			 *
-			 * @param node ASTNode
-			 * @return true if node's statement does not share lines with other statements otherwise false
-			 */
-			private boolean doesNotShareLines(ASTNode node) {
-				Statement stmt= null;
-				if (node instanceof Statement) {
-					stmt= (Statement)node;
-				} else {
-					stmt= ASTNodes.getFirstAncestorOrNull(node, Statement.class);
-				}
-				if (stmt == null) {
-					return false;
-				}
-				int stmtStartLine= unit.getLineNumber(stmt.getStartPosition());
-				int stmtEndLine= unit.getLineNumber(stmt.getStartPosition() + stmt.getLength());
-				Statement prevStmt= ASTNodes.getPreviousSibling(stmt);
-				if (prevStmt == null) {
-					ASTNode parent= stmt.getParent();
-					while (parent != null && parent instanceof Block) {
-						parent= parent.getParent();
-					}
-					if (parent instanceof Statement) {
-						prevStmt= (Statement)parent;
-					}
-				}
-				Statement nextStmt= ASTNodes.getNextStatement(stmt);
-				int prevEndLine= prevStmt == null ? -1 : unit.getLineNumber(prevStmt.getStartPosition() + prevStmt.getLength());
-				int nextStartLine= nextStmt == null ? Integer.MAX_VALUE : unit.getLineNumber(nextStmt.getStartPosition());
-
-				return (stmtStartLine > prevEndLine) && (stmtEndLine < nextStartLine);
-			}
-		});
-
-		if (rewriteOperations.isEmpty()) {
-			return null;
-		}
-
-		return new CompilationUnitRewriteOperationsFix(MultiFixMessages.OverriddenAssignmentCleanUp_description, unit,
-				rewriteOperations.toArray(new CompilationUnitRewriteOperation[0]));
-	}
 
 	private static class OverriddenAssignmentOperation extends CompilationUnitRewriteOperation {
 		private final VariableDeclarationStatement declaration;
@@ -230,7 +73,7 @@ public class OverriddenAssignmentCleanUp extends AbstractCleanUp {
 		}
 
 		@Override
-		public void rewriteASTInternal(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
+		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
 			rewrite.setTargetSourceRangeComputer(new TargetSourceRangeComputer() {
 				@Override
@@ -327,7 +170,6 @@ public class OverriddenAssignmentCleanUp extends AbstractCleanUp {
 
 			return !visitor.preventsMoveUp;
 		}
-
 		private void removeInitializer(CompilationUnitRewrite cuRewrite, TextEditGroup group) throws JavaModelException {
 			ICompilationUnit cu= cuRewrite.getCu();
 			int nameEnd= fragment.getName().getStartPosition() + fragment.getName().getLength();
@@ -344,9 +186,17 @@ public class OverriddenAssignmentCleanUp extends AbstractCleanUp {
 			Expression rhs= overridingAssignment.getRightHandSide();
 			String rhsText= cu.getBuffer().getText(extendedStart(cuRewrite.getRoot(), rhs), extendedEnd(cuRewrite.getRoot(), overridingAssignment.getParent()) - extendedStart(cuRewrite.getRoot(), rhs));
 
-			String declarationText= cu.getBuffer().getText(declaration.getStartPosition(), fragment.getInitializer().getStartPosition() - declaration.getStartPosition());
-			String targetText= declarationText + rhsText;
-
+			String targetText= null;
+			if (fragment.getInitializer() == null) {
+				String declarationText= cu.getBuffer().getText(declaration.getStartPosition(), declaration.getLength() - 1);
+				Hashtable<String, String> options= JavaCore.getOptions();
+				String spaceBeforeAssignment= options.get(DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_ASSIGNMENT_OPERATOR) == JavaCore.INSERT ? " " : ""; //$NON-NLS-1$ //$NON-NLS-2$
+				String spaceAfterAssignment= options.get(DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_AFTER_ASSIGNMENT_OPERATOR) == JavaCore.INSERT ? " " : ""; //$NON-NLS-1$ //$NON-NLS-2$
+				targetText= declarationText + spaceBeforeAssignment + "=" + spaceAfterAssignment + rhsText; //$NON-NLS-1$
+			} else {
+				String declarationText= cu.getBuffer().getText(declaration.getStartPosition(), fragment.getInitializer().getStartPosition() - declaration.getStartPosition());
+				targetText= declarationText + rhsText;
+			}
 			ASTRewrite astRewrite= cuRewrite.getASTRewrite();
 			ASTNode replacementNode= astRewrite.createStringPlaceholder(targetText, ASTNode.VARIABLE_DECLARATION_STATEMENT);
 			declaration.setProperty(IGNORE_LEADING_COMMENT, Boolean.TRUE);
@@ -361,9 +211,7 @@ public class OverriddenAssignmentCleanUp extends AbstractCleanUp {
 			String rhsText= cu.getBuffer().getText(rhs.getStartPosition(), extendedEnd(cuRewrite.getRoot(), overridingAssignment.getParent()) - rhs.getStartPosition());
 
 			String declarationText= cu.getBuffer().getText(declaration.getStartPosition(), fragment.getInitializer().getStartPosition() - declaration.getStartPosition());
-
 			String targetText= declarationText + rhsText;
-
 			ASTRewrite astRewrite= cuRewrite.getASTRewrite();
 			ASTNode replacementNode= astRewrite.createStringPlaceholder(targetText, ASTNode.VARIABLE_DECLARATION_STATEMENT);
 			overridingAssignment.getParent().setProperty(IGNORE_LEADING_COMMENT, Boolean.TRUE);
@@ -379,4 +227,113 @@ public class OverriddenAssignmentCleanUp extends AbstractCleanUp {
 			return cu.getExtendedStartPosition(node);
 		}
 	}
+
+	public static ICleanUpFix createCleanUp(final CompilationUnit unit, boolean canMoveDecl) {
+
+		final List<CompilationUnitRewriteOperation> rewriteOperations= new ArrayList<>();
+
+		unit.accept(new ASTVisitor() {
+			@Override
+			public boolean visit(final VariableDeclarationStatement node) {
+				VariableDeclarationFragment fragment= ASTNodes.getUniqueFragment(node);
+
+				if (fragment != null
+						&& (fragment.getInitializer() == null
+						|| ASTNodes.isPassiveWithoutFallingThrough(fragment.getInitializer()))) {
+					SimpleName varName= fragment.getName();
+					IVariableBinding variable= fragment.resolveBinding();
+					if (variable != null) {
+						Statement stmtToInspect= ASTNodes.getNextSibling(node);
+						Statement firstSibling= stmtToInspect;
+						Assignment overridingAssignment= null;
+
+						boolean shouldMoveDown= true;
+						while (stmtToInspect != null) {
+							VarDefinitionsUsesVisitor varDefinitionsUsesVisitor= new VarDefinitionsUsesVisitor(variable, stmtToInspect, true);
+							if (!varDefinitionsUsesVisitor.getReads().isEmpty()) {
+								return true;
+							}
+
+
+							Assignment assignment= ASTNodes.asExpression(stmtToInspect, Assignment.class);
+
+							if (assignment != null && ASTNodes.isSameVariable(varName, assignment.getLeftHandSide())) {
+								if (!ASTNodes.hasOperator(assignment, Assignment.Operator.ASSIGN)) {
+									return true;
+								}
+
+								overridingAssignment= assignment;
+								break;
+							} else {
+								// it's not an assignment, but it writes to the variable: for example assignments
+								// inside an if statement.
+								shouldMoveDown &= varDefinitionsUsesVisitor.getWrites().isEmpty();
+							}
+
+							if (fragment.getInitializer() == null) {
+								stmtToInspect= null;
+							} else {
+								stmtToInspect= ASTNodes.getNextSibling(stmtToInspect);
+							}
+						}
+
+						if (overridingAssignment != null && doesNotShareLines(node) && doesNotShareLines(overridingAssignment)) {
+							rewriteOperations.add(new OverriddenAssignmentOperation(node, fragment, overridingAssignment, firstSibling == stmtToInspect,
+									shouldMoveDown && canMoveDecl));
+							return false;
+						}
+					}
+				}
+
+				return true;
+			}
+
+			/**
+			 * Check that statement containing ASTNode does not share lines with other statements
+			 *
+			 * @param node ASTNode
+			 * @return true if node's statement does not share lines with other statements otherwise false
+			 */
+			private boolean doesNotShareLines(ASTNode node) {
+				Statement stmt= null;
+				if (node instanceof Statement) {
+					stmt= (Statement)node;
+				} else {
+					stmt= ASTNodes.getFirstAncestorOrNull(node, Statement.class);
+				}
+				if (stmt == null) {
+					return false;
+				}
+				int stmtStartLine= unit.getLineNumber(stmt.getStartPosition());
+				int stmtEndLine= unit.getLineNumber(stmt.getStartPosition() + stmt.getLength());
+				Statement prevStmt= ASTNodes.getPreviousSibling(stmt);
+				if (prevStmt == null) {
+					ASTNode parent= stmt.getParent();
+					while (parent != null && parent instanceof Block) {
+						parent= parent.getParent();
+					}
+					if (parent instanceof Statement) {
+						prevStmt= (Statement)parent;
+					}
+				}
+				Statement nextStmt= ASTNodes.getNextStatement(stmt);
+				int prevEndLine= prevStmt == null ? -1 : unit.getLineNumber(prevStmt.getStartPosition() + prevStmt.getLength());
+				int nextStartLine= nextStmt == null ? Integer.MAX_VALUE : unit.getLineNumber(nextStmt.getStartPosition());
+
+				return (stmtStartLine > prevEndLine) && (stmtEndLine < nextStartLine);
+			}
+		});
+
+		if (rewriteOperations.isEmpty()) {
+			return null;
+		}
+
+		return new CompilationUnitRewriteOperationsFixCore(MultiFixMessages.OverriddenAssignmentCleanUp_description, unit,
+				rewriteOperations.toArray(new CompilationUnitRewriteOperation[0]));
+	}
+
+	protected OverriddenAssignmentFixCore(final String name, final CompilationUnit compilationUnit, final CompilationUnitRewriteOperationsFixCore.CompilationUnitRewriteOperation[] fixRewriteOperations) {
+		super(name, compilationUnit, fixRewriteOperations);
+	}
+
 }
