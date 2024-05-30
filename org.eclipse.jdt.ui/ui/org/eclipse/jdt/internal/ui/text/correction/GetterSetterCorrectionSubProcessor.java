@@ -16,6 +16,7 @@ package org.eclipse.jdt.internal.ui.text.correction;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
@@ -40,9 +41,11 @@ import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 
-import org.eclipse.jdt.internal.corext.refactoring.sef.SelfEncapsulateFieldRefactoring;
+import org.eclipse.jdt.internal.corext.refactoring.sef.SelfEncapsulateFieldCompositeRefactoring;
 
 import org.eclipse.jdt.ui.refactoring.IRefactoringSaveModes;
+import org.eclipse.jdt.ui.text.java.IInvocationContext;
+import org.eclipse.jdt.ui.text.java.IProblemLocation;
 import org.eclipse.jdt.ui.text.java.correction.ASTRewriteCorrectionProposal;
 import org.eclipse.jdt.ui.text.java.correction.ChangeCorrectionProposal;
 import org.eclipse.jdt.ui.text.java.correction.ICommandAccess;
@@ -96,12 +99,14 @@ public class GetterSetterCorrectionSubProcessor extends GetterSetterCorrectionBa
 		@Override
 		public void apply(IDocument document) {
 			try {
-				final SelfEncapsulateFieldRefactoring refactoring= new SelfEncapsulateFieldRefactoring(fField);
-				refactoring.setVisibility(Flags.AccPublic);
-				refactoring.setConsiderVisibility(false);//private field references are just searched in local file
+				final SelfEncapsulateFieldCompositeRefactoring compositeRefactoring = new SelfEncapsulateFieldCompositeRefactoring(Collections.singletonList(fField));
+				compositeRefactoring.getRefactorings().forEach(refactoring -> {
+					refactoring.setVisibility(Flags.AccPublic);
+					refactoring.setConsiderVisibility(false);//private field references are just searched in local file
+				});
 				if (fNoDialog) {
 					IWorkbenchWindow window= PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-					final RefactoringExecutionHelper helper= new RefactoringExecutionHelper(refactoring, RefactoringStatus.ERROR, IRefactoringSaveModes.SAVE_REFACTORING, JavaPlugin.getActiveWorkbenchShell(), window);
+					final RefactoringExecutionHelper helper= new RefactoringExecutionHelper(compositeRefactoring, RefactoringStatus.ERROR, IRefactoringSaveModes.SAVE_REFACTORING, JavaPlugin.getActiveWorkbenchShell(), window);
 					if (Display.getCurrent() != null) {
 						try {
 							helper.perform(false, false);
@@ -118,7 +123,7 @@ public class GetterSetterCorrectionSubProcessor extends GetterSetterCorrectionBa
 						});
 					}
 				} else {
-					new RefactoringStarter().activate(new SelfEncapsulateFieldWizard(refactoring), JavaPlugin.getActiveWorkbenchShell(), "", IRefactoringSaveModes.SAVE_REFACTORING); //$NON-NLS-1$
+					new RefactoringStarter().activate(new SelfEncapsulateFieldWizard(compositeRefactoring, Collections.singletonList(fField)), JavaPlugin.getActiveWorkbenchShell(), "", IRefactoringSaveModes.SAVE_REFACTORING); //$NON-NLS-1$
 				}
 			} catch (JavaModelException e) {
 				ExceptionHandler.handle(e, CorrectionMessages.GetterSetterCorrectionSubProcessor_encapsulate_field_error_title, CorrectionMessages.GetterSetterCorrectionSubProcessor_encapsulate_field_error_message);
@@ -134,11 +139,11 @@ public class GetterSetterCorrectionSubProcessor extends GetterSetterCorrectionBa
 	 * @param resultingCollections the resulting proposals
 	 * @return <code>true</code> if the quick assist is applicable at this offset
 	 */
-	public static boolean addGetterSetterProposal(IInvocationContextCore context, ASTNode coveringNode, IProblemLocationCore[] locations, ArrayList<ICommandAccess> resultingCollections) {
+	public static boolean addGetterSetterProposal(IInvocationContext context, ASTNode coveringNode, IProblemLocation[] locations, ArrayList<ICommandAccess> resultingCollections) {
 		return new GetterSetterCorrectionSubProcessor().addGetterSetterProposals(context, coveringNode, locations, resultingCollections);
 	}
 
-	public static void addGetterSetterProposal(IInvocationContextCore context, IProblemLocationCore location, Collection<ICommandAccess> proposals, int relevance) {
+	public static void addGetterSetterProposal(IInvocationContext context, IProblemLocation location, Collection<ICommandAccess> proposals, int relevance) {
 		new GetterSetterCorrectionSubProcessor().addGetterSetterProposals(context, location, proposals, relevance);
 	}
 

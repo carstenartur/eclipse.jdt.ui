@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2023 Fabrice TIERCELIN and others.
+ * Copyright (c) 2021, 2024 Fabrice TIERCELIN and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -29,6 +29,7 @@ import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.InfixExpression.Operator;
 import org.eclipse.jdt.core.dom.InstanceofExpression;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Modifier.ModifierKeyword;
@@ -42,11 +43,12 @@ import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.TargetSourceRangeComputer;
-import org.eclipse.jdt.core.manipulation.ICleanUpFixCore;
 
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 import org.eclipse.jdt.internal.corext.refactoring.structure.ImportRemover;
+
+import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
 
 import org.eclipse.jdt.internal.ui.fix.MultiFixMessages;
 
@@ -128,6 +130,13 @@ public class PatternMatchingForInstanceofFixCore extends CompilationUnitRewriteO
 
 				if (currentNode.getParent() == null) {
 					return true;
+				}
+
+				if (currentNode instanceof InfixExpression infixExp) {
+					if (infixExp.getOperator() != Operator.CONDITIONAL_AND &&
+							infixExp.getOperator() != Operator.CONDITIONAL_OR) {
+						return true;
+					}
 				}
 
 				IfStatement ifStatement= (IfStatement) currentNode.getParent();
@@ -229,7 +238,7 @@ public class PatternMatchingForInstanceofFixCore extends CompilationUnitRewriteO
 	}
 
 
-	public static ICleanUpFixCore createCleanUp(final CompilationUnit compilationUnit) {
+	public static ICleanUpFix createCleanUp(final CompilationUnit compilationUnit) {
 		List<PatternMatchingForInstanceofFixOperation> operations= new ArrayList<>();
 		PatternMatchingForInstanceofFinder finder= new PatternMatchingForInstanceofFinder(operations);
 		compilationUnit.accept(finder);

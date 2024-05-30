@@ -66,7 +66,6 @@ import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite.ImportRewriteContext;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite.TypeLocation;
 import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
-import org.eclipse.jdt.core.manipulation.CleanUpOptionsCore;
 import org.eclipse.jdt.core.manipulation.JavaManipulation;
 
 import org.eclipse.jdt.internal.core.manipulation.StubUtility;
@@ -88,6 +87,8 @@ import org.eclipse.jdt.internal.corext.refactoring.surround.SurroundWithTryWithR
 import org.eclipse.jdt.internal.corext.refactoring.surround.SurroundWithTryWithResourcesRefactoringCore;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 import org.eclipse.jdt.internal.corext.util.Messages;
+
+import org.eclipse.jdt.ui.cleanup.CleanUpOptions;
 
 import org.eclipse.jdt.internal.ui.javaeditor.saveparticipant.SaveParticipantPreferenceConfigurationConstants;
 import org.eclipse.jdt.internal.ui.text.correction.CorrectionMessages;
@@ -112,8 +113,9 @@ public class AssignToVariableAssistProposalCore extends LinkedCorrectionProposal
 	private final List<String> fParamNames;
 
 	private VariableDeclarationFragment fExistingFragment;
+	private final boolean fAddFinal;
 
-	public AssignToVariableAssistProposalCore(ICompilationUnit cu, int variableKind, ExpressionStatement node, ITypeBinding typeBinding, int relevance) {
+	public AssignToVariableAssistProposalCore(ICompilationUnit cu, int variableKind, ExpressionStatement node, ITypeBinding typeBinding, int relevance, boolean addFinal) {
 		super("", cu, null, relevance); //$NON-NLS-1$
 
 		fCUnit= cu;
@@ -121,6 +123,7 @@ public class AssignToVariableAssistProposalCore extends LinkedCorrectionProposal
 		fParamNames = null;
 		fNodesToAssign= new ArrayList<>();
 		fNodesToAssign.add(node);
+		fAddFinal= addFinal;
 
 		fTypeBinding= Bindings.normalizeForDeclarationUse(typeBinding, node.getAST());
 		if (variableKind == AssignToVariableAssistProposalCore.LOCAL) {
@@ -133,7 +136,7 @@ public class AssignToVariableAssistProposalCore extends LinkedCorrectionProposal
 		createImportRewrite((CompilationUnit) node.getRoot());
 	}
 
-	public AssignToVariableAssistProposalCore(ICompilationUnit cu, SingleVariableDeclaration parameter, VariableDeclarationFragment existingFragment, ITypeBinding typeBinding, int relevance) {
+	public AssignToVariableAssistProposalCore(ICompilationUnit cu, SingleVariableDeclaration parameter, VariableDeclarationFragment existingFragment, ITypeBinding typeBinding, int relevance, boolean addFinal) {
 		super("", cu, null, relevance); //$NON-NLS-1$
 
 		fCUnit= cu;
@@ -143,6 +146,7 @@ public class AssignToVariableAssistProposalCore extends LinkedCorrectionProposal
 		fParamNames= null;
 		fTypeBinding= typeBinding;
 		fExistingFragment= existingFragment;
+		fAddFinal= addFinal;
 
 		if (existingFragment == null) {
 			setDisplayName(CorrectionMessages.AssignToVariableAssistProposal_assignparamtofield_description);
@@ -151,7 +155,7 @@ public class AssignToVariableAssistProposalCore extends LinkedCorrectionProposal
 		}
 	}
 
-	public AssignToVariableAssistProposalCore(ICompilationUnit cu, List<SingleVariableDeclaration> parameters, int relevance) {
+	public AssignToVariableAssistProposalCore(ICompilationUnit cu, List<SingleVariableDeclaration> parameters, int relevance, boolean addFinal) {
 		super("", cu, null, relevance); //$NON-NLS-1$
 
 		fCUnit= cu;
@@ -160,6 +164,7 @@ public class AssignToVariableAssistProposalCore extends LinkedCorrectionProposal
 		fNodesToAssign.addAll(parameters);
 		fTypeBinding= null;
 		fParamNames= new ArrayList<>();
+		fAddFinal= addFinal;
 		populateNames(parameters);
 		setDisplayName(CorrectionMessages.AssignToVariableAssistProposal_assignallparamstofields_description);
 	}
@@ -223,11 +228,17 @@ public class AssignToVariableAssistProposalCore extends LinkedCorrectionProposal
 
 			if (needsSemicolon(expression)) {
 				VariableDeclarationStatement varStatement= ast.newVariableDeclarationStatement(newDeclFrag);
+				if (fAddFinal) {
+					varStatement.modifiers().addAll(ast.newModifiers(Modifier.FINAL));
+				}
 				varStatement.setType(type);
 				rewrite.replace(expression, varStatement, null);
 			} else {
 				// trick for bug 43248: use an VariableDeclarationExpression and keep the ExpressionStatement
 				VariableDeclarationExpression varExpression= ast.newVariableDeclarationExpression(newDeclFrag);
+				if (fAddFinal) {
+					varExpression.modifiers().addAll(ast.newModifiers(Modifier.FINAL));
+				}
 				varExpression.setType(type);
 				rewrite.replace(expression, varExpression, null);
 			}
@@ -388,6 +399,9 @@ public class AssignToVariableAssistProposalCore extends LinkedCorrectionProposal
 		boolean isStatic= Modifier.isStatic(bodyDecl.getModifiers()) && !isAnonymous;
 		boolean isConstructorParam= isParamToField && nodeToAssign.getParent() instanceof MethodDeclaration && ((MethodDeclaration) nodeToAssign.getParent()).isConstructor();
 		int modifiers= Modifier.PRIVATE;
+		if (fAddFinal) {
+			modifiers |= Modifier.FINAL;
+		}
 		if (isStatic) {
 			modifiers |= Modifier.STATIC;
 		} else if (isConstructorParam) {
@@ -396,9 +410,9 @@ public class AssignToVariableAssistProposalCore extends LinkedCorrectionProposal
 			boolean safeActionsEnabled= Platform.getPreferencesService().getBoolean(JavaManipulation.getPreferenceNodeId(), saveActionsKey, false, scopes);
 			String prefix = CleanUpPreferenceUtilCore.SAVE_PARTICIPANT_KEY_PREFIX;
 			if (safeActionsEnabled
-					&& CleanUpOptionsCore.TRUE.equals(JavaManipulation.getPreference(prefix + CleanUpConstants.CLEANUP_ON_SAVE_ADDITIONAL_OPTIONS, project))
-					&& CleanUpOptionsCore.TRUE.equals(JavaManipulation.getPreference(prefix + CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL, project))
-					&& CleanUpOptionsCore.TRUE.equals(JavaManipulation.getPreference(prefix + CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_PRIVATE_FIELDS, project))
+					&& CleanUpOptions.TRUE.equals(JavaManipulation.getPreference(prefix + CleanUpConstants.CLEANUP_ON_SAVE_ADDITIONAL_OPTIONS, project))
+					&& CleanUpOptions.TRUE.equals(JavaManipulation.getPreference(prefix + CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL, project))
+					&& CleanUpOptions.TRUE.equals(JavaManipulation.getPreference(prefix + CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_PRIVATE_FIELDS, project))
 					) {
 				int constructors= 0;
 				if (newTypeDecl instanceof AbstractTypeDeclaration) {

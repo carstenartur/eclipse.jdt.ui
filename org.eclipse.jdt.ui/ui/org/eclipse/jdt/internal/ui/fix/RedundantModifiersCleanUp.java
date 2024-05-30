@@ -44,7 +44,7 @@ import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewr
 
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
-import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
+import org.eclipse.jdt.ui.text.java.IProblemLocation;
 
 /**
  * A fix that removes redundant modifiers:
@@ -52,7 +52,7 @@ import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
  * <li>Within an interface modifiers <code>public</code>, <code>static</code> and <code>final</code>
  * are redundant for field declarations.</li>
  * <li>Within an interface modifier <code>public</code> and
- * <code>abstract</code are redundant for method declarations.</li>
+ * <code>abstract</code> are redundant for method declarations.</li>
  * <li>Within a final class the <code>final</code> modifier is redundant for method
  * declarations.</li>
  * <li>For nested interfaces the <code>static</code> modifier is redundant.</li>
@@ -204,12 +204,12 @@ public class RedundantModifiersCleanUp extends AbstractMultiFix {
 	}
 
 	@Override
-	public boolean canFix(ICompilationUnit compilationUnit, IProblemLocationCore problem) {
+	public boolean canFix(ICompilationUnit compilationUnit, IProblemLocation problem) {
 		return false;
 	}
 
 	@Override
-	protected ICleanUpFix createFix(CompilationUnit unit, IProblemLocationCore[] problems) throws CoreException {
+	protected ICleanUpFix createFix(CompilationUnit unit, IProblemLocation[] problems) throws CoreException {
 		return null;
 	}
 

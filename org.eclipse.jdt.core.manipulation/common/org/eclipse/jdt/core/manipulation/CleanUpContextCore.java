@@ -24,7 +24,9 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
  * The context that contains all information required by a clean up to create a fix.
  *
  * @since 1.12
+ * @deprecated Please use CleanUpContext in the future
  */
+@Deprecated(forRemoval=true, since="2024-06")
 public class CleanUpContextCore {
 
 	private final ICompilationUnit fUnit;

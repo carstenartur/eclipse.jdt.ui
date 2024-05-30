@@ -26,11 +26,15 @@ import org.eclipse.core.runtime.CoreException;
 
 import org.eclipse.text.edits.TextEditGroup;
 
+import org.eclipse.jface.text.BadLocationException;
+
+import org.eclipse.jdt.core.IBuffer;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.core.compiler.InvalidInputException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -38,6 +42,7 @@ import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.ArrayType;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.Comment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -47,9 +52,11 @@ import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.InfixExpression.Operator;
 import org.eclipse.jdt.core.dom.LineComment;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.NullLiteral;
+import org.eclipse.jdt.core.dom.NumberLiteral;
 import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.StringLiteral;
@@ -61,16 +68,17 @@ import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.TargetSourceRangeComputer;
 import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
-import org.eclipse.jdt.core.manipulation.ICleanUpFixCore;
 
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.dom.AbortSearchException;
 import org.eclipse.jdt.internal.corext.refactoring.nls.NLSElement;
 import org.eclipse.jdt.internal.corext.refactoring.nls.NLSLine;
-import org.eclipse.jdt.internal.corext.refactoring.nls.NLSUtil;
+import org.eclipse.jdt.internal.corext.refactoring.nls.NLSScanner;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 import org.eclipse.jdt.internal.corext.util.CodeFormatterUtil;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
+
+import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
 
 import org.eclipse.jdt.internal.ui.fix.MultiFixMessages;
 
@@ -80,6 +88,7 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 	private final static String JAVA_STRINGBUFFER= "java.lang.StringBuffer"; //$NON-NLS-1$
 	private final static String JAVA_STRINGBUILDER= "java.lang.StringBuilder"; //$NON-NLS-1$
 	private final static String NLSComment= "$NON-NLS-1$"; //$NON-NLS-1$
+	private final static String NLSCommentPrefix= "$NON-NLS-"; //$NON-NLS-1$
 
 	public static final class StringConcatFinder extends ASTVisitor {
 
@@ -96,6 +105,10 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 		public boolean visit(final InfixExpression visited) {
 			if (visited.getOperator() != InfixExpression.Operator.PLUS
 					|| visited.extendedOperands().isEmpty()) {
+				return false;
+			}
+			if (visited.getLocationInParent() == InfixExpression.LEFT_OPERAND_PROPERTY ||
+					visited.getLocationInParent() == InfixExpression.RIGHT_OPERAND_PROPERTY) {
 				return false;
 			}
 			ITypeBinding typeBinding= visited.resolveTypeBinding();
@@ -117,8 +130,9 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 			if (!(rightHand instanceof StringLiteral)) {
 				return false;
 			}
-			StringLiteral rightLiteral= (StringLiteral)leftHand;
-			hasComments= hasComments || !ASTNodes.getTrailingComments(rightLiteral).isEmpty();
+			StringLiteral rightLiteral= (StringLiteral)rightHand;
+			ICompilationUnit cu= (ICompilationUnit)cUnit.getJavaElement();
+			hasComments= hasComments || hasNLS(ASTNodes.getTrailingComments(rightLiteral), cu);
 			literal= rightLiteral.getLiteralValue();
 			if (!literal.isEmpty() && !fAllConcats && !literal.endsWith("\n")) { //$NON-NLS-1$
 				return false;
@@ -129,17 +143,17 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 			}
 			int lineNo= getLineOfOffset(cUnit, leftLiteral.getStartPosition());
 			int endPosition= getLineOffset(cUnit, lineNo + 1) == -1 ? cUnit.getLength() : getLineOffset(cUnit, lineNo + 1);
-			hasComments= hasComments || !ASTNodes.getCommentsForRegion(cUnit, leftLiteral.getStartPosition(), endPosition - leftLiteral.getStartPosition()).isEmpty();
+			hasComments= hasComments || hasNLS(ASTNodes.getCommentsForRegion(cUnit, leftLiteral.getStartPosition(), endPosition - leftLiteral.getStartPosition()), cu);
 			lineNo= getLineOfOffset(cUnit, rightLiteral.getStartPosition());
 			endPosition= getLineOffset(cUnit, lineNo + 1) == -1 ? cUnit.getLength() : getLineOffset(cUnit, lineNo + 1);
-			hasComments= hasComments || !ASTNodes.getCommentsForRegion(cUnit, rightLiteral.getStartPosition(), endPosition - rightLiteral.getStartPosition()).isEmpty();
+			hasComments= hasComments || hasNLS(ASTNodes.getCommentsForRegion(cUnit, rightLiteral.getStartPosition(), endPosition - rightLiteral.getStartPosition()), cu);
 			for (int i= 0; i < extendedOperands.size(); ++i) {
 				Expression operand= extendedOperands.get(i);
 				if (operand instanceof StringLiteral) {
 					StringLiteral stringLiteral= (StringLiteral)operand;
 					lineNo= getLineOfOffset(cUnit, stringLiteral.getStartPosition());
 					endPosition= getLineOffset(cUnit, lineNo + 1) == -1 ? cUnit.getLength() : getLineOffset(cUnit, lineNo + 1);
-					hasComments= hasComments || !ASTNodes.getCommentsForRegion(cUnit, stringLiteral.getStartPosition(), endPosition - stringLiteral.getStartPosition()).isEmpty();
+					hasComments= hasComments || hasNLS(ASTNodes.getCommentsForRegion(cUnit, stringLiteral.getStartPosition(), endPosition - stringLiteral.getStartPosition()), cu);
 					String string= stringLiteral.getLiteralValue();
 					if (!string.isEmpty() && (fAllConcats || string.endsWith("\n") || i == extendedOperands.size() - 1)) { //$NON-NLS-1$
 						continue;
@@ -148,37 +162,85 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 				return false;
 			}
 			boolean isTagged= false;
-			if (hasComments && ASTNodes.getFirstAncestorOrNull(visited, Annotation.class) == null) {
-				// we must ensure that NLS comments are consistent for all string literals in concatenation
-				ICompilationUnit cu= (ICompilationUnit)((CompilationUnit)leftHand.getRoot()).getJavaElement();
-				try {
-				   NLSLine nlsLine= NLSUtil.scanCurrentLine(cu, leftHand.getStartPosition());
-				   if (nlsLine == null) {
-					   return false;
-				   }
-				   isTagged= nlsLine.getElements()[0].hasTag();
-				   if (!isConsistent(nlsLine, isTagged)) {
-					   return false;
-				   }
-				   nlsLine= NLSUtil.scanCurrentLine(cu, rightHand.getStartPosition());
-				   if (!isConsistent(nlsLine, isTagged)) {
-					   return false;
-				   }
-				   for (int i= 0; i < extendedOperands.size(); ++i) {
-					   Expression operand= extendedOperands.get(i);
-					   nlsLine= NLSUtil.scanCurrentLine(cu, operand.getStartPosition());
-					   if (!isConsistent(nlsLine, isTagged)) {
-						   return false;
-					   }
-				   }
-				} catch (JavaModelException e) {
+			// if there are any block comments or non-empty line comments and we aren't NLS, abandon change
+			if (!hasComments) {
+				List<Comment> comments= ASTNodes.getCommentsForRegion(cUnit, visited.getStartPosition(), visited.getLength());
+				if (!comments.isEmpty()) {
+					IBuffer buffer;
+					try {
+						buffer= cu.getBuffer();
+						for (Comment comment : comments) {
+							if (!(comment instanceof LineComment)) {
+								return false;
+							}
+							if (!buffer.getText(comment.getStartPosition() + 2, comment.getLength() - 2).trim().isEmpty()) {
+								return false;
+							}
+						}
+					} catch (JavaModelException e) {
+						// fall through
+					}
+				}
+			} else if (ASTNodes.getFirstAncestorOrNull(visited, Annotation.class) == null) {
+				NLSLine nlsLine= scanCurrentLine(cu, leftHand);
+				if (nlsLine == null) {
 					return false;
+				}
+				isTagged= nlsLine.getElements()[0].hasTag();
+				if (!isConsistent(nlsLine, isTagged)) {
+					return false;
+				}
+				nlsLine= scanCurrentLine(cu, rightHand);
+				if (nlsLine == null || !isConsistent(nlsLine, isTagged)) {
+					return false;
+				}
+				for (int i= 0; i < extendedOperands.size(); ++i) {
+					Expression operand= extendedOperands.get(i);
+					nlsLine= scanCurrentLine(cu, operand);
+					if (nlsLine == null || !isConsistent(nlsLine, isTagged)) {
+						return false;
+					}
 				}
 			}
 			// check if we are untagged or else if tagged, make sure we have a Statement or FieldDeclaration
 			// ancestor so we can recreate with proper single NLS tag
 			if (!isTagged || ASTNodes.getFirstAncestorOrNull(visited, Statement.class, FieldDeclaration.class) != null) {
 				fOperations.add(new ChangeStringConcatToTextBlock(visited, isTagged));
+			}
+			return false;
+		}
+
+		private NLSLine scanCurrentLine(ICompilationUnit cu, Expression exp) {
+			CompilationUnit cUnit= (CompilationUnit)exp.getRoot();
+			int startLine= cUnit.getLineNumber(exp.getStartPosition());
+			int endOfLine= cUnit.getPosition(startLine + 1, 0);
+			NLSLine[] lines;
+			try {
+				lines= NLSScanner.scan(cu.getBuffer().getText(exp.getStartPosition(), endOfLine - exp.getStartPosition()));
+				if (lines.length > 0) {
+					return lines[0];
+				}
+			} catch (IndexOutOfBoundsException | JavaModelException | InvalidInputException | BadLocationException e) {
+				// fall-through
+			}
+			return null;
+		}
+
+		private boolean hasNLS(List<Comment> trailingComments, ICompilationUnit cu) {
+			if (!trailingComments.isEmpty() && cu != null) {
+				IBuffer buffer;
+				try {
+					buffer= cu.getBuffer();
+					for (Comment comment : trailingComments) {
+						if (comment instanceof LineComment) {
+							if (buffer.getText(comment.getStartPosition(), comment.getLength()).contains("$NON-NLS")) { //$NON-NLS-1$
+								return true;
+							}
+						}
+					}
+				} catch (JavaModelException e) {
+					// fall through
+				}
 			}
 			return false;
 		}
@@ -259,6 +321,8 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 
 			buf.append("\"\"\"\n"); //$NON-NLS-1$
 			boolean newLine= false;
+			boolean allWhiteSpaceStart= true;
+			boolean allEmpty= true;
 			for (String part : parts) {
 				if (buf.length() > 4) {// the first part has been added after the text block delimiter and newline
 					if (!newLine) {
@@ -267,11 +331,41 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 					}
 				}
 				newLine= part.endsWith(System.lineSeparator());
+				allWhiteSpaceStart= allWhiteSpaceStart && (part.isEmpty() || Character.isWhitespace(part.charAt(0)));
+				allEmpty= allEmpty && part.isEmpty();
 				buf.append(fIndent).append(part);
 			}
 
-			if (newLine) {
+			if (newLine || allEmpty) {
 				buf.append(fIndent);
+			} else if (allWhiteSpaceStart) {
+				buf.append("\\").append(System.lineSeparator()); //$NON-NLS-1$
+				buf.append(fIndent);
+			} else {
+				// Replace trailing un-escaped quotes with escaped quotes before adding text block end
+				int i= buf.length() - 1;
+				int count= 0;
+				while (i >= 0 && buf.charAt(i) == '"' && count <= 3) {
+					--i;
+					++count;
+				}
+				if (i >= 0 && buf.charAt(i) == '\\') {
+					--count;
+				}
+				for (i= count; i > 0; --i) {
+					buf.deleteCharAt(buf.length() - 1);
+				}
+				for (i= count; i > 0; --i) {
+					buf.append("\\\""); //$NON-NLS-1$
+				}
+				i= buf.length() - 1;
+				if (buf.charAt(i) == ' ') {
+					buf.deleteCharAt(i);
+					buf.append("\\s"); //$NON-NLS-1$
+				} else if (buf.charAt(i) == '\t') {
+					buf.deleteCharAt(i);
+					buf.append("\\t"); //$NON-NLS-1$
+				}
 			}
 			buf.append("\"\"\""); //$NON-NLS-1$
 			if (!isTagged) {
@@ -300,7 +394,7 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 	 * 3. Transform any trailing spaces into \s escapes
 	 * 4. Transform any non-trailing \t characters into tab characters
 	 */
-	private static List<String> unescapeBlock(String escapedText) {
+	public static List<String> unescapeBlock(String escapedText) {
 		StringBuilder transformed= new StringBuilder();
 		int readIndex= 0;
 		int bsIndex= 0;
@@ -308,20 +402,22 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 		List<String> parts= new ArrayList<>();
 
 		while ((bsIndex= escapedText.indexOf("\\", readIndex)) >= 0) { //$NON-NLS-1$ "\"
-			if (escapedText.startsWith("\\n", bsIndex)) { //$NON-NLS-1$ "\n"
+			if (escapedText.startsWith("\\n", bsIndex) || escapedText.startsWith("\\u005cn", bsIndex)) { //$NON-NLS-1$ //$NON-NLS-2$ "\n"
 				transformed.append(escapedText.substring(readIndex, bsIndex));
 				parts.add(escapeTrailingWhitespace(transformed.toString())+ System.lineSeparator());
 				transformed= new StringBuilder();
-				readIndex= bsIndex + 2;
-			} else if (escapedText.startsWith("\\\"", bsIndex)) { //$NON-NLS-1$ "\""
+				readIndex= bsIndex + (escapedText.startsWith("\\n", bsIndex) ? 2 : 7); //$NON-NLS-1$
+			} else if (escapedText.startsWith("\\\"", bsIndex) || escapedText.startsWith("\\u005c\"", bsIndex)) { //$NON-NLS-1$ //$NON-NLS-2$ "\""
 				// if there are more than three quotes in a row, escape the first quote of every triplet to
 				// avoid it being interpreted as a text block terminator. This code would be much simpler if
 				// we could escape the third quote of each triplet, but the text block spec recommends this way.
 
 				transformed.append(escapedText.substring(readIndex, bsIndex));
 				int quoteCount= 1;
-				while (escapedText.startsWith("\\\"", bsIndex + 2 * quoteCount)) { //$NON-NLS-1$
+				int index= (escapedText.startsWith("\\\"", bsIndex) ? 2 : 7); //$NON-NLS-1$
+				while (escapedText.startsWith("\\\"", bsIndex + index) || escapedText.startsWith("\\u005c\"", bsIndex + index)) { //$NON-NLS-1$ //$NON-NLS-2$
 					quoteCount++;
+					index += (escapedText.startsWith("\\\"", bsIndex + index) ? 2 : 7); //$NON-NLS-1$
 				}
 				int i= 0;
 				while (i < quoteCount / 3) {
@@ -335,12 +431,15 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 				for (int j = 0; j < quoteCount % 3; j++) {
 					transformed.append("\""); //$NON-NLS-1$
 				}
-
-				readIndex= bsIndex + 2 * quoteCount;
-			} else if (escapedText.startsWith("\\t", bsIndex)) { //$NON-NLS-1$ "\t"
+				readIndex= bsIndex + index;
+			} else if (escapedText.startsWith("\\t", bsIndex) || escapedText.startsWith("\\u005ct", bsIndex)) { //$NON-NLS-1$ //$NON-NLS-2$ "\t"
 				transformed.append(escapedText.substring(readIndex, bsIndex));
 				transformed.append("\t"); //$NON-NLS-1$
-				readIndex= bsIndex+2;
+				readIndex= bsIndex + (escapedText.startsWith("\\t", bsIndex) ? 2 : 7); //$NON-NLS-1$
+			} else if (escapedText.startsWith("\\'", bsIndex) || escapedText.startsWith("\\u005c'", bsIndex)) { //$NON-NLS-1$ //$NON-NLS-2$
+				transformed.append(escapedText.substring(readIndex, bsIndex));
+				transformed.append("'"); //$NON-NLS-1$
+				readIndex= bsIndex + (escapedText.startsWith("\\'", bsIndex) ? 2 : 7); //$NON-NLS-1$
 			} else {
 				transformed.append(escapedText.substring(readIndex, bsIndex));
 				transformed.append("\\").append(escapedText.charAt(bsIndex + 1)); //$NON-NLS-1$
@@ -366,16 +465,12 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 		}
 		int whitespaceStart= unescaped.length()-1;
 		StringBuilder trailingWhitespace= new StringBuilder();
-		while (whitespaceStart > 0) {
-			if (unescaped.charAt(whitespaceStart) == ' ') {
-				whitespaceStart--;
-				trailingWhitespace.append("\\s"); //$NON-NLS-1$
-			} else if (unescaped.charAt(whitespaceStart) == '\t') {
-				whitespaceStart--;
-				trailingWhitespace.append("\\t"); //$NON-NLS-1$
-			} else {
-				break;
-			}
+		if (unescaped.charAt(whitespaceStart) == ' ') {
+			--whitespaceStart;
+			trailingWhitespace.append("\\s"); //$NON-NLS-1$
+		} else if (unescaped.charAt(whitespaceStart) == '\t') {
+			--whitespaceStart;
+			trailingWhitespace.append("\\t"); //$NON-NLS-1$
 		}
 
 		return unescaped.substring(0, whitespaceStart + 1) + trailingWhitespace;
@@ -386,11 +481,14 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 		private final List<CompilationUnitRewriteOperation> fOperations;
 		private List<StringLiteral> fLiterals= new ArrayList<>();
 		private List<Statement> statementList= new ArrayList<>();
+		private Set<Statement> ignoredConstructorStatements= new HashSet<>();
 		private SimpleName originalVarName;
 		private Map<ExpressionStatement, ChangeStringBufferToTextBlock> conversions= new HashMap<>();
 		private static final String APPEND= "append"; //$NON-NLS-1$
 		private static final String TO_STRING= "toString"; //$NON-NLS-1$
+		private BodyDeclaration fLastBodyDecl;
 		private final Set<String> fExcludedNames;
+		private final Set<IBinding> fRemovedDeclarations= new HashSet<>();
 
 		public StringBufferFinder(List<CompilationUnitRewriteOperation> operations, Set<String> excludedNames) {
 			super(true);
@@ -483,42 +581,80 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 					!(statement instanceof ExpressionStatement)) {
 				return false;
 			}
+			if (ignoredConstructorStatements.contains(statement)) {
+				statementList.remove(statement);
+				return false;
+			}
 			boolean nonNLS= false;
 			CompilationUnit cu= (CompilationUnit) node.getRoot();
 			ICompilationUnit icu= (ICompilationUnit) cu.getJavaElement();
 			if (args.size() == 1 && args.get(0) instanceof StringLiteral) {
 				fLiterals.add((StringLiteral)args.get(0));
-				nonNLS= hasNLSMarker(statement, icu);
+			} else if (args.size() > 0) {
+				if (args.get(0) instanceof InfixExpression infix) {
+					if (!processInfixExpression(infix)) {
+						return failure();
+					}
+				} else if (!(args.get(0) instanceof NumberLiteral)) {
+					statementList.remove(statement);
+					return false;
+				}
+			}
+			try {
+				extractConcatenatedAppends(node);
+			} catch (AbortSearchException e) {
+				return failure();
 			}
 			Block block= (Block) statement.getParent();
 			List<Statement> stmtList= block.statements();
 			int startIndex= stmtList.indexOf(statement);
 			int i= startIndex;
+			Statement previousStatement= null;
 			while (++i < stmtList.size()) {
 				Statement s= stmtList.get(i);
 				if (s instanceof ExpressionStatement) {
 					Expression exp= ((ExpressionStatement)s).getExpression();
 					if (exp instanceof MethodInvocation) {
-						MethodInvocation method= (MethodInvocation)exp;
-						Expression invocationExp= method.getExpression();
-						if (invocationExp instanceof SimpleName &&
-								((SimpleName)invocationExp).getFullyQualifiedName().equals(originalVarName.getFullyQualifiedName()) &&
-								method.getName().getFullyQualifiedName().equals(APPEND)) {
-							Expression arg= (Expression) method.arguments().get(0);
-							if (arg instanceof StringLiteral) {
-								if (nonNLS != hasNLSMarker(s, icu)) {
-									nonNLS= !nonNLS;
-									if (i - startIndex > 1 || args.size() == 1) {
-										return false;
-									}
-								}
-								fLiterals.add((StringLiteral)arg);
-								statementList.add(s);
-							} else {
-								return false;
+						class MethodVisitor extends ASTVisitor {
+							private boolean valid= false;
+							public boolean isValid() {
+								return valid;
 							}
-						} else {
-							break;
+							@Override
+							public boolean visit(SimpleName simpleName) {
+								if (simpleName.getFullyQualifiedName().equals(APPEND) && simpleName.getLocationInParent() == MethodInvocation.NAME_PROPERTY) {
+									return true;
+								}
+								if (simpleName.getLocationInParent() == MethodInvocation.EXPRESSION_PROPERTY && simpleName.getFullyQualifiedName().equals(originalVarName.getFullyQualifiedName())
+										&& ((MethodInvocation)simpleName.getParent()).getName().getFullyQualifiedName().equals(APPEND)) {
+									extractConcatenatedAppends(simpleName);
+									valid= true;
+									return false;
+								}
+								return true;
+							}
+						}
+						MethodVisitor methodVisitor= new MethodVisitor();
+						try {
+							s.accept(methodVisitor);
+							if (!methodVisitor.isValid()) {
+								break;
+							}
+							statementList.add(s);
+						} catch (AbortSearchException e) {
+							return failure();
+						}
+					} else if (exp instanceof Assignment assignment && assignment.getLeftHandSide() instanceof SimpleName name
+							&& name.getFullyQualifiedName().equals(originalVarName.getFullyQualifiedName())
+							&& (i - startIndex == 1 || ignoredConstructorStatements.contains(previousStatement))) {
+						Expression rightSide= ASTNodes.getUnparenthesedExpression(assignment.getRightHandSide());
+						if (rightSide instanceof ClassInstanceCreation cic && isStringBufferType(cic.getType())) {
+							List<Expression> cicArgs= cic.arguments();
+							ignoredConstructorStatements.add(s);
+							statementList.add(s);
+							if (!cicArgs.isEmpty() || !fLiterals.isEmpty()) {
+								return failure();
+							}
 						}
 					} else {
 						break;
@@ -526,12 +662,26 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 				} else {
 					break;
 				}
+				previousStatement= s;
 			}
 			Statement endStatement= stmtList.get(i - 1);
 			int lastStatementEnd= endStatement.getStartPosition() + endStatement.getLength();
 			IBinding varBinding= null;
 			if (originalVarName == null || (varBinding= originalVarName.resolveBinding()) == null) {
-				return false;
+				return failure();
+			}
+			// verify NLS markers are consistent for all string literals
+			if (!fLiterals.isEmpty()) {
+				try {
+					nonNLS= hasNLSMarker(fLiterals.get(0), icu);
+					for (int j= 1; j < fLiterals.size(); ++j) {
+						if (nonNLS != hasNLSMarker(fLiterals.get(j), icu)) {
+							return failure();
+						}
+					}
+				} catch (AbortSearchException e) {
+					return failure();
+				}
 			}
 			CheckValidityVisitor checkValidityVisitor= new CheckValidityVisitor(lastStatementEnd, varBinding);
 			try {
@@ -540,19 +690,76 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 				// do nothing
 			}
 			if (!checkValidityVisitor.isValid() || checkValidityVisitor.getToStringList().size() == 0) {
-				statementList.clear();
-				fLiterals.clear();
-				return false;
+				return failure();
 			}
 			ExpressionStatement assignmentToConvert= checkValidityVisitor.getNextAssignment();
 			List<Statement> statements= new ArrayList<>(statementList);
 			List<StringLiteral> literals= new ArrayList<>(fLiterals);
 			List<MethodInvocation> toStringList= new ArrayList<>(checkValidityVisitor.getToStringList());
-			ChangeStringBufferToTextBlock operation= new ChangeStringBufferToTextBlock(toStringList, statements, literals, assignmentToConvert, fExcludedNames, nonNLS);
+			BodyDeclaration bodyDecl= ASTNodes.getFirstAncestorOrNull(node, BodyDeclaration.class);
+			if (statements.get(0) instanceof VariableDeclarationStatement) {
+				fRemovedDeclarations.add(originalVarName.resolveBinding());
+			}
+			ChangeStringBufferToTextBlock operation= new ChangeStringBufferToTextBlock(toStringList, statements, literals,
+					fRemovedDeclarations.contains(originalVarName.resolveBinding()) ? assignmentToConvert : null, fExcludedNames, fLastBodyDecl, nonNLS);
+			fLastBodyDecl= bodyDecl;
 			fOperations.add(operation);
 			conversions.put(assignmentToConvert, operation);
 			statementList.clear();
 			fLiterals.clear();
+			return true;
+		}
+
+		private void extractConcatenatedAppends(ASTNode node) throws AbortSearchException {
+			ASTNode parent= node.getParent();
+			while (!(parent instanceof Statement)) {
+				if (parent instanceof MethodInvocation methodCall) {
+					if (!methodCall.getName().getFullyQualifiedName().equals(APPEND)) {
+						throw new AbortSearchException();
+					}
+					Expression arg= (Expression) methodCall.arguments().get(0);
+					if (arg instanceof StringLiteral) {
+						fLiterals.add((StringLiteral)arg);
+					} else if (arg instanceof InfixExpression infix) {
+						if (!processInfixExpression(infix)) {
+							throw new AbortSearchException();
+						}
+					} else {
+						throw new AbortSearchException();
+					}
+				}
+				parent= parent.getParent();
+			}
+		}
+
+		private boolean failure() {
+			statementList.clear();
+			fLiterals.clear();
+			return false;
+		}
+
+		private boolean processInfixExpression(InfixExpression infix) {
+			if (infix.getOperator() == Operator.PLUS) {
+				Expression left= infix.getLeftOperand();
+				Expression right= infix.getRightOperand();
+				List<Expression> extendedOps= infix.extendedOperands();
+				if (left instanceof StringLiteral && right instanceof StringLiteral) {
+					List<StringLiteral> extendedLiterals= new ArrayList<>();
+					for (Expression extendedOp : extendedOps) {
+						if (extendedOp instanceof StringLiteral) {
+							extendedLiterals.add((StringLiteral)extendedOp);
+						} else {
+							return false;
+						}
+
+					}
+					fLiterals.add((StringLiteral)left);
+					fLiterals.add((StringLiteral)right);
+					fLiterals.addAll(extendedLiterals);
+				} else {
+					return false;
+				}
+			}
 			return true;
 		}
 
@@ -573,6 +780,7 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 				return false;
 			}
 			originalVarName= node.getName();
+			statementList.clear();
 			statementList.add(varDeclStmt);
 			return true;
 		}
@@ -597,17 +805,27 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 
 	}
 
-	private static boolean hasNLSMarker(Statement statement, ICompilationUnit cu) {
+	private static boolean hasNLSMarker(ASTNode node, ICompilationUnit cu) throws AbortSearchException {
 		boolean hasNLS= false;
-		List<Comment> commentList= ASTNodes.getTrailingComments(statement);
+		List<Comment> commentList= ASTNodes.getTrailingComments(node);
+		if (commentList.isEmpty()) {
+			ASTNode n= node;
+			while (!(n instanceof Statement) && commentList.isEmpty()) {
+				n= n.getParent();
+				commentList= ASTNodes.getTrailingComments(n);
+			}
+		}
 		if (commentList.size() > 0) {
 			if (commentList.get(0) instanceof LineComment) {
 				LineComment lineComment= (LineComment) commentList.get(0);
 				try {
 					String comment= cu.getBuffer().getText(lineComment.getStartPosition() + 2, lineComment.getLength() - 2).trim();
-					hasNLS= comment.equals(NLSComment);
+					hasNLS= comment.startsWith(NLSComment);
+					if (comment.substring(NLSComment.length()).contains(NLSCommentPrefix)) {
+						throw new AbortSearchException();
+					}
 				} catch (IndexOutOfBoundsException | JavaModelException e) {
-					return false;
+					throw new AbortSearchException();
 				}
 			}
 		}
@@ -621,17 +839,19 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 		private final List<StringLiteral> fLiterals;
 		private String fIndent;
 		private final Set<String> fExcludedNames;
+		private final BodyDeclaration fLastBodyDecl;
 		private final boolean fNonNLS;
 		private ExpressionStatement fAssignmentToConvert;
 
 		public ChangeStringBufferToTextBlock(final List<MethodInvocation> toStringList, List<Statement> statements,
-				List<StringLiteral> literals, ExpressionStatement assignmentToConvert, Set<String> excludedNames, boolean nonNLS) {
+				List<StringLiteral> literals, ExpressionStatement assignmentToConvert, Set<String> excludedNames, BodyDeclaration lastBodyDecl, boolean nonNLS) {
 			this.fToStringList= toStringList;
 			this.fStatements= statements;
 			this.fLiterals= literals;
 			this.fAssignmentToConvert= assignmentToConvert;
 			this.fIndent= "\t"; //$NON-NLS-1$
 			this.fExcludedNames= excludedNames;
+			this.fLastBodyDecl= lastBodyDecl;
 			this.fNonNLS= nonNLS;
 		}
 
@@ -646,6 +866,10 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 		@Override
 		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			String DEFAULT_NAME= "str"; //$NON-NLS-1$
+			BodyDeclaration bodyDecl= ASTNodes.getFirstAncestorOrNull(fToStringList.get(0), BodyDeclaration.class);
+			if (bodyDecl != null && bodyDecl != fLastBodyDecl) {
+				fExcludedNames.clear();
+			}
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
 			IJavaElement root= cuRewrite.getRoot().getJavaElement();
 			if (root != null) {
@@ -680,6 +904,8 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 
 			buf.append("\"\"\"\n"); //$NON-NLS-1$
 			boolean newLine= false;
+			boolean allWhiteSpaceStart= true;
+			boolean allEmpty= true;
 			for (String part : parts) {
 				if (buf.length() > 4) {// the first part has been added after the text block delimiter and newline
 					if (!newLine) {
@@ -688,11 +914,33 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 					}
 				}
 				newLine= part.endsWith(System.lineSeparator());
+				allWhiteSpaceStart= allWhiteSpaceStart && (part.isEmpty() || Character.isWhitespace(part.charAt(0)));
+				allEmpty= allEmpty && part.isEmpty();
 				buf.append(fIndent).append(part);
 			}
 
-			if (newLine) {
+			if (newLine || allEmpty) {
 				buf.append(fIndent);
+			} else if (allWhiteSpaceStart) {
+				buf.append("\\").append(System.lineSeparator()); //$NON-NLS-1$
+				buf.append(fIndent);
+			} else {
+				// Replace trailing un-escaped quotes with escaped quotes before adding text block end
+				int readIndex= buf.length() - 1;
+				int count= 0;
+				while (readIndex >= 0 && buf.charAt(readIndex) == '"' && count <= 3) {
+					--readIndex;
+					++count;
+				}
+				if (readIndex >= 0 && buf.charAt(readIndex) == '\\') {
+					--count;
+				}
+				for (int i= count; i > 0; --i) {
+					buf.deleteCharAt(buf.length() - 1);
+				}
+				for (int i= count; i > 0; --i) {
+					buf.append("\\\""); //$NON-NLS-1$
+				}
 			}
 			buf.append("\"\"\""); //$NON-NLS-1$
 			MethodInvocation firstToStringCall= fToStringList.get(0);
@@ -715,7 +963,7 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 				ImportRewrite importRewriter= cuRewrite.getImportRewrite();
 				ITypeBinding binding= firstToStringCall.resolveTypeBinding();
 				if (binding != null) {
-					Set<String> excludedNames= new HashSet<>(ASTNodes.getVisibleLocalVariablesInScope(fToStringList.get(fToStringList.size() - 1)));
+					Set<String> excludedNames= new HashSet<>(ASTNodes.getAllLocalVariablesInBlock(fStatements.get(0)));
 					excludedNames.addAll(fExcludedNames);
 					String newVarName= DEFAULT_NAME;
 					if (excludedNames.contains(DEFAULT_NAME)) {
@@ -781,7 +1029,7 @@ public class StringConcatToTextBlockFixCore extends CompilationUnitRewriteOperat
 
 	}
 
-	public static ICleanUpFixCore createCleanUp(final CompilationUnit compilationUnit, boolean includeStringBufferBuilder) {
+	public static ICleanUpFix createCleanUp(final CompilationUnit compilationUnit, boolean includeStringBufferBuilder) {
 		if (!JavaModelUtil.is15OrHigher(compilationUnit.getJavaElement().getJavaProject()))
 			return null;
 

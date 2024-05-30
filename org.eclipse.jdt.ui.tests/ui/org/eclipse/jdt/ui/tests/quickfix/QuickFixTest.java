@@ -75,7 +75,7 @@ import org.eclipse.jdt.ui.text.java.correction.ICommandAccess;
 
 import org.eclipse.jdt.internal.ui.text.correction.AssistContext;
 import org.eclipse.jdt.internal.ui.text.correction.GetterSetterCorrectionSubProcessor.SelfEncapsulateFieldProposal;
-import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
+import org.eclipse.jdt.ui.text.java.IProblemLocation;
 import org.eclipse.jdt.internal.ui.text.correction.JavaCorrectionProcessor;
 import org.eclipse.jdt.internal.ui.text.correction.ProblemLocation;
 import org.eclipse.jdt.internal.ui.text.correction.ReorgCorrectionsSubProcessor;
@@ -87,9 +87,10 @@ import org.eclipse.jdt.internal.ui.text.template.contentassist.SurroundWithTempl
 
 public class QuickFixTest {
 
-	protected static String MODULE_INFO_FILE_CONTENT = ""
-			+ "module test {\n"
-			+ "}\n";
+	protected static String MODULE_INFO_FILE_CONTENT = """
+		module test {
+		}
+		""";
 
 	public static void assertCorrectLabels(List<? extends ICompletionProposal> proposals) {
 		for (ICompletionProposal proposal : proposals) {
@@ -311,9 +312,9 @@ public class QuickFixTest {
 		return proposals;
 	}
 
-	protected static ArrayList<IJavaCompletionProposal> collectCorrections(IInvocationContext context, IProblemLocationCore problem) throws CoreException {
+	protected static ArrayList<IJavaCompletionProposal> collectCorrections(IInvocationContext context, IProblemLocation problem) throws CoreException {
 		ArrayList<IJavaCompletionProposal> proposals= new ArrayList<>();
-		IStatus status= JavaCorrectionProcessor.collectCorrections(context, new IProblemLocationCore[] { problem }, proposals);
+		IStatus status= JavaCorrectionProcessor.collectCorrections(context, new IProblemLocation[] { problem }, proposals);
 		assertStatusOk(status);
 		return proposals;
 	}
@@ -332,7 +333,7 @@ public class QuickFixTest {
 
 	protected static final ArrayList<IJavaCompletionProposal> collectAssists(IInvocationContext context, Class<?>[] filteredTypes) throws CoreException {
 		ArrayList<IJavaCompletionProposal> proposals= new ArrayList<>();
-		IStatus status= JavaCorrectionProcessor.collectAssists(context, new IProblemLocationCore[0], proposals);
+		IStatus status= JavaCorrectionProcessor.collectAssists(context, new IProblemLocation[0], proposals);
 		assertStatusOk(status);
 
 		if (!proposals.isEmpty()) {
@@ -352,8 +353,8 @@ public class QuickFixTest {
 	protected static final ArrayList<IJavaCompletionProposal> collectAssistsWithProblems(IInvocationContext context) throws CoreException {
 		ArrayList<IJavaCompletionProposal> proposals= new ArrayList<>();
 		IProblem[] problems= context.getASTRoot().getProblems();
-		IProblemLocationCore firstProblemLocation= new ProblemLocation(problems[0]);
-		IStatus status= JavaCorrectionProcessor.collectAssists(context, new IProblemLocationCore[] { firstProblemLocation }, proposals);
+		IProblemLocation firstProblemLocation= new ProblemLocation(problems[0]);
+		IStatus status= JavaCorrectionProcessor.collectAssists(context, new IProblemLocation[] { firstProblemLocation }, proposals);
 		assertStatusOk(status);
 
 		if (!proposals.isEmpty()) {

@@ -121,19 +121,19 @@
             </message_arguments>
         </filter>
     </resource>
-    <resource path="ui/org/eclipse/jdt/internal/ui/util/CleanUpCoreWrapper.java" type="org.eclipse.jdt.internal.ui.util.CleanUpCoreWrapper">
-        <filter id="571519004">
+    <resource path="ui/org/eclipse/jdt/internal/ui/text/correction/AssistContext.java" type="org.eclipse.jdt.internal.ui.text.correction.AssistContext">
+        <filter id="574619656">
             <message_arguments>
-                <message_argument value="org.eclipse.jdt.internal.ui.util.CleanUpCoreWrapper.wrapOptions(CleanUpOptionsCore)"/>
-                <message_argument value="CleanUpOptions"/>
+                <message_argument value="IInvocationContext"/>
+                <message_argument value="AssistContext"/>
             </message_arguments>
         </filter>
     </resource>
-    <resource path="ui/org/eclipse/jdt/internal/ui/util/ViewerPane.java" type="org.eclipse.jdt.internal.ui.util.ViewerPane">
-        <filter id="571473929">
+    <resource path="ui/org/eclipse/jdt/internal/ui/text/correction/NullAnnotationsCorrectionProcessor.java" type="org.eclipse.jdt.internal.ui.text.correction.NullAnnotationsCorrectionProcessor">
+        <filter id="574664731">
             <message_arguments>
-                <message_argument value="ViewForm"/>
-                <message_argument value="ViewerPane"/>
+                <message_argument value="org.eclipse.jdt.internal.ui.text.correction.NullAnnotationsCorrectionProcessor.addNullAnnotationInSignatureProposal(IInvocationContext, IProblemLocation, Collection&lt;ICommandAccess&gt;, NullAnnotationsRewriteOperationsChangeKind, boolean)"/>
+                <message_argument value="IInvocationContext"/>
             </message_arguments>
         </filter>
     </resource>
@@ -153,38 +153,6 @@
             </message_arguments>
         </filter>
     </resource>
-    <resource path="ui/org/eclipse/jdt/ui/JavaUI.java" type="org.eclipse.jdt.ui.JavaUI">
-        <filter comment="View ID constants should be final." id="388100214">
-            <message_arguments>
-                <message_argument value="org.eclipse.jdt.ui.JavaUI"/>
-                <message_argument value="ID_BROWSING_PERSPECTIVE"/>
-            </message_arguments>
-        </filter>
-        <filter comment="View ID constants should be final." id="388100214">
-            <message_arguments>
-                <message_argument value="org.eclipse.jdt.ui.JavaUI"/>
-                <message_argument value="ID_MEMBERS_VIEW"/>
-            </message_arguments>
-        </filter>
-        <filter comment="View ID constants should be final." id="388100214">
-            <message_arguments>
-                <message_argument value="org.eclipse.jdt.ui.JavaUI"/>
-                <message_argument value="ID_PACKAGES_VIEW"/>
-            </message_arguments>
-        </filter>
-        <filter comment="View ID constants should be final." id="388100214">
-            <message_arguments>
-                <message_argument value="org.eclipse.jdt.ui.JavaUI"/>
-                <message_argument value="ID_PROJECTS_VIEW"/>
-            </message_arguments>
-        </filter>
-        <filter comment="View ID constants should be final." id="388100214">
-            <message_arguments>
-                <message_argument value="org.eclipse.jdt.ui.JavaUI"/>
-                <message_argument value="ID_TYPES_VIEW"/>
-            </message_arguments>
-        </filter>
-    </resource>
     <resource path="ui/org/eclipse/jdt/ui/StandardJavaElementContentProvider.java" type="org.eclipse.jdt.ui.StandardJavaElementContentProvider">
         <filter comment="For Java 13 Enable Preview feature" id="576725006">
             <message_arguments>
@@ -198,14 +166,6 @@
             <message_arguments>
                 <message_argument value="ITextEditorActionDefinitionIds"/>
                 <message_argument value="IJavaEditorActionDefinitionIds"/>
-            </message_arguments>
-        </filter>
-    </resource>
-    <resource path="ui/org/eclipse/jdt/ui/text/java/IInvocationContext.java" type="org.eclipse.jdt.ui.text.java.IInvocationContext">
-        <filter id="576720909">
-            <message_arguments>
-                <message_argument value="IInvocationContextCore"/>
-                <message_argument value="IInvocationContext"/>
             </message_arguments>
         </filter>
     </resource>

@@ -25,6 +25,7 @@ import org.eclipse.jdt.core.manipulation.CleanUpContextCore;
  *
  * @since 1.21
  */
+@SuppressWarnings({ "removal" })
 public class CleanUpContext extends CleanUpContextCore {
 
 	/**
