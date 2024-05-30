@@ -52,6 +52,8 @@ jobs:
           # Force 0 exit code to allow SARIF file generation
           # This will handover control about PR rejection to the GitHub side
           max-allowed-issues: 2147483647
+        env: 
+    CODEQL_ACTION_EXTRA_OPTIONS: '{"database":{"interpret-results":["--max-paths", 1]}}'
 
       # Upload the SARIF file generated in the previous step
       - name: Upload SARIF results file
