@@ -22,6 +22,8 @@ on:
     - cron: '20 9 * * 2'
 
 jobs:
+  callCodeQLworkflow:
+    uses: eclipse-platform/eclipse.platform.releng.aggregator/.github/workflows/codeQLworkflow.yml@master
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
@@ -82,4 +84,3 @@ jobs:
       uses: github/codeql-action/analyze@v3
       env:
         CODEQL_ACTION_EXTRA_OPTIONS: '{"database":{"interpret-results":["--max-paths", 1]}}'
-
