@@ -13,6 +13,8 @@
  ******************************************************************************/
 package org.eclipse.jdt.internal.ui.commands;
 
+import java.util.Objects;
+
 import org.eclipse.core.commands.AbstractParameterValueConverter;
 import org.eclipse.core.commands.ParameterValueConversionException;
 
@@ -50,7 +52,6 @@ import org.eclipse.jdt.core.Signature;
  *
  * where <code>parameterSignatures</code> uses the signature format documented
  * in the {@link org.eclipse.jdt.core.Signature Signature} class.
- * </p>
  *
  * @since 3.2
  */
@@ -67,10 +68,14 @@ public class JavaElementReferenceConverter extends AbstractParameterValueConvert
 	@Override
 	public Object convertToObject(String parameterValue) throws ParameterValueConversionException {
 
-		assertWellFormed(parameterValue != null);
+		if (parameterValue == null) {
+			throw new ParameterValueConversionException("Malformed parameterValue"); //$NON-NLS-1$
+		}
 
 		final int projectEndPosition= parameterValue.indexOf(PROJECT_END_CHAR);
-		assertWellFormed(projectEndPosition != -1);
+		if (!(projectEndPosition != -1)) {
+			throw new ParameterValueConversionException("Malformed parameterValue"); //$NON-NLS-1$
+		}
 
 		String projectName= parameterValue.substring(0, projectEndPosition);
 		String javaElementRef= parameterValue.substring(projectEndPosition + 1);
@@ -96,6 +101,7 @@ public class JavaElementReferenceConverter extends AbstractParameterValueConvert
 			// type == null
 		}
 		assertExists(type);
+		Objects.requireNonNull(type);
 
 		if (typeEndPosition == -1) {
 			return type;
@@ -117,23 +123,12 @@ public class JavaElementReferenceConverter extends AbstractParameterValueConvert
 		} catch (IllegalArgumentException ex) {
 			// parameterTypes == null
 		}
-		assertWellFormed(parameterTypes != null);
+		if (!(parameterTypes != null)) {
+			throw new ParameterValueConversionException("Malformed parameterValue"); //$NON-NLS-1$
+		}
 		IMethod method= type.getMethod(methodName, parameterTypes);
 		assertExists(method);
 		return method;
-	}
-
-	/**
-	 * Throws a <code>ParameterValueConversionException</code> if the java
-	 * element reference string does not meet some well-formedness condition.
-	 *
-	 * @param assertion
-	 *            a boolean check for well-formedness
-	 */
-	private void assertWellFormed(boolean assertion) throws ParameterValueConversionException {
-		if (!assertion) {
-			throw new ParameterValueConversionException("Malformed parameterValue"); //$NON-NLS-1$
-		}
 	}
 
 	/**

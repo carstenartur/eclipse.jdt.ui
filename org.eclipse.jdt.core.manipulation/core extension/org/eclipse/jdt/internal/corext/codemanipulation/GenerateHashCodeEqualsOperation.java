@@ -127,7 +127,6 @@ import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
  * implementation is consistent with the wrapper types java.lang.Float and
  * java.lang.Double.</li>
  * </ul>
- * </p>
  *
  * @since 3.2
  */
@@ -583,9 +582,9 @@ public final class GenerateHashCodeEqualsOperation implements IWorkspaceRunnable
 			// Double.doubleToIntBits(aDouble)
 			Expression comparison= createDoubleInvocation(provider.getThisAccess(name));
 
-			if (singleTemp)
+			if (singleTemp && fragment != null) {
 				fragment.setInitializer(comparison);
-			else {
+			} else {
 				Assignment ass= fAst.newAssignment();
 				ass.setLeftHandSide(fAst.newSimpleName(VARIABLE_NAME_DOUBLE_TEMPORARY));
 				ass.setRightHandSide(comparison);

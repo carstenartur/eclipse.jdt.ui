@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2008, 2023 IBM Corporation and others.
+ * Copyright (c) 2008, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -74,17 +74,17 @@ import org.eclipse.jdt.internal.ui.viewsupport.CoreJavaElementLinks;
  * Helper to get the content of a Javadoc comment as HTML.
  */
 public class CoreJavadocAccessImpl implements IJavadocAccess {
-	protected static final String BLOCK_TAG_START= "<ul>"; //$NON-NLS-1$
+	protected static final String BLOCK_TAG_START= "<dl>"; //$NON-NLS-1$
 
-	protected static final String BLOCK_TAG_END= "</ul>"; //$NON-NLS-1$
+	protected static final String BLOCK_TAG_END= "</dl>"; //$NON-NLS-1$
 
 	protected static final String BlOCK_TAG_TITLE_START= "<dt>"; //$NON-NLS-1$
 
 	protected static final String BlOCK_TAG_TITLE_END= "</dt>"; //$NON-NLS-1$
 
-	protected static final String BlOCK_TAG_ENTRY_START= "<li>"; //$NON-NLS-1$
+	protected static final String BlOCK_TAG_ENTRY_START= "<dd>"; //$NON-NLS-1$
 
-	protected static final String BlOCK_TAG_ENTRY_END= "</li>"; //$NON-NLS-1$
+	protected static final String BlOCK_TAG_ENTRY_END= "</dd>"; //$NON-NLS-1$
 
 	protected static final String PARAM_NAME_START= "<b>"; //$NON-NLS-1$
 
@@ -125,6 +125,8 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 
 	protected int fPreCounter;
 
+	protected int fInPreCodeCounter= -1;
+
 	public CoreJavadocAccessImpl(IJavaElement element, Javadoc javadoc, String source, JavadocLookup lookup) {
 		Assert.isNotNull(element);
 		Assert.isTrue(element instanceof IMethod || element instanceof ILocalVariable || element instanceof ITypeParameter);
@@ -147,7 +149,7 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 		fJavadocLookup= JavadocLookup.NONE;
 	}
 
-	protected CoreJavaDocSnippetStringEvaluator createSnippetEvaluator(IJavaElement element) {
+	protected CoreJavaDocSnippetStringEvaluator createSnippetEvaluator(@SuppressWarnings("unused") IJavaElement element) {
 		return new CoreJavaDocSnippetStringEvaluator(fElement);
 	}
 
@@ -380,7 +382,7 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 				provides.size() > 0 || hidden.size() > 0 || rest.size() > 0
 				|| (fBuf.length() > 0 && (parameterDescriptions.length > 0 || exceptionDescriptions.length > 0))) {
 			handleSuperMethodReferences();
-			fBuf.append(BLOCK_TAG_START);
+			fBuf.append(getBlockTagStart());
 			handleParameterTags(typeParameters, typeParameterNames, typeParameterDescriptions, true);
 			handleParameterTags(parameters, parameterNames, parameterDescriptions, false);
 			handleReturnTag(returnTag, returnDescription);
@@ -398,7 +400,7 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 				handleBlockTagsHidden();
 			}
 			handleBlockTags(rest);
-			fBuf.append(BLOCK_TAG_END);
+			fBuf.append(getBlockTagEnd());
 
 		} else if (fBuf.length() > 0) {
 			handleSuperMethodReferences();
@@ -420,11 +422,11 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 	}
 
 	protected void handleBlockTagsHidden() {
-		String replaceAll= fBuf.toString().replaceAll(BLOCK_TAG_START, "<dl hidden>"); //$NON-NLS-1$
-		replaceAll= replaceAll.replaceAll(BlOCK_TAG_TITLE_START, "<dt hidden>"); //$NON-NLS-1$
-		replaceAll= replaceAll.replaceAll(BlOCK_TAG_ENTRY_START, "<dd hidden>"); //$NON-NLS-1$
+		String replaceAll= fBuf.toString().replaceAll(getBlockTagStart(), "<dl hidden>"); //$NON-NLS-1$
+		replaceAll= replaceAll.replaceAll(getBlockTagTitleStart(), "<dt hidden>"); //$NON-NLS-1$
+		replaceAll= replaceAll.replaceAll(getBlockTagEntryStart(), "<dd hidden>"); //$NON-NLS-1$
 		// For tags like deprecated
-		replaceAll= replaceAll.replaceAll(PARAM_NAME_START, "<b hidden>"); //$NON-NLS-1$
+		replaceAll= replaceAll.replaceAll(getParamNameStart(), "<b hidden>"); //$NON-NLS-1$
 		fBuf.setLength(0);
 		fBuf.append(replaceAll);
 	}
@@ -456,7 +458,7 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 		return createSuperMethodReferencesHTML(data.superInterfaceMethods(), data.superClassMethod());
 	}
 
-	protected StringBuffer createSuperMethodReferencesHTML(ArrayList<IMethod> superInterfaceMethods, IMethod superClassMethod) throws JavaModelException {
+	protected StringBuffer createSuperMethodReferencesHTML(ArrayList<IMethod> superInterfaceMethods, IMethod superClassMethod) {
 		// jdtls override to return null
 		return CoreJavadocAccess.createSuperMethodReferencesHTMLStaticImpl(superInterfaceMethods, superClassMethod);
 	}
@@ -553,6 +555,7 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 		return hasInheritedExceptions;
 	}
 
+	@Override
 	public CharSequence getMainDescription() {
 		if (fMainDescription == null) {
 			fMainDescription= new StringBuffer();
@@ -573,6 +576,7 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 		return fMainDescription.length() > 0 ? fMainDescription : null;
 	}
 
+	@Override
 	public CharSequence getReturnDescription() {
 		if (fReturnDescription == null) {
 			fReturnDescription= new StringBuffer();
@@ -798,20 +802,28 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 			++fPreCounter;
 		} else if (tagElement == null && text.equals("</pre>")) { //$NON-NLS-1$
 			--fPreCounter;
+			if (fPreCounter == fInPreCodeCounter) {
+				fInPreCodeCounter= -1;
+			}
 		} else if (tagElement == null && fPreCounter > 0 && text.matches("}\\s*</pre>")) { //$NON-NLS-1$
 			// this is a temporary workaround for https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/316
 			// as the parser for @code is treating the first } it finds as the end of the code
 			// sequence but this is not the case for a <pre>{@code sequence which goes over
 			// multiple lines and may contain }'s that are part of the code
 			--fPreCounter;
-			text= "</code></pre>"; //$NON-NLS-1$
-			int lastCodeEnd= fBuf.lastIndexOf("</code>"); //$NON-NLS-1$
-			fBuf.replace(lastCodeEnd, lastCodeEnd + 7, ""); //$NON-NLS-1$
+			if (fPreCounter == fInPreCodeCounter) {
+				text= "</code></pre>"; //$NON-NLS-1$
+				int lastCodeEnd= fBuf.lastIndexOf("</code>"); //$NON-NLS-1$
+				if (lastCodeEnd >= 0) {
+					fBuf.replace(lastCodeEnd, lastCodeEnd + 7, ""); //$NON-NLS-1$
+				}
+				fInPreCodeCounter= -1;
+			}
 		}
 		return text;
 	}
 
-	protected void handleInLineText(String text, ASTNode previousNode) {
+	protected void handleInLineText(String text, @SuppressWarnings("unused") ASTNode previousNode) {
 		handleText(text);
 	}
 
@@ -924,8 +936,12 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 
 		if (isLiteral || isCode || isSummary || isIndex)
 			fLiteralContent++;
-		if (isCode || (isLink && addCodeTagOnLink()))
+		if (isCode || (isLink && addCodeTagOnLink())) {
+			if (isCode && fPreCounter > 0 && fBuf.lastIndexOf("<pre>") == fBuf.length() - 5) { //$NON-NLS-1$
+				fInPreCodeCounter= fPreCounter - 1;
+			}
 			fBuf.append("<code>"); //$NON-NLS-1$
+		}
 		if (isReturn)
 			fBuf.append(JavaDocMessages.JavadocContentAccess2_returns_pre);
 
@@ -1197,13 +1213,13 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 	}
 
 	protected void handleSingleTag(TagElement tag) {
-		fBuf.append(BlOCK_TAG_ENTRY_START);
+		fBuf.append(getBlockTagEntryStart());
 		if (TagElement.TAG_SEE.equals(tag.getTagName())) {
 			handleSeeTag(tag);
 		} else {
 			handleContentElements(tag.fragments());
 		}
-		fBuf.append(BlOCK_TAG_ENTRY_END);
+		fBuf.append(getBlockTagEntryEnd());
 	}
 
 	protected void handleReturnTag(TagElement tag, CharSequence returnDescription) {
@@ -1215,12 +1231,12 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 	}
 
 	protected void handleReturnTagBody(TagElement tag, CharSequence returnDescription) {
-		fBuf.append(BlOCK_TAG_ENTRY_START);
+		fBuf.append(getBlockTagEntryStart());
 		if (tag != null)
 			handleContentElements(tag.fragments());
 		else
 			fBuf.append(returnDescription);
-		fBuf.append(BlOCK_TAG_ENTRY_END);
+		fBuf.append(getBlockTagEntryEnd());
 	}
 
 	protected void handleBlockTags(List<TagElement> tags) {
@@ -1231,15 +1247,15 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 	}
 
 	protected void handleBlockTagBody(TagElement tag) {
-		fBuf.append(BlOCK_TAG_ENTRY_START);
+		fBuf.append(getBlockTagEntryStart());
 		handleContentElements(tag.fragments());
-		fBuf.append(BlOCK_TAG_ENTRY_END);
+		fBuf.append(getBlockTagEntryEnd());
 	}
 
 	protected void handleBlockTagTitle(String title) {
-		fBuf.append(BlOCK_TAG_TITLE_START);
+		fBuf.append(getBlockTagTitleStart());
 		fBuf.append(title);
-		fBuf.append(BlOCK_TAG_TITLE_END);
+		fBuf.append(getBlockTagTitleEnd());
 	}
 
 
@@ -1257,9 +1273,9 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 
 	protected void handleExceptionTagsBody(List<TagElement> tags, List<String> exceptionNames, CharSequence[] exceptionDescriptions) {
 		for (TagElement tag : tags) {
-			fBuf.append(BlOCK_TAG_ENTRY_START);
+			fBuf.append(getBlockTagEntryStart());
 			handleThrowsTag(tag);
-			fBuf.append(BlOCK_TAG_ENTRY_END);
+			fBuf.append(getBlockTagEntryEnd());
 		}
 
 		for (int i= 0; i < exceptionDescriptions.length; i++) {
@@ -1272,13 +1288,13 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 	}
 
 	protected void handleSingleException(String name, CharSequence description) {
-		fBuf.append(BlOCK_TAG_ENTRY_START);
+		fBuf.append(getBlockTagEntryStart());
 		handleLink(Collections.singletonList(fJavadoc.getAST().newSimpleName(name)));
 		if (description != null) {
 			fBuf.append(JavaElementLabelsCore.CONCAT_STRING);
 			fBuf.append(description);
 		}
-		fBuf.append(BlOCK_TAG_ENTRY_END);
+		fBuf.append(getBlockTagEntryEnd());
 	}
 
 	protected void handleThrowsTag(TagElement tag) {
@@ -1294,9 +1310,9 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 	}
 
 	protected void handleSingleParameterTag(TagElement tag) {
-		fBuf.append(BlOCK_TAG_ENTRY_START);
+		fBuf.append(getBlockTagEntryStart());
 		handleParamTag(tag);
-		fBuf.append(BlOCK_TAG_ENTRY_END);
+		fBuf.append(getBlockTagEntryEnd());
 	}
 
 	protected void handleParameterTags(List<TagElement> tags, List<String> parameterNames, CharSequence[] parameterDescriptions, boolean isTypeParameters) {
@@ -1319,8 +1335,8 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 	}
 
 	protected void handleSingleParameterDescription(String name, CharSequence description, boolean isTypeParameters) {
-		fBuf.append(BlOCK_TAG_ENTRY_START);
-		fBuf.append(PARAM_NAME_START);
+		fBuf.append(getBlockTagEntryStart());
+		fBuf.append(getParamNameStart());
 		if (isTypeParameters) {
 			fBuf.append("&lt;"); //$NON-NLS-1$
 		}
@@ -1328,10 +1344,10 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 		if (isTypeParameters) {
 			fBuf.append("&gt;"); //$NON-NLS-1$
 		}
-		fBuf.append(PARAM_NAME_END);
+		fBuf.append(getParamNameEnd());
 		if (description != null)
 			fBuf.append(description);
-		fBuf.append(BlOCK_TAG_ENTRY_END);
+		fBuf.append(getBlockTagEntryEnd());
 	}
 
 	protected void handleParamTag(TagElement tag) {
@@ -1340,7 +1356,7 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 		int size= fragments.size();
 		if (size > 0) {
 			Object first= fragments.get(0);
-			fBuf.append(PARAM_NAME_START);
+			fBuf.append(getParamNameStart());
 			if (first instanceof SimpleName) {
 				String name= ((SimpleName) first).getIdentifier();
 				fBuf.append(name);
@@ -1368,7 +1384,7 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 					}
 				}
 			}
-			fBuf.append(PARAM_NAME_END);
+			fBuf.append(getParamNameEnd());
 
 			handleContentElements(fragments.subList(i, fragments.size()));
 		}
@@ -1380,7 +1396,7 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 			Object first= fragments.get(0);
 			if (first instanceof TextElement) {
 				TextElement memberRef= (TextElement) first;
-				fBuf.append(BlOCK_TAG_TITLE_START + "Summary: " + memberRef.getText() + BlOCK_TAG_TITLE_END); //$NON-NLS-1$
+				fBuf.append(getBlockTagTitleStart() + "Summary: " + memberRef.getText() + getBlockTagTitleEnd()); //$NON-NLS-1$
 				return;
 			}
 		}
@@ -1401,9 +1417,9 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 					} else {
 						fBuf.append("<code>");//$NON-NLS-1$
 					}
-					fBuf.append(BlOCK_TAG_ENTRY_START);
+					fBuf.append(getBlockTagEntryStart());
 					fSnippetStringEvaluator.AddTagElementString(node, fBuf);
-					fBuf.append(BlOCK_TAG_ENTRY_END);
+					fBuf.append(getBlockTagEntryEnd());
 				}
 			} else {
 				handleInvalidSnippet(node);
@@ -1487,7 +1503,7 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 							fBuf.append('.');
 						}
 						fBuf.append(refMemberName);
-						if (refMethodParamTypes != null) {
+						if (refMethodParamTypes != null && refMethodParamNames != null) {
 							fBuf.append('(');
 							for (int i= 0; i < refMethodParamTypes.length; i++) {
 								String pType= refMethodParamTypes[i];
@@ -1511,7 +1527,7 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 		}
 	}
 
-	protected String createLinkURI(String scheme, IJavaElement element, String refTypeName, String refMemberName, String[] refParameterTypes) throws URISyntaxException {
+	protected String createLinkURI(String scheme, @SuppressWarnings("unused") IJavaElement element, String refTypeName, String refMemberName, String[] refParameterTypes) throws URISyntaxException {
 		return CoreJavaElementLinks.createURI(scheme, fElement, refTypeName, refMemberName, refParameterTypes);
 	}
 
@@ -1523,4 +1539,28 @@ public class CoreJavadocAccessImpl implements IJavadocAccess {
 		return true;
 	}
 
+	protected String getBlockTagStart() {
+		return BLOCK_TAG_START;
+	}
+	protected String getBlockTagEnd() {
+		return BLOCK_TAG_END;
+	}
+	protected String getBlockTagTitleStart() {
+		return BlOCK_TAG_TITLE_START;
+	}
+	protected String getBlockTagTitleEnd() {
+		return BlOCK_TAG_TITLE_END;
+	}
+	protected String getBlockTagEntryStart() {
+		return BlOCK_TAG_ENTRY_START;
+	}
+	protected String getBlockTagEntryEnd() {
+		return BlOCK_TAG_ENTRY_END;
+	}
+	protected String getParamNameStart() {
+		return PARAM_NAME_START;
+	}
+	protected String getParamNameEnd() {
+		return PARAM_NAME_END;
+	}
 }

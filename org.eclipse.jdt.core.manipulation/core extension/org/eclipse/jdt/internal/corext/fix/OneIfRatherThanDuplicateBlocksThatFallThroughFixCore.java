@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Fabrice TIERCELIN and others.
+ * Copyright (c) 2021, 2024 Fabrice TIERCELIN and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -14,7 +14,9 @@
 package org.eclipse.jdt.internal.corext.fix;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.core.runtime.CoreException;
@@ -29,13 +31,18 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.IfStatement;
 import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.Pattern;
+import org.eclipse.jdt.core.dom.PatternInstanceofExpression;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
+import org.eclipse.jdt.core.dom.TypePattern;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.TargetSourceRangeComputer;
-import org.eclipse.jdt.core.manipulation.ICleanUpFixCore;
 
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
+
+import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
 
 import org.eclipse.jdt.internal.ui.fix.MultiFixMessages;
 
@@ -71,10 +78,14 @@ public class OneIfRatherThanDuplicateBlocksThatFallThroughFixCore extends Compil
 			public boolean visit(final IfStatement visited) {
 				if (result && ASTNodes.fallsThrough(visited.getThenStatement())) {
 					List<IfStatement> duplicateIfBlocks= new ArrayList<>(ASTNodes.EXCESSIVE_OPERAND_NUMBER - 1);
+					Set<String> patternNames= new HashSet<>();
+					PatternNameVisitor visitor= new PatternNameVisitor();
+					visited.accept(visitor);
+					patternNames= visitor.getPatternNames();
 					AtomicInteger operandCount= new AtomicInteger(ASTNodes.getNbOperands(visited.getExpression()));
 					duplicateIfBlocks.add(visited);
 
-					while (addOneMoreIf(duplicateIfBlocks, operandCount)) {
+					while (addOneMoreIf(duplicateIfBlocks, patternNames, operandCount)) {
 						// OK continue
 					}
 
@@ -88,7 +99,25 @@ public class OneIfRatherThanDuplicateBlocksThatFallThroughFixCore extends Compil
 				return true;
 			}
 
-			private boolean addOneMoreIf(final List<IfStatement> duplicateIfBlocks, final AtomicInteger operandCount) {
+			private class PatternNameVisitor extends ASTVisitor {
+				private Set<String> patternNames= new HashSet<>();
+
+				@Override
+				public boolean visit(PatternInstanceofExpression node) {
+					Pattern p= node.getPattern();
+					if (p instanceof TypePattern typePattern) {
+						SingleVariableDeclaration patternVariable= typePattern.getPatternVariable();
+						patternNames.add(patternVariable.getName().getFullyQualifiedName());
+					}
+					return true;
+				}
+
+				public Set<String> getPatternNames() {
+					return patternNames;
+				}
+			}
+
+			private boolean addOneMoreIf(final List<IfStatement> duplicateIfBlocks, final Set<String> patternNames, final AtomicInteger operandCount) {
 				IfStatement lastBlock= duplicateIfBlocks.get(duplicateIfBlocks.size() - 1);
 
 				if (lastBlock.getElseStatement() == null) {
@@ -98,6 +127,14 @@ public class OneIfRatherThanDuplicateBlocksThatFallThroughFixCore extends Compil
 							&& nextSibling.getElseStatement() == null
 							&& operandCount.get() + ASTNodes.getNbOperands(nextSibling.getExpression()) < ASTNodes.EXCESSIVE_OPERAND_NUMBER
 							&& ASTNodes.match(lastBlock.getThenStatement(), nextSibling.getThenStatement())) {
+						PatternNameVisitor visitor= new PatternNameVisitor();
+						nextSibling.getExpression().accept(visitor);
+						Set<String> siblingPatternNames= visitor.getPatternNames();
+						for (String siblingPatternName : siblingPatternNames) {
+							if (!patternNames.add(siblingPatternName)) {
+								return false;
+							}
+						}
 						operandCount.addAndGet(ASTNodes.getNbOperands(nextSibling.getExpression()));
 						duplicateIfBlocks.add(nextSibling);
 						return true;
@@ -158,7 +195,7 @@ public class OneIfRatherThanDuplicateBlocksThatFallThroughFixCore extends Compil
 		}
 	}
 
-	public static ICleanUpFixCore createCleanUp(final CompilationUnit compilationUnit) {
+	public static ICleanUpFix createCleanUp(final CompilationUnit compilationUnit) {
 		List<CompilationUnitRewriteOperation> operations= new ArrayList<>();
 		OneIfRatherThanDuplicateBlocksThatFallThroughFinder finder= new OneIfRatherThanDuplicateBlocksThatFallThroughFinder(operations);
 		compilationUnit.accept(finder);

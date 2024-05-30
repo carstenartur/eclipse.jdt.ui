@@ -89,7 +89,7 @@ public final class JavaElementLabelsCore {
 	public final static long M_APP_RETURNTYPE= 1L << 5;
 
 	/**
-	 * Method names contain return type (appended)
+	 * Method names contain return type (prepended)
 	 * e.g. <code>int foo</code>
 	 */
 	public final static long M_PRE_RETURNTYPE= 1L << 6;
@@ -341,7 +341,7 @@ public final class JavaElementLabelsCore {
 	public final static long ALL_POST_QUALIFIED= F_POST_QUALIFIED | M_POST_QUALIFIED | I_POST_QUALIFIED | T_POST_QUALIFIED | TP_POST_QUALIFIED | D_POST_QUALIFIED | CF_POST_QUALIFIED | CU_POST_QUALIFIED | P_POST_QUALIFIED | ROOT_POST_QUALIFIED;
 
 	/**
-	 *  Default options (M_PARAMETER_TYPES,  M_APP_TYPE_PARAMETERS & T_TYPE_PARAMETERS enabled)
+	 *  Default options (M_PARAMETER_TYPES,  M_APP_TYPE_PARAMETERS, T_TYPE_PARAMETERS enabled)
 	 */
 	public final static long ALL_DEFAULT= M_PARAMETER_TYPES | M_APP_TYPE_PARAMETERS | T_TYPE_PARAMETERS;
 

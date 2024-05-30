@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2023 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -341,8 +341,9 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 			case IProblem.IllegalTotalPatternWithDefault:
 			case IProblem.IllegalFallthroughToPattern:
 				return true;
+
 			default:
-				return SuppressWarningsSubProcessorCore.hasSuppressWarningsProposal(cu.getJavaProject(), problemId)
+				return SuppressWarningsBaseSubProcessor.hasSuppressWarningsProposal(cu.getJavaProject(), problemId)
 						|| ConfigureProblemSeveritySubProcessor.hasConfigureProblemSeverityProposal(problemId);
 		}
 	}
@@ -371,7 +372,7 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 
 		HashSet<Integer> handledProblems= new HashSet<>(locations.length);
 		ArrayList<ICommandAccess> resultingCollections= new ArrayList<>();
-		for (IProblemLocationCore curr : locations) {
+		for (IProblemLocation curr : locations) {
 			Integer id= curr.getProblemId();
 			if (handledProblems.add(id)) {
 				process(context, curr, resultingCollections);
@@ -380,7 +381,7 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 		return resultingCollections.toArray(new IJavaCompletionProposal[resultingCollections.size()]);
 	}
 
-	private void process(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) throws CoreException {
+	private void process(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) throws CoreException {
 		int id= problem.getProblemId();
 		if (id == 0) { // no proposals for none-problem locations
 			return;
@@ -968,6 +969,11 @@ public class QuickFixProcessor implements IQuickFixProcessor {
 			case IProblem.PotentiallyUnclosedCloseable:
 				LocalCorrectionsSubProcessor.getTryWithResourceProposals(context, problem, proposals);
 			    break;
+			case IProblem.ParsingErrorInsertToComplete:
+				CompilationUnit astRoot1= context.getASTRoot();
+				ASTNode selectedNode1= problem.getCoveringNode(astRoot1);
+				QuickAssistProcessor.getAssignToVariableProposals(context, selectedNode1, new IProblemLocation[] {}, proposals);
+				break;
 			default:
 		}
 		if (JavaModelUtil.is50OrHigher(context.getCompilationUnit().getJavaProject())) {

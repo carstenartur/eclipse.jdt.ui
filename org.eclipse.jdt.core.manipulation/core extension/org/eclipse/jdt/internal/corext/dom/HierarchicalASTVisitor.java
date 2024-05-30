@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2023 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -28,7 +28,7 @@ import org.eclipse.jdt.core.dom.*;
  * </p>
  *
  * <p>
- * <b>Details:<b>
+ * <b>Details:</b>
  * </p>
  *
  * <p>
@@ -162,6 +162,16 @@ public abstract class HierarchicalASTVisitor extends ASTVisitor {
 	@Override
 	public void endVisit(AnnotationTypeMemberDeclaration node) {
 		endVisit((BodyDeclaration)node);
+	}
+
+	@Override
+	public boolean visit(ImplicitTypeDeclaration node) {
+		return visit((AbstractTypeDeclaration)node);
+	}
+
+	@Override
+	public void endVisit(ImplicitTypeDeclaration node) {
+		endVisit((AbstractTypeDeclaration)node);
 	}
 
 	@Override
@@ -668,6 +678,16 @@ public abstract class HierarchicalASTVisitor extends ASTVisitor {
 	}
 
 	@Override
+	public boolean visit(EitherOrMultiPattern node) {
+		return visit((Pattern) node);
+	}
+
+	@Override
+	public void endVisit(EitherOrMultiPattern node) {
+		endVisit((Pattern) node);
+	}
+
+	@Override
 	public boolean visit(ParenthesizedExpression node) {
 		return visit((Expression)node);
 	}
@@ -1060,16 +1080,6 @@ public abstract class HierarchicalASTVisitor extends ASTVisitor {
 
 	@Override
 	public void endVisit(EnhancedForStatement node) {
-		endVisit((Statement)node);
-	}
-
-	@Override
-	public boolean visit(EnhancedForWithRecordPattern node) {
-		return visit((Statement)node);
-	}
-
-	@Override
-	public void endVisit(EnhancedForWithRecordPattern node) {
 		endVisit((Statement)node);
 	}
 

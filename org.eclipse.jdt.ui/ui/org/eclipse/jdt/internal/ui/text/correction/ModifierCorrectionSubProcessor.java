@@ -81,6 +81,7 @@ import org.eclipse.jdt.internal.corext.util.Messages;
 
 import org.eclipse.jdt.ui.cleanup.CleanUpOptions;
 import org.eclipse.jdt.ui.text.java.IInvocationContext;
+import org.eclipse.jdt.ui.text.java.IProblemLocation;
 import org.eclipse.jdt.ui.text.java.correction.ASTRewriteCorrectionProposal;
 import org.eclipse.jdt.ui.text.java.correction.ICommandAccess;
 
@@ -98,7 +99,7 @@ public class ModifierCorrectionSubProcessor {
 	public static final int TO_NON_STATIC= 4;
 	public static final int TO_NON_FINAL= 5;
 
-	public static void addNonAccessibleReferenceProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals, int kind, int relevance) throws CoreException {
+	public static void addNonAccessibleReferenceProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals, int kind, int relevance) throws CoreException {
 		ICompilationUnit cu= context.getCompilationUnit();
 
 		ASTNode selectedNode= problem.getCoveringNode(context.getASTRoot());
@@ -198,7 +199,7 @@ public class ModifierCorrectionSubProcessor {
 					break;
 				case TO_NON_PRIVATE:
 					int visibility;
-					if (cu.getParent().getElementName().equals(typeBinding.getPackage().getName())) {
+					if (typeBinding != null && cu.getParent().getElementName().equals(typeBinding.getPackage().getName())) {
 						visibility= Modifier.NONE;
 						excludedModifiers= Modifier.PRIVATE;
 					} else {
@@ -217,7 +218,7 @@ public class ModifierCorrectionSubProcessor {
 				default:
 					throw new IllegalArgumentException("not supported"); //$NON-NLS-1$
 			}
-			ICompilationUnit targetCU= isLocalVar ? cu : ASTResolving.findCompilationUnitForBinding(cu, context.getASTRoot(), typeBinding.getTypeDeclaration());
+			ICompilationUnit targetCU= (typeBinding== null || isLocalVar) ? cu : ASTResolving.findCompilationUnitForBinding(cu, context.getASTRoot(), typeBinding.getTypeDeclaration());
 			if (targetCU != null) {
 				Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
 				proposals.add(new ModifierChangeCorrectionProposal(label, targetCU, bindingDecl, selectedNode, includedModifiers, excludedModifiers, relevance, image));
@@ -235,7 +236,7 @@ public class ModifierCorrectionSubProcessor {
 		}
 	}
 
-	public static void addChangeOverriddenModifierProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals, int kind) throws JavaModelException {
+	public static void addChangeOverriddenModifierProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals, int kind) throws JavaModelException {
 		ICompilationUnit cu= context.getCompilationUnit();
 
 		ASTNode selectedNode= problem.getCoveringNode(context.getASTRoot());
@@ -373,7 +374,7 @@ public class ModifierCorrectionSubProcessor {
 		}
 	}
 
-	public static void addNonFinalLocalProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+	public static void addNonFinalLocalProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 		ICompilationUnit cu= context.getCompilationUnit();
 
 		ASTNode selectedNode= problem.getCoveringNode(context.getASTRoot());
@@ -392,7 +393,7 @@ public class ModifierCorrectionSubProcessor {
 
 
 
-	public static void addRemoveInvalidModifiersProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals, int relevance) {
+	public static void addRemoveInvalidModifiersProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals, int relevance) {
 		ICompilationUnit cu= context.getCompilationUnit();
 
 		ASTNode selectedNode= problem.getCoveringNode(context.getASTRoot());
@@ -558,7 +559,7 @@ public class ModifierCorrectionSubProcessor {
 		return Modifier.PUBLIC;
 	}
 
-	public static void addAbstractMethodProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+	public static void addAbstractMethodProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 		ICompilationUnit cu= context.getCompilationUnit();
 
 		CompilationUnit astRoot= context.getASTRoot();
@@ -686,7 +687,7 @@ public class ModifierCorrectionSubProcessor {
 		proposals.add(proposal);
 	}
 
-	public static void addAbstractTypeProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+	public static void addAbstractTypeProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 		CompilationUnit astRoot= context.getASTRoot();
 
 		ASTNode selectedNode= problem.getCoveringNode(astRoot);
@@ -711,7 +712,7 @@ public class ModifierCorrectionSubProcessor {
 		addMakeTypeAbstractProposal(context, parentTypeDecl, proposals);
 	}
 
-	public static void addNativeMethodProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+	public static void addNativeMethodProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 		ICompilationUnit cu= context.getCompilationUnit();
 
 		CompilationUnit astRoot= context.getASTRoot();
@@ -766,7 +767,7 @@ public class ModifierCorrectionSubProcessor {
 
 	}
 
-	public static void addMethodRequiresBodyProposals(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+	public static void addMethodRequiresBodyProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 		ICompilationUnit cu= context.getCompilationUnit();
 		AST ast= context.getASTRoot().getAST();
 
@@ -818,7 +819,7 @@ public class ModifierCorrectionSubProcessor {
 	}
 
 
-	public static void addNeedToEmulateProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ModifierChangeCorrectionProposal> proposals) {
+	public static void addNeedToEmulateProposal(IInvocationContext context, IProblemLocation problem, Collection<ModifierChangeCorrectionProposal> proposals) {
 		ICompilationUnit cu= context.getCompilationUnit();
 
 		ASTNode selectedNode= problem.getCoveringNode(context.getASTRoot());
@@ -835,7 +836,7 @@ public class ModifierCorrectionSubProcessor {
 		}
 	}
 
-	public static void addOverrideAnnotationProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+	public static void addOverrideAnnotationProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 		IProposableFix fix= Java50FixCore.createAddOverrideAnnotationFix(context.getASTRoot(), problem);
 		if (fix != null) {
 			Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
@@ -848,7 +849,7 @@ public class ModifierCorrectionSubProcessor {
 		}
 	}
 
-	public static void addDeprecatedAnnotationProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+	public static void addDeprecatedAnnotationProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 		IProposableFix fix= Java50FixCore.createAddDeprectatedAnnotation(context.getASTRoot(), problem);
 		if (fix != null) {
 			Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
@@ -860,7 +861,7 @@ public class ModifierCorrectionSubProcessor {
 		}
 	}
 
-	public static void addOverridingDeprecatedMethodProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+	public static void addOverridingDeprecatedMethodProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 
 		ICompilationUnit cu= context.getCompilationUnit();
 
@@ -894,7 +895,7 @@ public class ModifierCorrectionSubProcessor {
 		proposals.add(proposal);
 	}
 
-	public static void removeOverrideAnnotationProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) throws CoreException {
+	public static void removeOverrideAnnotationProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) throws CoreException {
 		ICompilationUnit cu= context.getCompilationUnit();
 
 		ASTNode selectedNode= problem.getCoveringNode(context.getASTRoot());
@@ -916,15 +917,15 @@ public class ModifierCorrectionSubProcessor {
 	}
 
 
-	public static void addSynchronizedMethodProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+	public static void addSynchronizedMethodProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 		addAddMethodModifierProposal(context, problem, proposals, Modifier.SYNCHRONIZED, CorrectionMessages.ModifierCorrectionSubProcessor_addsynchronized_description);
 	}
 
-	public static void addStaticMethodProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+	public static void addStaticMethodProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 		addAddMethodModifierProposal(context, problem, proposals, Modifier.STATIC, CorrectionMessages.ModifierCorrectionSubProcessor_addstatic_description);
 	}
 
-	private static void addAddMethodModifierProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals, int modifier, String label) {
+	private static void addAddMethodModifierProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals, int modifier, String label) {
 		ICompilationUnit cu= context.getCompilationUnit();
 
 		ASTNode selectedNode= problem.getCoveringNode(context.getASTRoot());
@@ -940,7 +941,7 @@ public class ModifierCorrectionSubProcessor {
 		}
 	}
 
-	public static void addSealedMissingModifierProposal(IInvocationContext context, IProblemLocationCore problem, Collection<ICommandAccess> proposals) {
+	public static void addSealedMissingModifierProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 		if (proposals == null) {
 			return;
 		}

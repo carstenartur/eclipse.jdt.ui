@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2023 Fabrice TIERCELIN and others.
+ * Copyright (c) 2021, 2024 Fabrice TIERCELIN and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -74,7 +74,7 @@ import org.eclipse.jdt.internal.corext.util.NodeMatcher;
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
 
-import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
+import org.eclipse.jdt.ui.text.java.IProblemLocation;
 
 /**
  * A fix that replaces a plain comparator instance by a lambda expression passed to a <code>Comparator.comparing()</code> method:
@@ -483,12 +483,12 @@ public class ComparingOnCriteriaCleanUp extends AbstractMultiFix {
 	}
 
 	@Override
-	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocationCore problem) {
+	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocation problem) {
 		return false;
 	}
 
 	@Override
-	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocationCore[] problems) throws CoreException {
+	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocation[] problems) throws CoreException {
 		return null;
 	}
 
@@ -550,10 +550,15 @@ public class ComparingOnCriteriaCleanUp extends AbstractMultiFix {
 		}
 
 		private TypeMethodReference buildMethod(final ITypeBinding type, final MethodInvocation method, final ASTRewrite rewrite, final AST ast, final ImportRewrite importRewrite) {
-			String comparedClassNameText= importRewrite.addImport((type.getBound() != null && !type.isUpperbound()) ? type.getBound() : type.getErasure());
-
 			TypeMethodReference typeMethodRef= ast.newTypeMethodReference();
-			typeMethodRef.setType(ast.newSimpleType(ASTNodeFactory.newName(ast, comparedClassNameText)));
+			if (type.isWildcardType()) {
+				ITypeBinding bound= type.getBound();
+				Type boundType= importRewrite.addImport(bound, ast, importRewrite.getDefaultImportRewriteContext(), TypeLocation.TYPE_BOUND);
+				typeMethodRef.setType(boundType);
+			} else {
+				String comparedClassNameText= importRewrite.addImport(type.getErasure());
+				typeMethodRef.setType(ast.newSimpleType(ASTNodeFactory.newName(ast, comparedClassNameText)));
+			}
 			typeMethodRef.setName(ASTNodes.createMoveTarget(rewrite, method.getName()));
 			return typeMethodRef;
 		}

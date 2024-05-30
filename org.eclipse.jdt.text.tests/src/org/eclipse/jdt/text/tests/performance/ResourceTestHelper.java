@@ -36,6 +36,8 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.IncrementalProjectBuilder;
 import org.eclipse.core.resources.ResourcesPlugin;
 
+import org.eclipse.jdt.ui.tests.performance.FileTool;
+
 
 public class ResourceTestHelper {
 
@@ -92,13 +94,14 @@ public class ResourceTestHelper {
 	}
 
 	private static void delete(IFile file) throws CoreException {
-		CoreException x= null;
-		for (int i= 0; i < DELETE_MAX_RETRY; i++) {
+		for (int i= 0; ; i++) {
 			try {
 				file.delete(true, null);
 				return;
 			} catch (CoreException x0) {
-				x= x0;
+				if (i == DELETE_MAX_RETRY) {
+					throw x0;
+				}
 				try {
 					Thread.sleep(DELETE_RETRY_DELAY);
 				} catch (InterruptedException x1) {
@@ -106,7 +109,6 @@ public class ResourceTestHelper {
 				}
 			}
 		}
-		throw x;
 	}
 
 	public static void delete(String prefix, String suffix, int n) throws CoreException {

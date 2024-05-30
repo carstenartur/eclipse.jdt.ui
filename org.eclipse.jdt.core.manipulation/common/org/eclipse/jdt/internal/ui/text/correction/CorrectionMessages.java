@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2023 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -332,6 +332,7 @@ public final class CorrectionMessages extends NLS {
 	public static String QuickAssistProcessor_unwrap_synchronizedstatement;
 	public static String QuickAssistProcessor_split_case_labels;
 	public static String QuickAssistProcessor_splitdeclaration_description;
+	public static String QuickAssistProcessor_splittryresource_description;
 	public static String QuickAssistProcessor_joindeclaration_description;
 	public static String QuickAssistProcessor_add_inferred_lambda_parameter_types;
 	public static String QuickAssistProcessor_replace_var_with_inferred_lambda_parameter_types;
@@ -438,8 +439,12 @@ public final class CorrectionMessages extends NLS {
 	public static String UnresolvedElementsSubProcessor_change_to_static_import_description;
 	public static String ReorgCorrectionsSubProcessor_configure_buildpath_label;
 	public static String ReorgCorrectionsSubProcessor_configure_buildpath_description;
+	public static String QuickAssistProcessor_extract_anonymous_to_local_description;
+	public static String QuickAssistProcessor_extract_anonymous_to_local_preview;
 	public static String QuickAssistProcessor_extract_to_local_all_description;
+	public static String QuickAssistProcessor_extract_to_local_all_preview;
 	public static String QuickAssistProcessor_extract_to_local_description;
+	public static String QuickAssistProcessor_extract_to_local_preview;
 	public static String QuickAssistProcessor_extractmethod_description;
 	public static String QuickAssistProcessor_extractmethod_from_lambda_description;
 	public static String QuickAssistProcessor_move_exception_to_separate_catch_block;

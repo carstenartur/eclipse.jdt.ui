@@ -1118,7 +1118,7 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 	 * not its enclosing Java element.</li>
 	 * <li>If the selection spans one or more partitions of the document, then all
 	 * partitions covered by the selection are entirely formatted.</li>
-	 * <p>
+	 * </ul>
 	 * Partitions at the end of the selection are not completed, except for comments.
 	 *
 	 * @since 3.0
@@ -2289,14 +2289,15 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 
 		if (reference != null) {
 
-			StyledText  textWidget= null;
-
 			ISourceViewer sourceViewer= getSourceViewer();
-			if (sourceViewer != null)
-				textWidget= sourceViewer.getTextWidget();
-
-			if (textWidget == null)
+			if (sourceViewer == null) {
 				return;
+			}
+			StyledText textWidget= sourceViewer.getTextWidget();
+
+			if (textWidget == null) {
+				return;
+			}
 
 			try {
 				ISourceRange range= null;
@@ -3821,7 +3822,7 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 	 * Returns the cached selected range, which allows
 	 * to query it from a non-UI thread.
 	 * <p>
-	 * The result might be outdated if queried from a non-UI thread.</em></p>
+	 * The result might be outdated if queried from a non-UI thread.
 	 *
 	 * @return the caret offset in the master document
 	 * @see ITextViewer#getSelectedRange()
@@ -3882,7 +3883,9 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 				continue;
 
 			if (forward && p.offset == offset || !forward && p.offset + p.getLength() == offset + length) {// || p.includes(offset)) {
-				if (containingAnnotation == null || (forward && p.length >= containingAnnotationPosition.length || !forward && p.length >= containingAnnotationPosition.length)) {
+				if (containingAnnotation == null
+						|| (forward && containingAnnotationPosition != null && p.length >= containingAnnotationPosition.length
+							|| !forward && containingAnnotationPosition != null && p.length >= containingAnnotationPosition.length)) {
 					containingAnnotation= a;
 					containingAnnotationPosition= p;
 					currentAnnotation= p.length == length;
@@ -3895,7 +3898,7 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 					if (currentDistance < 0)
 						currentDistance= endOfDocument + currentDistance;
 
-					if (currentDistance < distance || currentDistance == distance && p.length < nextAnnotationPosition.length) {
+					if (currentDistance < distance || currentDistance == distance && nextAnnotationPosition != null && p.length < nextAnnotationPosition.length) {
 						distance= currentDistance;
 						nextAnnotation= a;
 						nextAnnotationPosition= p;
@@ -3905,7 +3908,7 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 					if (currentDistance < 0)
 						currentDistance= endOfDocument + currentDistance;
 
-					if (currentDistance < distance || currentDistance == distance && p.length < nextAnnotationPosition.length) {
+					if (currentDistance < distance || currentDistance == distance && nextAnnotationPosition != null && p.length < nextAnnotationPosition.length) {
 						distance= currentDistance;
 						nextAnnotation= a;
 						nextAnnotationPosition= p;

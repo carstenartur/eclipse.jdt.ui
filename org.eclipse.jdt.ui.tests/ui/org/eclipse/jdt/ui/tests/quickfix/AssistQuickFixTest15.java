@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2023 IBM Corporation and others.
+ * Copyright (c) 2021, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -15,6 +15,7 @@
 package org.eclipse.jdt.ui.tests.quickfix;
 
 import java.util.ArrayList;
+import java.util.Hashtable;
 
 import org.junit.After;
 import org.junit.Before;
@@ -27,6 +28,8 @@ import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IPackageFragmentRoot;
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
 
 import org.eclipse.jdt.internal.corext.fix.FixMessages;
 
@@ -34,6 +37,8 @@ import org.eclipse.jdt.ui.tests.core.rules.Java15ProjectTestSetup;
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 import org.eclipse.jdt.ui.text.java.IInvocationContext;
 import org.eclipse.jdt.ui.text.java.IJavaCompletionProposal;
+
+import org.eclipse.jdt.internal.ui.text.correction.CorrectionMessages;
 
 public class AssistQuickFixTest15 extends QuickFixTest {
 
@@ -63,14 +68,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
@@ -88,19 +94,19 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		assertNoErrors(ctx);
 		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
 
-		buf= new StringBuilder();
-		buf.append("package test;\n");
-		buf.append("public class Cls {\n");
-		buf.append("    public void foo() {\n");
-		buf.append("        // comment 1\n");
-		buf.append("        String x = \"\"\"\n");
-        buf.append("		\tpublic void foo() {\n");
-        buf.append("		\t    System.out.println(\"abc\");\n");
-        buf.append("		\t}\n");
-        buf.append("		\t\"\"\"; //$NON-NLS-1$ // comment 2\n");
-        buf.append("    }\n");
-		buf.append("}\n");
-		String expected= buf.toString();
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        // comment 1
+			        String x = \"""
+						public void foo() {
+						    System.out.println("abc");
+						}
+						\"""; //$NON-NLS-1$ // comment 2
+			    }
+			}
+			""";
 
 		assertProposalExists(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
 		assertExpectedExistInProposals(proposals, new String[] { expected });
@@ -113,14 +119,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
@@ -138,19 +145,19 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		assertNoErrors(ctx);
 		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
 
-		buf= new StringBuilder();
-		buf.append("package test;\n");
-		buf.append("public class Cls {\n");
-		buf.append("    public void foo() {\n");
-		buf.append("        // comment 1\n");
-		buf.append("        String x = \"\"\"\n");
-        buf.append("		\tpublic void foo() {\\s\n");
-        buf.append("		\t    System.out.println(\"abc\");\n");
-        buf.append("		\t}\n");
-        buf.append("		\t\"\"\"; // comment 2\n");
-        buf.append("    }\n");
-		buf.append("}\n");
-		String expected= buf.toString();
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        // comment 1
+			        String x = \"""
+						public void foo() {\\s
+						    System.out.println("abc");
+						}
+						\"""; // comment 2
+			    }
+			}
+			""";
 
 		assertProposalExists(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
 		assertExpectedExistInProposals(proposals, new String[] { expected });
@@ -163,14 +170,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
@@ -188,19 +196,19 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		assertNoErrors(ctx);
 		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
 
-		buf= new StringBuilder();
-		buf.append("package test;\n");
-		buf.append("public class Cls {\n");
-		buf.append("    public void foo() {\n");
-		buf.append("        // comment 1\n");
-		buf.append("        String x = \"\"\"\n");
-        buf.append("		\tpublic void foo() {\\s\n");
-        buf.append("		\t    System.out.println(\\\"\"\"abc\\\"\"\");\n");
-        buf.append("		\t}\n");
-        buf.append("		\t\"\"\"; // comment 2\n");
-        buf.append("    }\n");
-		buf.append("}\n");
-		String expected= buf.toString();
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        // comment 1
+			        String x = \"""
+						public void foo() {\\s
+						    System.out.println(\\\"""abc\\\""");
+						}
+						\"""; // comment 2
+			    }
+			}
+			""";
 
 		assertProposalExists(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
 		assertExpectedExistInProposals(proposals, new String[] { expected });
@@ -213,14 +221,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
@@ -238,18 +247,18 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		assertNoErrors(ctx);
 		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
 
-		buf= new StringBuilder();
-		buf.append("package test;\n");
-		buf.append("public class Cls {\n");
-		buf.append("    public void foo() {\n");
-		buf.append("        // comment 1\n");
-		buf.append("        String x = \"\"\"\n");
-        buf.append("		\tabcdef\\\n");
-        buf.append("		\tghijkl\\\"\"\"123\\\"\"\"\\\n");
-        buf.append("		\tmnop\"\"\";\n");
-        buf.append("    }\n");
-		buf.append("}\n");
-		String expected= buf.toString();
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        // comment 1
+			        String x = \"""
+						abcdef\\
+						ghijkl\\\"""123\\\"""\\
+						mnop\""";
+			    }
+			}
+			""";
 
 		assertProposalExists(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
 		assertExpectedExistInProposals(proposals, new String[] { expected });
@@ -262,14 +271,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
@@ -293,26 +303,26 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		assertNoErrors(ctx);
 		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
 
-		buf= new StringBuilder();
-		buf.append("package test;\n");
-		buf.append("public class Cls {\n");
-		buf.append("    public void foo() {\n");
-		buf.append("        // comment 1\n");
-		buf.append("        String str = \"\"\"\n");
-		buf.append("		\tintro string\n");
-		buf.append("		\tpublic void foo() {\n");
-		buf.append("		\t    return null;\n");
-		buf.append("		\t}\n");
-		buf.append("		\t\n");
-		buf.append("		\t\"\"\";\n");
-		buf.append("        System.out.println(str);\n");
-		buf.append("        System.out.println(str + \"abc\");\n");
-		buf.append("        // comment 2\n");
-		buf.append("        StringBuffer buf = new StringBuffer(\"intro string 2\\n\");\n");
-		buf.append("        buf.append(\"some string\\n\");\n");
-		buf.append("    }\n");
-		buf.append("}\n");
-		String expected= buf.toString();
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        // comment 1
+			        String str = \"""
+						intro string
+						public void foo() {
+						    return null;
+						}
+					\t
+						\""";
+			        System.out.println(str);
+			        System.out.println(str + "abc");
+			        // comment 2
+			        StringBuffer buf = new StringBuffer("intro string 2\\n");
+			        buf.append("some string\\n");
+			    }
+			}
+			""";
 
 		assertProposalExists(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
 		assertExpectedExistInProposals(proposals, new String[] { expected });
@@ -325,14 +335,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
@@ -353,21 +364,21 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		assertNoErrors(ctx);
 		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
 
-		buf= new StringBuilder();
-		buf.append("package test;\n");
-		buf.append("public class Cls {\n");
-		buf.append("    public void foo() {\n");
-		buf.append("        // comment 1\n");
-		buf.append("        String k = \"\"\"\n");
-		buf.append("		\tpublic void foo() {\n");
-		buf.append("		\t    return null;\n");
-		buf.append("		\t}\n");
-		buf.append("		\t\n");
-		buf.append("		\t\"\"\";\n");
-		buf.append("        \n");
-		buf.append("    }\n");
-		buf.append("}\n");
-		String expected= buf.toString();
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        // comment 1
+			        String k = \"""
+						public void foo() {
+						    return null;
+						}
+					\t
+						\""";
+			       \s
+			    }
+			}
+			""";
 
 		assertProposalExists(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
 		assertExpectedExistInProposals(proposals, new String[] { expected });
@@ -380,14 +391,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
@@ -408,22 +420,22 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		assertNoErrors(ctx);
 		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
 
-		buf= new StringBuilder();
-		buf.append("package test;\n");
-		buf.append("public class Cls {\n");
-		buf.append("    public void foo() {\n");
-		buf.append("        String str = \"\"\"\n");
-		buf.append("		\tpublic void foo() {\n");
-		buf.append("		\t    return null;\n");
-		buf.append("		\t}\n");
-		buf.append("		\t\n");
-		buf.append("		\t\"\"\"; //$NON-NLS-1$\n");
-		buf.append("        // comment 1\n");
-		buf.append("        String k = str;\n");
-		buf.append("        \n");
-		buf.append("    }\n");
-		buf.append("}\n");
-		String expected= buf.toString();
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        String str = \"""
+						public void foo() {
+						    return null;
+						}
+					\t
+						\"""; //$NON-NLS-1$
+			        // comment 1
+			        String k = str;
+			       \s
+			    }
+			}
+			""";
 
 		assertProposalExists(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
 		assertExpectedExistInProposals(proposals, new String[] { expected });
@@ -436,14 +448,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
@@ -464,22 +477,178 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		assertNoErrors(ctx);
 		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
 
-		buf= new StringBuilder();
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        String str = \"""
+						public void foo() {
+						    return null;
+						}
+					\t
+						\"""; //$NON-NLS-1$
+			        // comment 1
+			        String k = str;
+			       \s
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToTextBlock9() throws Exception { //https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/1111
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
-		buf.append("        String str = \"\"\"\n");
-		buf.append("		\tpublic void foo() {\n");
-		buf.append("		\t    return null;\n");
-		buf.append("		\t}\n");
-		buf.append("		\t\n");
-		buf.append("		\t\"\"\"; //$NON-NLS-1$\n");
 		buf.append("        // comment 1\n");
-		buf.append("        String k = str;\n");
-		buf.append("        \n");
+		buf.append("        String x = \"foo \\n\" + \"bar  \" + \"baz\" + \"biz\";\n");
+        buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+
+		int index= buf.indexOf("x");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        // comment 1
+			        String x = \"""
+						foo\\s
+						bar  \\
+						baz\\
+						biz\""";
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToTextBlock10() throws Exception { //https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/1111
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		Hashtable<String, String> hashtable= JavaCore.getOptions();
+		hashtable.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
+		JavaCore.setOptions(hashtable);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo() {\n");
+		buf.append("        // comment 1\n");
+		buf.append("        String x = \"foo \\n\" + \"bar  \" + \"baz\" + \"biz\";\n");
+        buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+
+		int index= buf.indexOf("x");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        // comment 1
+			        String x = \"""
+			            foo\\s
+			            bar  \\
+			            baz\\
+			            biz\""";
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToTextBlock11() throws Exception { //https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/1240
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		Hashtable<String, String> hashtable= JavaCore.getOptions();
+		hashtable.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
+		JavaCore.setOptions(hashtable);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo() {\n");
+		buf.append("        // comment 1\n");
+		buf.append("        String x =\"\\tif (true) {\\n\" +\n");
+		buf.append("                \"\\t\\tstuff();\\n\" +\n");
+		buf.append("                \"\\t} else\\n\" +\n");
+		buf.append("                \"\\t\\tnoStuff\";\n");
+		buf.append("        System.out.println(x);\n");
 		buf.append("    }\n");
 		buf.append("}\n");
-		String expected= buf.toString();
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+
+		int index= buf.indexOf("x");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        // comment 1
+			        String x =\"""
+			            	if (true) {
+			            		stuff();
+			            	} else
+			            		noStuff\\
+			            \""";
+			        System.out.println(x);
+			    }
+			}
+			""";
 
 		assertProposalExists(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
 		assertExpectedExistInProposals(proposals, new String[] { expected });
@@ -492,14 +661,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
@@ -526,14 +696,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
@@ -561,14 +732,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo() {\n");
@@ -596,14 +768,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void foo(String a) {\n");
@@ -631,14 +804,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void noToString() {\n");
@@ -667,14 +841,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void extraAppend() {\n");
@@ -705,22 +880,23 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
-		buf.append("    public void combinedAppend() {\n");
+		buf.append("    public void combinedAppendWithNLS() {\n");
 		buf.append("        StringBuffer buf3= new StringBuffer();\n");
-		buf.append("        buf3.append(\"public void foo() {\\n\");\n");
-		buf.append("        buf3.append(\"    return null;\\n\");\n");
-		buf.append("        buf3.append(\"}\\n\");\n");
-		buf.append("        buf3.append(\"\\n\").append(\"extra append\\n\");\n");
+		buf.append("        buf3.append(\"public void foo() {\\n\"); //$NON-NLS-1$\n");
+		buf.append("        buf3.append(\"    return null;\\n\"); //$NON-NLS-1$\n");
+		buf.append("        buf3.append(\"}\\n\"); //$NON-NLS-1$\n");
+		buf.append("        buf3.append(\"\\n\").append(\"extra append\\n\"); //$NON-NLS-1$ //$NON-NLS-2$\n");
 		buf.append("        String k = buf3.toString();\n");
 		buf.append("        \n");
 		buf.append("    }\n");
@@ -742,14 +918,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void inconsistentNLSMarkers() {\n");
@@ -779,14 +956,15 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 
-		StringBuilder buf= new StringBuilder();
-		buf.append("module test {\n");
-		buf.append("}\n");
+		String str= """
+			module test {
+			}
+			""";
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit("module-info.java", buf.toString(), false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		buf= new StringBuilder();
+		StringBuilder buf= new StringBuilder();
 		buf.append("package test;\n");
 		buf.append("public class Cls {\n");
 		buf.append("    public void inconsistentNLS() {\n");
@@ -806,5 +984,606 @@ public class AssistQuickFixTest15 extends QuickFixTest {
 
 		assertProposalDoesNotExist(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
 	}
-}
 
+	@Test
+	public void testNoConcatToTextBlock10() throws Exception {
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void inconsistentNLS() {\n");
+		buf.append("        // comment 1\n");
+		buf.append("        String y = \"something\";\n");
+		buf.append("        String x = \"\" +\n");
+        buf.append("            \"public void foo() {\\n\" +\n");
+        buf.append("            \"    System.out.println(\\\"abc\\\");\\n\" +\n");
+        buf.append("                  y + \n");
+        buf.append("            \"}\\n\"; //$NON-NLS-1$ // comment 2\n");
+        buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+
+		int index= buf.indexOf("x");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 1);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		assertProposalDoesNotExist(proposals, FixMessages.StringConcatToTextBlockFix_convert_msg);
+	}
+
+	@Test
+	public void testConcatToMessageFormatTextBlock1() throws Exception {
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo() {\n");
+		buf.append("        String statement= \" * statement\\n\";\n");
+		buf.append("        // comment 1\n");
+		buf.append("        String copyright=\n");
+		buf.append("                \"/***********\\n\" +\n");
+		buf.append("                \" * simple {} \\n\" +\n");
+		buf.append("                \" * copyright\\n\" +\n");
+		buf.append("                statement +\n");
+		buf.append("                \" * notice {0}\\n\" +\n");
+		buf.append("                \"***********/\\n\"; // comment 2\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+		int index= buf.indexOf("simple");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			
+			import java.text.MessageFormat;
+			
+			public class Cls {
+			    public void foo() {
+			        String statement= " * statement\\n";
+			        // comment 1
+			        String copyright=
+			                MessageFormat.format(\"""
+					                /***********
+					                 * simple '{}'\\s
+					                 * copyright
+					                {0}\\
+					                 * notice '{'0'}'
+					                ***********/
+					                \""", statement); // comment 2
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, CorrectionMessages.QuickAssistProcessor_convert_to_message_format);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToMessageFormatTextBlock2() throws Exception {
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo() {\n");
+		buf.append("        String statement= \" * statement\\n\";\n");
+		buf.append("        // comment 1\n");
+		buf.append("        String copyright=\n");
+		buf.append("                \"/***********\\n\" + //$NON-NLS-1$\n");
+		buf.append("                \" * simple   \\n\" + //$NON-NLS-1$\n");
+		buf.append("                statement +\n");
+		buf.append("                \" * copyright\\n\"; //$NON-NLS-1$\n");
+		buf.append("        System.out.println(copyright);\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+		int index= buf.indexOf("simple");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			
+			import java.text.MessageFormat;
+			
+			public class Cls {
+			    public void foo() {
+			        String statement= " * statement\\n";
+			        // comment 1
+			        String copyright=
+			                MessageFormat.format(\"""
+					                /***********
+					                 * simple  \\s
+					                {0}\\
+					                 * copyright
+					                \""", statement); //$NON-NLS-1$
+			        System.out.println(copyright);
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, CorrectionMessages.QuickAssistProcessor_convert_to_message_format);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToMessageFormatTextBlock3() throws Exception {
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo() {\n");
+		buf.append("        String statement= \" * statement\\n\";\n");
+		buf.append("        // comment 1\n");
+		buf.append("        String copyright=\n");
+		buf.append("                \"/***********\\n\" + //$NON-NLS-1$\n");
+		buf.append("                \" * simple   \\n\" + //$NON-NLS-1$\n");
+		buf.append("                \" * copyright\\n\" + //$NON-NLS-1$\n");
+		buf.append("                statement;\n");
+		buf.append("        System.out.println(copyright);\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+		int index= buf.indexOf("simple");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			
+			import java.text.MessageFormat;
+			
+			public class Cls {
+			    public void foo() {
+			        String statement= " * statement\\n";
+			        // comment 1
+					        String copyright=
+					                MessageFormat.format(\"""
+					                /***********
+					                 * simple  \\s
+					                 * copyright
+					                {0}\""", statement); //$NON-NLS-1$
+			        System.out.println(copyright);
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, CorrectionMessages.QuickAssistProcessor_convert_to_message_format);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToMessageFormatTextBlock4() throws Exception {
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo() {\n");
+		buf.append("        String statement= \" * statement\\n\";\n");
+		buf.append("        // comment 1\n");
+		buf.append("        String copyright=\n");
+		buf.append("                \"/***********\\n\" + //$NON-NLS-1$\n");
+		buf.append("                \" * simple   \\n\" + //$NON-NLS-1$\n");
+		buf.append("                \" * copyright\\n\" + //$NON-NLS-1$\n");
+		buf.append("                statement + \" * notice\\n\" + \"***********/\\n\"; //comment 2 //$NON-NLS-1$ //$NON-NLS-2$\n");
+		buf.append("        System.out.println(copyright);\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+		int index= buf.indexOf("simple");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			
+			import java.text.MessageFormat;
+			
+			public class Cls {
+			    public void foo() {
+			        String statement= " * statement\\n";
+			        // comment 1
+					        String copyright=
+					                MessageFormat.format(\"""
+					                /***********
+					                 * simple  \\s
+					                 * copyright
+					                {0}\\
+					                 * notice
+					                ***********/
+					                \""", statement); //comment 2 //$NON-NLS-1$
+			        System.out.println(copyright);
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, CorrectionMessages.QuickAssistProcessor_convert_to_message_format);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToMessageFormatTextBlock5() throws Exception {
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo(String name, String id) {\n");
+		buf.append("        String title = \"Name: \" + name + \" ID: \" + id;\n");
+		buf.append("        System.out.println(title);\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+		int index= buf.indexOf("title");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			
+			import java.text.MessageFormat;
+			
+			public class Cls {
+			    public void foo(String name, String id) {
+			        String title = MessageFormat.format("Name: {0} ID: {1}", name, id);
+			        System.out.println(title);
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, CorrectionMessages.QuickAssistProcessor_convert_to_string_format);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToStringFormatTextBlock1() throws Exception {
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo() {\n");
+		buf.append("        String statement= \" * statement\\n\";\n");
+		buf.append("        // comment 1\n");
+		buf.append("        String copyright=\n");
+		buf.append("                \"/***********\\n\" +\n");
+		buf.append("                \" * simple   \\n\" +\n");
+		buf.append("                \" * copyright %\\n\" +\n");
+		buf.append("                statement +\n");
+		buf.append("                \" * notice\\n\" +\n");
+		buf.append("                \"***********/\\n\"; // comment 2\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+		int index= buf.indexOf("simple");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        String statement= " * statement\\n";
+			        // comment 1
+			        String copyright=
+			                String.format(\"""
+					                /***********
+					                 * simple  \\s
+					                 * copyright %%
+					                %s\\
+					                 * notice
+					                ***********/
+					                \""", statement); // comment 2
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, CorrectionMessages.QuickAssistProcessor_convert_to_string_format);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToStringFormatTextBlock2() throws Exception {
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo() {\n");
+		buf.append("        String statement= \" * statement\\n\";\n");
+		buf.append("        // comment 1\n");
+		buf.append("        String copyright=\n");
+		buf.append("                \"/***********\\n\" + //$NON-NLS-1$\n");
+		buf.append("                \" * simple   \\n\" + //$NON-NLS-1$\n");
+		buf.append("                statement +\n");
+		buf.append("                \" * copyright\\n\"; //$NON-NLS-1$\n");
+		buf.append("        System.out.println(copyright);\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+		int index= buf.indexOf("simple");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        String statement= " * statement\\n";
+			        // comment 1
+			        String copyright=
+			                String.format(\"""
+					                /***********
+					                 * simple  \\s
+					                %s\\
+					                 * copyright
+					                \""", statement); //$NON-NLS-1$
+			        System.out.println(copyright);
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, CorrectionMessages.QuickAssistProcessor_convert_to_string_format);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToStringFormatTextBlock3() throws Exception {
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo() {\n");
+		buf.append("        String statement= \" * statement\\n\";\n");
+		buf.append("        // comment 1\n");
+		buf.append("        String copyright=\n");
+		buf.append("                \"/***********\\n\" + //$NON-NLS-1$\n");
+		buf.append("                \" * simple   \\n\" + //$NON-NLS-1$\n");
+		buf.append("                \" * copyright\\n\" + //$NON-NLS-1$\n");
+		buf.append("                statement;\n");
+		buf.append("        System.out.println(copyright);\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+		int index= buf.indexOf("simple");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        String statement= " * statement\\n";
+			        // comment 1
+					        String copyright=
+					                String.format(\"""
+					                /***********
+					                 * simple  \\s
+					                 * copyright
+					                %s\""", statement); //$NON-NLS-1$
+			        System.out.println(copyright);
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, CorrectionMessages.QuickAssistProcessor_convert_to_string_format);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToStringFormatTextBlock4() throws Exception {
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo() {\n");
+		buf.append("        String statement= \" * statement\\n\";\n");
+		buf.append("        // comment 1\n");
+		buf.append("        String copyright=\n");
+		buf.append("                \"/***********\\n\" + //$NON-NLS-1$\n");
+		buf.append("                \" * simple   \\n\" + //$NON-NLS-1$\n");
+		buf.append("                \" * copyright\\n\" + //$NON-NLS-1$\n");
+		buf.append("                statement + \" * notice\\n\" + \"***********/\\n\"; //comment 2 //$NON-NLS-1$ //$NON-NLS-2$\n");
+		buf.append("        System.out.println(copyright);\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+		int index= buf.indexOf("simple");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo() {
+			        String statement= " * statement\\n";
+			        // comment 1
+					        String copyright=
+					                String.format(\"""
+					                /***********
+					                 * simple  \\s
+					                 * copyright
+					                %s\\
+					                 * notice
+					                ***********/
+					                \""", statement); //comment 2 //$NON-NLS-1$
+			        System.out.println(copyright);
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, CorrectionMessages.QuickAssistProcessor_convert_to_string_format);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testConcatToStringFormatTextBlock5() throws Exception {
+		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
+		fJProject1.setRawClasspath(projectSetup.getDefaultClasspath(), null);
+		JavaProjectHelper.set15CompilerOptions(fJProject1, false);
+		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
+
+		String str= """
+			module test {
+			}
+			""";
+		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
+		def.createCompilationUnit("module-info.java", str, false, null);
+
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
+		StringBuilder buf= new StringBuilder();
+		buf.append("package test;\n");
+		buf.append("public class Cls {\n");
+		buf.append("    public void foo(String name, String id) {\n");
+		buf.append("        String title = \"Name: \" + name + \" ID: \" + id;\n");
+		buf.append("        System.out.println(title);\n");
+		buf.append("    }\n");
+		buf.append("}\n");
+		ICompilationUnit cu= pack.createCompilationUnit("Cls.java", buf.toString(), false, null);
+		int index= buf.indexOf("title");
+		IInvocationContext ctx= getCorrectionContext(cu, index, 6);
+		assertNoErrors(ctx);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(ctx, false);
+
+		String expected= """
+			package test;
+			public class Cls {
+			    public void foo(String name, String id) {
+			        String title = String.format("Name: %s ID: %s", name, id);
+			        System.out.println(title);
+			    }
+			}
+			""";
+
+		assertProposalExists(proposals, CorrectionMessages.QuickAssistProcessor_convert_to_string_format);
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+}

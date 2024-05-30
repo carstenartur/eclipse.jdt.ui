@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2023 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -2367,6 +2367,11 @@ public final class ReorgPolicyFactory {
 					}
 					parent= parent.getParent();
 				}
+				if (element instanceof IMember member && member.getParent() instanceof IType parentType && parentType.isInterface()) {
+					if (!(destination instanceof IType destType) || !destType.isInterface()) {
+						return RefactoringStatus.createFatalErrorStatus(RefactoringCoreMessages.ReorgPolicyFactory_cannot_move_interface_member);
+					}
+				}
 			}
 
 			RefactoringStatus superStatus= super.verifyDestination(destination, location);
@@ -3751,8 +3756,7 @@ public final class ReorgPolicyFactory {
 			} else if (destinationContainer instanceof AnonymousClassDeclaration) {
 				listRewrite= targetRewriter.getASTRewrite().getListRewrite(destinationContainer, AnonymousClassDeclaration.BODY_DECLARATIONS_PROPERTY);
 			} else {
-				listRewrite= null;
-				Assert.isLegal(false);
+				throw new IllegalArgumentException(destinationContainer.getClass().getName());
 			}
 
 			if (getLocation() == IReorgDestination.LOCATION_ON) {

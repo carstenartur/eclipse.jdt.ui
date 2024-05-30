@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2021 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -269,6 +269,57 @@ public final class MoveInstanceMethodProcessor extends MoveProcessor implements 
 		 */
 		public final RefactoringStatus getStatus() {
 			return fStatus;
+		}
+	}
+
+	protected static class AccessAnalyzer extends ASTVisitor {
+		public boolean fAccessesPrivate;
+		public boolean fAccessesProtected;
+		public boolean fAccessesPackagePrivate;
+		@Override
+		public boolean visit(SimpleName node) {
+			IBinding binding= node.resolveBinding();
+			if (binding != null) {
+				int modifiers= binding.getModifiers();
+				boolean isPublic= Modifier.isPublic(modifiers);
+				boolean isPrivate= Modifier.isPrivate(modifiers);
+				boolean isProtected= Modifier.isProtected(modifiers);
+				if (!isPublic) {
+					if (binding instanceof IVariableBinding varBinding) {
+						ITypeBinding declClass= varBinding.getDeclaringClass();
+						if (!varBinding.isField() || declClass == null || declClass.isLocal()) {
+							return true;
+						}
+					} else if (binding instanceof IMethodBinding methodBinding) {
+						ITypeBinding declClass= methodBinding.getDeclaringClass();
+						if (declClass == null || declClass.isLocal()) {
+							return true;
+						}
+					} else {
+						return true;
+					}
+				}
+				fAccessesPrivate= fAccessesPrivate || isPrivate;
+				fAccessesProtected= fAccessesProtected || isProtected;
+				fAccessesPackagePrivate= fAccessesPackagePrivate || (!isPublic && !isPrivate && !isProtected);
+			}
+			return true;
+		}
+
+		public boolean accessesPrivate() {
+			return fAccessesPrivate;
+		}
+
+		public boolean accessesProtected() {
+			return fAccessesProtected;
+		}
+
+		public boolean accessesPackagePrivate() {
+			return fAccessesPackagePrivate;
+		}
+
+		public boolean onlyAccessesPublic() {
+			return !fAccessesPrivate && !fAccessesProtected && !fAccessesPackagePrivate;
 		}
 	}
 
@@ -1219,6 +1270,25 @@ public final class MoveInstanceMethodProcessor extends MoveProcessor implements 
 	}
 
 	/**
+	 * Checks whether a final method is being moved into an interface
+	 *
+	 * @param status
+	 *			the status of the check
+	 * @throws JavaModelException
+	 *             if the declared methods of the target type could not be
+	 *             retrieved
+	 */
+	protected void checkFinalMethod(final RefactoringStatus status) throws JavaModelException {
+		Assert.isNotNull(status);
+		if (fTargetType.isInterface()) {
+			if (Flags.isFinal(fMethod.getFlags())) {
+				status.merge(RefactoringStatus.createWarningStatus(Messages.format(RefactoringCoreMessages.MoveInstanceMethodProcessor_method_final_to_interface, new String[] { BasicElementLabels.getJavaElementName(fMethodName), BasicElementLabels.getJavaElementName(fTargetType.getElementName()) }), JavaStatusContext.create(fTargetType)));
+			}
+		}
+
+	}
+
+	/**
 	 * Checks whether a method with the proposed name already exists in the
 	 * target type.
 	 *
@@ -1317,6 +1387,7 @@ public final class MoveInstanceMethodProcessor extends MoveProcessor implements 
 									status.merge(RefactoringStatus.createFatalErrorStatus(RefactoringCoreMessages.MoveInstanceMethodProcessor_no_binary, JavaStatusContext.create(fMethod)));
 								checkConflictingTarget(Progress.subMonitor(monitor, 1), status);
 								checkConflictingMethod(Progress.subMonitor(monitor, 1), status);
+								checkFinalMethod(status);
 
 								Checks.addModifiedFilesToChecker(computeModifiedFiles(fMethod.getCompilationUnit(), type.getCompilationUnit()), context);
 
@@ -1449,8 +1520,10 @@ public final class MoveInstanceMethodProcessor extends MoveProcessor implements 
 				declaration.accept(finder);
 				if (!finder.getStatus().isOK())
 					status.merge(finder.getStatus());
+
 				monitor.worked(1);
 			}
+
 		} finally {
 			monitor.done();
 		}
@@ -1671,7 +1744,7 @@ public final class MoveInstanceMethodProcessor extends MoveProcessor implements 
 	 * @throws JavaModelException
 	 *             if an error occurs while accessing the target expression
 	 */
-	protected Expression createAdjustedTargetExpression(final IJavaElement enclosingElement, final Expression expression, final Map<IMember, IncomingMemberVisibilityAdjustment> adjustments, final ASTRewrite rewrite) throws JavaModelException {
+	protected Expression createAdjustedTargetExpression(final IJavaElement enclosingElement, final Expression expression, final Map<IMember, IncomingMemberVisibilityAdjustment> adjustments, final ASTRewrite rewrite, RefactoringStatus status) throws JavaModelException {
 		Assert.isNotNull(enclosingElement);
 		Assert.isNotNull(adjustments);
 		Assert.isNotNull(rewrite);
@@ -1697,8 +1770,12 @@ public final class MoveInstanceMethodProcessor extends MoveProcessor implements 
 						}
 					}
 				}
-				if (MemberVisibilityAdjustor.hasLowerVisibility(field.getFlags(), (keyword == null ? Modifier.NONE : keyword.toFlagValue())) && MemberVisibilityAdjustor.needsVisibilityAdjustments(field, keyword, adjustments))
+				if (MemberVisibilityAdjustor.hasLowerVisibility(field.getFlags(), (keyword == null ? Modifier.NONE : keyword.toFlagValue())) && MemberVisibilityAdjustor.needsVisibilityAdjustments(field, keyword, adjustments)) {
+					if (MemberVisibilityAdjustor.hasLowerVisibility(fTarget.getType().getModifiers(), keyword == null ? Modifier.NONE : keyword.toFlagValue())) {
+						status.merge(RefactoringStatus.createErrorStatus(Messages.format(RefactoringCoreMessages.MoveInstanceMethodProcessor_cannot_access_or_adjust, new String[] { BindingLabelProviderCore.getBindingLabel(fTarget.getType(), JavaElementLabelsCore.ALL_FULLY_QUALIFIED)}), JavaStatusContext.create(field)));
+					}
 					adjustments.put(field, new MemberVisibilityAdjustor.OutgoingMemberVisibilityAdjustment(field, keyword, RefactoringStatus.createWarningStatus(Messages.format(RefactoringCoreMessages.MemberVisibilityAdjustor_change_visibility_field_warning, new String[] { BindingLabelProviderCore.getBindingLabel(fTarget, JavaElementLabelsCore.ALL_FULLY_QUALIFIED), modifier }), JavaStatusContext.create(field))));
+				}
 			}
 		}
 		return null;
@@ -1951,6 +2028,10 @@ public final class MoveInstanceMethodProcessor extends MoveProcessor implements 
 				Expression access= null;
 				if (invocation.getExpression() != null) {
 					access= createInlinedTargetExpression(rewriter, (IJavaElement) match.getElement(), invocation.getExpression(), adjustments, status);
+					if (status.hasError()) {
+						result= false;
+						return result;
+					}
 					rewrite.set(invocation, MethodInvocation.EXPRESSION_PROPERTY, access, group);
 				} else
 					rewrite.set(invocation, MethodInvocation.EXPRESSION_PROPERTY, rewrite.getAST().newSimpleName(fTarget.getName()), group);
@@ -2035,8 +2116,8 @@ public final class MoveInstanceMethodProcessor extends MoveProcessor implements 
 		Assert.isNotNull(status);
 		Assert.isTrue(fTarget.isField());
 		final Expression expression= (Expression) ASTNode.copySubtree(fSourceRewrite.getASTRewrite().getAST(), original);
-		final Expression result= createAdjustedTargetExpression(enclosingElement, expression, adjustments, fSourceRewrite.getASTRewrite());
-		if (result == null) {
+		final Expression result= createAdjustedTargetExpression(enclosingElement, expression, adjustments, fSourceRewrite.getASTRewrite(), status);
+		if (result == null && !status.hasError()) {
 			final FieldAccess access= fSourceRewrite.getASTRewrite().getAST().newFieldAccess();
 			access.setExpression(expression);
 			access.setName(fSourceRewrite.getASTRewrite().getAST().newSimpleName(fTarget.getName()));
@@ -2321,7 +2402,7 @@ public final class MoveInstanceMethodProcessor extends MoveProcessor implements 
 					modifierRewrite.setModifiers(Modifier.NONE, Modifier.DEFAULT, null);
 				} else if (!JdtFlags.isDefaultMethod(binding) && getTargetType().isInterface()) {
 					// Remove visibility modifiers and add 'default'
-					modifierRewrite.setModifiers(Modifier.DEFAULT, Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE, null);
+					modifierRewrite.setModifiers(Modifier.DEFAULT, Modifier.PUBLIC | Modifier.PROTECTED | Modifier.PRIVATE | Modifier.FINAL, null);
 				} else if (MemberVisibilityAdjustor.hasLowerVisibility(binding.getModifiers(), same ? Modifier.NONE : keyword == null ? Modifier.NONE : keyword.toFlagValue())
 						&& MemberVisibilityAdjustor.needsVisibilityAdjustments(fMethod, keyword, adjustments)) {
 					final MemberVisibilityAdjustor.IncomingMemberVisibilityAdjustment adjustment= new MemberVisibilityAdjustor.IncomingMemberVisibilityAdjustment(fMethod, keyword, RefactoringStatus.createStatus(RefactoringStatus.WARNING, Messages.format(RefactoringCoreMessages.MemberVisibilityAdjustor_change_visibility_method_warning, new String[] { MemberVisibilityAdjustor.getLabel(fMethod), MemberVisibilityAdjustor.getLabel(keyword) }), JavaStatusContext.create(fMethod), null, RefactoringStatusEntry.NO_CODE, null));

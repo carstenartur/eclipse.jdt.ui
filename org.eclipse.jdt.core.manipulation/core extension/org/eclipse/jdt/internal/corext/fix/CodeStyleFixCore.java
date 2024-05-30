@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2023 IBM Corporation and others.
+ * Copyright (c) 2019, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -31,16 +31,19 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AbstractTypeDeclaration;
 import org.eclipse.jdt.core.dom.Assignment;
 import org.eclipse.jdt.core.dom.Block;
+import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.FieldAccess;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.Initializer;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
@@ -60,7 +63,6 @@ import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite.TypeLocation;
 import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
-import org.eclipse.jdt.core.manipulation.ICleanUpFixCore;
 
 import org.eclipse.jdt.internal.core.manipulation.StubUtility;
 import org.eclipse.jdt.internal.core.manipulation.dom.ASTResolving;
@@ -72,8 +74,10 @@ import org.eclipse.jdt.internal.corext.dom.ScopeAnalyzer;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 import org.eclipse.jdt.internal.corext.util.Messages;
 
-import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
-import org.eclipse.jdt.internal.ui.text.correction.ProblemLocationCore;
+import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
+import org.eclipse.jdt.ui.text.java.IProblemLocation;
+
+import org.eclipse.jdt.internal.ui.text.correction.ProblemLocation;
 
 /**
  * A fix which fixes code style issues.
@@ -265,6 +269,12 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 			if (hasConflict(expression.getStartPosition(), name, ScopeAnalyzer.VARIABLES | ScopeAnalyzer.CHECK_VISIBILITY))
 				return true;
 
+			ASTNode ancestor= ASTNodes.getFirstAncestorOrNull(node, LambdaExpression.class, BodyDeclaration.class);
+			if (ancestor instanceof LambdaExpression lambdaAncestor) {
+				if (ASTNodes.getFirstAncestorOrNull(lambdaAncestor, FieldDeclaration.class) != null) {
+					return false;
+				}
+			}
 			Name qualifier= ((ThisExpression) expression).getQualifier();
 			if (qualifier != null) {
 				ITypeBinding outerClass= (ITypeBinding) qualifier.resolveBinding();
@@ -529,7 +539,7 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		}
 	}
 
-	public static CompilationUnitRewriteOperationsFixCore[] createNonStaticAccessFixes(CompilationUnit compilationUnit, IProblemLocationCore problem) {
+	public static CompilationUnitRewriteOperationsFixCore[] createNonStaticAccessFixes(CompilationUnit compilationUnit, IProblemLocation problem) {
 		if (!isNonStaticAccess(problem))
 			return null;
 
@@ -548,7 +558,7 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		return new CompilationUnitRewriteOperationsFixCore[] {fix1};
 	}
 
-	public static CompilationUnitRewriteOperationsFixCore createAddFieldQualifierFix(CompilationUnit compilationUnit, IProblemLocationCore problem) {
+	public static CompilationUnitRewriteOperationsFixCore createAddFieldQualifierFix(CompilationUnit compilationUnit, IProblemLocation problem) {
 		if (IProblem.UnqualifiedFieldAccess != problem.getProblemId())
 			return null;
 
@@ -560,7 +570,7 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		return new CodeStyleFixCore(groupName, compilationUnit, new CompilationUnitRewriteOperation[] {operation});
 	}
 
-	public static CompilationUnitRewriteOperationsFixCore createIndirectAccessToStaticFix(CompilationUnit compilationUnit, IProblemLocationCore problem) {
+	public static CompilationUnitRewriteOperationsFixCore createIndirectAccessToStaticFix(CompilationUnit compilationUnit, IProblemLocation problem) {
 		if (!isIndirectStaticAccess(problem))
 			return null;
 
@@ -572,7 +582,7 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		return new CodeStyleFixCore(label, compilationUnit, new CompilationUnitRewriteOperation[] {operations[0]});
 	}
 
-	public static ICleanUpFixCore createCleanUp(CompilationUnit compilationUnit,
+	public static ICleanUpFix createCleanUp(CompilationUnit compilationUnit,
 			boolean addThisQualifier,
 			boolean changeNonStaticAccessToStatic,
 			boolean qualifyStaticFieldAccess,
@@ -592,9 +602,9 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		}
 
 		IProblem[] problems= compilationUnit.getProblems();
-		IProblemLocationCore[] locations= new IProblemLocationCore[problems.length];
+		IProblemLocation[] locations= new IProblemLocation[problems.length];
 		for (int i= 0; i < problems.length; i++) {
-			locations[i]= new ProblemLocationCore(problems[i]);
+			locations[i]= new ProblemLocation(problems[i]);
 		}
 		addToStaticAccessOperations(compilationUnit, locations, changeNonStaticAccessToStatic, changeIndirectStaticAccessToDirect, operations);
 
@@ -610,7 +620,7 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		return new CodeStyleFixCore(FixMessages.CodeStyleFix_change_name, compilationUnit, operationsArray);
 	}
 
-	public static ICleanUpFixCore createCleanUp(CompilationUnit compilationUnit, IProblemLocationCore[] problems,
+	public static ICleanUpFix createCleanUp(CompilationUnit compilationUnit, IProblemLocation[] problems,
 			boolean addThisQualifier,
 			boolean changeNonStaticAccessToStatic,
 			boolean changeIndirectStaticAccessToDirect) {
@@ -620,7 +630,7 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 
 		List<CompilationUnitRewriteOperation> operations= new ArrayList<>();
 		if (addThisQualifier) {
-			for (IProblemLocationCore problem : problems) {
+			for (IProblemLocation problem : problems) {
 				if (problem.getProblemId() == IProblem.UnqualifiedFieldAccess) {
 					AddThisQualifierOperation operation= getUnqualifiedFieldAccessResolveOperation(compilationUnit, problem);
 					if (operation != null)
@@ -638,13 +648,13 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		return new CodeStyleFixCore(FixMessages.CodeStyleFix_change_name, compilationUnit, operationsArray);
 	}
 
-	public static void addToStaticAccessOperations(CompilationUnit compilationUnit, IProblemLocationCore[] problems, boolean changeNonStaticAccessToStatic, boolean changeIndirectStaticAccessToDirect, List<CompilationUnitRewriteOperation> result) {
+	public static void addToStaticAccessOperations(CompilationUnit compilationUnit, IProblemLocation[] problems, boolean changeNonStaticAccessToStatic, boolean changeIndirectStaticAccessToDirect, List<CompilationUnitRewriteOperation> result) {
 		if (!changeNonStaticAccessToStatic && !changeIndirectStaticAccessToDirect)
 			return;
 
 		List<ToStaticAccessOperation> operations= new ArrayList<>();
 		HashMap<ASTNode, Block> createdBlocks= new HashMap<>();
-		for (IProblemLocationCore problem : problems) {
+		for (IProblemLocation problem : problems) {
 			boolean isNonStaticAccess= changeNonStaticAccessToStatic && isNonStaticAccess(problem);
 			boolean isIndirectStaticAccess= changeIndirectStaticAccessToDirect && isIndirectStaticAccess(problem);
 			if (isNonStaticAccess || isIndirectStaticAccess) {
@@ -678,18 +688,18 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		result.addAll(operations);
 	}
 
-	public static boolean isIndirectStaticAccess(IProblemLocationCore problem) {
+	public static boolean isIndirectStaticAccess(IProblemLocation problem) {
 		return (problem.getProblemId() == IProblem.IndirectAccessToStaticField
 				|| problem.getProblemId() == IProblem.IndirectAccessToStaticMethod);
 	}
 
-	public static boolean isNonStaticAccess(IProblemLocationCore problem) {
+	public static boolean isNonStaticAccess(IProblemLocation problem) {
 		return (problem.getProblemId() == IProblem.NonStaticAccessToStaticField
 				|| problem.getProblemId() == IProblem.NonStaticAccessToStaticMethod
 				|| problem.getProblemId() == IProblem.NonStaticOrAlienTypeReceiver);
 	}
 
-	public static ToStaticAccessOperation[] createToStaticAccessOperations(CompilationUnit astRoot, HashMap<ASTNode, Block> createdBlocks, IProblemLocationCore problem, boolean conservative) {
+	public static ToStaticAccessOperation[] createToStaticAccessOperations(CompilationUnit astRoot, HashMap<ASTNode, Block> createdBlocks, IProblemLocation problem, boolean conservative) {
 		ASTNode selectedNode= problem.getCoveringNode(astRoot);
 		if (selectedNode == null) {
 			return null;
@@ -764,7 +774,7 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		return null;
 	}
 
-	public static AddThisQualifierOperation getUnqualifiedFieldAccessResolveOperation(CompilationUnit compilationUnit, IProblemLocationCore problem) {
+	public static AddThisQualifierOperation getUnqualifiedFieldAccessResolveOperation(CompilationUnit compilationUnit, IProblemLocation problem) {
 		SimpleName name= getName(compilationUnit, problem);
 		if (name == null)
 			return null;
@@ -814,7 +824,7 @@ public class CodeStyleFixCore extends CompilationUnitRewriteOperationsFixCore {
 		}
 	}
 
-	private static SimpleName getName(CompilationUnit compilationUnit, IProblemLocationCore problem) {
+	private static SimpleName getName(CompilationUnit compilationUnit, IProblemLocation problem) {
 		ASTNode selectedNode= problem.getCoveringNode(compilationUnit);
 
 		while (selectedNode instanceof QualifiedName) {

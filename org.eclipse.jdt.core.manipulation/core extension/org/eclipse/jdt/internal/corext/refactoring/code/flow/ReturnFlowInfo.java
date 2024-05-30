@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2019 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -16,6 +16,7 @@ package org.eclipse.jdt.internal.corext.refactoring.code.flow;
 
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
+import org.eclipse.jdt.core.dom.YieldStatement;
 
 class ReturnFlowInfo extends FlowInfo {
 
@@ -23,7 +24,11 @@ class ReturnFlowInfo extends FlowInfo {
 		super(getReturnFlag(node));
 	}
 
-	public void merge(FlowInfo info, FlowContext context) {
+	public ReturnFlowInfo(@SuppressWarnings("unused") YieldStatement node) {
+		super(VALUE_RETURN);
+	}
+
+	public void merge(FlowInfo info) {
 		if (info == null)
 			return;
 

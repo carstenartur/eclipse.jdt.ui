@@ -93,6 +93,7 @@ import org.eclipse.jdt.core.WorkingCopyOwner;
 import org.eclipse.jdt.core.manipulation.JavaManipulation;
 
 import org.eclipse.jdt.internal.core.manipulation.CodeTemplateContextType;
+import org.eclipse.jdt.internal.core.manipulation.JavaManipulationPlugin;
 import org.eclipse.jdt.internal.corext.callhierarchy.MethodWrapper;
 import org.eclipse.jdt.internal.corext.callhierarchy.MethodWrapperDynamic;
 import org.eclipse.jdt.internal.corext.fix.CleanUpRegistry;
@@ -176,7 +177,7 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 	 * The code template context type registry for the java editor.
 	 * @since 3.0
 	 */
-	private ContextTypeRegistry fCodeTemplateContextTypeRegistry;
+	private volatile ContextTypeRegistry fCodeTemplateContextTypeRegistry;
 
 	/**
 	 * The template store for the java editor.
@@ -187,14 +188,7 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 	 * The coded template store for the java editor.
 	 * @since 3.0
 	 */
-	private TemplateStore fCodeTemplateStore;
-
-	/**
-	 * Default instance of the appearance type filters.
-	 * @since 3.0
-	 */
-	private volatile TypeFilter fTypeFilter;
-
+	private volatile TemplateStore fCodeTemplateStore;
 
 	private volatile WorkingCopyManager fWorkingCopyManager;
 
@@ -227,7 +221,7 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 	 * The combined preference store.
 	 * @since 3.0
 	 */
-	private IPreferenceStore fCombinedPreferenceStore;
+	private volatile IPreferenceStore fCombinedPreferenceStore;
 
 	/**
 	 * The extension point registry for the <code>org.eclipse.jdt.ui.javaFoldingStructureProvider</code>
@@ -247,7 +241,7 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 	 * Content assist history.
 	 * @since 3.2
 	 */
-	private ContentAssistHistory fContentAssistHistory;
+	private volatile ContentAssistHistory fContentAssistHistory;
 
 	/**
 	 * The save participant registry.
@@ -267,7 +261,7 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 	 */
 	private volatile ClasspathAttributeConfigurationDescriptors fClasspathAttributeConfigurationDescriptors;
 
-	private FormToolkit fDialogsFormToolkit;
+	private volatile FormToolkit fDialogsFormToolkit;
 
 	private volatile ImagesOnFileSystemRegistry fImagesOnFSRegistry;
 
@@ -498,11 +492,6 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 				fJavaTextTools= null;
 			}
 
-			if (fTypeFilter != null) {
-				fTypeFilter.dispose();
-				fTypeFilter= null;
-			}
-
 			if (fContentAssistHistory != null) {
 				ContentAssistHistory.store(fContentAssistHistory, getPluginPreferences(), PreferenceConstants.CODEASSIST_LRU_HISTORY);
 				fContentAssistHistory= null;
@@ -550,8 +539,6 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 			// must add here to guarantee that it is the first in the listener list
 
 			OpenTypeHistory.shutdown();
-
-			JavaManipulation.setPreferenceNodeId(null);
 		} finally {
 			super.stop(context);
 		}
@@ -699,20 +686,12 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 
 
 	public TypeFilter getTypeFilter() {
-		TypeFilter result= fTypeFilter;
-		if (result != null) { // First check (no locking)
-			return result;
-		}
-		synchronized(this) {
-			if (fTypeFilter == null) { // Second check (with locking)
-				fTypeFilter= new TypeFilter();
-			}
-			return fTypeFilter;
-		}
+		return JavaManipulationPlugin.getDefault().getTypeFilter();
 	}
 
 	public FormToolkit getDialogsFormToolkit() {
 		if (fDialogsFormToolkit == null) {
+			// Single threaded init as it only works in UI thread
 			FormColors colors= new FormColors(Display.getCurrent());
 			colors.setBackground(null);
 			colors.setForeground(null);
@@ -859,14 +838,22 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 	 */
 	public TemplateStore getTemplateStore() {
 		if (fTemplateStore == null) {
-			final IPreferenceStore store= getPreferenceStore();
-			fTemplateStore= new ContributionTemplateStore(getTemplateContextRegistry(), store, TEMPLATES_KEY);
-			try {
-				fTemplateStore.load();
-			} catch (IOException e) {
-				log(e);
+			synchronized (this) {
+				if (fTemplateStore != null) {
+					return fTemplateStore;
+				}
+
+				final IPreferenceStore store= getPreferenceStore();
+				ContributionTemplateStore templateStore = new ContributionTemplateStore(getTemplateContextRegistry(), store, TEMPLATES_KEY);
+				try {
+					templateStore.load();
+				} catch (IOException e) {
+					log(e);
+				}
+
+				fTemplateStore = templateStore;
+				templateStore.startListeningForPreferenceChanges();
 			}
-			fTemplateStore.startListeningForPreferenceChanges();
 		}
 		return fTemplateStore;
 	}
@@ -881,11 +868,20 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 	 */
 	public ContextTypeRegistry getCodeTemplateContextRegistry() {
 		if (fCodeTemplateContextTypeRegistry == null) {
-			fCodeTemplateContextTypeRegistry= new ContributionContextTypeRegistry();
-
-			CodeTemplateContextType.registerContextTypes(fCodeTemplateContextTypeRegistry);
+			synchronized (this) {
+				if (fCodeTemplateContextTypeRegistry != null) {
+					return fCodeTemplateContextTypeRegistry;
+				}
+			}
+			// Registry creation loads 3rd party extensions and shouldn't be executed with lock held
+			ContributionContextTypeRegistry codeTemplateContextTypeRegistry = new ContributionContextTypeRegistry();
+			synchronized (this) {
+				if (fCodeTemplateContextTypeRegistry == null) {
+					CodeTemplateContextType.registerContextTypes(codeTemplateContextTypeRegistry);
+					fCodeTemplateContextTypeRegistry = codeTemplateContextTypeRegistry;
+				}
+			}
 		}
-
 		return fCodeTemplateContextTypeRegistry;
 	}
 
@@ -897,17 +893,22 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 	 */
 	public TemplateStore getCodeTemplateStore() {
 		if (fCodeTemplateStore == null) {
-			IPreferenceStore store= getPreferenceStore();
-			fCodeTemplateStore= new ContributionTemplateStore(getCodeTemplateContextRegistry(), store, CODE_TEMPLATES_KEY);
+			synchronized (this) {
+				if (fCodeTemplateStore != null) {
+					return fCodeTemplateStore;
+				}
 
-			try {
-				fCodeTemplateStore.load();
-			} catch (IOException e) {
-				log(e);
+				IPreferenceStore store= getPreferenceStore();
+				ContributionTemplateStore templateStore = new ContributionTemplateStore(getCodeTemplateContextRegistry(), store, CODE_TEMPLATES_KEY);
+				try {
+					templateStore.load();
+				} catch (IOException e) {
+					log(e);
+				}
+
+				fCodeTemplateStore = templateStore;
+				templateStore.startListeningForPreferenceChanges();
 			}
-
-			fCodeTemplateStore.startListeningForPreferenceChanges();
-
 		}
 
 		return fCodeTemplateStore;
@@ -935,8 +936,21 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 	 */
 	public IPreferenceStore getCombinedPreferenceStore() {
 		if (fCombinedPreferenceStore == null) {
+			synchronized (this) {
+				if (fCombinedPreferenceStore != null) {
+					return fCombinedPreferenceStore;
+				}
+			}
+			
+			// Block below may init other bundles and shouldn't be executed with lock held
 			IPreferenceStore generalTextStore= EditorsUI.getPreferenceStore();
-			fCombinedPreferenceStore= new ChainedPreferenceStore(new IPreferenceStore[] { getPreferenceStore(), new PreferencesAdapter(getJavaCorePluginPreferences()), generalTextStore });
+			ChainedPreferenceStore store = new ChainedPreferenceStore(new IPreferenceStore[] { getPreferenceStore(), new PreferencesAdapter(getJavaCorePluginPreferences()), generalTextStore });
+			
+			synchronized (this) {
+				if (fCombinedPreferenceStore == null) {
+					fCombinedPreferenceStore = store;
+				}
+			}
 		}
 		return fCombinedPreferenceStore;
 	}
@@ -1014,13 +1028,19 @@ public class JavaPlugin extends AbstractUIPlugin implements DebugOptionsListener
 	 */
 	public ContentAssistHistory getContentAssistHistory() {
 		if (fContentAssistHistory == null) {
-			try {
-				fContentAssistHistory= ContentAssistHistory.load(getPluginPreferences(), PreferenceConstants.CODEASSIST_LRU_HISTORY);
-			} catch (CoreException x) {
-				log(x);
+			synchronized (this) {
+				if (fContentAssistHistory != null) {
+					return fContentAssistHistory;
+				}
+				try {
+					fContentAssistHistory= ContentAssistHistory.load(getPluginPreferences(), PreferenceConstants.CODEASSIST_LRU_HISTORY);
+				} catch (CoreException x) {
+					log(x);
+				}
+				if (fContentAssistHistory == null) {
+					fContentAssistHistory= new ContentAssistHistory();
+				}
 			}
-			if (fContentAssistHistory == null)
-				fContentAssistHistory= new ContentAssistHistory();
 		}
 
 		return fContentAssistHistory;

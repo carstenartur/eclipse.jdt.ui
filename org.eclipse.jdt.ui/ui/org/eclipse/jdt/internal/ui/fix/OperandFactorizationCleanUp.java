@@ -42,10 +42,10 @@ import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewr
 
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
-import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
+import org.eclipse.jdt.ui.text.java.IProblemLocation;
 
 /**
- * A fix that replaces (X && Y) || (X && Z) by (X && (Y || Z)):
+ * A fix that replaces {@code (X && Y) || (X && Z) by (X && (Y || Z))}:
  * <ul>
  * <li>The operators can be lazy or eager,</li>
  * <li>The factor operand must be passive and primitive,</li>
@@ -54,7 +54,7 @@ import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
  * </ul>
  *
  * Truth table:
- * <pre>
+ * <pre>{@code
    -------------------------------------------------------------------------------------------
    | a | b | c | (a && b) || (a && c) | a && (b || c) | (a || b) && (a || c) | a || (b && c) |
    | 0 | 0 | 0 |                    0 |             0 |                    0 |             0 |
@@ -66,7 +66,7 @@ import org.eclipse.jdt.internal.ui.text.correction.IProblemLocationCore;
    | 1 | 1 | 0 |                    1 |             1 |                    1 |             1 |
    | 1 | 1 | 1 |                    1 |             1 |                    1 |             1 |
    -------------------------------------------------------------------------------------------
-   </pre>
+   }</pre>
  */
 public class OperandFactorizationCleanUp extends AbstractMultiFix {
 	public OperandFactorizationCleanUp() {
@@ -197,12 +197,12 @@ public class OperandFactorizationCleanUp extends AbstractMultiFix {
 	}
 
 	@Override
-	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocationCore problem) {
+	public boolean canFix(final ICompilationUnit compilationUnit, final IProblemLocation problem) {
 		return false;
 	}
 
 	@Override
-	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocationCore[] problems) throws CoreException {
+	protected ICleanUpFix createFix(final CompilationUnit unit, final IProblemLocation[] problems) throws CoreException {
 		return null;
 	}
 

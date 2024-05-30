@@ -53,20 +53,21 @@ public class QuickFixTest15 extends QuickFixTest {
 
 
 		IPackageFragment def= fSourceFolder.createPackageFragment("", false, null);
-		def.createCompilationUnit(QuickFixTest14.MODULE_INFO_FILE, QuickFixTest14.MODULE_INFO_FILE_CONTENT, false, null);
+		def.createCompilationUnit(QuickFixTest14.MODULE_INFO_FILE, QuickFixTest.MODULE_INFO_FILE_CONTENT, false, null);
 
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);
-		String test= ""
-				+ "package test;\n"
-				+ "public class Cls1 {\n"
-				+ "	public static void main(String[] args) {\n"
-				+ "		String str= \"\"\"\n"
-				+ "					Hello\n"
-				+ "					World\n"
-				+ "					\"\"\";\n"
-				+ "		System.out.println(str);\n"
-				+ "	}\n"
-				+ "}\n";
+		String test= """
+			package test;
+			public class Cls1 {
+				public static void main(String[] args) {
+					String str= \"""
+								Hello
+								World
+								\""";
+					System.out.println(str);
+				}
+			}
+			""";
 		ICompilationUnit cu= pack.createCompilationUnit("Cls1.java", test, false, null);
 
 		CompilationUnit astRoot= getASTRoot(cu);
