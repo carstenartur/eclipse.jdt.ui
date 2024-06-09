@@ -1655,6 +1655,11 @@ public class ExtractMethodTests extends AbstractJunit4SelectionTestCase {
 		localsTest();
 	}
 
+	@Test
+	public void test579() throws Exception {
+		localsTest();
+	}
+
 	//---- Test expressions
 
 	@Test
@@ -2122,6 +2127,11 @@ public class ExtractMethodTests extends AbstractJunit4SelectionTestCase {
 
 	@Test
 	public void test769() throws Exception {
+		branchTest();
+	}
+
+	@Test
+	public void test770() throws Exception {
 		branchTest();
 	}
 

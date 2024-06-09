@@ -656,6 +656,58 @@ public class MoveInstanceMethodTests extends GenericRefactoringTest {
 		helper1(new String[] { "A" }, "A", 10, 17, 10, 18, FIELD, "b", true, true);
 	}
 
+	// Issue 1301
+	@Test
+	public void test71() throws Exception {
+		helper1(new String[] { "p1.A" }, "p1.A", 13, 17, 13, 18, FIELD, "b", true, true);
+	}
+
+	// Issue 1301
+	@Test
+	public void test72() throws Exception {
+		helper1(new String[] { "p1.A" }, "p1.A", 13, 17, 13, 18, FIELD, "b", true, true);
+	}
+
+	// Issue 1301
+	@Test
+	public void test73() throws Exception {
+		helper1(new String[] { "p1.A", "p1.B" }, "p1.A", 13, 17, 13, 18, FIELD, "b", true, true);
+	}
+
+	// Issue 1301
+	@Test
+	public void test74() throws Exception {
+		helper1(new String[] { "p1.A", "p1.B" }, "p1.A", 13, 17, 13, 18, FIELD, "b", true, true);
+	}
+
+	// Issue 1303
+	@Test
+	public void test75() throws Exception {
+		helper1(new String[] { "p1.A" }, "p1.A", 13, 17, 13, 18, FIELD, "b", true, true);
+	}
+
+	// Issue 1303
+	@Test
+	public void test76() throws Exception {
+		helper1(new String[] { "p1.A", "p1.B" }, "p1.A", 13, 17, 13, 18, FIELD, "b", true, true);
+	}
+
+	// Issue 1304
+	@Test
+	public void test77() throws Exception {
+		helper1(new String[] { "p1.A" }, "p1.A", 12, 17, 12, 18, FIELD, "b", true, true);
+	}
+
+	// Issue 1304
+	@Test
+	public void test78() throws Exception {
+		helper1(new String[] { "p1.A", "p1.B" }, "p1.A", 12, 17, 12, 18, FIELD, "b", true, true);
+	}
+
+	@Test
+	public void test79() throws Exception {
+		helper1(new String[] { "A" }, "A", 11, 17, 11, 18, FIELD, "b", true, true);
+	}
 	// Move mA1 to field fB, do not inline delegator
 	@Test
 	public void test3() throws Exception {
