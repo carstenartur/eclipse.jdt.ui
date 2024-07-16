@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2022 Red Hat Inc. and others.
+ * Copyright (c) 2020, 2024 Red Hat Inc. and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -95,6 +95,7 @@ public class CleanUpTest12 extends CleanUpTestCase {
 			        } else if (i2 == 2) {
 			            i = 150;
 			        }
+			        // extra comment
 			    }
 
 			    public void replaceIfWithSwitchUsingConstants(int date) {
@@ -570,6 +571,7 @@ public class CleanUpTest12 extends CleanUpTestCase {
 			                }
 			                break;
 			        }
+			        // extra comment
 			    }
 
 			    public void replaceIfWithSwitchUsingConstants(int date) {
