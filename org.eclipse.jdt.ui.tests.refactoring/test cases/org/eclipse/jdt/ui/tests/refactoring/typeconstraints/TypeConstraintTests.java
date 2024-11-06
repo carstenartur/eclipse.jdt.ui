@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.typeconstraints;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IPackageFragment;
@@ -75,7 +75,7 @@ public class TypeConstraintTests extends GenericRefactoringTest {
 		ConstraintCollector collector= getCollector();
 		cuNode.accept(collector);
 		ITypeConstraint[] constraints= collector.getConstraints();
-		assertEquals(Arrays.asList(constraints).toString(), number, constraints.length);
+		assertEquals(number, constraints.length, Arrays.asList(constraints).toString());
 	}
 
 	@Test
@@ -119,9 +119,9 @@ public class TypeConstraintTests extends GenericRefactoringTest {
 		ITypeConstraint[] constraints= collector.getConstraints();
 
 		List<String> externals= allToStrings(constraints);
-		assertEquals("length", constraintStrings.length, constraints.length);
+		assertEquals(constraintStrings.length, constraints.length, "length");
 		for (String constraintString : constraintStrings) {
-			assertTrue("missing constraint:" + constraintString, externals.remove(constraintString));
+			assertTrue(externals.remove(constraintString), "missing constraint:" + constraintString);
 		}
 	}
 
@@ -282,8 +282,8 @@ public class TypeConstraintTests extends GenericRefactoringTest {
 	@Test
 	public void testTypeTuplesuniqueHashcode() {
 		TypeEnvironment te=new TypeEnvironment();
-		assertNotEquals("HashCode of two different TypeTuples should be different",
-				new TypeTuple(te.INT, te.BOOLEAN).hashCode(),
-				new TypeTuple(te.INT, te.DOUBLE).hashCode());
+		assertNotEquals(new TypeTuple(te.INT, te.BOOLEAN).hashCode(),
+				new TypeTuple(te.INT, te.DOUBLE).hashCode(),
+				"HashCode of two different TypeTuples should be different");
 	}
 }

@@ -13,17 +13,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -74,12 +74,12 @@ import org.eclipse.jdt.internal.ui.preferences.JavaPreferencesSettings;
 public class BinaryReferencesTests {
 	private static final boolean BUG_226660= true;
 
-	@Rule
+	@RegisterExtension
 	public BinaryReferencesTestSetup fgTestSetup= new BinaryReferencesTestSetup();
 
 	private static void assertContainsMatches(List<SearchMatch> matches, String[] expectedHandleIdentifiers) {
 		int matchCount= matches.size();
-		assertTrue("match count too small: " + matchCount, matchCount >= expectedHandleIdentifiers.length);
+		assertTrue(matchCount >= expectedHandleIdentifiers.length, "match count too small: " + matchCount);
 
 		List<String> actual= new ArrayList<>();
 		for (int i= 0; i < matchCount; i++) {
@@ -90,7 +90,7 @@ public class BinaryReferencesTests {
 		List<String> expected= new ArrayList<>(Arrays.asList(expectedHandleIdentifiers));
 		expected.removeAll(actual);
 		if (!expected.isEmpty())
-			assertEquals("not all expected matches", expected.toString(), actual.toString());
+			assertEquals(expected.toString(), actual.toString(), "not all expected matches");
 	}
 
 	private IType findType(String typeName) throws JavaModelException {
@@ -470,7 +470,7 @@ public class BinaryReferencesTests {
 		MoveInstanceMethodProcessor processor= new MoveInstanceMethodProcessor(method, JavaPreferencesSettings.getCodeGenerationSettings(method.getJavaProject()));
 		Refactoring ref= new MoveRefactoring(processor);
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful", preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful");
 
 		MoveInstanceMethodTests.chooseNewTarget(processor, MoveInstanceMethodTests.PARAMETER, "c");
 		List<SearchMatch> matches= doCheckConditions(ref);

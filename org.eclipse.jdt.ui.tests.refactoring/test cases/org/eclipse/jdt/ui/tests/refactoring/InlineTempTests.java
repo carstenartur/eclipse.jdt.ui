@@ -16,12 +16,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 
@@ -80,12 +80,12 @@ public class InlineTempTests extends GenericRefactoringTest {
 		if (ref.checkIfTempSelected().hasFatalError())
 			ref= null;
 		RefactoringStatus result= performRefactoring(ref);
-		assertNull("precondition was supposed to pass", result);
+		assertNull(result, "precondition was supposed to pass");
 
 		IPackageFragment pack= (IPackageFragment)cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		assertEqualLines("incorrect inlining", getFileContents(getTestFileName(true, false)), newcu.getSource());
 	}
 
@@ -106,7 +106,7 @@ public class InlineTempTests extends GenericRefactoringTest {
 			ref= null;
 		if (ref != null){
 			RefactoringStatus result= performRefactoring(ref);
-			assertNotNull("precondition was supposed to fail", result);
+			assertNotNull(result, "precondition was supposed to fail");
 		}
 	}
 
@@ -499,13 +499,13 @@ public class InlineTempTests extends GenericRefactoringTest {
 
 	//------
 
-	@Ignore("compile errors are ok now")
+	@Disabled("compile errors are ok now")
 	@Test
 	public void testFail0() throws Exception{
 		helper2();
 	}
 
-	@Ignore("compile errors are ok now")
+	@Disabled("compile errors are ok now")
 	@Test
 	public void testFail1() throws Exception{
 			helper2();
@@ -564,26 +564,26 @@ public class InlineTempTests extends GenericRefactoringTest {
 		helper2(8, 14, 8, 18);
 	}
 
-	@Ignore("compile errors are ok now")
+	@Disabled("compile errors are ok now")
 	@Test
 	public void testFail12() throws Exception{
 		//test for 19851
 		helper2(10, 16, 10, 19);
 	}
 
-	@Ignore("12106")
+	@Disabled("12106")
 	@Test
 	public void testFail13() throws Exception{
 		helper2(4, 18, 4, 19);
 	}
 
-	@Ignore("https://bugs.eclipse.org/bugs/show_bug.cgi?id=93850")
+	@Disabled("https://bugs.eclipse.org/bugs/show_bug.cgi?id=93850")
 	@Test
 	public void testFail14() throws Exception {
 		helper2(5, 17, 5, 18);
 	}
 
-	@Ignore("https://bugs.eclipse.org/bugs/show_bug.cgi?id=367536")
+	@Disabled("https://bugs.eclipse.org/bugs/show_bug.cgi?id=367536")
 	public void testFail15() throws Exception {
 		helper2(12, 13, 12, 14);
 	}

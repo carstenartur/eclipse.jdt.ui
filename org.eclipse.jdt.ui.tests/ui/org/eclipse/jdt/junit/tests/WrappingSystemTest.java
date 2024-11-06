@@ -13,18 +13,18 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Iterator;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.junit.JUnitCore;
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -89,45 +89,45 @@ public class WrappingSystemTest implements ILaunchesListener2 {
 		fLaunchHasTerminated = true;
 	}
 
-	@Ignore("java.lang.AssertionError: Timeout waiting for 2 lines in table. Present: 0 items.\r\n" +
+	@Disabled("java.lang.AssertionError: Timeout waiting for 2 lines in table. Present: 0 items.\r\n" +
 			"The 2nd vm has terminated.")
 	@Test
 	public void test00characterizeSecondLine() throws Exception {
 		runTests("\\n", 1000, 2, false);
 		String text = getText(1);
-		assertTrue(text, text.startsWith("Numbers"));
+		assertTrue(text.startsWith("Numbers"), text);
 	}
 
-	@Ignore("java.lang.AssertionError: Timeout waiting for 2 lines in table. Present: 0 items.\r\n" +
+	@Disabled("java.lang.AssertionError: Timeout waiting for 2 lines in table. Present: 0 items.\r\n" +
 			"The 2nd vm has terminated.")
 	@Test
 	public void test01shouldWrapSecondLine() throws Exception {
 		runTests("\\n", 1000, 2, false);
 		String text = getText(1);
-		assertTrue(text, text.length() < 300);
+		assertTrue(text.length() < 300, text);
 	}
 
-	@Ignore("java.lang.AssertionError: Timeout waiting for 3 lines in table. Present: 0 items.\r\n" +
+	@Disabled("java.lang.AssertionError: Timeout waiting for 3 lines in table. Present: 0 items.\r\n" +
 			"The 2nd vm has terminated.")
 	@Test
 	public void test02characterizeImages() throws Exception {
 		runTests("\\n", 0, 3, true);
-		assertEquals(getFailureTrace().getTrace(), getFailureDisplay().getExceptionIcon(), getImage(0));
-		assertNull(getFailureTrace().getTrace(), getImage(1));
-		assertEquals(getFailureTrace().getTrace(), getFailureDisplay().getStackIcon(), getImage(2));
+		assertEquals(getFailureDisplay().getExceptionIcon(), getImage(0), getFailureTrace().getTrace());
+		assertNull(getImage(1), getFailureTrace().getTrace());
+		assertEquals(getFailureDisplay().getStackIcon(), getImage(2), getFailureTrace().getTrace());
 	}
 
 	private FailureTableDisplay getFailureDisplay() throws PartInitException {
 		return getFailureTrace().getFailureTableDisplay();
 	}
 
-	@Ignore("java.lang.AssertionError: Timeout waiting for 1 lines in table. Present: 0 items.\r\n" +
+	@Disabled("java.lang.AssertionError: Timeout waiting for 1 lines in table. Present: 0 items.\r\n" +
 			"The 2nd vm has terminated.")
 	@Test
 	public void test03shouldWrapFirstLine() throws Exception {
 		runTests("", 1000, 1, false);
 		String text = getText(0);
-		assertTrue(text, text.length() < 300);
+		assertTrue(text.length() < 300, text);
 	}
 
 	private String getText(int i) throws PartInitException {
@@ -213,9 +213,8 @@ public class WrappingSystemTest implements ILaunchesListener2 {
 			int millisecondTimeout, boolean lastItemHasImage) throws PartInitException {
 		long startTime = System.currentTimeMillis();
 		while (stillWaiting(numExpectedTableLines, lastItemHasImage)) {
-			assertFalse("Timeout waiting for " + numExpectedTableLines
-					+ " lines in table. Present: " + getNumTableItems() + " items.\n"
-					+ "The 2nd vm has " + (hasNotTerminated() ? "not " : "") + "terminated.", System.currentTimeMillis() - startTime > millisecondTimeout);
+			assertFalse(System.currentTimeMillis() - startTime > millisecondTimeout, "Timeout waiting for " + numExpectedTableLines + " lines in table. Present: " + getNumTableItems() + " items.\n" + "The 2nd vm has " + (hasNotTerminated() ? "not " : "")
+							+ "terminated.");
 			dispatchEvents();
 		}
 	}
@@ -233,12 +232,12 @@ public class WrappingSystemTest implements ILaunchesListener2 {
 		return getTable().getItemCount();
 	}
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fProject = JavaProjectHelper.createJavaProject("a", "bin");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fProject);
 	}

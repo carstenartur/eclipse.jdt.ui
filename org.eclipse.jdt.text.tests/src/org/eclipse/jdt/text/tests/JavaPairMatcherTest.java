@@ -14,9 +14,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests;
 
-import org.junit.After;
-import org.junit.Before;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
@@ -56,7 +57,7 @@ public class JavaPairMatcherTest extends AbstractPairMatcherTest {
 		return new JavaPairMatcher(chars.toCharArray());
 	}
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		Document document= new Document("xx(yy(xx)yy)xx()/*  */");
 		String[] types= new String[] {
@@ -75,7 +76,7 @@ public class JavaPairMatcherTest extends AbstractPairMatcherTest {
 		fPairMatcher= new JavaPairMatcher(new char[] { '(', ')' });
 	}
 
-	@After
+	@AfterEach
 	public void tearDown () {
 		fDocument= null;
 		fPairMatcher= null;

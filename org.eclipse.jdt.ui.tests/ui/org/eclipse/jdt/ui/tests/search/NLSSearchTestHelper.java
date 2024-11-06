@@ -16,7 +16,7 @@ package org.eclipse.jdt.ui.tests.search;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.core.runtime.CoreException;
 
@@ -63,7 +63,7 @@ public class NLSSearchTestHelper {
 
 	private static void assertNumberResults(NLSSearchResult result, int expected) {
 		int is= result.getElements().length;
-		Assert.assertEquals("Expected number of results is " + expected + " but was " + is, expected, is);
+		Assertions.assertEquals(expected, is, "Expected number of results is " + expected + " but was " + is);
 	}
 
 	private static void assertResultHasUndefinedKey(String key, IFile file, boolean isAccessor, NLSSearchResult result) throws CoreException {
@@ -76,7 +76,7 @@ public class NLSSearchTestHelper {
 			}
 		}
 
-		Assert.fail("No undefined key problem found for " + key + " in " + file.getName());
+		Assertions.fail("No undefined key problem found for " + key + " in " + file.getName());
 	}
 
 	private static void assertResultHasUnusedKey(String key, IFile file, boolean isAccessor, NLSSearchResult result) throws IOException, CoreException {
@@ -95,7 +95,7 @@ public class NLSSearchTestHelper {
 			}
 		}
 
-		Assert.fail("No unused key problem found for " + key + " in " + file.getName());
+		Assertions.fail("No unused key problem found for " + key + " in " + file.getName());
 	}
 
 	private static String getContent(IFile entry) throws CoreException, IOException {
@@ -123,6 +123,6 @@ public class NLSSearchTestHelper {
 			}
 		}
 
-		Assert.fail("No duplicate key problem found for " + key + " in " + file.getName());
+		Assertions.fail("No duplicate key problem found for " + key + " in " + file.getName());
 	}
 }

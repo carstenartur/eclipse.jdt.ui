@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.Enumeration;
 
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.osgi.framework.Bundle;
 
 import org.eclipse.core.runtime.CoreException;
@@ -56,8 +57,8 @@ public class InlineMethodTestSetup extends RefactoringTestSetup {
 	private IPackageFragment fWarning;
 
 	@Override
-	public void before() throws Exception {
-		super.before();
+	public void beforeEach(ExtensionContext context) throws Exception {
+		super.beforeEach(context);
 
 		IPackageFragmentRoot root= getDefaultSourceFolder();
 		fInvalid= root.createPackageFragment("invalid", true, null);

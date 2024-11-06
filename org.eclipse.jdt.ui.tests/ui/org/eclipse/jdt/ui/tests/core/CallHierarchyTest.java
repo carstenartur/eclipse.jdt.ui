@@ -14,19 +14,19 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -47,13 +47,13 @@ public class CallHierarchyTest {
 
     private CallHierarchyTestHelper helper;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
         helper= new CallHierarchyTestHelper();
         helper.setUp();
     }
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
         helper.tearDown();
         helper= null;
@@ -175,7 +175,7 @@ public class CallHierarchyTest {
         assertRecursive(callsTo1, false);
 
         MethodWrapper wrapper2= helper.findMethodWrapper(method2, callsTo1);
-        assertFalse("Should be marked as recursive", wrapper2.isRecursive());
+        assertFalse(wrapper2.isRecursive(), "Should be marked as recursive");
 
         MethodWrapper[] callsTo2= wrapper2.getCalls(new NullProgressMonitor());
         helper.assertCalls(expectedMethodsTo2, callsTo2);
@@ -332,10 +332,10 @@ public class CallHierarchyTest {
         MethodWrapper[] callers= wrapper.getCalls(new NullProgressMonitor());
         assertRecursive(callers, false);
 
-        assertEquals("Wrong number of callees", 1, callers.length);
+        assertEquals(1, callers.length, "Wrong number of callees");
         IMember member= callers[0].getMember();
-        assertTrue("Wrong member type (expected an instanceof IType)", member instanceof IType);
-        assertEquals("Wrong member name", "Intf", member.getElementName());
+        assertTrue(member instanceof IType, "Wrong member type (expected an instanceof IType)");
+        assertEquals("Intf", member.getElementName(), "Wrong member name");
     }
 
     /**
@@ -352,7 +352,7 @@ public class CallHierarchyTest {
         MethodWrapper[] callers= wrapper.getCalls(new NullProgressMonitor());
         assertRecursive(callers, false);
 
-        assertEquals("Wrong number of callees", 3, callers.length);
+        assertEquals(3, callers.length, "Wrong number of callees");
 
         IMethod methodRun= methodM.getType("", 1).getMethod("run", EMPTY);
 
@@ -360,9 +360,9 @@ public class CallHierarchyTest {
         callers= wrapper.getCalls(new NullProgressMonitor());
         assertRecursive(callers, false);
 
-        assertEquals("Wrong number of callees", 1, callers.length);
-        assertEquals("Wrong callee method", "println", callers[0].getMember().getElementName());
-        assertEquals("Wrong callee type", "java.io.PrintStream", callers[0].getMember().getDeclaringType().getFullyQualifiedName());
+        assertEquals(1, callers.length, "Wrong number of callees");
+        assertEquals("println", callers[0].getMember().getElementName(), "Wrong callee method");
+        assertEquals("java.io.PrintStream", callers[0].getMember().getDeclaringType().getFullyQualifiedName(), "Wrong callee type");
     }
 
     /**
@@ -379,10 +379,10 @@ public class CallHierarchyTest {
         MethodWrapper[] callers= wrapper.getCalls(new NullProgressMonitor());
         assertRecursive(callers, false);
 
-        assertEquals("Wrong number of callees", 1, callers.length);
+        assertEquals(1, callers.length, "Wrong number of callees");
         IMember member= callers[0].getMember();
-        assertTrue("Wrong member type (expected an instanceof IType)", member instanceof IType);
-        assertEquals("Wrong member name", "Clazz", member.getElementName());
+        assertTrue(member instanceof IType, "Wrong member type (expected an instanceof IType)");
+        assertEquals("Clazz", member.getElementName(), "Wrong member name");
     }
 
     /**
@@ -442,12 +442,12 @@ public class CallHierarchyTest {
         MethodWrapper wrapper= getSingleCallerRoot(helper.getMethod1());
         MethodWrapper[] calls= wrapper.getCalls(new NullProgressMonitor());
         MethodWrapper method2Wrapper= helper.findMethodWrapper(helper.getMethod2(), calls);
-        assertEquals("Wrong line number", 9, method2Wrapper.getMethodCall().getFirstCallLocation().getLineNumber());
+        assertEquals(9, method2Wrapper.getMethodCall().getFirstCallLocation().getLineNumber(), "Wrong line number");
 
         wrapper= getSingleCallerRoot(helper.getRecursiveMethod2());
         calls= wrapper.getCalls(new NullProgressMonitor());
         MethodWrapper recursiveMethod1Wrapper= helper.findMethodWrapper(helper.getRecursiveMethod1(), calls);
-        assertEquals("Wrong line number", 12, recursiveMethod1Wrapper.getMethodCall().getFirstCallLocation().getLineNumber());
+        assertEquals(12, recursiveMethod1Wrapper.getMethodCall().getFirstCallLocation().getLineNumber(), "Wrong line number");
     }
 
 	@Test
@@ -457,12 +457,12 @@ public class CallHierarchyTest {
         MethodWrapper wrapper= getSingleCalleeRoot(helper.getMethod2());
         MethodWrapper[] calls= wrapper.getCalls(new NullProgressMonitor());
         MethodWrapper method1Wrapper= helper.findMethodWrapper(helper.getMethod1(), calls);
-        assertEquals("Wrong line number", 9, method1Wrapper.getMethodCall().getFirstCallLocation().getLineNumber());
+        assertEquals(9, method1Wrapper.getMethodCall().getFirstCallLocation().getLineNumber(), "Wrong line number");
 
         wrapper= getSingleCalleeRoot(helper.getRecursiveMethod1());
         calls= wrapper.getCalls(new NullProgressMonitor());
         MethodWrapper recursiveMethod2Wrapper= helper.findMethodWrapper(helper.getRecursiveMethod2(), calls);
-        assertEquals("Wrong line number", 12, recursiveMethod2Wrapper.getMethodCall().getFirstCallLocation().getLineNumber());
+        assertEquals(12, recursiveMethod2Wrapper.getMethodCall().getFirstCallLocation().getLineNumber(), "Wrong line number");
     }
 
     @Test
@@ -531,7 +531,7 @@ public class CallHierarchyTest {
 
     private void assertRecursive(MethodWrapper[] callResults, boolean shouldBeRecursive) {
     	for (MethodWrapper callResult : callResults) {
-    		assertEquals("Wrong recursive value: " + callResult.getName(), shouldBeRecursive, callResult.isRecursive());
+    		assertEquals(shouldBeRecursive, callResult.isRecursive(), "Wrong recursive value: " + callResult.getName());
     	}
     }
 }

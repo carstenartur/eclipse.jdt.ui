@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core.source;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -39,7 +39,7 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
  * @see org.eclipse.jdt.internal.corext.codemanipulation.AddGetterSetterOperation
  */
 public class GenerateGettersSettersTest16 extends SourceTestCase16 {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private static final IField[] NOFIELDS= new IField[] {};

@@ -20,10 +20,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -69,8 +69,8 @@ public class IsCompletelySelectedTest  {
 	private IPackageFragment package_a_b_c_d2;
 	private IPackageFragment package_a_b_e;
 
-	@Rule
-    public ProjectTestSetup projectSetup = new ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new ProjectTestSetup();
 
 	@BeforeEach
 	public void setUp() throws Exception {

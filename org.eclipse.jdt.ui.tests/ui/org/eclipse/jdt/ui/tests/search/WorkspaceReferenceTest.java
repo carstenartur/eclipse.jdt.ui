@@ -13,16 +13,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.search;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.ui.tests.core.rules.JUnitSourceSetup;
 
 public class WorkspaceReferenceTest {
 
-	@Rule
+	@RegisterExtension
 	public JUnitSourceSetup projectSetup = new JUnitSourceSetup();
 
 	@Test

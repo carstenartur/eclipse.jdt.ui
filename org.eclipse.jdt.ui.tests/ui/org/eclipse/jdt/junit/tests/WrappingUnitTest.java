@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.CoreException;
 
@@ -77,7 +77,7 @@ public class WrappingUnitTest {
 		test.waitForTableToFill(17, 30000, false);
 	}
 
-	@Ignore("java.lang.AssertionError")
+	@Disabled("java.lang.AssertionError")
 	@Test
 	public void test03waitForTableToFillObeysTimeout() throws Exception {
 		final WrappingSystemTest test = new WrappingSystemTest() {

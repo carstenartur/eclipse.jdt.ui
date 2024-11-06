@@ -13,6 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
+import org.junit.jupiter.api.extension.ExtensionContext;
+
 import org.eclipse.ltk.core.refactoring.RefactoringCore;
 
 import org.eclipse.jdt.core.IPackageFragment;
@@ -27,8 +29,8 @@ public class ExtractMethodTestSetup9 extends Java9Setup {
 	private IPackageFragment fInvalidSelectionPackage;
 
 	@Override
-	public void before() throws Exception {
-		super.before();
+	public void beforeEach(ExtensionContext context) throws Exception {
+		super.beforeEach(context);
 
 		RefactoringCore.getUndoManager().flush();
 

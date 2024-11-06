@@ -13,7 +13,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.contentassist;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.ui.PreferenceConstants;
 

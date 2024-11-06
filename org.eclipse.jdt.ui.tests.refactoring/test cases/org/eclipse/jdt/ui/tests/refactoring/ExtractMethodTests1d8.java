@@ -17,8 +17,8 @@ import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCa
 import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCase.TestMode.INVALID_SELECTION;
 import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCase.TestMode.VALID_SELECTION;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.runner.RunWith;
 
 import org.eclipse.jdt.core.dom.Modifier;
@@ -33,7 +33,7 @@ import org.eclipse.jdt.ui.tests.IgnoreInheritedTests;
 @RunWith(CustomBaseRunner.class)
 public class ExtractMethodTests1d8 extends ExtractMethodTests {
 
-	@Rule
+	@RegisterExtension
 	public ExtractMethodTestSetup1d8 fgTestSetup1d8= new ExtractMethodTestSetup1d8();
 
 	protected void defaultMethodsTest(int destination, int visibility) throws Exception {

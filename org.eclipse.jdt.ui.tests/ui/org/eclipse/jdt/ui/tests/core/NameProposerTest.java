@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -35,13 +35,13 @@ import org.eclipse.jdt.internal.corext.codemanipulation.GetterSetterUtil;
 public class NameProposerTest {
 	private IJavaProject fJProject1;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
-		assertNotNull("rt not found", JavaProjectHelper.addRTJar(fJProject1));
+		assertNotNull(JavaProjectHelper.addRTJar(fJProject1), "rt not found");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fJProject1);
 	}
@@ -105,7 +105,7 @@ public class NameProposerTest {
 	}
 
 	private void assertEqualString(String expected, String actual) {
-		assertEquals("Expected '" + expected + "', is '" + actual + "'", expected, actual);
+		assertEquals(expected, actual, "Expected '" + expected + "', is '" + actual + "'");
 	}
 
 }

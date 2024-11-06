@@ -15,7 +15,7 @@
 package org.eclipse.jdt.text.tests.performance;
 
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
@@ -112,7 +112,7 @@ public class SWTEventHelper {
 				return display.post(event);
 			}
 		};
-		Assert.assertTrue(helper.waitForCondition(display, 1000));
+		Assertions.assertTrue(helper.waitForCondition(display, 1000));
 
 		if (runEventQueue)
 			EditorTestHelper.runEventQueue();

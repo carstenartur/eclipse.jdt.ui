@@ -14,17 +14,17 @@
 
 package org.eclipse.jdt.ui.tests.wizardapi;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.StringAsserts;
@@ -77,19 +77,79 @@ public class NewTypeWizardTest17 {
 
 	private ITypeBinding fSealedClsBinding, fSealedInterfaceBinding, fMSealedClsBinding, fMSealedInterfaceBinding;
 
-	@Rule
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new Java17ProjectTestSetup(false);
 
-	@Rule
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
 	public ProjectTestSetup projectSetup2= new Java17ProjectTestSetup(Java17ProjectTestSetup.PROJECT_NAME17 + "_2", false);
 
-	@Rule
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
 	public ProjectTestSetup projectMSetup= new Java17ProjectTestSetup(Java17ProjectTestSetup.PROJECT_NAME17 + "_M", false);
 
-	@Rule
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
 	public ProjectTestSetup projectMSetup2= new Java17ProjectTestSetup(Java17ProjectTestSetup.PROJECT_NAME17 + "_M_2", false);
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
@@ -237,7 +297,7 @@ public class NewTypeWizardTest17 {
 		fJProjectM2.setRawClasspath(newPath, null);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		if (fJProject1 != null)
 			JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());

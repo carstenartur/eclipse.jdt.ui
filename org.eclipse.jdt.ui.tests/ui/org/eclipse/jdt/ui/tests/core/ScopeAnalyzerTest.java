@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -42,13 +42,13 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 public class ScopeAnalyzerTest extends CoreTests {
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 
 		fJProject1= pts.getProject();
@@ -61,7 +61,7 @@ public class ScopeAnalyzerTest extends CoreTests {
 		JavaCore.setOptions(options);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, pts.getDefaultClasspath());
 	}

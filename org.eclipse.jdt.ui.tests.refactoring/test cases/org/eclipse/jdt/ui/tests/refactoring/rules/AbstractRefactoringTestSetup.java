@@ -15,7 +15,9 @@ package org.eclipse.jdt.ui.tests.refactoring.rules;
 
 import java.util.Hashtable;
 
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import org.eclipse.jdt.testplugin.TestOptions;
 
@@ -30,11 +32,11 @@ import org.eclipse.jdt.internal.core.manipulation.StubUtility;
 import org.eclipse.jdt.internal.ui.JavaPlugin;
 import org.eclipse.jdt.internal.ui.util.CoreUtility;
 
-public class AbstractRefactoringTestSetup extends ExternalResource {
+public class AbstractRefactoringTestSetup implements BeforeEachCallback, AfterEachCallback {
 	private boolean fWasAutobuild;
 
 	@Override
-	public void before() throws Exception {
+	public void beforeEach(ExtensionContext context) throws Exception {
 		fWasAutobuild= CoreUtility.setAutoBuilding(false);
 		if (JavaPlugin.getActivePage() != null)
 			JavaPlugin.getActivePage().close();
@@ -57,7 +59,7 @@ public class AbstractRefactoringTestSetup extends ExternalResource {
 	}
 
 	@Override
-	public void after() {
+	public void afterEach(ExtensionContext context) {
 		try {
 			CoreUtility.setAutoBuilding(fWasAutobuild);
 		} catch (CoreException e) {

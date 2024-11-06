@@ -13,13 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -58,7 +58,7 @@ public class RenameStaticMethodTests extends GenericRefactoringTest {
 		descriptor.setNewName(newMethodName);
 		descriptor.setUpdateReferences(true);
 		RefactoringStatus result= performRefactoring(descriptor);
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	private void helper1() throws Exception{
@@ -76,18 +76,18 @@ public class RenameStaticMethodTests extends GenericRefactoringTest {
 		descriptor.setKeepOriginal(createDelegate);
 		descriptor.setDeprecateDelegate(true);
 
-		assertNull("was supposed to pass", performRefactoring(descriptor));
+		assertNull(performRefactoring(descriptor), "was supposed to pass");
 		assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName("A")), cu.getSource());
 
-		assertTrue("anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertFalse("! anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertTrue(RefactoringCore.getUndoManager().anythingToUndo(), "anythingToUndo");
+		assertFalse(RefactoringCore.getUndoManager().anythingToRedo(), "! anythingToRedo");
 		//assertEquals("1 to undo", 1, Refactoring.getUndoManager().getRefactoringLog().size());
 
 		RefactoringCore.getUndoManager().performUndo(null, new NullProgressMonitor());
 		assertEqualLines("invalid undo", getFileContents(getInputTestFileName("A")), cu.getSource());
 
-		assertFalse("! anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertTrue("anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertFalse(RefactoringCore.getUndoManager().anythingToUndo(), "! anythingToUndo");
+		assertTrue(RefactoringCore.getUndoManager().anythingToRedo(), "anythingToRedo");
 		//assertEquals("1 to redo", 1, Refactoring.getUndoManager().getRedoStack().size());
 
 		RefactoringCore.getUndoManager().performRedo(null, new NullProgressMonitor());
@@ -215,7 +215,7 @@ public class RenameStaticMethodTests extends GenericRefactoringTest {
 		descriptor.setJavaElement(method);
 		descriptor.setNewName("newmethod");
 
-		assertNull("was supposed to pass", performRefactoring(descriptor));
+		assertNull(performRefactoring(descriptor), "was supposed to pass");
 		assertEqualLines("invalid renaming in A", getFileContents(getOutputTestFileName("A")), cuA.getSource());
 		assertEqualLines("invalid renaming in B", getFileContents(getOutputTestFileName("B")), cuB.getSource());
 	}
@@ -236,7 +236,7 @@ public class RenameStaticMethodTests extends GenericRefactoringTest {
 		descriptor.setJavaElement(method);
 		descriptor.setNewName("fred");
 
-		assertNull("was supposed to pass", performRefactoring(descriptor));
+		assertNull(performRefactoring(descriptor), "was supposed to pass");
 		assertEqualLines("invalid renaming in A", getFileContents(getOutputTestFileName("A")), cuA.getSource());
 		assertEqualLines("invalid renaming in B", getFileContents(getOutputTestFileName("B")), cuB.getSource());
 	}
@@ -265,7 +265,7 @@ public class RenameStaticMethodTests extends GenericRefactoringTest {
 		assertEqualLines("invalid renaming in C", getFileContents(getOutputTestFileName("C")), cuA.getSource());
 	}
 
-	@Ignore("BUG_83332_SPLIT_SINGLE_IMPORT")
+	@Disabled("BUG_83332_SPLIT_SINGLE_IMPORT")
 	@Test
 	public void testStaticImport3() throws Exception {
 		helper2();
@@ -276,7 +276,7 @@ public class RenameStaticMethodTests extends GenericRefactoringTest {
 		helper2();
 	}
 
-	@Ignore("BUG_83332_SPLIT_SINGLE_IMPORT")
+	@Disabled("BUG_83332_SPLIT_SINGLE_IMPORT")
 	@Test
 	public void testStaticImport5() throws Exception {
 		helper2();

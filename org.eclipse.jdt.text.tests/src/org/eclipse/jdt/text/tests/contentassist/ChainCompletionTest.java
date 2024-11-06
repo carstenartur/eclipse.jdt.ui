@@ -12,17 +12,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.contentassist;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -62,10 +62,10 @@ public class ChainCompletionTest {
 
 	private IPackageFragment pkg;
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject= JavaProjectHelper.createJavaProject("TestProject", "bin");
 		JavaProjectHelper.addRTJar18(fJProject);
@@ -73,7 +73,7 @@ public class ChainCompletionTest {
 		pkg= javaSrc.createPackageFragment("test", false, null);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fJProject);
 	}

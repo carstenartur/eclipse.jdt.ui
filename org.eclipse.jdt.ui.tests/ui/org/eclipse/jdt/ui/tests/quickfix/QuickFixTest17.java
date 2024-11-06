@@ -15,9 +15,9 @@ package org.eclipse.jdt.ui.tests.quickfix;
 
 import java.util.ArrayList;
 
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.osgi.util.NLS;
@@ -37,14 +37,14 @@ import org.eclipse.jdt.internal.ui.text.correction.CorrectionMessages;
 
 public class QuickFixTest17 extends QuickFixTest {
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectsetup= new Java17ProjectTestSetup(false);
 
 	private IJavaProject fJProject1;
 
 	private IPackageFragmentRoot fSourceFolder;
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		if (fJProject1 != null) {
 			JavaProjectHelper.delete(fJProject1);

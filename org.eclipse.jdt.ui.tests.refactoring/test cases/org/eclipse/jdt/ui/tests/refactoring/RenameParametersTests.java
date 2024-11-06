@@ -13,16 +13,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Iterator;
 import java.util.List;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.ltk.core.refactoring.Refactoring;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
@@ -73,7 +73,7 @@ public class RenameParametersTests extends GenericRefactoringTest{
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), true, true);
 		IType classA= getType(cu, "A");
 		IMethod method= classA.getMethod("m", signature);
-		assertTrue("refactoring not available", RefactoringAvailabilityTester.isChangeSignatureAvailable(method));
+		assertTrue(RefactoringAvailabilityTester.isChangeSignatureAvailable(method), "refactoring not available");
 		ChangeSignatureProcessor processor= new ChangeSignatureProcessor(method);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
 		//ref.setUpdateReferences(updateReferences);
@@ -82,13 +82,13 @@ public class RenameParametersTests extends GenericRefactoringTest{
 		modifyInfos(processor.getParameterInfos(), newNames);
 
 		RefactoringStatus result= performRefactoring(ref);
-		assertNull("precondition was supposed to pass", result);
+		assertNull(result, "precondition was supposed to pass");
 
 		IPackageFragment pack= (IPackageFragment)cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
-		assertEquals("invalid renaming", getFileContents(getTestFileName(true, false)).length(), newcu.getSource().length());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
+		assertEquals(getFileContents(getTestFileName(true, false)).length(), newcu.getSource().length(), "invalid renaming");
 		assertEqualLines("invalid renaming", getFileContents(getTestFileName(true, false)), newcu.getSource());
 	}
 
@@ -96,13 +96,13 @@ public class RenameParametersTests extends GenericRefactoringTest{
 		IType classA= getType(createCUfromTestFile(getPackageP(), false, false), "A");
 		//DebugUtils.dump("classA" + classA);
 		IMethod method= classA.getMethod("m", signature);
-		assertTrue("refactoring not available", RefactoringAvailabilityTester.isChangeSignatureAvailable(method));
+		assertTrue(RefactoringAvailabilityTester.isChangeSignatureAvailable(method), "refactoring not available");
 		ChangeSignatureProcessor processor= new ChangeSignatureProcessor(method);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
 		modifyInfos(processor.getParameterInfos(), newNames);
 
 		RefactoringStatus result= performRefactoring(ref);
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	private void modifyInfos(List<ParameterInfo> list, String[] newNames) {
@@ -169,7 +169,7 @@ public class RenameParametersTests extends GenericRefactoringTest{
 		helper1(new String[]{"j"}, new String[]{"I"});
 	}
 
-	@Ignore("revisit in the context of anonymous types in type hierarchies")
+	@Disabled("revisit in the context of anonymous types in type hierarchies")
 	@Test
 	public void test11() throws Exception{
 		 helper1(new String[]{"j"}, new String[]{"I"});
@@ -245,7 +245,7 @@ public class RenameParametersTests extends GenericRefactoringTest{
 		helper1(new String[]{"j"}, new String[]{"I"});
 	}
 
-	@Ignore("revisit in the context of anonymous types in type hierarchies")
+	@Disabled("revisit in the context of anonymous types in type hierarchies")
 	@Test
 	public void test26() throws Exception{
 		helper1(new String[]{"j"}, new String[]{"I"});
@@ -276,12 +276,12 @@ public class RenameParametersTests extends GenericRefactoringTest{
 		helper1(new String[]{"kk", "j"}, new String[]{"I", "I"});
 	}
 
-	@Ignore("must do - constructor params")
+	@Disabled("must do - constructor params")
 	@Test
 	public void test32() throws Exception{
 	}
 
-	@Ignore("revisit - removed the 'no ref update' option")
+	@Disabled("revisit - removed the 'no ref update' option")
 	@Test
 	public void test33() throws Exception{
 //		helper1(new String[]{"b"}, new String[]{"QA;"}, false);
@@ -293,7 +293,7 @@ public class RenameParametersTests extends GenericRefactoringTest{
 		helper1(new String[]{"test2"}, new String[]{"Z"});
 	}
 
-	@Ignore("regression test for bug#6224")
+	@Disabled("regression test for bug#6224")
 	@Test
 	public void test35() throws Exception{
 		helper1(new String[]{"j"}, new String[]{"I"});
@@ -307,7 +307,7 @@ public class RenameParametersTests extends GenericRefactoringTest{
 
 	// -----
 
-	@Ignore("must fix - name collision with an instance var")
+	@Disabled("must fix - name collision with an instance var")
 	@Test
 	public void testFail0() throws Exception{
 		helper2(new String[]{"j"}, new String[]{"I"});
@@ -338,25 +338,25 @@ public class RenameParametersTests extends GenericRefactoringTest{
 		helper2(new String[]{"j"}, new String[]{"I"});
 	}
 
-	@Ignore("must fix - name collision with an instance var")
+	@Disabled("must fix - name collision with an instance var")
 	@Test
 	public void testFail6() throws Exception{
 		helper2(new String[]{"j"}, new String[]{"I"});
 	}
 
-	@Ignore("waiting for better conflict detection story from DB")
+	@Disabled("waiting for better conflict detection story from DB")
 	@Test
 	public void testFail7() throws Exception{
 		helper2(new String[]{"j"}, new String[]{"I"});
 	}
 
-	@Ignore("waiting for better conflict detection story from DB")
+	@Disabled("waiting for better conflict detection story from DB")
 	@Test
 	public void testFail8() throws Exception{
 		helper2(new String[]{"j"}, new String[]{"I"});
 	}
 
-	@Ignore("waiting for better conflict detection story from DB")
+	@Disabled("waiting for better conflict detection story from DB")
 	@Test
 	public void testFail9() throws Exception{
 		helper2(new String[]{"j"}, new String[]{"I"});
@@ -372,19 +372,19 @@ public class RenameParametersTests extends GenericRefactoringTest{
 		helper2(new String[]{"j", "j"}, new String[]{"I", "I"});
 	}
 
-	@Ignore("waiting for better conflict detection story from DB")
+	@Disabled("waiting for better conflict detection story from DB")
 	@Test
 	public void testFail12() throws Exception{
 		helper2(new String[]{"j"}, new String[]{"I"});
 	}
 
-	@Ignore("waiting for better conflict detection story from DB")
+	@Disabled("waiting for better conflict detection story from DB")
 	@Test
 	public void testFail13() throws Exception{
 		helper2(new String[]{"j"}, new String[]{"I"});
 	}
 
-	@Ignore("waiting for better conflict detection story from DB")
+	@Disabled("waiting for better conflict detection story from DB")
 	@Test
 	public void testFail14() throws Exception{
 		helper2(new String[]{"j"}, new String[]{"QA;"});
@@ -410,19 +410,19 @@ public class RenameParametersTests extends GenericRefactoringTest{
 		helper2(new String[]{"j"}, new String[]{"I"});
 	}
 
-	@Ignore("waiting for better conflict detection story from DB")
+	@Disabled("waiting for better conflict detection story from DB")
 	@Test
 	public void testFail19() throws Exception{
 		helper2(new String[]{"j"}, new String[]{"I"});
 	}
 
-	@Ignore("waiting for better conflict detection story from DB")
+	@Disabled("waiting for better conflict detection story from DB")
 	@Test
 	public void testFail20() throws Exception{
 		helper2(new String[]{"j"}, new String[]{"I"});
 	}
 
-	@Ignore("Disabled since 1.4 compliance level doesn't produce error message")
+	@Disabled("Disabled since 1.4 compliance level doesn't produce error message")
 	@Test
 	public void testFail21() throws Exception{
 		 helper2(new String[]{"j"}, new String[]{"I"});

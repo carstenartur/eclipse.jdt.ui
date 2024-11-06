@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -72,14 +72,14 @@ public class TestCopyParticipantSingle extends CopyParticipant {
 	}
 
 	public static void testNumberOfInstances(int instances) {
-		Assert.assertEquals(instances, fgInstances.size());
+		Assertions.assertEquals(instances, fgInstances.size());
 	}
 
 	public static void testElements(String[] handles) {
 		testNumberOfInstances(handles.length);
 		List<String> l1= new ArrayList<>(Arrays.asList(handles));
 		for (int i= 0; i < l1.size(); i++) {
-			Assert.assertTrue(l1.contains(getInstance(i).fHandle));
+			Assertions.assertTrue(l1.contains(getInstance(i).fHandle));
 		}
 	}
 

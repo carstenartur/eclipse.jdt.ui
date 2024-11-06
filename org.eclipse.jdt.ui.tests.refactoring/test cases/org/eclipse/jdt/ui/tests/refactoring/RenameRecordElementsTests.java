@@ -13,17 +13,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -126,9 +126,9 @@ public class RenameRecordElementsTests extends GenericRefactoringTest {
 		RenameRefactoring refactoring= (RenameRefactoring) createRefactoring(descriptor);
 		RenameFieldProcessor processor= (RenameFieldProcessor) refactoring.getProcessor();
 		if (isGetterPresent) {
-			assertNull("Getter rename should be enabled", processor.canEnableGetterRenaming());
+			assertNull(processor.canEnableGetterRenaming(), "Getter rename should be enabled");
 		} else {
-			assertEquals("Getter rename should not be enabled", "", processor.canEnableGetterRenaming());
+			assertEquals("", processor.canEnableGetterRenaming(), "Getter rename should not be enabled");
 		}
 
 		List<IAnnotatable> elements= new ArrayList<>();
@@ -148,9 +148,9 @@ public class RenameRecordElementsTests extends GenericRefactoringTest {
 
 		RefactoringStatus result= performRefactoring(refactoring);
 		if (fail) {
-			assertNotNull("was supposed to fail", result);
+			assertNotNull(result, "was supposed to fail");
 		} else {
-			assertNull("was supposed to pass", result);
+			assertNull(result, "was supposed to pass");
 			assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName("A")), cu.getSource());
 			assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName("B")), cu2.getSource());
 
@@ -158,15 +158,15 @@ public class RenameRecordElementsTests extends GenericRefactoringTest {
 				renameHandles,
 				args.toArray(new RenameArguments[args.size()]));
 
-			assertTrue("anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-			assertFalse("! anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+			assertTrue(RefactoringCore.getUndoManager().anythingToUndo(), "anythingToUndo");
+			assertFalse(RefactoringCore.getUndoManager().anythingToRedo(), "! anythingToRedo");
 
 			RefactoringCore.getUndoManager().performUndo(null, new NullProgressMonitor());
 			assertEqualLines("invalid undo", getFileContents(getInputTestFileName("A")), cu.getSource());
 			assertEqualLines("invalid undo", getFileContents(getInputTestFileName("B")), cu2.getSource());
 
-			assertFalse("! anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-			assertTrue("anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+			assertFalse(RefactoringCore.getUndoManager().anythingToUndo(), "! anythingToUndo");
+			assertTrue(RefactoringCore.getUndoManager().anythingToRedo(), "anythingToRedo");
 
 			RefactoringCore.getUndoManager().performRedo(null, new NullProgressMonitor());
 			assertEqualLines("invalid redo", getFileContents(getOutputTestFileName("A")), cu.getSource());
@@ -217,9 +217,9 @@ public class RenameRecordElementsTests extends GenericRefactoringTest {
 		RenameRefactoring refactoring= (RenameRefactoring) createRefactoring(descriptor);
 		RenameFieldProcessor processor= (RenameFieldProcessor) refactoring.getProcessor();
 		if (isGetterPresent) {
-			assertNull("Getter rename should be enabled", processor.canEnableGetterRenaming());
+			assertNull(processor.canEnableGetterRenaming(), "Getter rename should be enabled");
 		} else {
-			assertEquals("Getter rename should not be enabled", "", processor.canEnableGetterRenaming());
+			assertEquals("", processor.canEnableGetterRenaming(), "Getter rename should not be enabled");
 		}
 
 		List<IAnnotatable> elements= new ArrayList<>();
@@ -239,9 +239,9 @@ public class RenameRecordElementsTests extends GenericRefactoringTest {
 
 		RefactoringStatus result= performRefactoring(refactoring);
 		if (fail) {
-			assertNotNull("was supposed to fail", result);
+			assertNotNull(result, "was supposed to fail");
 		} else {
-			assertNull("was supposed to pass", result);
+			assertNull(result, "was supposed to pass");
 			assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName("A")), cu.getSource());
 			assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName("B")), cu2.getSource());
 			assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName("C")), cu3.getSource());
@@ -251,8 +251,8 @@ public class RenameRecordElementsTests extends GenericRefactoringTest {
 				renameHandles,
 				args.toArray(new RenameArguments[args.size()]));
 
-			assertTrue("anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-			assertFalse("! anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+			assertTrue(RefactoringCore.getUndoManager().anythingToUndo(), "anythingToUndo");
+			assertFalse(RefactoringCore.getUndoManager().anythingToRedo(), "! anythingToRedo");
 
 			RefactoringCore.getUndoManager().performUndo(null, new NullProgressMonitor());
 			assertEqualLines("invalid undo", getFileContents(getInputTestFileName("A")), cu.getSource());
@@ -260,8 +260,8 @@ public class RenameRecordElementsTests extends GenericRefactoringTest {
 			assertEqualLines("invalid undo", getFileContents(getInputTestFileName("C")), cu3.getSource());
 			assertEqualLines("invalid undo", getFileContents(getInputTestFileName("D")), cu4.getSource());
 
-			assertFalse("! anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-			assertTrue("anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+			assertFalse(RefactoringCore.getUndoManager().anythingToUndo(), "! anythingToUndo");
+			assertTrue(RefactoringCore.getUndoManager().anythingToRedo(), "anythingToRedo");
 
 			RefactoringCore.getUndoManager().performRedo(null, new NullProgressMonitor());
 			assertEqualLines("invalid redo", getFileContents(getOutputTestFileName("A")), cu.getSource());
@@ -291,8 +291,8 @@ public class RenameRecordElementsTests extends GenericRefactoringTest {
 		descriptor.setRenameSetters(false);
 		RenameRefactoring refactoring= (RenameRefactoring) createRefactoring(descriptor);
 		RefactoringStatus result= performRefactoring(refactoring);
-		assertNotNull("was supposed to fail", result);
-		assertTrue("should have errors", result.hasError());
+		assertNotNull(result, "was supposed to fail");
+		assertTrue(result.hasError(), "should have errors");
 		assertEquals(failMsg.replaceAll("TestProject", projName), result.toString());
 	}
 
@@ -312,20 +312,20 @@ public class RenameRecordElementsTests extends GenericRefactoringTest {
 		RenameRefactoring refactoring= (RenameRefactoring) createRefactoring(descriptor);
 
 		RefactoringStatus result= performRefactoring(refactoring);
-		assertNull("was supposed to pass", result);
+		assertNull(result, "was supposed to pass");
 		ICompilationUnit newcu= pack.getCompilationUnit(newRecordName +".java");
 		assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName(newRecordName)), newcu.getSource());
 		assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName("B")), cu2.getSource());
 
-		assertTrue("anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertFalse("! anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertTrue(RefactoringCore.getUndoManager().anythingToUndo(), "anythingToUndo");
+		assertFalse(RefactoringCore.getUndoManager().anythingToRedo(), "! anythingToRedo");
 
 		RefactoringCore.getUndoManager().performUndo(null, new NullProgressMonitor());
 		assertEqualLines("invalid undo", getFileContents(getInputTestFileName(recordName)), cu.getSource());
 		assertEqualLines("invalid undo", getFileContents(getInputTestFileName("B")), cu2.getSource());
 
-		assertFalse("! anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertTrue("anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertFalse(RefactoringCore.getUndoManager().anythingToUndo(), "! anythingToUndo");
+		assertTrue(RefactoringCore.getUndoManager().anythingToRedo(), "anythingToRedo");
 
 		RefactoringCore.getUndoManager().performRedo(null, new NullProgressMonitor());
 		assertEqualLines("invalid redo", getFileContents(getOutputTestFileName(newRecordName)), newcu.getSource());

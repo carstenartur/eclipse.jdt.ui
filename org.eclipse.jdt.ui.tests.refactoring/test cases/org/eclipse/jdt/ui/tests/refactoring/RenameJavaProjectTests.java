@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -87,8 +87,8 @@ public class RenameJavaProjectTests extends GenericRefactoringTest {
 
 			RefactoringStatus result= performRefactoring(ref);
 
-			assertNull("not expected to fail", result);
-			assertFalse("p1 is gone", p1.exists());
+			assertNull(result, "not expected to fail");
+			assertFalse(p1.exists(), "p1 is gone");
 
 			ParticipantTesting.testRename(handles,
 				new RenameArguments[] {
@@ -96,27 +96,27 @@ public class RenameJavaProjectTests extends GenericRefactoringTest {
 					new RenameArguments(newProjectName, true)});
 
 			p1= referencing1.getJavaModel().getJavaProject(newProjectName);
-			assertTrue("p1 exists", p1.exists());
+			assertTrue(p1.exists(), "p1 exists");
 
 			//check entries in  referencing1
 			IClasspathEntry[] entries= referencing1.getRawClasspath();
-			assertEquals("expected entries", 3, entries.length);
+			assertEquals(3, entries.length, "expected entries");
 			for (int i= 0; i < entries.length; i++) {
 				IClasspathEntry iClassPathEntry= entries[i];
 				if (i == 1) {
-					assertEquals("expected entry name", p1.getProject().getFullPath(), iClassPathEntry.getPath());
-					assertEquals("expected entry kind", IClasspathEntry.CPE_PROJECT, iClassPathEntry.getEntryKind());
+					assertEquals(p1.getProject().getFullPath(), iClassPathEntry.getPath(), "expected entry name");
+					assertEquals(IClasspathEntry.CPE_PROJECT, iClassPathEntry.getEntryKind(), "expected entry kind");
 				}
 			}
 
 			//check entries in  referencing2
 			entries= referencing2.getRawClasspath();
-			assertEquals("expected entries", 3, entries.length);
+			assertEquals(3, entries.length, "expected entries");
 			for (int i= 0; i < entries.length; i++) {
 				IClasspathEntry iClassPathEntry= entries[i];
 				if (i == 1) {
-					assertEquals("expected entry name", p1.getProject().getFullPath(), iClassPathEntry.getPath());
-					assertEquals("expected entry kind", IClasspathEntry.CPE_PROJECT, iClassPathEntry.getEntryKind());
+					assertEquals(p1.getProject().getFullPath(), iClassPathEntry.getPath(), "expected entry name");
+					assertEquals(IClasspathEntry.CPE_PROJECT, iClassPathEntry.getEntryKind(), "expected entry kind");
 				}
 			}
 
@@ -180,8 +180,8 @@ public class RenameJavaProjectTests extends GenericRefactoringTest {
 
 			RefactoringStatus result= performRefactoring(ref);
 
-			assertNull("not expected to fail", result);
-			assertFalse("p1 is gone", p1.exists());
+			assertNull(result, "not expected to fail");
+			assertFalse(p1.exists(), "p1 is gone");
 
 			ParticipantTesting.testRename(handles,
 				new RenameArguments[] {
@@ -189,29 +189,29 @@ public class RenameJavaProjectTests extends GenericRefactoringTest {
 					new RenameArguments(newProjectName, true)});
 
 			p1= referencing1.getJavaModel().getJavaProject(newProjectName);
-			assertTrue("p1 exists", p1.exists());
+			assertTrue(p1.exists(), "p1 exists");
 
 			//check entries in  referencing1
 			IClasspathEntry[] entries= referencing1.getRawClasspath();
-			assertEquals("expected entries", 3, entries.length);
+			assertEquals(3, entries.length, "expected entries");
 			IClasspathEntry iClassPathEntry= entries[1];
-			assertEquals("expected entry name", p1.getProject().getFullPath(), iClassPathEntry.getPath());
-			assertEquals("expected entry kind", IClasspathEntry.CPE_PROJECT, iClassPathEntry.getEntryKind());
-			assertTrue("expected entry isExported", iClassPathEntry.isExported());
-			assertTrue("expected entry combineAccessRules", iClassPathEntry.combineAccessRules());
-			assertEquals("expected entry accessRules count", 0, iClassPathEntry.getAccessRules().length);
-			assertEquals("expected entry accessRules getExtraAttributes", 0, iClassPathEntry.getExtraAttributes().length);
+			assertEquals(p1.getProject().getFullPath(), iClassPathEntry.getPath(), "expected entry name");
+			assertEquals(IClasspathEntry.CPE_PROJECT, iClassPathEntry.getEntryKind(), "expected entry kind");
+			assertTrue(iClassPathEntry.isExported(), "expected entry isExported");
+			assertTrue(iClassPathEntry.combineAccessRules(), "expected entry combineAccessRules");
+			assertEquals(0, iClassPathEntry.getAccessRules().length, "expected entry accessRules count");
+			assertEquals(0, iClassPathEntry.getExtraAttributes().length, "expected entry accessRules getExtraAttributes");
 
 			//check entries in  referencing2
 			entries= referencing2.getRawClasspath();
-			assertEquals("expected entries", 3, entries.length);
+			assertEquals(3, entries.length, "expected entries");
 			iClassPathEntry= entries[1];
-			assertEquals("expected entry name", p1.getProject().getFullPath(), iClassPathEntry.getPath());
-			assertEquals("expected entry kind", IClasspathEntry.CPE_PROJECT, iClassPathEntry.getEntryKind());
-			assertFalse("expected entry isExported", iClassPathEntry.isExported());
-			assertTrue("expected entry combineAccessRules", iClassPathEntry.combineAccessRules());
-			assertEquals("expected entry accessRules count", accessRules2.length, iClassPathEntry.getAccessRules().length);
-			assertEquals("expected entry accessRules getExtraAttributes", extraAttributes2.length, iClassPathEntry.getExtraAttributes().length);
+			assertEquals(p1.getProject().getFullPath(), iClassPathEntry.getPath(), "expected entry name");
+			assertEquals(IClasspathEntry.CPE_PROJECT, iClassPathEntry.getEntryKind(), "expected entry kind");
+			assertFalse(iClassPathEntry.isExported(), "expected entry isExported");
+			assertTrue(iClassPathEntry.combineAccessRules(), "expected entry combineAccessRules");
+			assertEquals(accessRules2.length, iClassPathEntry.getAccessRules().length, "expected entry accessRules count");
+			assertEquals(extraAttributes2.length, iClassPathEntry.getExtraAttributes().length, "expected entry accessRules getExtraAttributes");
 
 		} finally {
 			performDummySearch();

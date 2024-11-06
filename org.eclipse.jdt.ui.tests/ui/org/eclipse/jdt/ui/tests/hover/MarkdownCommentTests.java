@@ -13,17 +13,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.hover;
 
-import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -56,7 +56,7 @@ import org.eclipse.jdt.internal.ui.text.java.hover.JavadocHover;
 
 public class MarkdownCommentTests extends CoreTests {
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new Java23ProjectTestSetup("TestSetupProject", false);
 
 	private IJavaProject fJProject1;
@@ -74,13 +74,13 @@ public class MarkdownCommentTests extends CoreTests {
 	static final char JEM_COMPILATIONUNIT= '{';
 	static final char JEM_TYPE= LINK_BRACKET_REPLACEMENT; // replacement for '['
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= pts.getProject();
 		JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, pts.getDefaultClasspath());
 	}
@@ -214,7 +214,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/TestClass.java", source, null);
-		assertNotNull("TestClass.java", cu);
+		assertNotNull(cu, "TestClass.java");
 
 		IType type= cu.getType("TestClass");
 		String actualHtmlContent= getHoverHtmlContent(cu, type);
@@ -254,7 +254,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/TestClass.java", source, null);
-		assertNotNull("TestClass.java", cu);
+		assertNotNull(cu, "TestClass.java");
 
 		IType type= cu.getType("TestClass");
 		String actualHtmlContent= getHoverHtmlContent(cu, type);
@@ -279,7 +279,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/TestClass.java", source, null);
-		assertNotNull("TestClass.java", cu);
+		assertNotNull(cu, "TestClass.java");
 
 		String expectedURI= makeEncodedMethodUri("p", "TestClass", "TestClass", "m1", "int");
 		String expectedHtmlContent= """
@@ -305,7 +305,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/TestClass.java", source, null);
-		assertNotNull("TestClass.java", cu);
+		assertNotNull(cu, "TestClass.java");
 
 		String expectedURI= makeEncodedMethodUri("p", "TestClass", "TestClass", "m1", "int");
 		String expectedHtmlContent= """
@@ -333,7 +333,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/TestClass.java", source, null);
-		assertNotNull("TestClass.java", cu);
+		assertNotNull(cu, "TestClass.java");
 
 		String expectedURI= makeEncodedMethodUri("p", "TestClass", "TestClass", "m1", "int []");
 		String expectedHtmlContent= """
@@ -374,7 +374,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/Spec01Links.java", source, null);
-		assertNotNull("Spec01Links.java", cu);
+		assertNotNull(cu, "Spec01Links.java");
 		IType type= cu.getType("Spec01Links");
 
 		String plainLinksURI= makeEncodedMethodUri(true, "p", "Spec01Links", "Spec01Links", "plainLinks");
@@ -436,7 +436,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/Spec02Table.java", source, null);
-		assertNotNull("Spec02Table.java", cu);
+		assertNotNull(cu, "Spec02Table.java");
 
 		IType type= cu.getType("Spec02Table");
 		String actualHtmlContent= getHoverHtmlContent(cu, type);
@@ -485,7 +485,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/Spec03Tags.java", source, null);
-		assertNotNull("Spec03Tags.java", cu);
+		assertNotNull(cu, "Spec03Tags.java");
 
 		String mURI= makeEncodedMethodUri(true, "p", "Spec03Tags", "Spec03Tags","m", "I");
 		String waitURI= makeEncodedRelativeUri(mURI, "", "wait", "");
@@ -529,7 +529,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/Spec04Code.java", source, null);
-		assertNotNull("Spec04Code.java", cu);
+		assertNotNull(cu, "Spec04Code.java");
 
 		String expectedContent= """
 				<p>The following code span contains literal text, and not a JavaDoc tag:
@@ -561,7 +561,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/Spec05TextInTag.java", source, null);
-		assertNotNull("Spec05TextInTag.java", cu);
+		assertNotNull(cu, "Spec05TextInTag.java");
 
 		IType type= cu.getType("Spec05TextInTag");
 		IMethod method= type.getMethods()[0];
@@ -590,7 +590,7 @@ public class MarkdownCommentTests extends CoreTests {
 
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/CodeAtEdge.java", source, null);
-		assertNotNull("CodeAtEdge.java", cu);
+		assertNotNull(cu, "CodeAtEdge.java");
 
 		IType type= cu.getType("CodeAtEdge");
 
@@ -648,7 +648,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/LineStarts.java", source, null);
-		assertNotNull("LineStarts.java", cu);
+		assertNotNull(cu, "LineStarts.java");
 
 		IType type= cu.getType("LineStarts");
 
@@ -703,7 +703,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/SeeTag.java", source, null);
-		assertNotNull("SeeTag.java", cu);
+		assertNotNull(cu, "SeeTag.java");
 
 		IType type= cu.getType("SeeTag");
 
@@ -732,7 +732,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/CodeAfterPara.java", source, null);
-		assertNotNull("CodeAfterPara.java", cu);
+		assertNotNull(cu, "CodeAfterPara.java");
 
 		IType type= cu.getType("CodeAfterPara");
 
@@ -779,7 +779,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/BlockEnding.java", source, null);
-		assertNotNull("BlockEnding.java", cu);
+		assertNotNull(cu, "BlockEnding.java");
 
 		IType type= cu.getType("BlockEnding");
 
@@ -852,7 +852,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/X.java", source, null);
-		assertNotNull("X.java", cu);
+		assertNotNull(cu, "X.java");
 
 		IType type= cu.getType("X");
 
@@ -911,7 +911,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/FenceLenFour.java", source, null);
-		assertNotNull("FenceLenFour.java", cu);
+		assertNotNull(cu, "FenceLenFour.java");
 
 		String expectedContent= """
 				<pre><code>```
@@ -942,7 +942,7 @@ public class MarkdownCommentTests extends CoreTests {
 				}
 				""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/FenceLenFour.java", source, null);
-		assertNotNull("FenceLenFour.java", cu);
+		assertNotNull(cu, "FenceLenFour.java");
 
 		String expectedContent= """
 				<pre><code>````

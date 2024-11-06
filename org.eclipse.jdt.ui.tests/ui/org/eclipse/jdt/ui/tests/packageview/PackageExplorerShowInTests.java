@@ -18,10 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.ByteArrayInputStream;
 
-import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -52,7 +52,7 @@ import org.eclipse.jdt.internal.ui.javaeditor.EditorUtility;
 import org.eclipse.jdt.internal.ui.packageview.PackageExplorerPart;
 
 public class PackageExplorerShowInTests {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts=new ProjectTestSetup();
 
 	private IJavaProject fJProject;

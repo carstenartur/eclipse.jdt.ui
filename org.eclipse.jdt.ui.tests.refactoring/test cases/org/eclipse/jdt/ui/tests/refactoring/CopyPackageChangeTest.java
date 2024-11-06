@@ -13,10 +13,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -52,7 +52,7 @@ public class CopyPackageChangeTest extends GenericRefactoringTest {
 		change.initializeValidationData(new NullProgressMonitor());
 		performChange(change);
 		IPackageFragment copied= newRoot.getPackageFragment(packName);
-		assertTrue("copied.exists()", copied.exists());
+		assertTrue(copied.exists(), "copied.exists()");
 		assertEquals(1, copied.getChildren().length);
 	}
 }

@@ -15,8 +15,8 @@ package org.eclipse.jdt.ui.tests.quickfix;
 
 import java.util.ArrayList;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -36,7 +36,7 @@ import org.eclipse.jdt.internal.ui.text.correction.CorrectionMessages;
 
 public class QuickFixTest15 extends QuickFixTest {
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectsetup= new Java15ProjectTestSetup(true);
 
 	private IJavaProject fJProject;

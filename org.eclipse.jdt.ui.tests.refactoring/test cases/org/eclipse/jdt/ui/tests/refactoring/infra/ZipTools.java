@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.infra;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -83,10 +83,10 @@ public class ZipTools {
 			IPackageFragment packageFragment= (IPackageFragment) javaelement;
 			for (ICompilationUnit cu : packageFragment.getCompilationUnits()) {
 				String cuDescr= packageFragment.getElementName() + "/" + cu.getElementName();
-				assertTrue(cuDescr, zipCus.remove(cuDescr));
+				assertTrue(zipCus.remove(cuDescr), cuDescr);
 			}
 		}
-		assertEquals(zipCus.toString(), 0, zipCus.size());
+		assertEquals(0, zipCus.size(), zipCus.toString());
 	}
 
 }

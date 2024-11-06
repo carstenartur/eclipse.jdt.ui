@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.wizardapi;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.tests.harness.FussyProgressMonitor;
 
@@ -82,7 +82,7 @@ public class NewJavaProjectWizardTest {
 
 	private TestNewJavaProjectWizardPage fWizardPage;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		IWorkspaceRoot root= ResourcesPlugin.getWorkspace().getRoot();
 
@@ -92,7 +92,7 @@ public class NewJavaProjectWizardTest {
 		fWizardPage.setProjectHandle(project);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		IWorkspaceRoot root= ResourcesPlugin.getWorkspace().getRoot();
 		IProject project= root.getProject(PROJECT_NAME);
@@ -113,18 +113,18 @@ public class NewJavaProjectWizardTest {
 
 
 	private void assertBasicBuildPath(IProject project, IPath outputLocation, IClasspathEntry[] classpath) {
-		assertNotNull("a", outputLocation);
-		assertNotNull("b", classpath);
-		assertEquals("c", 2, classpath.length);
+		assertNotNull(outputLocation, "a");
+		assertNotNull(classpath, "b");
+		assertEquals(2, classpath.length, "c");
 
 		if (PreferenceConstants.getPreferenceStore().getBoolean(PreferenceConstants.SRCBIN_FOLDERS_IN_NEWPROJ)) {
-			assertEquals("d", outputLocation, project.getFolder("bin").getFullPath());
-			assertEquals("e", classpath[0].getPath(), project.getFolder("src").getFullPath());
+			assertEquals(outputLocation, project.getFolder("bin").getFullPath(), "d");
+			assertEquals(classpath[0].getPath(), project.getFolder("src").getFullPath(), "e");
 		} else {
-			assertEquals("f", outputLocation, project.getFullPath());
-			assertEquals("g", classpath[0].getPath(), project.getFullPath());
+			assertEquals(outputLocation, project.getFullPath(), "f");
+			assertEquals(classpath[0].getPath(), project.getFullPath(), "g");
 		}
-		assertEquals("h", classpath[1].getPath(), getJREEntryPath());
+		assertEquals(classpath[1].getPath(), getJREEntryPath(), "h");
 	}
 
 	@Test
@@ -149,7 +149,7 @@ public class NewJavaProjectWizardTest {
 
 		IJavaProject jproj= fWizardPage.getNewJavaProject();
 
-		assertEquals("a", jproj.getProject(), project);
+		assertEquals(jproj.getProject(), project, "a");
 
 		IPath outputLocation= jproj.getOutputLocation();
 		IClasspathEntry[] classpath= jproj.getRawClasspath();
@@ -179,7 +179,7 @@ public class NewJavaProjectWizardTest {
 
 		IJavaProject jproj= fWizardPage.getNewJavaProject();
 
-		assertEquals("a", jproj.getProject(), otherProject);
+		assertEquals(jproj.getProject(), otherProject, "a");
 
 		IPath outputLocation1= fWizardPage.getOutputLocation();
 		IClasspathEntry[] classpath1= fWizardPage.getRawClassPath();
@@ -187,14 +187,14 @@ public class NewJavaProjectWizardTest {
 	}
 
 	private void assertUserBuildPath(IProject project, IPath outputLocation, IClasspathEntry[] classpath) {
-		assertNotNull("a", outputLocation);
-		assertNotNull("b", classpath);
-		assertEquals("c", 3, classpath.length);
+		assertNotNull(outputLocation, "a");
+		assertNotNull(classpath, "b");
+		assertEquals(3, classpath.length, "c");
 
-		assertEquals("d", outputLocation, project.getFolder("dbin").getFullPath());
-		assertEquals("e", classpath[0].getPath(), project.getFolder("dsrc1").getFullPath());
-		assertEquals("f", classpath[1].getPath(), project.getFolder("dsrc2").getFullPath());
-		assertEquals("g", classpath[2].getPath(), getJREEntryPath());
+		assertEquals(outputLocation, project.getFolder("dbin").getFullPath(), "d");
+		assertEquals(classpath[0].getPath(), project.getFolder("dsrc1").getFullPath(), "e");
+		assertEquals(classpath[1].getPath(), project.getFolder("dsrc2").getFullPath(), "f");
+		assertEquals(classpath[2].getPath(), getJREEntryPath(), "g");
 	}
 
 	@Test
@@ -247,7 +247,7 @@ public class NewJavaProjectWizardTest {
 
 		IJavaProject jproj= fWizardPage.getNewJavaProject();
 
-		assertEquals("a", jproj.getProject(), project);
+		assertEquals(jproj.getProject(), project, "a");
 
 		IPath outputLocation= jproj.getOutputLocation();
 		IClasspathEntry[] classpath= jproj.getRawClasspath();

@@ -13,15 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core.source;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.StringAsserts;
@@ -50,8 +49,12 @@ import org.eclipse.jdt.internal.ui.preferences.JavaPreferencesSettings;
  * @see org.eclipse.jdt.internal.corext.codemanipulation.AddGetterSetterOperation
  */
 public class SourceTestCase16 {
-	@Rule
-	public TestName tn=new TestName();
+	private String testName;
+
+	@BeforeEach
+	void init(TestInfo testInfo) {
+		this.testName= testInfo.getDisplayName();
+	}
 
 	private IJavaProject fJavaProject;
 
@@ -113,7 +116,7 @@ public class SourceTestCase16 {
 		fSettings.createComments= true;
 	}
 
-	@Before
+	@BeforeEach
 	public void setUp() throws CoreException {
 
 		fJavaProject= JavaProjectHelper.createJavaProject("DummyProject", "bin");
@@ -127,7 +130,7 @@ public class SourceTestCase16 {
 		initCodeTemplates();
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fJavaProject);
 		fJavaProject= null;
@@ -143,6 +146,6 @@ public class SourceTestCase16 {
 	}
 
 	private String getName() {
-		return tn.getMethodName();
+		return testName;
 	}
 }

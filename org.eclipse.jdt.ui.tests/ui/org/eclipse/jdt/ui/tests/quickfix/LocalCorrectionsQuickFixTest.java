@@ -19,9 +19,9 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,11 +29,11 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -68,13 +68,13 @@ import org.eclipse.jdt.internal.ui.text.correction.proposals.LinkedNamesAssistPr
 
 public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
@@ -98,7 +98,7 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());
 	}
@@ -12463,7 +12463,7 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 	 * Tests if the quick fix to loop over a variable name is added correctly. The complete
 	 * functionality of the for loop generation is tested in {@link AssistQuickFixTest}
 	 */
-	@Ignore("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
+	@Disabled("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
 	@Test
 	public void testLoopOverAddedToFixesForVariable() throws Exception {
 
@@ -12526,7 +12526,7 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 	 * Tests if the quick fix to loop over a method invocation is added correctly. The complete
 	 * functionality of the for loop generation is tested in {@link AssistQuickFixTest}
 	 */
-	@Ignore("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
+	@Disabled("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
 	@Test
 	public void testLoopOverAddedToFixesForMethodInvocation() throws Exception {
 		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
@@ -12589,7 +12589,7 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 	 * Tests if the quick fix to loop over a method invocation is added correctly. The complete
 	 * functionality of the for loop generation is tested in {@link AssistQuickFixTest}
 	 */
-	@Ignore("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
+	@Disabled("Bug 434188: [quick fix] shows sign of quick fix, but says no suggestions available.")
 	@Test
 	public void testGenerateForeachNotAddedForLowVersion() throws Exception {
 
@@ -12684,8 +12684,8 @@ public class LocalCorrectionsQuickFixTest extends QuickFixTest {
 				assertEquals(IProblem.ParsingErrorInsertToComplete, problem.getID());
 			}
 		}
-		assertFalse("IProblem.ParsingErrorInsertToComplete is very general and should not trigger the quick fix lightbulb everywhere",
-				JavaCorrectionProcessor.hasCorrections(cu, IProblem.ParsingErrorInsertToComplete, IJavaModelMarker.JAVA_MODEL_PROBLEM_MARKER));
+		assertFalse(JavaCorrectionProcessor.hasCorrections(cu, IProblem.ParsingErrorInsertToComplete, IJavaModelMarker.JAVA_MODEL_PROBLEM_MARKER),
+				"IProblem.ParsingErrorInsertToComplete is very general and should not trigger the quick fix lightbulb everywhere");
 	}
 
 	@Test

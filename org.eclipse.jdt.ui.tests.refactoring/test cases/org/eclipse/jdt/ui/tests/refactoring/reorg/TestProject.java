@@ -14,7 +14,7 @@
 package org.eclipse.jdt.ui.tests.refactoring.reorg;
 
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -35,7 +35,7 @@ public class TestProject {
 		fTestProject= JavaProjectHelper.createJavaProject(name, "bin");
 		// was: we must make sure that the performance test are compatible to 2.1.3 & 3.0 so use rt13
 		// rt13 is deprecated, use rt15
-		Assert.assertNotNull("rt not found", JavaProjectHelper.addRTJar15(fTestProject));
+		Assertions.assertNotNull(JavaProjectHelper.addRTJar15(fTestProject), "rt not found");
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fTestProject, "src");
 	}
 

@@ -13,7 +13,9 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.extensions;
 
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -24,7 +26,7 @@ import org.eclipse.jdt.core.IPackageFragmentRoot;
 
 import org.eclipse.jdt.internal.ui.util.CoreUtility;
 
-public class ExtensionPointTestSetup extends ExternalResource {
+public class ExtensionPointTestSetup implements BeforeEachCallback, AfterEachCallback {
 	private IJavaProject fJavaProject;
 	private IPackageFragmentRoot fRoot;
 	private static final String CONTAINER= "src";
@@ -34,7 +36,7 @@ public class ExtensionPointTestSetup extends ExternalResource {
 	}
 
 	@Override
-	protected void before() throws Exception {
+	public void beforeEach(ExtensionContext context) throws Exception {
 		fJavaProject= JavaProjectHelper.createJavaProject("TestProject", "bin");
 		JavaProjectHelper.addRTJar(fJavaProject);
 		fRoot= JavaProjectHelper.addSourceContainer(fJavaProject, CONTAINER);
@@ -45,7 +47,7 @@ public class ExtensionPointTestSetup extends ExternalResource {
 	}
 
 	@Override
-	protected void after() {
+	public void afterEach(ExtensionContext context) {
 		try {
 			JavaProjectHelper.delete(fJavaProject);
 		} catch (CoreException e) {

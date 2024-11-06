@@ -13,10 +13,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.extensions;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.Path;
 
@@ -36,7 +36,7 @@ import org.eclipse.jdt.internal.corext.refactoring.util.JavaStatusContext;
 
 @SuppressWarnings("restriction") // org.eclipse.ltk.internal
 public class ExtensionPointTests {
-	@Rule
+	@RegisterExtension
 	public ExtensionPointTestSetup eps= new ExtensionPointTestSetup();
 
 	@Test

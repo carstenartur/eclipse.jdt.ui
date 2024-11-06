@@ -13,11 +13,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.search;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -44,7 +44,7 @@ public class WorkspaceScopeTest {
 	private IJavaProject fProject4;
 	private ICompilationUnit fCompilationUnit;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fProject1= createStandardProject("Test", "test"); //$NON-NLS-1$ //$NON-NLS-2$
 		IPackageFragment pkg= fProject1.findPackageFragment(new Path("/Test/src/test")); //$NON-NLS-1$

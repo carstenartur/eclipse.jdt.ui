@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -54,7 +54,7 @@ public class RenamePrivateMethodTests extends GenericRefactoringTest {
 		RenameRefactoring refactoring= new RenameRefactoring(processor);
 		processor.setNewElementName(newMethodName);
 		RefactoringStatus result= performRefactoring(refactoring);
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	private void helper1() throws Exception{
@@ -72,7 +72,7 @@ public class RenamePrivateMethodTests extends GenericRefactoringTest {
 		processor.setUpdateReferences(updateReferences);
 		processor.setNewElementName(newMethodName);
 		processor.setDelegateUpdating(createDelegate);
-		assertNull("was supposed to pass", performRefactoring(refactoring));
+		assertNull(performRefactoring(refactoring), "was supposed to pass");
 		assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName("A")), cu.getSource());
 
 		ParticipantTesting.testRename(
@@ -80,15 +80,15 @@ public class RenamePrivateMethodTests extends GenericRefactoringTest {
 			new RenameArguments[] {
 				new RenameArguments(newMethodName, updateReferences)});
 
-		assertTrue("anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertFalse("! anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertTrue(RefactoringCore.getUndoManager().anythingToUndo(), "anythingToUndo");
+		assertFalse(RefactoringCore.getUndoManager().anythingToRedo(), "! anythingToRedo");
 		//assertEquals("1 to undo", 1, Refactoring.getUndoManager().getRefactoringLog().size());
 
 		RefactoringCore.getUndoManager().performUndo(null, new NullProgressMonitor());
 		assertEqualLines("invalid undo", getFileContents(getInputTestFileName("A")), cu.getSource());
 
-		assertFalse("! anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertTrue("anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertFalse(RefactoringCore.getUndoManager().anythingToUndo(), "! anythingToUndo");
+		assertTrue(RefactoringCore.getUndoManager().anythingToRedo(), "anythingToRedo");
 		//assertEquals("1 to redo", 1, Refactoring.getUndoManager().getRedoStack().size());
 
 		RefactoringCore.getUndoManager().performRedo(null, new NullProgressMonitor());
@@ -191,7 +191,7 @@ public class RenamePrivateMethodTests extends GenericRefactoringTest {
 		RenameRefactoring refactoring= new RenameRefactoring(processor);
 		processor.setNewElementName("kk");
 
-		assertNull("was supposed to pass", performRefactoring(refactoring));
+		assertNull(performRefactoring(refactoring), "was supposed to pass");
 		assertEqualLines("invalid renaming A", getFileContents(getOutputTestFileName("A")), cu.getSource());
 		assertEqualLines("invalid renaming C", getFileContents(getOutputTestFileName("C")), cuC.getSource());
 

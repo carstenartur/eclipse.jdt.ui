@@ -13,20 +13,20 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.tests.harness.FussyProgressMonitor;
 
@@ -118,8 +118,8 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), true, true);
 		IType classA= getType(cu, "A");
 		IMethod method = classA.getMethod("m", signature);
-		assertTrue("method does not exist", method.exists());
-		assertTrue("refactoring not available", RefactoringAvailabilityTester.isChangeSignatureAvailable(method));
+		assertTrue(method.exists(), "method does not exist");
+		assertTrue(RefactoringAvailabilityTester.isChangeSignatureAvailable(method), "refactoring not available");
 
 		ChangeSignatureProcessor processor= new ChangeSignatureProcessor(method);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
@@ -130,15 +130,15 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		RefactoringStatus initialConditions= ref.checkInitialConditions(testMonitor);
 		testMonitor.assertUsedUp();
 
-		assertTrue("precondition was supposed to pass:"+initialConditions.getEntryWithHighestSeverity(), initialConditions.isOK());
+		assertTrue(initialConditions.isOK(), "precondition was supposed to pass:" + initialConditions.getEntryWithHighestSeverity());
 		JavaRefactoringDescriptor descriptor= processor.createDescriptor();
 		RefactoringStatus result= performRefactoring(descriptor);
-		assertNull("precondition was supposed to pass", result);
+		assertNull(result, "precondition was supposed to pass");
 
 		IPackageFragment pack= (IPackageFragment)cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		String expectedFileContents= getFileContents(getTestFileName(true, false));
 		assertEqualLines("invalid renaming", expectedFileContents, newcu.getSource());
 
@@ -170,8 +170,8 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), true, true);
 		IType classType= getType(cu, typeName);
 		IMethod method = classType.getMethod("m", signature);
-		assertTrue("method m does not exist in " +typeName, method.exists());
-		assertTrue("refactoring not available", RefactoringAvailabilityTester.isChangeSignatureAvailable(method));
+		assertTrue(method.exists(), "method m does not exist in " + typeName);
+		assertTrue(RefactoringAvailabilityTester.isChangeSignatureAvailable(method), "refactoring not available");
 
 		ChangeSignatureProcessor processor= new ChangeSignatureProcessor(method);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
@@ -185,12 +185,12 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 
 		JavaRefactoringDescriptor descriptor= processor.createDescriptor();
 		RefactoringStatus result= performRefactoring(descriptor);
-		assertNull("precondition was supposed to pass", result);
+		assertNull(result, "precondition was supposed to pass");
 
 		IPackageFragment pack= (IPackageFragment)cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		String expectedFileContents= getFileContents(getTestFileName(true, false));
 		assertEqualLines("invalid change of method name", expectedFileContents, newcu.getSource());
 
@@ -211,12 +211,12 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), true, true);
 		IType classA= getType(cu, typeName);
 		IMethod method = classA.getMethod(methodName, signature);
-		assertTrue("method " + methodName +" does not exist", method.exists());
+		assertTrue(method.exists(), "method " + methodName + " does not exist");
 		helperDoAll(method, newParamInfos, newIndices, oldParamNames, newParamNames, newParameterTypeNames, permutation, newVisibility, deleted, returnTypeName, createDelegate);
 	}
 
 	private void helperDoAll(IMethod method, ParameterInfo[] newParamInfos, int[] newIndices, String[] oldParamNames, String[] newParamNames, String[] newParameterTypeNames, int[] permutation, int newVisibility, int[] deleted, String returnTypeName, boolean createDelegate) throws Exception {
-		assertTrue("refactoring not available", RefactoringAvailabilityTester.isChangeSignatureAvailable(method));
+		assertTrue(RefactoringAvailabilityTester.isChangeSignatureAvailable(method), "refactoring not available");
 
 		ChangeSignatureProcessor processor= new ChangeSignatureProcessor(method);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
@@ -236,12 +236,12 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		assertTrue(initialConditions.isOK());
 		JavaRefactoringDescriptor descriptor= processor.createDescriptor();
 		RefactoringStatus result= performRefactoring(descriptor);
-		assertNull("precondition was supposed to pass", result);
+		assertNull(result, "precondition was supposed to pass");
 
 		IPackageFragment pack= (IPackageFragment)method.getCompilationUnit().getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		String expectedFileContents= getFileContents(getTestFileName(true, false));
 		assertEqualLines(expectedFileContents, newcu.getSource());
 
@@ -279,8 +279,8 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), true, true);
 		IType classA= getType(cu, "A");
 		IMethod method = classA.getMethod("m", signature);
-		assertTrue("method does not exist", method.exists());
-		assertTrue("refactoring not available", RefactoringAvailabilityTester.isChangeSignatureAvailable(method));
+		assertTrue(method.exists(), "method does not exist");
+		assertTrue(RefactoringAvailabilityTester.isChangeSignatureAvailable(method), "refactoring not available");
 
 		ChangeSignatureProcessor processor= new ChangeSignatureProcessor(method);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
@@ -293,12 +293,12 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 
 		JavaRefactoringDescriptor descriptor= processor.createDescriptor();
 		RefactoringStatus result= performRefactoring(descriptor);
-		assertNull("precondition was supposed to pass", result);
+		assertNull(result, "precondition was supposed to pass");
 
 		IPackageFragment pack= (IPackageFragment)cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		String expectedFileContents= getFileContents(getTestFileName(true, false));
 //		assertEquals("invalid renaming", expectedFileContents, newcu.getSource());
 		assertEqualLines(expectedFileContents, newcu.getSource());
@@ -385,7 +385,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 	private void helperFail(String[] newOrder, String[] signature, int expectedSeverity) throws Exception{
 		IType classA= getType(createCUfromTestFile(getPackageP(), false, false), "A");
 		IMethod method= classA.getMethod("m", signature);
-		assertTrue("refactoring not available", RefactoringAvailabilityTester.isChangeSignatureAvailable(method));
+		assertTrue(RefactoringAvailabilityTester.isChangeSignatureAvailable(method), "refactoring not available");
 
 		ChangeSignatureProcessor processor= new ChangeSignatureProcessor(method);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
@@ -403,14 +403,14 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 			JavaRefactoringDescriptor descriptor= processor.createDescriptor();
 			result= performRefactoring(descriptor, true);
 		}
-		assertNotNull("precondition was supposed to fail", result);
-		assertEquals("Severity:", expectedSeverity, result.getSeverity());
+		assertNotNull(result, "precondition was supposed to fail");
+		assertEquals(expectedSeverity, result.getSeverity(), "Severity:");
 	}
 
 	private void helperAddFail(String[] signature, ParameterInfo[] newParamInfos, int[] newIndices, int expectedSeverity) throws Exception{
 		IType classA= getType(createCUfromTestFile(getPackageP(), false, false), "A");
 		IMethod method= classA.getMethod("m", signature);
-		assertTrue("refactoring not available", RefactoringAvailabilityTester.isChangeSignatureAvailable(method));
+		assertTrue(RefactoringAvailabilityTester.isChangeSignatureAvailable(method), "refactoring not available");
 
 		ChangeSignatureProcessor processor= new ChangeSignatureProcessor(method);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
@@ -424,8 +424,8 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 			JavaRefactoringDescriptor descriptor= processor.createDescriptor();
 			result= performRefactoring(descriptor, true);
 		}
-		assertNotNull("precondition was supposed to fail", result);
-		assertEquals("Severity:" + result.getMessageMatchingSeverity(result.getSeverity()), expectedSeverity, result.getSeverity());
+		assertNotNull(result, "precondition was supposed to fail");
+		assertEquals(expectedSeverity, result.getSeverity(), "Severity:" + result.getMessageMatchingSeverity(result.getSeverity()));
 	}
 
 	private void helperDoAllFail(String methodName,
@@ -441,8 +441,8 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), false, false);
 		IType classA= getType(cu, "A");
 		IMethod method = classA.getMethod(methodName, signature);
-		assertTrue("method does not exist", method.exists());
-		assertTrue("refactoring not available", RefactoringAvailabilityTester.isChangeSignatureAvailable(method));
+		assertTrue(method.exists(), "method does not exist");
+		assertTrue(RefactoringAvailabilityTester.isChangeSignatureAvailable(method), "refactoring not available");
 
 		ChangeSignatureProcessor processor= new ChangeSignatureProcessor(method);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
@@ -459,8 +459,8 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 			JavaRefactoringDescriptor descriptor= processor.createDescriptor();
 			result= performRefactoring(descriptor);
 		}
-		assertNotNull("precondition was supposed to fail", result);
-		assertEquals("Severity:" + result.getMessageMatchingSeverity(result.getSeverity()), expectedSeverity, result.getSeverity());
+		assertNotNull(result, "precondition was supposed to fail");
+		assertEquals(expectedSeverity, result.getSeverity(), "Severity:" + result.getMessageMatchingSeverity(result.getSeverity()));
 	}
 
 	private void helperDoAllWithExceptions(String typeName,
@@ -480,8 +480,8 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), true, true);
 		IType classA= getType(cu, typeName);
 		IMethod method = classA.getMethod(methodName, signature);
-		assertTrue("method " + methodName +" does not exist", method.exists());
-		assertTrue("refactoring not available", RefactoringAvailabilityTester.isChangeSignatureAvailable(method));
+		assertTrue(method.exists(), "method " + methodName + " does not exist");
+		assertTrue(RefactoringAvailabilityTester.isChangeSignatureAvailable(method), "refactoring not available");
 
 		ChangeSignatureProcessor processor= new ChangeSignatureProcessor(method);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
@@ -498,7 +498,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		RefactoringStatus status= ref.checkInitialConditions(testMonitor);
 		testMonitor.assertUsedUp();
 
-		assertTrue("checkActivation was supposed to pass", status.isOK());
+		assertTrue(status.isOK(), "checkActivation was supposed to pass");
 
 		mangleExceptions(processor.getExceptionInfos(), removeExceptions, addExceptions, method.getCompilationUnit());
 
@@ -506,14 +506,14 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		status= ref.checkFinalConditions(testMonitor2);
 		testMonitor2.assertUsedUp();
 
-		assertTrue("checkInput was supposed to pass", status.isOK());
+		assertTrue(status.isOK(), "checkInput was supposed to pass");
 		Change undo= performChange(ref, true);
 		assertNotNull(undo);
 
 		IPackageFragment pack= (IPackageFragment)cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		String expectedFileContents= getFileContents(getTestFileName(true, false));
 		assertEqualLines(expectedFileContents, newcu.getSource());
 	}
@@ -523,8 +523,8 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), true, true);
 		IType classA= getType(cu, "A");
 		IMethod method = classA.getMethod("m", signature);
-		assertTrue("method does not exist", method.exists());
-		assertTrue("refactoring not available", RefactoringAvailabilityTester.isChangeSignatureAvailable(method));
+		assertTrue(method.exists(), "method does not exist");
+		assertTrue(RefactoringAvailabilityTester.isChangeSignatureAvailable(method), "refactoring not available");
 
 		ChangeSignatureProcessor processor= new ChangeSignatureProcessor(method);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
@@ -534,7 +534,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		RefactoringStatus status= ref.checkInitialConditions(testMonitor);
 		testMonitor.assertUsedUp();
 
-		assertTrue("checkActivation was supposed to pass", status.isOK());
+		assertTrue(status.isOK(), "checkActivation was supposed to pass");
 
 		mangleExceptions(processor.getExceptionInfos(), removeExceptions, addExceptions, method.getCompilationUnit());
 
@@ -542,14 +542,14 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		status= ref.checkFinalConditions(testMonitor2);
 		testMonitor2.assertUsedUp();
 
-		assertTrue("checkInput was supposed to pass", status.isOK());
+		assertTrue(status.isOK(), "checkInput was supposed to pass");
 		Change undo= performChange(ref, true);
 		assertNotNull(undo);
 
 		IPackageFragment pack= (IPackageFragment)cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		String expectedFileContents= getFileContents(getTestFileName(true, false));
 		assertEqualLines("invalid renaming", expectedFileContents, newcu.getSource());
 	}
@@ -920,7 +920,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 //constructor tests
 	@Test
 	public void test21() throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 		String[] signature= {"I", "I"};
 		ParameterInfo[] newParamInfo= null;
 		int[] newIndices= null;
@@ -935,7 +935,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 	}
 	@Test
 	public void test22() throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 		String[] signature= {"I", "I"};
 		ParameterInfo[] newParamInfo= null;
 		int[] newIndices= null;
@@ -950,7 +950,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 	}
 	@Test
 	public void test23() throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 		String[] signature= {"I", "I"};
 		ParameterInfo[] newParamInfo= null;
 		int[] newIndices= null;
@@ -965,7 +965,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 	}
 	@Test
 	public void test24() throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 //		if (true){
 //			printTestDisabledMessage("Bug 24230");
 //			return;
@@ -984,7 +984,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 	}
 	@Test
 	public void test25() throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 		String[] signature= {"I", "I"};
 		ParameterInfo[] newParamInfo= null;
 		int[] newIndices= null;
@@ -999,7 +999,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 	}
 	@Test
 	public void test26() throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 		String[] signature= {"I", "I"};
 		ParameterInfo[] newParamInfo= null;
 		int[] newIndices= null;
@@ -1015,7 +1015,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 
 	@Test
 	public void test27() throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 		String[] signature= {"QString;", "QObject;", "I"};
 		ParameterInfo[] newParamInfo= createNewParamInfos(new String[]{"Object"}, new String[]{"newParam"}, new String[]{"null"});
 		int[] newIndices= { 3 };
@@ -1285,7 +1285,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		helperDoAll("A", "m", signature, newParamInfo, newIndices, oldParamNames, newParamNames, null, permutation, newVisibility, deletedIndices, newReturnTypeName, true);
 	}
 
-	@Ignore("need to decide how to treat compile errors")
+	@Disabled("need to decide how to treat compile errors")
 	@Test
 	public void testAll44()throws Exception{
 		String[] signature= {"I", "I"};
@@ -1304,7 +1304,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 		helperDoAll("A", "m", signature, newParamInfo, newIndices, oldParamNames, newParamNames, null, permutation, newVisibility, deletedIndices, newReturnTypeName);
 	}
 
-	@Ignore("need to decide how to treat compile errors")
+	@Disabled("need to decide how to treat compile errors")
 	@Test
 	public void testAll45()throws Exception{
 		String[] signature= {"I", "I"};
@@ -1326,7 +1326,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 
 	@Test
 	public void testAll46()throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 
 		String[] signature= {};
 		String[] newNames= {"i"};
@@ -1346,7 +1346,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 
 	@Test
 	public void testAll47()throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 
 		String[] signature= {};
 		String[] newNames= {"i"};
@@ -1366,7 +1366,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 
 	@Test
 	public void testAll48()throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 
 		String[] signature= {};
 		String[] newNames= {"i"};
@@ -1386,7 +1386,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 
 	@Test
 	public void testAll49()throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 
 		String[] signature= {};
 		String[] newNames= {"i"};
@@ -1406,7 +1406,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 
 	@Test
 	public void testAll50()throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 
 		String[] signature= {};
 		String[] newNames= {"i"};
@@ -1426,7 +1426,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 
 	@Test
 	public void testAll51()throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 
 		String[] signature= {};
 		String[] newNames= {"i"};
@@ -1446,7 +1446,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 
 	@Test
 	public void testAll52()throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 
 		String[] signature= {};
 		String[] newNames= {"i"};
@@ -1515,7 +1515,7 @@ public class ChangeSignatureTests extends GenericRefactoringTest {
 
 	@Test
 	public void testAll56()throws Exception{
-		assumeFalse("disabled for constructors for now",RUN_CONSTRUCTOR_TEST);
+		assumeFalse(RUN_CONSTRUCTOR_TEST,"disabled for constructors for now");
 
 //		printTestDisabledMessage("test for 38366 ArrayIndexOutOfBoundsException in change signeture [refactoring] ");
 		String[] signature= {"QEvaViewPart;", "I"};

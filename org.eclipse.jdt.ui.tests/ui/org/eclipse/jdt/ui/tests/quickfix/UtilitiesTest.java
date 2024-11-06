@@ -14,14 +14,14 @@
 
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -52,13 +52,13 @@ import org.eclipse.jdt.internal.ui.JavaPlugin;
 
 public class UtilitiesTest extends QuickFixTest {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
@@ -74,7 +74,7 @@ public class UtilitiesTest extends QuickFixTest {
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());
 	}
@@ -120,7 +120,7 @@ public class UtilitiesTest extends QuickFixTest {
 			ITypeBinding actualBinding= ASTResolving.guessBindingForTypeReference(node);
 			String actual= actualBinding != null ? actualBinding.getQualifiedName() : "null";
 			if (!actual.equals(expected[i])) {
-				assertEquals("Guessing failed for " + fields[i].toString(), expected[i], actual);
+				assertEquals(expected[i], actual, "Guessing failed for " + fields[i].toString());
 			}
 		}
 	}
@@ -157,7 +157,7 @@ public class UtilitiesTest extends QuickFixTest {
 			ITypeBinding actualBinding= ASTResolving.guessBindingForTypeReference(node);
 			String actual= actualBinding != null ? actualBinding.getQualifiedName() : "null";
 			if (!actual.equals(expected[i])) {
-				assertEquals("Guessing failed for " + methods[i].toString(), expected[i], actual);
+				assertEquals(expected[i], actual, "Guessing failed for " + methods[i].toString());
 			}
 		}
 
@@ -211,7 +211,7 @@ public class UtilitiesTest extends QuickFixTest {
 			ASTNode node= NodeFinder.perform(astRoot, buf.indexOf("X", fields[i].getStartPosition()), 1);
 			int kinds= ASTResolving.getPossibleTypeKinds(node, true);
 			if (kinds != expected[i]) {
-				assertEquals("Guessing failed for " + fields[i].toString(), expected[i], kinds);
+				assertEquals(expected[i], kinds, "Guessing failed for " + fields[i].toString());
 			}
 		}
 	}
@@ -238,7 +238,7 @@ public class UtilitiesTest extends QuickFixTest {
 			TypeDeclaration typeDecl = (TypeDeclaration) astRoot.types().get(i);
 			ASTNode node= NodeFinder.perform(astRoot, buf.indexOf("X", typeDecl.getStartPosition()), 1);
 			int kinds= ASTResolving.getPossibleTypeKinds(node, true);
-			assertEquals("Guessing failed for " + node.toString(), expected[i], kinds);
+			assertEquals(expected[i], kinds, "Guessing failed for " + node.toString());
 		}
 	}
 }

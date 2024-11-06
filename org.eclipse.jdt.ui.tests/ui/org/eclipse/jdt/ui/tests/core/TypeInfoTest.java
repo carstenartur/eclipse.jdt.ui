@@ -13,21 +13,21 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -54,22 +54,22 @@ import org.eclipse.jdt.internal.corext.util.TypeInfoFilter;
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 public class TypeInfoTest {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 	private IJavaProject fJProject2;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
-		assertNotNull("jre is null", JavaProjectHelper.addRTJar(fJProject1));
+		assertNotNull(JavaProjectHelper.addRTJar(fJProject1), "jre is null");
 
 		fJProject2= JavaProjectHelper.createJavaProject("TestProject2", "bin");
-		assertNotNull("jre is null", JavaProjectHelper.addRTJar(fJProject2));
+		assertNotNull(JavaProjectHelper.addRTJar(fJProject2), "jre is null");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fJProject1);
 		JavaProjectHelper.delete(fJProject2);
@@ -80,8 +80,8 @@ public class TypeInfoTest {
 
 		// add Junit source to project 2
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("Junit source", junitSrcArchive);
-		assertTrue("Junit source", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "Junit source");
+		assertTrue(junitSrcArchive.exists(), "Junit source");
 		JavaProjectHelper.addSourceContainerWithImport(fJProject2, "src", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 		// source folder
 		IPackageFragmentRoot root1= JavaProjectHelper.addSourceContainer(fJProject1, "src");
@@ -128,15 +128,15 @@ public class TypeInfoTest {
 			assertResolve(ref);
 
 		}
-		assertEquals("Should find 8 elements, is " + result.size(), 8, result.size());
+		assertEquals(8, result.size(), "Should find 8 elements, is " + result.size());
 
 
 	}
 
 	private void assertResolve(TypeNameMatch ref) {
 		IType resolvedType= ref.getType();
-		assertNotNull("Could not be resolved: " + ref.toString(), resolvedType);
-		assertTrue("Resolved type does not exist: " + ref.toString(), resolvedType.exists());
+		assertNotNull(resolvedType, "Could not be resolved: " + ref.toString());
+		assertTrue(resolvedType.exists(), "Resolved type does not exist: " + ref.toString());
 		StringAsserts.assertEqualString(resolvedType.getFullyQualifiedName('.'), ref.getFullyQualifiedName());
 	}
 
@@ -156,8 +156,8 @@ public class TypeInfoTest {
 
 		// add Junit source to project 2
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("Junit source", junitSrcArchive);
-		assertTrue("Junit source", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "Junit source");
+		assertTrue(junitSrcArchive.exists(), "Junit source");
 		JavaProjectHelper.addSourceContainerWithImport(fJProject2, "src", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 
 
@@ -182,7 +182,7 @@ public class TypeInfoTest {
 		findTypeRef(result, "junit.framework.TestListener");
 		findTypeRef(result, "junit.tests.framework.TestCaseTest.TornDown");
 
-		assertEquals("wrong element count", 51, result.size());
+		assertEquals(51, result.size(), "wrong element count");
 		//System.out.println("Elements found: " + result.size());
 		for (TypeNameMatch ref : result) {
 			//System.out.println(ref.getTypeName());
@@ -215,7 +215,7 @@ public class TypeInfoTest {
 			requestor,
 			IJavaSearchConstants.WAIT_UNTIL_READY_TO_SEARCH,
 			null);
-		assertEquals("result size", 2, result.size());
+		assertEquals(2, result.size(), "result size");
 		IType type1= result.get(0).getType();
 		IType type2= result.get(1).getType();
 

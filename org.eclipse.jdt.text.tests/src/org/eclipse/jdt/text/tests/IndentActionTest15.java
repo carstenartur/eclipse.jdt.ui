@@ -13,7 +13,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ListResourceBundle;
 
@@ -25,33 +25,41 @@ import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
 import org.eclipse.jdt.internal.ui.actions.IndentAction;
 import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.text.tests.performance.EditorTestHelper;
 import org.eclipse.jdt.text.tests.performance.ResourceTestHelper;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.source.SourceViewer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExternalResource;
-import org.junit.rules.TestName;
 
 /**
  *
  * @since 3.2
  */
 public class IndentActionTest15 {
-	@Rule
-	public TestName tn= new TestName();
+	private String testName;
+
+	@BeforeEach
+	void init(TestInfo testInfo) {
+		this.testName= testInfo.getDisplayName();
+	}
 
 	private static final String PROJECT= "IndentTests15";
 
-	private final static class IndentTestSetup extends ExternalResource {
+	private final static class IndentTestSetup implements BeforeEachCallback, AfterEachCallback {
 		private IJavaProject fJavaProject;
 
 		@Override
-		protected void before() throws Exception {
+		public void beforeEach(ExtensionContext context) throws Exception {
 			fJavaProject= EditorTestHelper.createJavaProject15(PROJECT, "testResources/indentation15");
 			fJavaProject.setOption(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.TAB);
 			fJavaProject.setOption(DefaultCodeFormatterConstants.FORMATTER_INDENT_EMPTY_LINES, DefaultCodeFormatterConstants.FALSE);
@@ -60,7 +68,7 @@ public class IndentActionTest15 {
 		}
 
 		@Override
-		protected void after () {
+		public void afterEach (ExtensionContext context) {
 			if (fJavaProject != null)
 				try {
 					JavaProjectHelper.delete(fJavaProject);
@@ -82,14 +90,14 @@ public class IndentActionTest15 {
 		}
 	}
 
-	@Rule
+	@RegisterExtension
 	public IndentTestSetup indentTestSetup=new IndentTestSetup();
 
 	private JavaEditor fEditor;
 	private SourceViewer fSourceViewer;
 	private IDocument fDocument;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		String filename= createFileName("Before");
 		fEditor= (JavaEditor) EditorTestHelper.openInEditor(ResourceTestHelper.findFile(filename), true);
@@ -97,7 +105,7 @@ public class IndentActionTest15 {
 		fDocument= fSourceViewer.getDocument();
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		EditorTestHelper.closeEditor(fEditor);
 		fEditor= null;
@@ -114,7 +122,7 @@ public class IndentActionTest15 {
 	}
 
 	private String createFileName(String qualifier) {
-		String name= tn.getMethodName();
+		String name= testName;
 		name= name.substring(4, 5).toLowerCase() + name.substring(5);
 		return "/" + PROJECT + "/src/" + name + "/" + qualifier + ".java";
 	}

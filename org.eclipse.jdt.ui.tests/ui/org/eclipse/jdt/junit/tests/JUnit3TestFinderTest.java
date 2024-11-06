@@ -13,13 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.HashSet;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.junit.JUnitCore;
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -44,7 +44,7 @@ public class JUnit3TestFinderTest {
 	private IJavaProject fProject;
 	private IPackageFragmentRoot fRoot;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fProject= JavaProjectHelper.createJavaProject("TestProject", "bin");
 		JavaProjectHelper.addRTJar(fProject);
@@ -54,7 +54,7 @@ public class JUnit3TestFinderTest {
 		fRoot= JavaProjectHelper.addSourceContainer(fProject, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fProject);
 	}
@@ -406,7 +406,7 @@ public class JUnit3TestFinderTest {
 		if (container instanceof IType) {
 			IType type= (IType) container;
 			boolean isValidTest= expectedValidTests.length == 1 && type.getFullyQualifiedName('.').equals(expectedValidTests[0]);
-			assertEquals(type.getFullyQualifiedName('.'), isValidTest, finder.isTest(type));
+			assertEquals(isValidTest, finder.isTest(type), type.getFullyQualifiedName('.'));
 		}
 
 		HashSet<IType> set= new HashSet<>();

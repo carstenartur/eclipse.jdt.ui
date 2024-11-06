@@ -13,10 +13,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
@@ -60,7 +60,7 @@ public class ExtractConstantTests1d7 extends ExtractConstantTests {
 		if(!allowLoadtime && !ref.selectionAllStaticFinal())
 			return;
 
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 		if(checkMsg)
 			assertEquals(errorMsg, result.getEntryMatchingSeverity(RefactoringStatus.FATAL).getMessage());
 	}

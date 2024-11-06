@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -113,10 +113,10 @@ public class TestRenameParticipantShared extends RenameParticipant implements IS
 
 	public static void testNumberOfElements(int expected) {
 		if (expected == 0) {
-			Assert.assertNull(fgInstance);
+			Assertions.assertNull(fgInstance);
 		} else {
-			Assert.assertEquals(expected, fgInstance.fElements.size());
-			Assert.assertEquals(expected, fgInstance.fArguments.size());
+			Assertions.assertEquals(expected, fgInstance.fElements.size());
+			Assertions.assertEquals(expected, fgInstance.fArguments.size());
 		}
 	}
 
@@ -125,8 +125,8 @@ public class TestRenameParticipantShared extends RenameParticipant implements IS
 		for (int i= 0; i < args.length; i++) {
 			RenameArguments expected= args[i];
 			RenameArguments actual= (RenameArguments)fgInstance.fArguments.get(i);
-			Assert.assertEquals(expected.getNewName(), actual.getNewName());
-			Assert.assertEquals(expected.getUpdateReferences(), actual.getUpdateReferences());
+			Assertions.assertEquals(expected.getNewName(), actual.getNewName());
+			Assertions.assertEquals(expected.getUpdateReferences(), actual.getUpdateReferences());
 		}
 	}
 
@@ -136,9 +136,9 @@ public class TestRenameParticipantShared extends RenameParticipant implements IS
 
 	public static void testNumberOfSimilarElements(int expected) {
 		if (expected == 0)
-			Assert.assertNull(fgInstance);
+			Assertions.assertNull(fgInstance);
 		else
-			Assert.assertEquals(expected, fgInstance.fSimilarToHandle.size());
+			Assertions.assertEquals(expected, fgInstance.fSimilarToHandle.size());
 	}
 
 	public static void testSimilarElements(List<String> similarList, List<String> similarNewNameList, List<String> similarNewHandleList) {
@@ -148,9 +148,9 @@ public class TestRenameParticipantShared extends RenameParticipant implements IS
 			String newName= similarNewNameList.get(i);
 			String actualNewHandle= fgInstance.fSimilarToHandle.get(handle);
 			String actualNewName= fgInstance.fSimilarToNewName.get(handle);
-			Assert.assertEquals("New element handle not as expected", newHandle, actualNewHandle);
-			Assert.assertEquals("New element name not as expected", newName, actualNewName);
+			Assertions.assertEquals(newHandle, actualNewHandle, "New element handle not as expected");
+			Assertions.assertEquals(newName, actualNewName, "New element name not as expected");
 		}
-		Assert.assertEquals(similarList.size(), fgInstance.fSimilarToHandle.size());
+		Assertions.assertEquals(similarList.size(), fgInstance.fSimilarToHandle.size());
 	}
 }

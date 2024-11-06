@@ -20,16 +20,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -86,7 +86,7 @@ public class ConvertAnonymousToNestedTests extends GenericRefactoringTest {
 		return createCU(pack, getSimpleTestFileName(canConvert, input), getFileContents(getTestFileName(canConvert, input)));
 	}
 
-	@Before
+	@BeforeEach
 	public void before() throws Exception {
 		Hashtable<String, String> options= JavaCore.getOptions();
 
@@ -102,7 +102,7 @@ public class ConvertAnonymousToNestedTests extends GenericRefactoringTest {
 
 	}
 
-	@After
+	@AfterEach
 	public void after() throws Exception {
 		Hashtable<String, String> options= JavaCore.getOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_ASSIGNMENT_OPERATOR, fCompactPref);
@@ -115,7 +115,7 @@ public class ConvertAnonymousToNestedTests extends GenericRefactoringTest {
 		ConvertAnonymousToNestedRefactoring ref= new ConvertAnonymousToNestedRefactoring(cu, selection.getOffset(), selection.getLength());
 
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful", preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful");
 
 		ref.setClassName(className);
 		ref.setDeclareFinal(makeFinal);
@@ -123,14 +123,14 @@ public class ConvertAnonymousToNestedTests extends GenericRefactoringTest {
 
 		preconditionResult= ref.checkFinalConditions(new NullProgressMonitor());
 
-		assertTrue("precondition was supposed to pass", preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "precondition was supposed to pass");
 
 		performChange(ref, false);
 
 		IPackageFragment pack= (IPackageFragment)cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		assertEqualLines(getFileContents(getTestFileName(true, false)), newcu.getSource());
 	}
 
@@ -140,7 +140,7 @@ public class ConvertAnonymousToNestedTests extends GenericRefactoringTest {
 		ConvertAnonymousToNestedRefactoring ref= new ConvertAnonymousToNestedRefactoring(cu, selection.getOffset(), selection.getLength());
 
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful", preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful");
 
 		ref.setClassName(className);
 		ref.setDeclareFinal(makeFinal);
@@ -149,14 +149,14 @@ public class ConvertAnonymousToNestedTests extends GenericRefactoringTest {
 
 		preconditionResult= ref.checkFinalConditions(new NullProgressMonitor());
 
-		assertTrue("precondition was supposed to pass", preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "precondition was supposed to pass");
 
 		performChange(ref, false);
 
 		IPackageFragment pack= (IPackageFragment)cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		assertEqualLines(getFileContents(getTestFileName(true, false)), newcu.getSource());
 	}
 
@@ -166,7 +166,7 @@ public class ConvertAnonymousToNestedTests extends GenericRefactoringTest {
 		ConvertAnonymousToNestedRefactoring ref= new ConvertAnonymousToNestedRefactoring(cu, selection.getOffset(), selection.getLength());
 
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful", preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful");
 
 		ref.setClassName(className);
 		ref.setDeclareFinal(makeFinal);
@@ -174,8 +174,8 @@ public class ConvertAnonymousToNestedTests extends GenericRefactoringTest {
 
 		preconditionResult= ref.checkFinalConditions(new NullProgressMonitor());
 
-		assertFalse("precondition was supposed to fail", preconditionResult.isOK());
-		assertEquals("incorrect severity:", expectedSeverity, preconditionResult.getSeverity());
+		assertFalse(preconditionResult.isOK(), "precondition was supposed to fail");
+		assertEquals(expectedSeverity, preconditionResult.getSeverity(), "incorrect severity:");
 	}
 
 	private void failActivationHelper(int startLine, int startColumn, int endLine, int endColumn, int expectedSeverity) throws Exception {
@@ -184,12 +184,12 @@ public class ConvertAnonymousToNestedTests extends GenericRefactoringTest {
 	    ConvertAnonymousToNestedRefactoring ref= new ConvertAnonymousToNestedRefactoring(cu, selection.getOffset(), selection.getLength());
 
 	    RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
-	    assertEquals("activation was supposed to fail", expectedSeverity, preconditionResult.getSeverity());
+	    assertEquals(expectedSeverity, preconditionResult.getSeverity(), "activation was supposed to fail");
 	}
 
 	//--- TESTS
 
-	@Ignore("corner case - local types")
+	@Disabled("corner case - local types")
 	@Test
 	public void testFail0() throws Exception{
 		failHelper1(6, 14, 6, 16, true, "Inner", Modifier.PRIVATE, RefactoringStatus.FATAL);

@@ -14,19 +14,19 @@
 
 package org.eclipse.jdt.ui.tests.refactoring.nls;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.util.Properties;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -77,12 +77,12 @@ public class NLSHintHelperTest {
 	@Rule
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject= pts.getProject();
 		File lib= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.NLS_LIB);
-		assertNotNull("lib does not exist", lib);
-		assertTrue("lib does not exist", lib.exists());
+		assertNotNull(lib, "lib does not exist");
+		assertTrue(lib.exists(), "lib does not exist");
 		fLibrary= JavaProjectHelper.addLibrary(fJProject, Path.fromOSString(lib.getPath())); // add library to project
 	}
 
@@ -468,7 +468,7 @@ public class NLSHintHelperTest {
         return  NLSHintHelper.getResourceBundleName(typeBinding);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject, pts.getDefaultClasspath());
 	}

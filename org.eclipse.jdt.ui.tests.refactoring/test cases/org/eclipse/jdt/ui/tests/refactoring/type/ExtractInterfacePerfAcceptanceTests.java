@@ -16,8 +16,8 @@ package org.eclipse.jdt.ui.tests.refactoring.type;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.test.performance.Dimension;
 
@@ -42,7 +42,7 @@ public class ExtractInterfacePerfAcceptanceTests extends RefactoringPerformanceT
 	private SWTTestProject fProject;
 	private Refactoring fRefactoring;
 
-	@Rule
+	@RegisterExtension
 	public RefactoringPerformanceTestSetup rpts= new RefactoringPerformanceTestSetup();
 
 	@Override

@@ -13,13 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.util.Arrays;
 import java.util.HashSet;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 
@@ -37,8 +37,8 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 import org.eclipse.jdt.internal.ui.fix.MultiFixMessages;
 
 public class CleanUpTest1d7 extends CleanUpTestCase {
-	@Rule
-    public ProjectTestSetup projectSetup= new Java1d8ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup= new Java1d8ProjectTestSetup();
 
 	@Override
 	protected IJavaProject getProject() {
@@ -568,7 +568,7 @@ public class CleanUpTest1d7 extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.TryWithResourceCleanup_description)));
 	}
@@ -959,7 +959,7 @@ public class CleanUpTest1d7 extends CleanUpTestCase {
 		enable(CleanUpConstants.MULTI_CATCH);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.MultiCatchCleanUp_description)));
 	}

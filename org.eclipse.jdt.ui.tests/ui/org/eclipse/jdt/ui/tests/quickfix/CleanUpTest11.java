@@ -13,13 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.util.Arrays;
 import java.util.HashSet;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 
@@ -38,7 +38,7 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
  * Tests the cleanup features related to Java 11.
  */
 public class CleanUpTest11 extends CleanUpTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new Java11ProjectTestSetup();
 
 	@Override
@@ -566,7 +566,7 @@ public class CleanUpTest11 extends CleanUpTestCase {
 		enable(CleanUpConstants.USE_STRING_IS_BLANK);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(FixMessages.UseStringIsBlankCleanUp_description)));
 	}
 

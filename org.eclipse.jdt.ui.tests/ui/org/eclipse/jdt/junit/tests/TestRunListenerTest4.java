@@ -14,8 +14,8 @@
 
 package org.eclipse.jdt.junit.tests;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.junit.JUnitCore;
 import org.eclipse.jdt.junit.TestRunListener;
@@ -54,7 +54,7 @@ public class TestRunListenerTest4 extends AbstractTestRunListenerTest {
 	}
 
 	@Override
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fProject= JavaProjectHelper.createJavaProject("TestRunListenerTest", "bin");
 		JavaProjectHelper.addToClasspath(fProject, JavaCore.newContainerEntry(JUnitCore.JUNIT4_CONTAINER_PATH));

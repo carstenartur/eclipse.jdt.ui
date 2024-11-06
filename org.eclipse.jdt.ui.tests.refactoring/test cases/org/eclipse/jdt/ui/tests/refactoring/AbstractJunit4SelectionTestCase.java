@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -72,7 +72,7 @@ public abstract class AbstractJunit4SelectionTestCase extends AbstractJunit4CUTe
 		fIgnoreSelectionMarker= ignoreSelectionMarker;
 	}
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fIsPreDeltaTest= false;
 	}
@@ -135,18 +135,18 @@ public abstract class AbstractJunit4SelectionTestCase extends AbstractJunit4CUTe
 				} else {
 					JavaCore.run(op, new NullProgressMonitor());
 				}
-				assertFalse("Precondition check failed: " + op.getConditionStatus().toString(), op.getConditionStatus().hasFatalError());
-				assertFalse("Validation check failed: " + op.getConditionStatus().toString(), op.getValidationStatus().hasFatalError());
-				assertNotNull("No Undo", op.getUndoChange());
+				assertFalse(op.getConditionStatus().hasFatalError(), "Precondition check failed: " + op.getConditionStatus().toString());
+				assertFalse(op.getValidationStatus().hasFatalError(), "Validation check failed: " + op.getConditionStatus().toString());
+				assertNotNull(op.getUndoChange(), "No Undo");
 				compareSource(unit.getSource(), out);
 				Change undo= op.getUndoChange();
-				assertNotNull("Undo doesn't exist", undo);
-				assertTrue("Undo manager is empty", undoManager.anythingToUndo());
+				assertNotNull(undo, "Undo doesn't exist");
+				assertTrue(undoManager.anythingToUndo(), "Undo manager is empty");
 
 				if (doUndo) {
 					undoManager.performUndo(null, new NullProgressMonitor());
-					assertFalse("Undo manager still has undo", undoManager.anythingToUndo());
-					assertTrue("Undo manager is empty", undoManager.anythingToRedo());
+					assertFalse(undoManager.anythingToUndo(), "Undo manager still has undo");
+					assertTrue(undoManager.anythingToRedo(), "Undo manager is empty");
 					compareSource(original, unit.getSource());
 				}
 				break;
@@ -201,9 +201,9 @@ public abstract class AbstractJunit4SelectionTestCase extends AbstractJunit4CUTe
 			end= includingEnd + SQUARE_BRACKET_CLOSE_LENGTH;
 		}
 
-		assertTrue("Selection invalid", start >= 0);
-		assertTrue("Selection invalid", end >= 0);
-		assertTrue("Selection invalid", end >= start);
+		assertTrue(start >= 0, "Selection invalid");
+		assertTrue(end >= 0, "Selection invalid");
+		assertTrue(end >= start, "Selection invalid");
 
 		fSelection= new int[] {
 			start - (fIgnoreSelectionMarker ? SQUARE_BRACKET_CLOSE_LENGTH : 0),

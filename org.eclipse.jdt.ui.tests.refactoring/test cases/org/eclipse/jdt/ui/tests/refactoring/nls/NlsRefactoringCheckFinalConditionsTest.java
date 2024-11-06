@@ -13,16 +13,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.nls;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Properties;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -58,13 +58,13 @@ public class NlsRefactoringCheckFinalConditionsTest {
 	private IPackageFragment fResourceBundlePackage;
 	private String fResourceBundleName;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		javaProject= pts.getProject();
 		fHelper= new NlsRefactoringTestHelper(javaProject);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(javaProject, pts.getDefaultClasspath());
 	}
@@ -78,11 +78,11 @@ public class NlsRefactoringCheckFinalConditionsTest {
 
 		RefactoringStatus res= createCheckInputStatus(cu);
 
-		assertFalse("should info about properties", res.isOK());
+		assertFalse(res.isOK(), "should info about properties");
 
-		assertEquals("one info", 1, res.getEntries().length);
+		assertEquals(1, res.getEntries().length, "one info");
 		RefactoringStatusEntry help= res.getEntryAt(0);
-		assertEquals("info", RefactoringStatus.INFO, help.getSeverity());
+		assertEquals(RefactoringStatus.INFO, help.getSeverity(), "info");
 		assertEquals(Messages.format(NLSMessages.NLSRefactoring_will_be_created, BasicElementLabels.getPathLabel(propertyFile.getFullPath(), false)), help.getMessage());
 	}
 
@@ -111,32 +111,30 @@ public class NlsRefactoringCheckFinalConditionsTest {
 
 		RefactoringStatusEntry[] results= res.getEntries();
 
-		assertEquals("substitution pattern must be given", 2, results.length); //$NON-NLS-1$
-		assertEquals("first is fatal", RefactoringStatus.ERROR, results[0].getSeverity()); //$NON-NLS-1$
-		assertEquals("right fatal message", //$NON-NLS-1$
-				NLSMessages.NLSRefactoring_pattern_empty,
-				results[0].getMessage());
+		assertEquals(2, results.length, "substitution pattern must be given"); //$NON-NLS-1$
+		assertEquals(RefactoringStatus.ERROR, results[0].getSeverity(), "first is fatal"); //$NON-NLS-1$
+		assertEquals(NLSMessages.NLSRefactoring_pattern_empty, //$NON-NLS-1$
+				results[0].getMessage(),
+				"right fatal message");
 
-		assertEquals("warning no key given", RefactoringStatus.WARNING, //$NON-NLS-1$
-				results[1].getSeverity());
-		assertEquals("right warning message", //$NON-NLS-1$
-				Messages.format(NLSMessages.NLSRefactoring_pattern_does_not_contain,
-						"${key}"), results[1].getMessage()); //$NON-NLS-1$
+		assertEquals(RefactoringStatus.WARNING, results[1].getSeverity(), //$NON-NLS-1$
+				"warning no key given");
+		assertEquals(Messages.format(NLSMessages.NLSRefactoring_pattern_does_not_contain, "${key}"), //$NON-NLS-1$
+				results[1].getMessage(), "right warning message"); //$NON-NLS-1$
 
 		fSubstitutionPattern= "blabla${key}"; //$NON-NLS-1$
 		res= createCheckInputStatus(cu);
-		assertTrue("substitution pattern ok", res.isOK()); //$NON-NLS-1$
+		assertTrue(res.isOK(), "substitution pattern ok"); //$NON-NLS-1$
 
 		fSubstitutionPattern= "${key}blabla${key}"; //$NON-NLS-1$
 		res= createCheckInputStatus(cu);
-		assertFalse("substitution pattern ko", res.isOK()); //$NON-NLS-1$
+		assertFalse(res.isOK(), "substitution pattern ko"); //$NON-NLS-1$
 
 		results= res.getEntries();
-		assertEquals("one warning", 1, results.length); //$NON-NLS-1$
-		assertEquals("warning", RefactoringStatus.WARNING, results[0].getSeverity()); //$NON-NLS-1$
-		assertEquals("warning message", //$NON-NLS-1$
-				Messages.format(NLSMessages.NLSRefactoring_Only_the_first_occurrence_of,
-						"${key}"), results[0].getMessage()); //$NON-NLS-1$
+		assertEquals(1, results.length, "one warning"); //$NON-NLS-1$
+		assertEquals(RefactoringStatus.WARNING, results[0].getSeverity(), "warning"); //$NON-NLS-1$
+		assertEquals(Messages.format(NLSMessages.NLSRefactoring_Only_the_first_occurrence_of, "${key}"), //$NON-NLS-1$
+				results[0].getMessage(), "warning message"); //$NON-NLS-1$
 
 		// check for duplicate keys????
 		// check for keys already defined
@@ -171,13 +169,13 @@ public class NlsRefactoringCheckFinalConditionsTest {
 	}
 
 	private void checkNothingToDo(RefactoringStatus status) {
-		assertEquals("fatal error expected", 1, status.getEntries().length); //$NON-NLS-1$
+		assertEquals(1, status.getEntries().length, "fatal error expected"); //$NON-NLS-1$
 
 		RefactoringStatusEntry fatalError= status.getEntryAt(0);
-		assertEquals("fatalerror", RefactoringStatus.FATAL, fatalError.getSeverity()); //$NON-NLS-1$
-		assertEquals("errormessage", //$NON-NLS-1$
-				NLSMessages.NLSRefactoring_nothing_to_do,
-				fatalError.getMessage());
+		assertEquals(RefactoringStatus.FATAL, fatalError.getSeverity(), "fatalerror"); //$NON-NLS-1$
+		assertEquals(NLSMessages.NLSRefactoring_nothing_to_do, //$NON-NLS-1$
+				fatalError.getMessage(),
+				"errormessage");
 	}
 
 	private void fillInValues(NLSRefactoring refac) {

@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -35,7 +35,7 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
  * Tests the cleanup features related to Java 16.
  */
 public class CleanUpTest15 extends CleanUpTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new Java15ProjectTestSetup(false);
 
 	@Override

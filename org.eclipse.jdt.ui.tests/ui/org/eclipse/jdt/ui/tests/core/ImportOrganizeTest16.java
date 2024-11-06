@@ -15,10 +15,10 @@ package org.eclipse.jdt.ui.tests.core;
 
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -41,12 +41,12 @@ import org.eclipse.jdt.ui.PreferenceConstants;
 import org.eclipse.jdt.ui.tests.core.rules.Java16ProjectTestSetup;
 
 public class ImportOrganizeTest16 extends ImportOrganizeTest {
-	@Rule
+	@RegisterExtension
 	public Java16ProjectTestSetup j16p= new Java16ProjectTestSetup(false);
 
 	private IJavaProject fJProject1;
 
-	@Before
+	@BeforeEach
 	public void before() throws Exception {
 		fJProject1= j16p.getProject();
 
@@ -55,7 +55,7 @@ public class ImportOrganizeTest16 extends ImportOrganizeTest {
 		JavaCore.setOptions(options);
 	}
 
-	@After
+	@AfterEach
 	public void after() throws Exception {
 		setOrganizeImportSettings(null, 99, 99, fJProject1);
 		JavaProjectHelper.clear(fJProject1, j16p.getDefaultClasspath());

@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -23,10 +23,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -64,8 +64,8 @@ import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
  */
 public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new Java1d8ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new Java1d8ProjectTestSetup();
 
 	protected static final String ANNOTATION_PATH= "annots";
 
@@ -149,7 +149,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 		};
 	}
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= projectSetup.getProject();
 		fJProject1.getProject().getFolder(ANNOTATION_PATH).create(true, true, null);
@@ -157,7 +157,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 		setDefaultClassFileEditor(true);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());
 		setDefaultClassFileEditor(false);
@@ -213,7 +213,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([IL1java/util/List&lt;L<b>1</b>java/lang/String;&gt;;)Ljava/lang/String;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as '@Nullable String'", list);
 			expectedInfo=
@@ -221,13 +221,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([IL1java/util/List&lt;L<b>0</b>java/lang/String;&gt;;)Ljava/lang/String;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -326,7 +326,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([Ljava/lang/Object;Ljava/util/List&lt;+Ljava/lang/Number;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([Ljava/lang/Object;L1java/util/List&lt;+1L<b>1</b>java/lang/Number;&gt;;)Ljava/lang/String;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as '@Nullable Number'", list);
 			expectedInfo=
@@ -334,13 +334,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([Ljava/lang/Object;Ljava/util/List&lt;+Ljava/lang/Number;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([Ljava/lang/Object;L1java/util/List&lt;+1L<b>0</b>java/lang/Number;&gt;;)Ljava/lang/String;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -403,7 +403,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([[ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([[<b>1</b>ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as 'int[] @Nullable []'", list);
 			expectedInfo=
@@ -411,13 +411,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([[ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([[<b>0</b>ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -484,7 +484,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([[ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([1[<b>1</b>ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as 'int[] @Nullable []'", list);
 			expectedInfo=
@@ -492,13 +492,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([[ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([1[<b>0</b>ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -565,7 +565,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([[ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([1[<b>1</b>ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as 'int[] @Nullable []'", list);
 			expectedInfo=
@@ -573,13 +573,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([[ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([1[<b>0</b>ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -646,7 +646,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([[[ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([<b>1</b>[1[ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as 'int @Nullable [][][]'", list);
 			expectedInfo=
@@ -654,13 +654,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>([[[ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" +
 					"<dd>([<b>0</b>[1[ILjava/util/List&lt;Ljava/lang/String;&gt;;)Ljava/lang/String;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -725,7 +725,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>()[Ljava/lang/String;</dd>" +
 					"<dd>()[<b>1</b>Ljava/lang/String;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as 'String @Nullable []'", list);
 			expectedInfo=
@@ -733,13 +733,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>()[Ljava/lang/String;</dd>" +
 					"<dd>()[<b>0</b>Ljava/lang/String;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -804,7 +804,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>()[Ljava/lang/String;</dd>" +
 					"<dd>()[<b>1</b>Ljava/lang/String;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as 'String @Nullable []'", list);
 			expectedInfo=
@@ -812,13 +812,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>()[Ljava/lang/String;</dd>" +
 					"<dd>()[<b>0</b>Ljava/lang/String;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -883,7 +883,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[I)Ljava/lang/String;</dd>" +
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[<b>1</b>I)Ljava/lang/String;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as 'int @Nullable ...'", list);
 			expectedInfo=
@@ -891,13 +891,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[I)Ljava/lang/String;</dd>" +
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[<b>0</b>I)Ljava/lang/String;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -964,7 +964,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[[I)Ljava/lang/String;</dd>" +
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[<b>1</b>[1I)Ljava/lang/String;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as 'int[] @Nullable ...'", list);
 			expectedInfo=
@@ -972,13 +972,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[[I)Ljava/lang/String;</dd>" +
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[<b>0</b>[1I)Ljava/lang/String;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -1043,7 +1043,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[Ljava/lang/String;)Ljava/lang/String;</dd>" +
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[L<b>1</b>java/lang/String;)Ljava/lang/String;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as '@Nullable String'", list);
 			expectedInfo=
@@ -1051,13 +1051,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[Ljava/lang/String;)Ljava/lang/String;</dd>" +
 					"<dd>(Ljava/util/List&lt;Ljava/lang/String;&gt;;[L<b>0</b>java/lang/String;)Ljava/lang/String;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -1111,7 +1111,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>&lt;X:Ljava/lang/Object;T::Ljava/util/List&lt;TX;&gt;;&gt;(TT;)TX;</dd>" +
 					"<dd>&lt;X:Ljava/lang/Object;<b>1</b>T::Ljava/util/List&lt;TX;&gt;;&gt;(TT;)TX;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as '@Nullable T extends List<X>'", list);
 			expectedInfo=
@@ -1119,13 +1119,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>&lt;X:Ljava/lang/Object;T::Ljava/util/List&lt;TX;&gt;;&gt;(TT;)TX;</dd>" +
 					"<dd>&lt;X:Ljava/lang/Object;<b>0</b>T::Ljava/util/List&lt;TX;&gt;;&gt;(TT;)TX;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			IFile annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -1150,7 +1150,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>&lt;X:Ljava/lang/Object;T::Ljava/util/List&lt;TX;&gt;;&gt;(TT;)TX;</dd>" +
 					"<dd>&lt;<b>1</b>X:Ljava/lang/Object;0T::Ljava/util/List&lt;TX;&gt;;&gt;(TT;)TX;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as '@Nullable X'", list);
 			expectedInfo=
@@ -1158,13 +1158,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>&lt;X:Ljava/lang/Object;T::Ljava/util/List&lt;TX;&gt;;&gt;(TT;)TX;</dd>" +
 					"<dd>&lt;<b>0</b>X:Ljava/lang/Object;0T::Ljava/util/List&lt;TX;&gt;;&gt;(TT;)TX;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			expectedContent=
 					"""
@@ -1218,7 +1218,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>&lt;X:Ljava/lang/Object;T::Ljava/util/List&lt;TX;&gt;;&gt;</dd>" +
 					"<dd>&lt;X:Ljava/lang/Object;<b>1</b>T::Ljava/util/List&lt;TX;&gt;;&gt;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as '@Nullable T extends List<X>'", list);
 			expectedInfo=
@@ -1226,13 +1226,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>&lt;X:Ljava/lang/Object;T::Ljava/util/List&lt;TX;&gt;;&gt;</dd>" +
 					"<dd>&lt;X:Ljava/lang/Object;<b>0</b>T::Ljava/util/List&lt;TX;&gt;;&gt;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			IFile annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -1256,7 +1256,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>&lt;X:Ljava/lang/Object;T::Ljava/util/List&lt;TX;&gt;;&gt;</dd>" +
 					"<dd>&lt;<b>1</b>X:Ljava/lang/Object;0T::Ljava/util/List&lt;TX;&gt;;&gt;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as '@Nullable X'", list);
 			expectedInfo=
@@ -1264,13 +1264,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>&lt;X:Ljava/lang/Object;T::Ljava/util/List&lt;TX;&gt;;&gt;</dd>" +
 					"<dd>&lt;<b>0</b>X:Ljava/lang/Object;0T::Ljava/util/List&lt;TX;&gt;;&gt;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(X_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			expectedContent=
 					"""
@@ -1321,7 +1321,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>Ljava/util/List&lt;[Ljava/lang/Object;&gt;;</dd>" +
 					"<dd>Ljava/util/List&lt;[<b>1</b>Ljava/lang/Object;&gt;;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as 'Object @Nullable []'", list);
 			expectedInfo=
@@ -1329,13 +1329,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>Ljava/util/List&lt;[Ljava/lang/Object;&gt;;</dd>" +
 					"<dd>Ljava/util/List&lt;[<b>0</b>Ljava/lang/Object;&gt;;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			IFile annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(NODE_PATH+".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -1407,7 +1407,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>(TK;)TV;</dd>" +
 					"<dd>(TK;)T<b>1</b>V;</dd>" + // <= 1
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			proposal= findProposalByName("Annotate as '@Nullable V'", list);
 			expectedInfo=
@@ -1415,13 +1415,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 					"<dd>(TK;)TV;</dd>" +
 					"<dd>(TK;)T<b>0</b>V;</dd>" + // <= 0
 					"</dl>";
-			assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+			assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 			IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 			proposal.apply(document);
 
 			IFile annotationFile= fJProject1.getProject().getFile(new Path(ANNOTATION_PATH).append(MY_MAP_PATH + ".eea"));
-			assertTrue("Annotation file should have been created", annotationFile.exists());
+			assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 			String expectedContent=
 					"""
@@ -1493,7 +1493,7 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 						"<dd>(TK;)TV;</dd>" +
 						"<dd>(TK;)T<b>1</b>V;</dd>" + // <= 1
 						"</dl>";
-				assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+				assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 				proposal= findProposalByName("Annotate as '@Nullable V'", list);
 				expectedInfo=
@@ -1501,13 +1501,13 @@ public class AnnotateAssistTest1d8 extends AbstractAnnotateAssistTests {
 						"<dd>(TK;)TV;</dd>" +
 						"<dd>(TK;)T<b>0</b>V;</dd>" + // <= 0
 						"</dl>";
-				assertEquals("expect detail", expectedInfo, proposal.getAdditionalProposalInfo());
+				assertEquals(expectedInfo, proposal.getAdditionalProposalInfo(), "expect detail");
 
 				IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
 				proposal.apply(document);
 
 				IFile annotationFile= eeaProject.getProject().getFile(new Path(MY_MAP_PATH + ".eea"));
-				assertTrue("Annotation file should have been created", annotationFile.exists());
+				assertTrue(annotationFile.exists(), "Annotation file should have been created");
 
 				String expectedContent=
 						"""

@@ -14,12 +14,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -98,18 +98,18 @@ public class QuickFixTest {
 			if (name == null || name.length() == 0 || name.charAt(0) == '!' || name.contains("{0}") || name.contains("{1}")) {
 				fail("wrong proposal label: " + name);
 			}
-			assertNotNull("wrong proposal image", proposal.getImage());
+			assertNotNull(proposal.getImage(), "wrong proposal image");
 		}
 	}
 
 	public static void assertCorrectContext(IInvocationContext context, ProblemLocation problem) {
 		if (problem.getProblemId() != 0) {
-			assertTrue("Problem type not marked with light bulb: " + problem, JavaCorrectionProcessor.hasCorrections(context.getCompilationUnit(), problem.getProblemId(), problem.getMarkerType()));
+			assertTrue(JavaCorrectionProcessor.hasCorrections(context.getCompilationUnit(), problem.getProblemId(), problem.getMarkerType()), "Problem type not marked with light bulb: " + problem);
 		}
 	}
 
 	public static void assertNumberOf(String name, int nProblems, int nProblemsExpected) {
-		assertEquals("Wrong number of " + name + ", is: " + nProblems + ", expected: " + nProblemsExpected, nProblems, nProblemsExpected);
+		assertEquals(nProblems, nProblemsExpected, "Wrong number of " + name + ", is: " + nProblems + ", expected: " + nProblemsExpected);
 	}
 
 	public static void assertEqualString(String actual, String expected) {
@@ -136,7 +136,7 @@ public class QuickFixTest {
 
 	protected static void assertProposalPreviewEquals(String expected, String proposalName, List<IJavaCompletionProposal> proposals) throws CoreException, BadLocationException {
 		final ICompletionProposal proposal= findProposalByName(proposalName, proposals);
-		assertNotNull("proposal \""+proposalName+"\" not found", proposal);
+		assertNotNull(proposal, "proposal \"" + proposalName + "\" not found");
 		assertEquals(expected, getProposalPreviewContent(proposal));
 	}
 
@@ -337,7 +337,7 @@ public class QuickFixTest {
 		assertStatusOk(status);
 
 		if (!proposals.isEmpty()) {
-			assertTrue("should be marked as 'has assist'", JavaCorrectionProcessor.hasAssists(context));
+			assertTrue(JavaCorrectionProcessor.hasAssists(context), "should be marked as 'has assist'");
 		}
 
 		if (filteredTypes != null && filteredTypes.length > 0) {
@@ -358,7 +358,7 @@ public class QuickFixTest {
 		assertStatusOk(status);
 
 		if (!proposals.isEmpty()) {
-			assertTrue("should be marked as 'has assist'", JavaCorrectionProcessor.hasAssists(context));
+			assertTrue(JavaCorrectionProcessor.hasAssists(context), "should be marked as 'has assist'");
 		}
 
 		return proposals;
@@ -451,7 +451,7 @@ public class QuickFixTest {
 		newCUWizard.apply(null);
 
 		IType createdType= newCUWizard.getCreatedType();
-		assertTrue("Nothing created", createdType.exists());
+		assertTrue(createdType.exists(), "Nothing created");
 		String preview= createdType.getCompilationUnit().getSource();
 
 		IJavaElement parent= createdType.getParent();
@@ -517,7 +517,7 @@ public class QuickFixTest {
 
 	protected static void assertNoErrors(IInvocationContext context) {
 		for (IProblem problem : context.getASTRoot().getProblems()) {
-			assertFalse("source has error: " + problem.getMessage(), problem.isError());
+			assertFalse(problem.isError(), "source has error: " + problem.getMessage());
 		}
 	}
 
@@ -596,36 +596,36 @@ public class QuickFixTest {
 	}
 
 	protected void assertLinkedChoices(ICompletionProposal proposal, String linkedGroup, String[] expectedChoices) {
-		assertTrue("Not a LinkedCorrectionProposal", proposal instanceof LinkedCorrectionProposal);
+		assertTrue(proposal instanceof LinkedCorrectionProposal, "Not a LinkedCorrectionProposal");
 		LinkedCorrectionProposal linkedProposal = (LinkedCorrectionProposal)proposal;
 
 		LinkedProposalModelCore linkedProposalModel = linkedProposal.getLinkedProposalModel();
 		LinkedProposalPositionGroupCore positionGroup = linkedProposalModel.getPositionGroup(linkedGroup, false);
 		ProposalCore[] choices = positionGroup.getProposals();
-		assertEquals("Not same number of choices", expectedChoices.length, choices.length);
+		assertEquals(expectedChoices.length, choices.length, "Not same number of choices");
 		Arrays.sort(expectedChoices);
 		List<String> sortedChoices= Arrays.stream(choices)
 									.map(ProposalCore::getDisplayString)
 									.sorted()
 									.collect(Collectors.toList());
 		for (int i=0; i<expectedChoices.length; i++) {
-			assertEquals("Unexpected choice", expectedChoices[i], sortedChoices.get(i));
+			assertEquals(expectedChoices[i], sortedChoices.get(i), "Unexpected choice");
 		}
 	}
 	protected void assertLinkedChoicesContains(ICompletionProposal proposal, String linkedGroup, String[] expectedChoices) throws CoreException{
-		assertTrue("Not a LinkedCorrectionProposal", proposal instanceof LinkedCorrectionProposal);
+		assertTrue(proposal instanceof LinkedCorrectionProposal, "Not a LinkedCorrectionProposal");
 		LinkedCorrectionProposal linkedProposal = (LinkedCorrectionProposal)proposal;
 		linkedProposal.getChange(); // force computing the proposal details
 		LinkedProposalModelCore linkedProposalModel = linkedProposal.getLinkedProposalModel();
 		LinkedProposalPositionGroupCore positionGroup = linkedProposalModel.getPositionGroup(linkedGroup, false);
 		ProposalCore[] choices = positionGroup.getProposals();
-		assertTrue("Contains less number of choices", choices.length >= expectedChoices.length);
+		assertTrue(choices.length >= expectedChoices.length, "Contains less number of choices");
 		List<String> sortedChoices= Arrays.stream(choices)
 									.map(ProposalCore::getDisplayString)
 									.sorted()
 									.collect(Collectors.toList());
 		for (int i=0; i<expectedChoices.length; i++) {
-			assertTrue("choice not found" + expectedChoices[i], sortedChoices.contains(expectedChoices[i]));
+			assertTrue(sortedChoices.contains(expectedChoices[i]), "choice not found" + expectedChoices[i]);
 		}
 	}
 

@@ -14,17 +14,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -58,10 +58,10 @@ public class ImportOrganizeTest extends CoreTests {
 
 	private IJavaProject fJProject1;
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= pts.getProject();
 
@@ -70,7 +70,7 @@ public class ImportOrganizeTest extends CoreTests {
 		JavaCore.setOptions(options);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		setOrganizeImportSettings(null, 99, 99, fJProject1);
 		JavaProjectHelper.clear(fJProject1, pts.getDefaultClasspath());
@@ -78,23 +78,23 @@ public class ImportOrganizeTest extends CoreTests {
 
 	protected IChooseImportQuery createQuery(final String name, final String[] choices, final int[] nEntries) {
 		return (openChoices, ranges) -> {
-			assertEquals(name + "-query-nchoices1", choices.length, openChoices.length);
-			assertEquals(name + "-query-nchoices2", nEntries.length, openChoices.length);
+			assertEquals(choices.length, openChoices.length, name + "-query-nchoices1");
+			assertEquals(nEntries.length, openChoices.length, name + "-query-nchoices2");
 			for (int i1= 0; i1 < nEntries.length; i1++) {
-				assertEquals(name + "-query-cnt" + i1, openChoices[i1].length, nEntries[i1]);
+				assertEquals(openChoices[i1].length, nEntries[i1], name + "-query-cnt" + i1);
 			}
 			TypeNameMatch[] res= new TypeNameMatch[openChoices.length];
 			for (int i2= 0; i2 < openChoices.length; i2++) {
 				TypeNameMatch[] selection= openChoices[i2];
-				assertNotNull(name + "-query-setset" + i2, selection);
-				assertTrue(name + "-query-setlen" + i2, selection.length > 0);
+				assertNotNull(selection, name + "-query-setset" + i2);
+				assertTrue(selection.length > 0, name + "-query-setlen" + i2);
 				TypeNameMatch found= null;
 				for (TypeNameMatch s : selection) {
 					if (s.getFullyQualifiedName().equals(choices[i2])) {
 						found= s;
 					}
 				}
-				assertNotNull(name + "-query-notfound" + i2, found);
+				assertNotNull(found, name + "-query-notfound" + i2);
 				res[i2]= found;
 			}
 			return res;
@@ -103,22 +103,22 @@ public class ImportOrganizeTest extends CoreTests {
 
 	protected void assertImports(ICompilationUnit cu, String[] imports) throws Exception {
 		IImportDeclaration[] desc= cu.getImports();
-		assertEquals(cu.getElementName() + "-count", imports.length, desc.length);
+		assertEquals(imports.length, desc.length, cu.getElementName() + "-count");
 		for (int i= 0; i < imports.length; i++) {
-			assertEquals(cu.getElementName() + "-cmpentries" + i, desc[i].getElementName(), imports[i]);
+			assertEquals(desc[i].getElementName(), imports[i], cu.getElementName() + "-cmpentries" + i);
 		}
 	}
 
 	@Test
 	public void test1() throws Exception {
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("junit src not found", junitSrcArchive);
-		assertTrue("junit src not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "junit src not found");
+		assertTrue(junitSrcArchive.exists(), "junit src not found");
 
 		JavaProjectHelper.addSourceContainerWithImport(fJProject1, "src", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 
 		ICompilationUnit cu= (ICompilationUnit) fJProject1.findElement(new Path("junit/runner/BaseTestRunner.java"));
-		assertNotNull("BaseTestRunner.java", cu);
+		assertNotNull(cu, "BaseTestRunner.java");
 
 		IPackageFragmentRoot root= (IPackageFragmentRoot)cu.getParent().getParent();
 		IPackageFragment pack= root.createPackageFragment("mytest", true, null);
@@ -158,13 +158,13 @@ public class ImportOrganizeTest extends CoreTests {
 	@Test
 	public void test1WithOrder() throws Exception {
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("junit src not found", junitSrcArchive);
-		assertTrue("junit src not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "junit src not found");
+		assertTrue(junitSrcArchive.exists(), "junit src not found");
 
 		JavaProjectHelper.addSourceContainerWithImport(fJProject1, "src", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 
 		ICompilationUnit cu= (ICompilationUnit) fJProject1.findElement(new Path("junit/runner/BaseTestRunner.java"));
-		assertNotNull("BaseTestRunner.java", cu);
+		assertNotNull(cu, "BaseTestRunner.java");
 
 		IPackageFragmentRoot root= (IPackageFragmentRoot)cu.getParent().getParent();
 		IPackageFragment pack= root.createPackageFragment("mytest", true, null);
@@ -205,13 +205,13 @@ public class ImportOrganizeTest extends CoreTests {
 	@Test
 	public void test2() throws Exception {
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("junit src not found", junitSrcArchive);
-		assertTrue("junit src not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "junit src not found");
+		assertTrue(junitSrcArchive.exists(), "junit src not found");
 
 		JavaProjectHelper.addSourceContainerWithImport(fJProject1, "src", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 
 		ICompilationUnit cu= (ICompilationUnit) fJProject1.findElement(new Path("junit/runner/LoadingTestCollector.java"));
-		assertNotNull("LoadingTestCollector.java", cu);
+		assertNotNull(cu, "LoadingTestCollector.java");
 
 		String[] order= new String[0];
 		IChooseImportQuery query= createQuery("LoadingTestCollector", new String[] { }, new int[] { });
@@ -230,13 +230,13 @@ public class ImportOrganizeTest extends CoreTests {
 	@Test
 	public void test3() throws Exception {
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("junit src not found", junitSrcArchive);
-		assertTrue("junit src not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "junit src not found");
+		assertTrue(junitSrcArchive.exists(), "junit src not found");
 
 		JavaProjectHelper.addSourceContainerWithImport(fJProject1, "src", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 
 		ICompilationUnit cu= (ICompilationUnit) fJProject1.findElement(new Path("junit/runner/TestCaseClassLoader.java"));
-		assertNotNull("TestCaseClassLoader.java", cu);
+		assertNotNull(cu, "TestCaseClassLoader.java");
 
 		String[] order= new String[0];
 		IChooseImportQuery query= createQuery("TestCaseClassLoader", new String[] { }, new int[] { });
@@ -256,13 +256,13 @@ public class ImportOrganizeTest extends CoreTests {
 	@Test
 	public void test4() throws Exception {
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("junit src not found", junitSrcArchive);
-		assertTrue("junit src not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "junit src not found");
+		assertTrue(junitSrcArchive.exists(), "junit src not found");
 
 		JavaProjectHelper.addSourceContainerWithImport(fJProject1, "src", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 
 		ICompilationUnit cu= (ICompilationUnit) fJProject1.findElement(new Path("junit/textui/TestRunner.java"));
-		assertNotNull("TestRunner.java", cu);
+		assertNotNull(cu, "TestRunner.java");
 
 		String[] order= new String[0];
 		IChooseImportQuery query= createQuery("TestRunner", new String[] {}, new int[] {});
@@ -1056,7 +1056,7 @@ public class ImportOrganizeTest extends CoreTests {
 		// unrelated project, to fill the all types cache
 		IJavaProject project2 = JavaProjectHelper.createJavaProject("TestProject2", "bin");
 		try {
-			assertNotNull("rt not found", JavaProjectHelper.addRTJar(project2));
+			assertNotNull(JavaProjectHelper.addRTJar(project2), "rt not found");
 			IPackageFragmentRoot sourceFolder2= JavaProjectHelper.addSourceContainer(project2, "src");
 
 			IPackageFragment pack22= sourceFolder2.createPackageFragment("packx", false, null);

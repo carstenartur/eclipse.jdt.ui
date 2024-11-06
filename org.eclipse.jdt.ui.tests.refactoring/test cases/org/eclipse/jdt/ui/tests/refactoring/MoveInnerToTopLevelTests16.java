@@ -13,17 +13,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -61,7 +61,7 @@ public class MoveInnerToTopLevelTests16 extends GenericRefactoringTest {
 		return REFACTORING_PATH;
 	}
 
-	@Before
+	@BeforeEach
 	public void before() throws Exception {
 		StubUtility.setCodeTemplate(CodeTemplateContextType.FIELDCOMMENT_ID, FIELD_COMMENT, null);
 		StubUtility.setCodeTemplate(CodeTemplateContextType.NEWTYPE_ID,
@@ -77,7 +77,7 @@ public class MoveInnerToTopLevelTests16 extends GenericRefactoringTest {
 		JavaCore.setOptions(options);
 	}
 
-	@After
+	@AfterEach
 	public void after() throws Exception {
 		Hashtable<String, String> options= JavaCore.getOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_ASSIGNMENT_OPERATOR, fCompactPref);
@@ -96,19 +96,19 @@ public class MoveInnerToTopLevelTests16 extends GenericRefactoringTest {
 	}
 
 	private void validatePassingTest(String className, IType clas, String[] cuNames, String[] packageNames, String enclosingInstanceName, boolean makeFinal, boolean possible, boolean mandatory, boolean createFieldIfPossible) throws JavaModelException, CoreException, Exception, IOException {
-		assertTrue("should be enabled", RefactoringAvailabilityTester.isMoveInnerAvailable(clas));
+		assertTrue(RefactoringAvailabilityTester.isMoveInnerAvailable(clas), "should be enabled");
 		MoveInnerToTopRefactoring ref= ((RefactoringAvailabilityTester.isMoveInnerAvailable(clas)) ? new MoveInnerToTopRefactoring(clas, JavaPreferencesSettings.getCodeGenerationSettings(clas.getJavaProject())) : null);
-		assertNotNull("Move to inner refactoring should be available", ref);
+		assertNotNull(ref, "Move to inner refactoring should be available");
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful" + preconditionResult.toString(), preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful" + preconditionResult.toString());
 
-		assertEquals("reference creation possible", possible, ref.isCreatingInstanceFieldPossible());
-		assertEquals("reference creation mandatory", mandatory, ref.isCreatingInstanceFieldMandatory());
+		assertEquals(possible, ref.isCreatingInstanceFieldPossible(), "reference creation possible");
+		assertEquals(mandatory, ref.isCreatingInstanceFieldMandatory(), "reference creation mandatory");
 		if (ref.isCreatingInstanceFieldPossible() && ! ref.isCreatingInstanceFieldMandatory())
 			ref.setCreateInstanceField(createFieldIfPossible);
 		if (enclosingInstanceName != null){
 			ref.setEnclosingInstanceName(enclosingInstanceName);
-			assertTrue("name should be ok ", ref.checkEnclosingInstanceName(enclosingInstanceName).isOK());
+			assertTrue(ref.checkEnclosingInstanceName(enclosingInstanceName).isOK(), "name should be ok ");
 		}
 		ref.setMarkInstanceFieldAsFinal(makeFinal);
 		ICompilationUnit[] cus= new ICompilationUnit[cuNames.length];
@@ -120,7 +120,7 @@ public class MoveInnerToTopLevelTests16 extends GenericRefactoringTest {
 		}
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
-		assertFalse("precondition was supposed to pass", checkInputResult.hasError());
+		assertFalse(checkInputResult.hasError(), "precondition was supposed to pass");
 		performChange(ref, false);
 
 		for (int i= 0; i < cus.length; i++) {

@@ -18,7 +18,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -58,10 +58,10 @@ public class TestModelProvider extends ModelProvider {
 	}
 
 	public static void assertTrue(IResourceDelta expected) {
-		Assert.assertNotNull(LAST_DELTA);
+		Assertions.assertNotNull(LAST_DELTA);
 		boolean res= assertTrue(expected, LAST_DELTA);
 		if (!res) {
-			Assert.assertEquals(printDelta(expected), printDelta(LAST_DELTA));
+			Assertions.assertEquals(printDelta(expected), printDelta(LAST_DELTA));
 		}
 
 		LAST_DELTA= null;
@@ -97,7 +97,7 @@ public class TestModelProvider extends ModelProvider {
 		for (int i= 0; i < expectedChildren.length; i++) {
 			boolean res= assertTrue(expectedChildren[i], actualChildren[i]);
 			if (!res) {
-				Assert.assertEquals(printDelta(expected), printDelta(actual));
+				Assertions.assertEquals(printDelta(expected), printDelta(actual));
 			}
 		}
 		return true;
@@ -181,15 +181,15 @@ public class TestModelProvider extends ModelProvider {
 		if (IS_COPY_TEST) {
 			IPath expectedPath= expected.getFullPath();
 			IPath actualPath= actual.getFullPath();
-			Assert.assertEquals("Same path length", expectedPath.segmentCount(), actualPath.segmentCount());
+			Assertions.assertEquals(expectedPath.segmentCount(), actualPath.segmentCount(), "Same path length");
 			for(int i= 0; i < expectedPath.segmentCount(); i++) {
 				String expectedSegment= expectedPath.segment(i);
 				if (expectedSegment.startsWith("UnusedName") || "unusedName".equals(expectedSegment))
 					continue;
-				Assert.assertEquals("Different path segment", expectedSegment, actualPath.segment(i));
+				Assertions.assertEquals(expectedSegment, actualPath.segment(i), "Different path segment");
 			}
 		} else {
-			Assert.assertEquals("Same resource", expected, actual);
+			Assertions.assertEquals(expected, actual, "Same resource");
 		}
 	}
 
@@ -270,11 +270,11 @@ public class TestModelProvider extends ModelProvider {
 	private static void assertCopySource(IResourceDelta delta) {
 		try {
 			delta.accept(d -> {
-				Assert.assertEquals("Not a copy delta", 0, (d.getKind() & ~IResourceDelta.CHANGED));
+				Assertions.assertEquals(0, (d.getKind() & ~IResourceDelta.CHANGED), "Not a copy delta");
 				return true;
 			});
 		} catch (CoreException e) {
-			Assert.fail("Shouldn't happen");
+			Assertions.fail("Shouldn't happen");
 		}
 	}
 }

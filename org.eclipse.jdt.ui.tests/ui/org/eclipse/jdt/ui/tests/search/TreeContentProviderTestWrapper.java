@@ -14,10 +14,10 @@
 
 package org.eclipse.jdt.ui.tests.search;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.ui.tests.core.rules.JUnitSourceSetup;
 
@@ -32,16 +32,16 @@ public class TreeContentProviderTestWrapper {
 
 	TreeContentProviderTest fTest;
 
-	@Rule
+	@RegisterExtension
 	public JUnitSourceSetup projectSetup = new JUnitSourceSetup();
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fTest= new TreeContentProviderTest();
 		fTest.setUp();
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		fTest.tearDown();
 		fTest= null;

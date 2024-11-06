@@ -18,11 +18,11 @@
 package org.eclipse.jdt.ui.tests.quickfix;
 
 import static org.eclipse.jdt.internal.ui.fix.MultiFixMessages.ConstantsCleanUp_description;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -31,9 +31,9 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Map;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -82,13 +82,13 @@ import org.eclipse.jdt.internal.ui.fix.UnimplementedCodeCleanUp;
 import org.eclipse.jdt.internal.ui.text.correction.ProblemLocation;
 
 public class CleanUpTest extends CleanUpTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new Java13ProjectTestSetup(false);
 
 	IJavaProject fJProject1= getProject();
 
 	@Override
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		super.setUp();
 		IPath osgiJar= new Path("testresources/org.junit.jupiter.api_stub.jar");
@@ -4780,7 +4780,7 @@ public class CleanUpTest extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.SubstringCleanUp_description)));
 	}
@@ -5600,7 +5600,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.VALUEOF_RATHER_THAN_INSTANTIATION);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(
 						MultiFixMessages.ValueOfRatherThanInstantiationCleanup_description_float_with_valueof,
@@ -5663,7 +5663,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.VALUEOF_RATHER_THAN_INSTANTIATION);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.ValueOfRatherThanInstantiationCleanup_description_float_with_float_value)));
 	}
@@ -5789,7 +5789,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PRIMITIVE_COMPARISON);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveComparisonCleanUp_description)));
 	}
@@ -6080,7 +6080,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PRIMITIVE_PARSING);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveParsingCleanUp_description)));
 	}
@@ -6232,7 +6232,7 @@ public class CleanUpTest extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", input, output);
+		assertNotEquals(input, output, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { output },
 				new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveSerializationCleanUp_description)));
 	}
@@ -6788,7 +6788,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PRIMITIVE_RATHER_THAN_WRAPPER);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveRatherThanWrapperCleanUp_description)));
 	}
 
@@ -7320,7 +7320,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PRIMITIVE_RATHER_THAN_WRAPPER);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveRatherThanWrapperCleanUp_description)));
 	}
 
@@ -7841,7 +7841,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PRIMITIVE_RATHER_THAN_WRAPPER);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveRatherThanWrapperCleanUp_description)));
 	}
 
@@ -8390,7 +8390,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PRIMITIVE_RATHER_THAN_WRAPPER);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveRatherThanWrapperCleanUp_description)));
 	}
 
@@ -9047,7 +9047,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PRIMITIVE_RATHER_THAN_WRAPPER);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveRatherThanWrapperCleanUp_description)));
 	}
 
@@ -9674,7 +9674,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PRIMITIVE_RATHER_THAN_WRAPPER);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveRatherThanWrapperCleanUp_description)));
 	}
 
@@ -10235,7 +10235,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PRIMITIVE_RATHER_THAN_WRAPPER);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveRatherThanWrapperCleanUp_description)));
 	}
 
@@ -10834,7 +10834,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PRIMITIVE_RATHER_THAN_WRAPPER);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveRatherThanWrapperCleanUp_description)));
 	}
 
@@ -10935,7 +10935,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PRIMITIVE_RATHER_THAN_WRAPPER);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.PrimitiveRatherThanWrapperCleanUp_description)));
 	}
@@ -11066,7 +11066,7 @@ public class CleanUpTest extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", input, output);
+		assertNotEquals(input, output, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { output },
 				new HashSet<>(Arrays.asList(MultiFixMessages.EvaluateNullableCleanUp_description)));
 	}
@@ -11976,7 +11976,7 @@ public class CleanUpTest extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.OperandFactorizationCleanUp_description)));
 	}
@@ -12269,7 +12269,7 @@ public class CleanUpTest extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.TernaryOperatorCleanUp_description)));
 	}
@@ -12493,7 +12493,7 @@ public class CleanUpTest extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.StrictlyEqualOrDifferentCleanUp_description)));
 	}
@@ -12820,7 +12820,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.BOOLEAN_VALUE_RATHER_THAN_COMPARISON);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(MultiFixMessages.BooleanValueRatherThanComparisonCleanUp_description)));
 	}
 
@@ -12927,7 +12927,7 @@ public class CleanUpTest extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", input, output);
+		assertNotEquals(input, output, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { output },
 				new HashSet<>(Arrays.asList(MultiFixMessages.DoubleNegationCleanUp_description)));
 	}
@@ -13293,7 +13293,7 @@ public class CleanUpTest extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.RedundantComparisonStatementCleanup_description)));
 	}
@@ -13699,7 +13699,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.UNREACHABLE_BLOCK);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.UnreachableBlockCleanUp_description)));
 	}
@@ -14423,7 +14423,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.MERGE_CONDITIONAL_BLOCKS);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.MergeConditionalBlocksCleanup_description_if_suite, MultiFixMessages.MergeConditionalBlocksCleanup_description_inner_if)));
 	}
@@ -15668,7 +15668,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PULL_OUT_IF_FROM_IF_ELSE);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(MultiFixMessages.PullOutIfFromIfElseCleanUp_description)));
 	}
 
@@ -16062,7 +16062,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.REDUNDANT_COMPARATOR);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.RedundantComparatorCleanUp_description)));
 	}
@@ -16293,7 +16293,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.ARRAY_WITH_CURLY);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.ArrayWithCurlyCleanup_description)));
 	}
@@ -16610,7 +16610,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.RETURN_EXPRESSION);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.ReturnExpressionCleanUp_description)));
 	}
@@ -16750,7 +16750,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.SIMPLIFY_BOOLEAN_IF_ELSE);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.CodeStyleCleanUp_SimplifyBooleanIfElse_description)));
 	}
@@ -16830,7 +16830,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.REDUCE_INDENTATION);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.CodeStyleCleanUp_SimplifyBooleanIfElse_description)));
 	}
@@ -17524,7 +17524,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.UNLOOPED_WHILE);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.UnloopedWhileCleanUp_description)));
 	}
@@ -19521,7 +19521,7 @@ public class CleanUpTest extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", input, output);
+		assertNotEquals(input, output, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { output },
 				new HashSet<>(Arrays.asList(MultiFixMessages.CodeStyleCleanUp_ElseIf_description)));
 	}
@@ -20225,7 +20225,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.REDUCE_INDENTATION);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.CodeStyleCleanUp_ReduceIndentation_description)));
 	}
@@ -22429,7 +22429,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.SINGLE_USED_FIELD);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.SingleUsedFieldCleanUp_description_new_local_var_declaration,
 						MultiFixMessages.SingleUsedFieldCleanUp_description_old_field_declaration, MultiFixMessages.SingleUsedFieldCleanUp_description_uses_of_the_var)));
@@ -22492,7 +22492,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.SINGLE_USED_FIELD);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.SingleUsedFieldCleanUp_description_new_local_var_declaration,
 						MultiFixMessages.SingleUsedFieldCleanUp_description_old_field_declaration, MultiFixMessages.SingleUsedFieldCleanUp_description_uses_of_the_var)));
@@ -22533,7 +22533,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.SINGLE_USED_FIELD);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.SingleUsedFieldCleanUp_description_new_local_var_declaration,
 						MultiFixMessages.SingleUsedFieldCleanUp_description_old_field_declaration, MultiFixMessages.SingleUsedFieldCleanUp_description_uses_of_the_var)));
@@ -22596,7 +22596,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.SINGLE_USED_FIELD);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.SingleUsedFieldCleanUp_description_new_local_var_declaration,
 						MultiFixMessages.SingleUsedFieldCleanUp_description_old_field_declaration, MultiFixMessages.SingleUsedFieldCleanUp_description_uses_of_the_var)));
@@ -22637,7 +22637,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.SINGLE_USED_FIELD);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.SingleUsedFieldCleanUp_description_new_local_var_declaration,
 						MultiFixMessages.SingleUsedFieldCleanUp_description_old_field_declaration, MultiFixMessages.SingleUsedFieldCleanUp_description_uses_of_the_var)));
@@ -22686,7 +22686,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.SINGLE_USED_FIELD);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.SingleUsedFieldCleanUp_description_new_local_var_declaration,
 						MultiFixMessages.SingleUsedFieldCleanUp_description_old_field_declaration, MultiFixMessages.SingleUsedFieldCleanUp_description_uses_of_the_var)));
@@ -22725,7 +22725,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.SINGLE_USED_FIELD);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.SingleUsedFieldCleanUp_description_new_local_var_declaration,
 						MultiFixMessages.SingleUsedFieldCleanUp_description_old_field_declaration, MultiFixMessages.SingleUsedFieldCleanUp_description_uses_of_the_var)));
@@ -23127,7 +23127,7 @@ public class CleanUpTest extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", input, output);
+		assertNotEquals(input, output, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { output },
 				new HashSet<>(Arrays.asList(MultiFixMessages.BreakLoopCleanUp_description)));
 	}
@@ -23798,7 +23798,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.STATIC_INNER_CLASS);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.StaticInnerClassCleanUp_description)));
 	}
@@ -23848,7 +23848,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.STATIC_INNER_CLASS);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.StaticInnerClassCleanUp_description)));
 	}
@@ -23914,7 +23914,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.STATIC_INNER_CLASS);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.StaticInnerClassCleanUp_description)));
 	}
@@ -24695,7 +24695,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.STRINGBUILDER);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.StringBuilderCleanUp_description)));
 	}
@@ -24978,7 +24978,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PLAIN_REPLACEMENT);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.PlainReplacementCleanUp_description)));
 	}
@@ -25078,7 +25078,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.PLAIN_REPLACEMENT);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.PlainReplacementCleanUp_description)));
 	}
@@ -25449,7 +25449,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.CONTROLFLOW_MERGE);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.ControlFlowMergeCleanUp_description)));
 	}
@@ -25818,7 +25818,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.ONE_IF_RATHER_THAN_DUPLICATE_BLOCKS_THAT_FALL_THROUGH);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, new HashSet<>(Arrays.asList(MultiFixMessages.OneIfRatherThanDuplicateBlocksThatFallThroughCleanUp_description)));
 	}
 
@@ -26654,7 +26654,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.EXTRACT_INCREMENT);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.CodeStyleCleanUp_ExtractIncrement_description)));
 	}
@@ -27202,7 +27202,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.INSTANCEOF);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.CodeStyleCleanUp_Instanceof_description)));
 	}
@@ -28784,7 +28784,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.INVERT_EQUALS);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.InvertEqualsCleanUp_description)));
 	}
@@ -28937,7 +28937,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.STANDARD_COMPARISON);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.StandardComparisonCleanUp_description)));
 	}
@@ -29585,8 +29585,8 @@ public class CleanUpTest extends CleanUpTestCase {
 		RefactoringStatusEntry[] entries= status.getEntries();
 		assertEquals(1, entries.length);
 		String message= entries[0].getMessage();
-		assertTrue(message, entries[0].isInfo());
-		assertTrue(message, message.contains("ambiguous"));
+		assertTrue(entries[0].isInfo(), message);
+		assertTrue(message.contains("ambiguous"), message);
 	}
 
 	@Test
@@ -29606,8 +29606,8 @@ public class CleanUpTest extends CleanUpTestCase {
 		RefactoringStatusEntry[] entries= status.getEntries();
 		assertEquals(1, entries.length);
 		String message= entries[0].getMessage();
-		assertTrue(message, entries[0].isInfo());
-		assertTrue(message, message.contains("parse"));
+		assertTrue(entries[0].isInfo(), message);
+		assertTrue(message.contains("parse"), message);
 	}
 
 	@Test
@@ -30049,7 +30049,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.CONSTANTS_FOR_SYSTEM_PROPERTY_JAVA_SPECIFICATION_VERSION);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(Messages.format(ConstantsCleanUp_description,UpdateProperty.FILE_SEPARATOR.toString()),
 						Messages.format(ConstantsCleanUp_description,UpdateProperty.PATH_SEPARATOR.toString()),
@@ -30113,7 +30113,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		enable(CleanUpConstants.CONSTANTS_FOR_SYSTEM_PROPERTY_BOXED);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(Messages.format(ConstantsCleanUp_description,UpdateProperty.FILE_SEPARATOR.toString()),
 						Messages.format(ConstantsCleanUp_description,UpdateProperty.PATH_SEPARATOR.toString()),
@@ -30337,7 +30337,7 @@ public class CleanUpTest extends CleanUpTestCase {
 		ICleanUpFix fix= cleanup.createFix(unit);
 
 		// Then
-		assertNull("ICleanInterface should not be cleaned up", fix);
+		assertNull(fix, "ICleanInterface should not be cleaned up");
 	}
 
 	@Test

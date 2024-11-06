@@ -14,12 +14,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -75,18 +75,18 @@ public class MoveInnerToNewTests16 extends GenericRefactoringTest {
 		IType fooType= p1Foo.getTypes()[0];
 		IType barType= fooType.getTypes()[0];
 
-		assertTrue("should be enabled", RefactoringAvailabilityTester.isMoveInnerAvailable(barType));
+		assertTrue(RefactoringAvailabilityTester.isMoveInnerAvailable(barType), "should be enabled");
 		MoveInnerToTopRefactoring ref= ((RefactoringAvailabilityTester.isMoveInnerAvailable(barType)) ? new MoveInnerToTopRefactoring(barType, JavaPreferencesSettings.getCodeGenerationSettings(barType.getJavaProject())) : null);
-		assertNotNull("MoveInnerToTopRefactoring should not be null", ref);
+		assertNotNull(ref, "MoveInnerToTopRefactoring should not be null");
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful" + preconditionResult.toString(), preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful" + preconditionResult.toString());
 
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
-		assertFalse("precondition was supposed to pass", checkInputResult.hasError());
+		assertFalse(checkInputResult.hasError(), "precondition was supposed to pass");
 		performChange(ref, false);
 
-		assertEquals("p1 files", 2, packP1.getChildren().length);
+		assertEquals(2, packP1.getChildren().length, "p1 files");
 
 		String expectedSource= getFileContents(getRefactoringPath() + getName() + outDir + p1Name + "/Foo.java");
 		assertEqualLines("incorrect update of Foo", expectedSource, packP1.getCompilationUnit("Foo.java").getSource());
@@ -108,18 +108,18 @@ public class MoveInnerToNewTests16 extends GenericRefactoringTest {
 		IType fooType= p1Foo.getTypes()[0];
 		IType barType= fooType.getTypes()[0];
 
-		assertTrue("should be enabled", RefactoringAvailabilityTester.isMoveInnerAvailable(barType));
+		assertTrue(RefactoringAvailabilityTester.isMoveInnerAvailable(barType), "should be enabled");
 		MoveInnerToTopRefactoring ref= ((RefactoringAvailabilityTester.isMoveInnerAvailable(barType)) ? new MoveInnerToTopRefactoring(barType, JavaPreferencesSettings.getCodeGenerationSettings(barType.getJavaProject())) : null);
-		assertNotNull("MoveInnerToTopRefactoring should not be null", ref);
+		assertNotNull(ref, "MoveInnerToTopRefactoring should not be null");
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful" + preconditionResult.toString(), preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful" + preconditionResult.toString());
 
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
-		assertFalse("precondition was supposed to pass", checkInputResult.hasError());
+		assertFalse(checkInputResult.hasError(), "precondition was supposed to pass");
 		performChange(ref, false);
 
-		assertEquals("p1 files", 2, packP1.getChildren().length);
+		assertEquals(2, packP1.getChildren().length, "p1 files");
 
 		String expectedSource= getFileContents(getRefactoringPath() + getName() + outDir + p1Name + "/Foo.java");
 		assertEqualLines("incorrect update of Foo", expectedSource, packP1.getCompilationUnit("Foo.java").getSource());

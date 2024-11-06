@@ -13,17 +13,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Hashtable;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -70,21 +70,21 @@ public class MethodOverrideTest extends CoreTests {
 	 * See bug https://bugs.eclipse.org/bugs/show_bug.cgi?id=111093
 	 */
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private static final boolean DEBUG_SHOWRESULTS= true;
 
 	private IJavaProject fJProject1;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= pts.getProject();
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		JavaCore.setOptions(options);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, pts.getDefaultClasspath());
 	}
@@ -374,7 +374,7 @@ public class MethodOverrideTest extends CoreTests {
 //				}
 			}
 			if (overrideAnnotationResult != testerOverrides) {
-				assertEquals(getDebugString(overridingBinding, overriddenBinding), overrideAnnotationResult, testerOverrides);
+				assertEquals(overrideAnnotationResult, testerOverrides, getDebugString(overridingBinding, overriddenBinding));
 			}
 			/*if (overrideAnnotationResult != uiBindingsIsSubsignature) {
 				assertEquals(getDebugString(overridingBinding, overriddenBinding), overrideAnnotationResult, uiBindingsIsSubsignature);

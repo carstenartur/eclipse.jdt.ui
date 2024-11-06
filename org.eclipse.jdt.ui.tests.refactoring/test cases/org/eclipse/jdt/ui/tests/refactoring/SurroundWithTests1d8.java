@@ -16,8 +16,8 @@ package org.eclipse.jdt.ui.tests.refactoring;
 import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCase.TestMode.COMPARE_WITH_OUTPUT;
 import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCase.TestMode.INVALID_SELECTION;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.runner.RunWith;
 
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -35,7 +35,7 @@ import org.eclipse.jdt.ui.tests.IgnoreInheritedTests;
 @RunWith(CustomBaseRunner.class)
 public class SurroundWithTests1d8 extends SurroundWithTests {
 
-	@Rule
+	@RegisterExtension
 	public SurroundWithTestSetup1d8 fGTestSetup1d8= new SurroundWithTestSetup1d8();
 
 	@Override

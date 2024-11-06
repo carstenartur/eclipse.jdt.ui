@@ -15,15 +15,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collection;
 
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.StringAsserts;
 
@@ -101,7 +101,7 @@ public class ChangeTypeRefactoringTests extends GenericRefactoringTest {
 
 		RefactoringStatus	activationResult= ref.checkInitialConditions(new NullProgressMonitor());
 
-		assertTrue("activation was supposed to be successful:" + activationResult.toString(), activationResult.isOK());
+		assertTrue(activationResult.isOK(), "activation was supposed to be successful:" + activationResult.toString());
 
 		Collection<ITypeBinding> validTypes= ref.computeValidTypes(new NullProgressMonitor());
 		if (validTypes.isEmpty())
@@ -109,7 +109,7 @@ public class ChangeTypeRefactoringTests extends GenericRefactoringTest {
 
 		RefactoringStatus	checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
 
-		assertTrue("precondition was supposed to pass but was " + checkInputResult.toString(), checkInputResult.isOK());
+		assertTrue(checkInputResult.isOK(), "precondition was supposed to pass but was " + checkInputResult.toString());
 
 		performChange(ref, false);
 
@@ -128,8 +128,8 @@ public class ChangeTypeRefactoringTests extends GenericRefactoringTest {
 		ChangeTypeRefactoring	ref= new ChangeTypeRefactoring(cu, selection.getOffset(), selection.getLength(), selectedTypeName);
 		RefactoringStatus	result= performRefactoring(ref);
 
-		assertNotNull("precondition was supposed to fail", result);
-		assertEquals("status", expectedStatus, result.getSeverity());
+		assertNotNull(result, "precondition was supposed to fail");
+		assertEquals(expectedStatus, result.getSeverity(), "status");
 
 		String	canonAfterSrcName= getTestFileName(false, true);
 
@@ -151,20 +151,20 @@ public class ChangeTypeRefactoringTests extends GenericRefactoringTest {
 	public void testLocalVarName() throws Exception {
 		System.out.println("running testLocalVarName()");
 		Collection<String> types= helper1(5, 19, 5, 24, "java.util.Map").getValidTypeNames();
-		Assert.assertEquals(1, types.size());
-		Assert.assertTrue(types.contains("java.util.Map"));
+		Assertions.assertEquals(1, types.size());
+		Assertions.assertTrue(types.contains("java.util.Map"));
 	}
 	@Test
 	public void testLocalVarType() throws Exception {
 		Collection<String> types= helper1(5, 9, 5, 18, "java.util.Map").getValidTypeNames();
-		Assert.assertEquals(1, types.size());
-		Assert.assertTrue(types.contains("java.util.Map"));
+		Assertions.assertEquals(1, types.size());
+		Assertions.assertTrue(types.contains("java.util.Map"));
 	}
 	@Test
 	public void testLocalVarDecl() throws Exception {
 		Collection<String> types= helper1(8, 9, 8, 23, "java.util.Map").getValidTypeNames();
-		Assert.assertEquals(1, types.size());
-		Assert.assertTrue(types.contains("java.util.Map"));
+		Assertions.assertEquals(1, types.size());
+		Assertions.assertTrue(types.contains("java.util.Map"));
 	}
 	@Test
 	public void testLocalSuperTypesOfArrayList() throws Exception {
@@ -179,108 +179,108 @@ public class ChangeTypeRefactoringTests extends GenericRefactoringTest {
 	@Test
 	public void testParameterName() throws Exception {
 		Collection<String> types= helper1(4, 31, 4, 36, "java.util.Map").getValidTypeNames();
-		Assert.assertEquals(2, types.size());
-		Assert.assertTrue(types.contains("java.util.Map"));
-		Assert.assertTrue(types.contains("java.util.Dictionary"));
+		Assertions.assertEquals(2, types.size());
+		Assertions.assertTrue(types.contains("java.util.Map"));
+		Assertions.assertTrue(types.contains("java.util.Dictionary"));
 	}
 	@Test
 	public void testParameterType() throws Exception {
 		Collection<String> types= helper1(4, 21, 4, 29, "java.util.Dictionary").getValidTypeNames();
-		Assert.assertEquals(2, types.size());
-		Assert.assertTrue(types.contains("java.util.Map"));
-		Assert.assertTrue(types.contains("java.util.Dictionary"));
+		Assertions.assertEquals(2, types.size());
+		Assertions.assertTrue(types.contains("java.util.Map"));
+		Assertions.assertTrue(types.contains("java.util.Dictionary"));
 	}
 	@Test
 	public void testParameterDecl() throws Exception {
 		Collection<String> types= helper1(4, 21, 4, 36, "java.util.Map").getValidTypeNames();
-		Assert.assertEquals(2, types.size());
-		Assert.assertTrue(types.contains("java.util.Map"));
-		Assert.assertTrue(types.contains("java.util.Dictionary"));
+		Assertions.assertEquals(2, types.size());
+		Assertions.assertTrue(types.contains("java.util.Map"));
+		Assertions.assertTrue(types.contains("java.util.Dictionary"));
 	}
 	@Test
 	public void testFieldName() throws Exception {
 		Collection<String> types= helper1(10, 29, 10, 33, "java.util.AbstractList").getValidTypeNames();
-		Assert.assertEquals(2, types.size());
-		Assert.assertTrue(types.contains("java.util.AbstractList"));
-		Assert.assertTrue(types.contains("java.util.List"));
+		Assertions.assertEquals(2, types.size());
+		Assertions.assertTrue(types.contains("java.util.AbstractList"));
+		Assertions.assertTrue(types.contains("java.util.List"));
 	}
 	@Test
 	public void testFieldType() throws Exception {
 		Collection<String> types= helper1(10, 19, 10, 27, "java.util.AbstractList").getValidTypeNames();
-		Assert.assertEquals(2, types.size());
-		Assert.assertTrue(types.contains("java.util.AbstractList"));
-		Assert.assertTrue(types.contains("java.util.List"));
+		Assertions.assertEquals(2, types.size());
+		Assertions.assertTrue(types.contains("java.util.AbstractList"));
+		Assertions.assertTrue(types.contains("java.util.List"));
 	}
 	@Test
 	public void testFieldDecl() throws Exception {
 		Collection<String> types= helper1(10, 19, 10, 32, "java.util.AbstractList").getValidTypeNames();
-		Assert.assertEquals(2, types.size());
-		Assert.assertTrue(types.contains("java.util.AbstractList"));
-		Assert.assertTrue(types.contains("java.util.List"));
+		Assertions.assertEquals(2, types.size());
+		Assertions.assertTrue(types.contains("java.util.AbstractList"));
+		Assertions.assertTrue(types.contains("java.util.List"));
 	}
 	@Test
 	public void testFieldUseSubtypesOfList() throws Exception {
 		Collection<String> types= helper1(5, 22, 5, 26, "java.util.List").getValidTypeNames();
-		Assert.assertEquals(2, types.size());
-		Assert.assertTrue(types.contains("java.util.AbstractList"));
-		Assert.assertTrue(types.contains("java.util.List"));
+		Assertions.assertEquals(2, types.size());
+		Assertions.assertTrue(types.contains("java.util.AbstractList"));
+		Assertions.assertTrue(types.contains("java.util.List"));
 	}
 	@Test
 	public void testFieldDeclSubtypesOfList() throws Exception {
 		Collection<String> types= helper1(8, 12, 8, 25, "java.util.List").getValidTypeNames();
-		Assert.assertEquals(2, types.size());
-		Assert.assertTrue(types.contains("java.util.AbstractList"));
-		Assert.assertTrue(types.contains("java.util.List"));
+		Assertions.assertEquals(2, types.size());
+		Assertions.assertTrue(types.contains("java.util.AbstractList"));
+		Assertions.assertTrue(types.contains("java.util.List"));
 	}
 	@Test
 	public void testLocalVarUse() throws Exception {
 		Collection<String> types= helper1(6, 22, 6, 26, "java.util.AbstractList").getValidTypeNames();
-		Assert.assertEquals(2, types.size());
-		Assert.assertTrue(types.contains("java.util.AbstractList"));
-		Assert.assertTrue(types.contains("java.util.List"));
+		Assertions.assertEquals(2, types.size());
+		Assertions.assertTrue(types.contains("java.util.AbstractList"));
+		Assertions.assertTrue(types.contains("java.util.List"));
 	}
 	@Test
 	public void testReturnTypeWithCall() throws Exception {
 		Collection<String> types= helper1(4, 12, 4, 20, "java.util.AbstractList").getValidTypeNames();
-		Assert.assertEquals(2, types.size());
-		Assert.assertTrue(types.contains("java.util.AbstractList"));
-		Assert.assertTrue(types.contains("java.util.List"));
+		Assertions.assertEquals(2, types.size());
+		Assertions.assertTrue(types.contains("java.util.AbstractList"));
+		Assertions.assertTrue(types.contains("java.util.List"));
 	}
 	@Test
 	public void testParameterNameWithOverride() throws Exception {
 		Collection<String> types= helper1(5, 38, 5, 40, "java.util.Collection").getValidTypeNames();
-		Assert.assertEquals(3, types.size());
-		Assert.assertTrue(types.contains("java.util.AbstractCollection"));
+		Assertions.assertEquals(3, types.size());
+		Assertions.assertTrue(types.contains("java.util.AbstractCollection"));
 //		Assert.assertTrue(types.contains("java.util.ArrayList"));
-		Assert.assertTrue(types.contains("java.util.List"));
-		Assert.assertTrue(types.contains("java.util.Collection"));
+		Assertions.assertTrue(types.contains("java.util.List"));
+		Assertions.assertTrue(types.contains("java.util.Collection"));
 	}
 	@Test
 	public void testParameterTypeWithOverride() throws Exception {
 		Collection<String> types= helper1(10, 25, 10, 36, "java.util.List").getValidTypeNames();
-		Assert.assertEquals(3, types.size());
-		Assert.assertTrue(types.contains("java.util.AbstractCollection"));
+		Assertions.assertEquals(3, types.size());
+		Assertions.assertTrue(types.contains("java.util.AbstractCollection"));
 //		Assert.assertTrue(types.contains("java.util.ArrayList"));
-		Assert.assertTrue(types.contains("java.util.List"));
-		Assert.assertTrue(types.contains("java.util.Collection"));
+		Assertions.assertTrue(types.contains("java.util.List"));
+		Assertions.assertTrue(types.contains("java.util.Collection"));
 	}
 
 	@Test
 	public void testParameterTypeWithOverrideMethod() throws Exception {
 		Collection<String> types= helper1(3, 36, 3, 41, "java.lang.Number").getValidTypeNames();
-		Assert.assertEquals(3, types.size());
-		Assert.assertTrue(types.contains("java.io.Serializable"));
-		Assert.assertTrue(types.contains("java.lang.Comparable<java.lang.Float>"));
-		Assert.assertTrue(types.contains("java.lang.Number"));
-		Assert.assertFalse(types.contains("java.lang.Object"));
+		Assertions.assertEquals(3, types.size());
+		Assertions.assertTrue(types.contains("java.io.Serializable"));
+		Assertions.assertTrue(types.contains("java.lang.Comparable<java.lang.Float>"));
+		Assertions.assertTrue(types.contains("java.lang.Number"));
+		Assertions.assertFalse(types.contains("java.lang.Object"));
 	}
 	@Test
 	public void testParameterDeclWithOverride() throws Exception {
 		Collection<String> types= helper1(10, 25, 10, 39, "java.util.AbstractCollection").getValidTypeNames();
-		Assert.assertEquals(3, types.size());
-		Assert.assertTrue(types.contains("java.util.AbstractCollection"));
-		Assert.assertTrue(types.contains("java.util.List"));
-		Assert.assertTrue(types.contains("java.util.Collection"));
+		Assertions.assertEquals(3, types.size());
+		Assertions.assertTrue(types.contains("java.util.AbstractCollection"));
+		Assertions.assertTrue(types.contains("java.util.List"));
+		Assertions.assertTrue(types.contains("java.util.Collection"));
 	}
 	@Test
 	public void testLocalVarCast() throws Exception {
@@ -304,15 +304,15 @@ public class ChangeTypeRefactoringTests extends GenericRefactoringTest {
 	public void testFieldWithAccess() throws Exception {
 		createAdditionalCU("A_testFieldWithAccess2", getPackageP());
 		Collection<String> types= helper1(6, 12, 6, 21, "java.util.Collection").getValidTypeNames();
-		Assert.assertEquals(1, types.size());
-		Assert.assertTrue(types.contains("java.util.Collection"));
+		Assertions.assertEquals(1, types.size());
+		Assertions.assertTrue(types.contains("java.util.Collection"));
 	}
 	@Test
 	public void testParameterTypeWithOverriding() throws Exception {
 		createAdditionalCU("A_testParameterTypeWithOverriding2", getPackageP());
 		Collection<String> types= helper1(6, 21, 6, 24, "java.util.Collection").getValidTypeNames();
-		Assert.assertEquals(1, types.size());
-		Assert.assertTrue(types.contains("java.util.Collection"));
+		Assertions.assertEquals(1, types.size());
+		Assertions.assertTrue(types.contains("java.util.Collection"));
 	}
 	@Test
 	public void testMultiCU() throws Exception {
@@ -321,15 +321,15 @@ public class ChangeTypeRefactoringTests extends GenericRefactoringTest {
 		createAdditionalCU("A_testMultiCUClass1", getPackageP());
 		createAdditionalCU("A_testMultiCUClass2", getPackageP());
 		Collection<String> types= helper1(6, 21, 6, 26, "java.util.Collection").getValidTypeNames();
-		Assert.assertEquals(1, types.size());
-		Assert.assertTrue(types.contains("java.util.Collection"));
+		Assertions.assertEquals(1, types.size());
+		Assertions.assertTrue(types.contains("java.util.Collection"));
 	}
 	@Test
 	public void testHashMap() throws Exception {
 		Collection<String> types= helper1(15, 17, 15, 19, "java.util.AbstractMap").getValidTypeNames();
-		Assert.assertEquals(2, types.size());
-		Assert.assertTrue(types.contains("java.util.AbstractMap"));
-		Assert.assertTrue(types.contains("java.util.Map"));
+		Assertions.assertEquals(2, types.size());
+		Assertions.assertTrue(types.contains("java.util.AbstractMap"));
+		Assertions.assertTrue(types.contains("java.util.Map"));
 	}
 	@Test
 	public void testString() throws Exception {
@@ -343,10 +343,10 @@ public class ChangeTypeRefactoringTests extends GenericRefactoringTest {
 	@Test
 	public void testInterfaceTypes() throws Exception {
 		Collection<String> types= helper1(4, 11, 4, 11, "p.I").getValidTypeNames();
-		Assert.assertEquals(3, types.size());
-		Assert.assertTrue(types.contains("java.lang.Object"));
-		Assert.assertTrue(types.contains("p.I"));
-		Assert.assertTrue(types.contains("p.A"));
+		Assertions.assertEquals(3, types.size());
+		Assertions.assertTrue(types.contains("java.lang.Object"));
+		Assertions.assertTrue(types.contains("p.I"));
+		Assertions.assertTrue(types.contains("p.A"));
 	}
 	@Test
 	public void testImport() throws Exception {
@@ -469,7 +469,7 @@ public class ChangeTypeRefactoringTests extends GenericRefactoringTest {
 		};
 		StringAsserts.assertEqualStringsIgnoreOrder(actual, expected);
 	}
-	@Ignore("BUG_CORE_TYPE_HIERARCHY_ILLEGAL_PARAMETERIZED_INTERFACES core bug")
+	@Disabled("BUG_CORE_TYPE_HIERARCHY_ILLEGAL_PARAMETERIZED_INTERFACES core bug")
 	@Test
 	public void test4TypeParameters() throws Exception {
 
@@ -737,13 +737,13 @@ public class ChangeTypeRefactoringTests extends GenericRefactoringTest {
 		createAdditionalCUForNegative("A_InVisibleType", getPackageP());
 		createAdditionalCUForNegative("A_VisibleType", getPackageP());
 		Collection<String> types= failHelper2(6, 9, 6, 21, "p.A_VisibleType", getRoot().getPackageFragment("")).getValidTypeNames();
-		Assert.assertFalse(types.contains("p.A_InVisibleType"));
+		Assertions.assertFalse(types.contains("p.A_InVisibleType"));
 	}
 
 	@Test
 	public void testThrowableSubtype() throws Exception {
 		Collection<String> types= failHelper2(3, 9, 3, 17, "java.lang.Exception", getPackageP()).getValidTypeNames();
-		Assert.assertTrue(types.contains("java.lang.Throwable"));
-		Assert.assertFalse(types.contains("java.lang.Object"));
+		Assertions.assertTrue(types.contains("java.lang.Throwable"));
+		Assertions.assertFalse(types.contains("java.lang.Object"));
 	}
 }

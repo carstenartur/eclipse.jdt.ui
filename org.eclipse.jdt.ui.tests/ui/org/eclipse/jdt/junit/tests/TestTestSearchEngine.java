@@ -13,18 +13,18 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.junit.JUnitCore;
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -50,7 +50,7 @@ public class TestTestSearchEngine {
 	private IJavaProject fProject;
 	private IPackageFragmentRoot fRoot;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fProject= JavaProjectHelper.createJavaProject("TestProject", "bin");
 		JavaProjectHelper.addRTJar(fProject);
@@ -58,7 +58,7 @@ public class TestTestSearchEngine {
 		fRoot= JavaProjectHelper.addSourceContainer(fProject, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fProject);
 	}
@@ -244,9 +244,9 @@ public class TestTestSearchEngine {
 	}
 
 	private void assertEqualTypes(String message, List<IType> expected, List<IType> actual) {
-		assertEquals("Wrong number of found tests", expected.size(), actual.size());
+		assertEquals(expected.size(), actual.size(), "Wrong number of found tests");
 		for (int i= 0; i < actual.size(); i++) {
-			assertTrue(message + expected.get(i).getFullyQualifiedName(), expected.contains(actual.get(i)));
+			assertTrue(expected.contains(actual.get(i)), message + expected.get(i).getFullyQualifiedName());
 		}
 	}
 }

@@ -13,6 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
+import org.junit.jupiter.api.extension.ExtensionContext;
+
 import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IPackageFragmentRoot;
 
@@ -23,8 +25,8 @@ public class RewriteMethodInvocationsTestSetup extends RefactoringTestSetup {
 	private IPackageFragment fRewrite;
 
 	@Override
-	public void before() throws Exception {
-		super.before();
+	public void beforeEach(ExtensionContext context) throws Exception {
+		super.beforeEach(context);
 
 		IPackageFragmentRoot root= getDefaultSourceFolder();
 		fRewrite= root.createPackageFragment("rewrite_in", true, null);

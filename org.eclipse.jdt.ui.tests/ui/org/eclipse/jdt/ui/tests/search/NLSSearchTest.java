@@ -16,10 +16,10 @@ package org.eclipse.jdt.ui.tests.search;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.Charset;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -48,13 +48,13 @@ import org.eclipse.jdt.internal.ui.refactoring.nls.search.NLSSearchQuery;
 
 public class NLSSearchTest {
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup = new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws CoreException {
 		fJProject1= projectSetup.getProject();
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
@@ -69,7 +69,7 @@ public class NLSSearchTest {
 		pack.createCompilationUnit("NLS.java", str, false, null);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());
 		ISearchResultViewPart searchResultView= NewSearchUI.getSearchResultView();

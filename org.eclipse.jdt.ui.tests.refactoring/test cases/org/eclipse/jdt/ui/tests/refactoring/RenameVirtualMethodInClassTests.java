@@ -14,14 +14,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -69,7 +69,7 @@ public class RenameVirtualMethodInClassTests extends GenericRefactoringTest {
 		RenameRefactoring ref= new RenameRefactoring(processor);
 		processor.setNewElementName(newMethodName);
 		RefactoringStatus result= performRefactoring(ref);
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	private void helper1() throws Exception{
@@ -88,26 +88,26 @@ public class RenameVirtualMethodInClassTests extends GenericRefactoringTest {
 		descriptor.setDeprecateDelegate(createDelegate);
 		final RefactoringStatus status= new RefactoringStatus();
 		final Refactoring refactoring= descriptor.createRefactoring(status);
-		assertNotNull("Refactoring should not be null", refactoring);
-		assertTrue("status should be ok", status.isOK());
-		assertNull("was supposed to pass", performRefactoring(refactoring));
+		assertNotNull(refactoring, "Refactoring should not be null");
+		assertTrue(status.isOK(), "status should be ok");
+		assertNull(performRefactoring(refactoring), "was supposed to pass");
 		if (!shouldPass){
-			assertNotEquals("incorrect renaming because of java model", getFileContents(getOutputTestFileName("A")), cu.getSource());
+			assertNotEquals(getFileContents(getOutputTestFileName("A")), cu.getSource(), "incorrect renaming because of java model");
 			return;
 		}
 		String expectedRenaming= getFileContents(getOutputTestFileName("A"));
 		String actuaRenaming= cu.getSource();
 		assertEqualLines("incorrect renaming", expectedRenaming, actuaRenaming);
 
-		assertTrue("anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertFalse("! anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertTrue(RefactoringCore.getUndoManager().anythingToUndo(), "anythingToUndo");
+		assertFalse(RefactoringCore.getUndoManager().anythingToRedo(), "! anythingToRedo");
 		//assertEquals("1 to undo", 1, Refactoring.getUndoManager().getRefactoringLog().size());
 
 		RefactoringCore.getUndoManager().performUndo(null, new NullProgressMonitor());
 		assertEqualLines("invalid undo", getFileContents(getInputTestFileName("A")), cu.getSource());
 
-		assertFalse("! anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertTrue("anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertFalse(RefactoringCore.getUndoManager().anythingToUndo(), "! anythingToUndo");
+		assertTrue(RefactoringCore.getUndoManager().anythingToRedo(), "anythingToRedo");
 		//assertEquals("1 to redo", 1, Refactoring.getUndoManager().getRedoStack().size());
 
 		RefactoringCore.getUndoManager().performRedo(null, new NullProgressMonitor());
@@ -155,7 +155,7 @@ public class RenameVirtualMethodInClassTests extends GenericRefactoringTest {
 		helper2_0("getSquare", "get2ndPower", new String[0]);
 	}
 
-	@Ignore("BUG_83217_IMPLICIT_ENUM_METHODS")
+	@Disabled("BUG_83217_IMPLICIT_ENUM_METHODS")
 	@Test
 	public void testEnumFail1() throws Exception {
 		helper1_0("value", "valueOf", new String[]{"QString;"});
@@ -463,10 +463,10 @@ public class RenameVirtualMethodInClassTests extends GenericRefactoringTest {
 		descriptor.setUpdateReferences(true);
 		final RefactoringStatus status= new RefactoringStatus();
 		final Refactoring refactoring= descriptor.createRefactoring(status);
-		assertNotNull("Refactoring should not be null", refactoring);
-		assertTrue("status should be ok", status.isOK());
+		assertNotNull(refactoring, "Refactoring should not be null");
+		assertTrue(status.isOK(), "status should be ok");
 
-		assertNull("was supposed to pass", performRefactoring(refactoring));
+		assertNull(performRefactoring(refactoring), "was supposed to pass");
 		assertEqualLines("invalid renaming A", getFileContents(getOutputTestFileName("A")), cu.getSource());
 		assertEqualLines("invalid renaming C", getFileContents(getOutputTestFileName("C")), cuC.getSource());
 	}
@@ -598,7 +598,7 @@ public class RenameVirtualMethodInClassTests extends GenericRefactoringTest {
 		helper2();
 	}
 
-	@Ignore("test for bug#18553")
+	@Disabled("test for bug#18553")
 	@Test
 	public void test34() throws Exception{
 //		helper2_0("A", "foo", new String[0], true, true);
@@ -619,7 +619,7 @@ public class RenameVirtualMethodInClassTests extends GenericRefactoringTest {
 		helper2_0("foo", "bar", new String[] {"QA;"}, true);
 	}
 
-	@Ignore("difficult to set up test in current testing framework")
+	@Disabled("difficult to set up test in current testing framework")
 	@Test
 	public void test38() throws Exception {
 		helper2();
@@ -642,10 +642,10 @@ public class RenameVirtualMethodInClassTests extends GenericRefactoringTest {
 		descriptor.setUpdateReferences(true);
 		final RefactoringStatus status= new RefactoringStatus();
 		final Refactoring refactoring= descriptor.createRefactoring(status);
-		assertNotNull("Refactoring should not be null", refactoring);
-		assertTrue("status should be ok", status.isOK());
+		assertNotNull(refactoring, "Refactoring should not be null");
+		assertTrue(status.isOK(), "status should be ok");
 
-		assertNull("was supposed to pass", performRefactoring(refactoring));
+		assertNull(performRefactoring(refactoring), "was supposed to pass");
 		assertEqualLines("invalid renaming A", getFileContents(getOutputTestFileName("A")), cu.getSource());
 	}
 

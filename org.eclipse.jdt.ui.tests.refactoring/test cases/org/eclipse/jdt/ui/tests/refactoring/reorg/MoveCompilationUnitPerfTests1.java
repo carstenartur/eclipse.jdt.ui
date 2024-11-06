@@ -14,8 +14,8 @@
 package org.eclipse.jdt.ui.tests.refactoring.reorg;
 
 import org.junit.FixMethodOrder;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.runners.MethodSorters;
 
 import org.eclipse.test.performance.Dimension;
@@ -25,7 +25,7 @@ import org.eclipse.jdt.ui.tests.refactoring.rules.RefactoringPerformanceTestSetu
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class MoveCompilationUnitPerfTests1 extends AbstractMoveCompilationUnitPrefTest {
 
-	@Rule
+	@RegisterExtension
 	public RefactoringPerformanceTestSetup rpts= new RefactoringPerformanceTestSetup();
 
 	@Test

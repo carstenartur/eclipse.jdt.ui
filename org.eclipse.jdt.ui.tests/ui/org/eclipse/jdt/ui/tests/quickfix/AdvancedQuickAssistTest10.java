@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Hashtable;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -42,14 +42,14 @@ import org.eclipse.jdt.internal.ui.text.correction.AssistContext;
 import org.eclipse.jdt.internal.ui.text.correction.CorrectionMessages;
 
 public class AdvancedQuickAssistTest10 extends QuickFixTest {
-	@Rule
-    public ProjectTestSetup projectSetup= new Java10ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup= new Java10ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		JavaCore.setOptions(options);
@@ -59,7 +59,7 @@ public class AdvancedQuickAssistTest10 extends QuickFixTest {
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());
 	}
@@ -290,8 +290,8 @@ public class AdvancedQuickAssistTest10 extends QuickFixTest {
 		ICompletionProposal proposal= findProposalByName(CorrectionMessages.AssignToVariableAssistProposal_assigntolocal_description, proposals);
 		ICompletionProposal proposal2=  findProposalByName(CorrectionMessages.AssignToVariableAssistProposal_assignintrywithresources_description, proposals);
 
-		assertNotNull("Proposal `" + CorrectionMessages.AssignToVariableAssistProposal_assigntolocal_description + "` missing",proposal);
-		assertNotNull("Proposal `" + CorrectionMessages.AssignToVariableAssistProposal_assignintrywithresources_description + "` missing",proposal2);
+		assertNotNull(proposal,"Proposal `" + CorrectionMessages.AssignToVariableAssistProposal_assigntolocal_description + "` missing");
+		assertNotNull(proposal2,"Proposal `" + CorrectionMessages.AssignToVariableAssistProposal_assignintrywithresources_description + "` missing");
 
 		assertLinkedChoicesContains(proposal, "type", choices);
         assertLinkedChoicesContains(proposal2, "type", choices);

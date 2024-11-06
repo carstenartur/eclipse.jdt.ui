@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.contentassist;
 
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -44,7 +44,7 @@ public class MissingTypeCompletionTest extends AbstractCompletionTest {
 		expectImport("missing.MissingType");
 	}
 
-	@After
+	@AfterEach
 	public void cleanupMissingType() throws CoreException {
 		if (missingType != null) {
 			JavaProjectHelper.delete(missingType);

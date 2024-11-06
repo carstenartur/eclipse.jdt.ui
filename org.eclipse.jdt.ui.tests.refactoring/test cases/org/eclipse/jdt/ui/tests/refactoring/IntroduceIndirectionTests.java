@@ -15,12 +15,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -95,22 +95,22 @@ public class IntroduceIndirectionTests extends GenericRefactoringTest {
 			boolean failed= false;
 			RefactoringStatus status= performRefactoringWithStatus(ref);
 			if (status.hasFatalError()) {
-				assertTrue("Failed but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.FATAL), shouldFail);
+				assertTrue(shouldFail, "Failed but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.FATAL));
 				failed= true;
 			} else
-				assertFalse("Didn't fail although expected", shouldFail);
+				assertFalse(shouldFail, "Didn't fail although expected");
 
 			if (!failed) {
 
 				if (status.hasError())
-					assertTrue("Had errors but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.ERROR), shouldError);
+					assertTrue(shouldError, "Had errors but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.ERROR));
 				else
-					assertFalse("No error although expected", shouldError);
+					assertFalse(shouldError, "No error although expected");
 
 				if (status.hasWarning())
-					assertTrue("Had warnings but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.WARNING), shouldWarn);
+					assertTrue(shouldWarn, "Had warnings but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.WARNING));
 				else
-					assertFalse("No warning although expected", shouldWarn);
+					assertFalse(shouldWarn, "No warning although expected");
 
 				for (int i= 0; i < topLevelName.length; i++) {
 					String className= topLevelName[i].substring(topLevelName[i].indexOf('.') + 1);

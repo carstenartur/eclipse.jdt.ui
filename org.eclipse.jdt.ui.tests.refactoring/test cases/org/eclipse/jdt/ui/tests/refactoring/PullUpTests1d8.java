@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Hashtable;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -74,11 +74,11 @@ public class PullUpTests1d8 extends PullUpTests {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		assertTrue(ref.checkInitialConditions(new NullProgressMonitor()).isOK(), "activation");
 		setSuperclassAsTargetClass(processor);
 
 		RefactoringStatus result= performRefactoring(ref);
-		assertTrue("precondition was supposed to pass", result == null || !result.hasError());
+		assertTrue(result == null || !result.hasError(), "precondition was supposed to pass");
 
 		assertEqualLines("A", getFileContents(getOutputTestFileName("A")), cuA.getSource());
 		assertEqualLines("B", getFileContents(getOutputTestFileName("B")), cuB.getSource());
@@ -232,11 +232,11 @@ public class PullUpTests1d8 extends PullUpTests {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		assertTrue(ref.checkInitialConditions(new NullProgressMonitor()).isOK(), "activation");
 		setSuperclassAsTargetClass(processor);
 
 		RefactoringStatus result= performRefactoring(ref);
-		assertTrue("precondition was supposed to pass", result == null || !result.hasError());
+		assertTrue(result == null || !result.hasError(), "precondition was supposed to pass");
 
 		assertEqualLines("IFoo", getFileContents(getOutputTestFileName("IFoo")), cuIFoo.getSource());
 		assertEqualLines("FooImpl", getFileContents(getOutputTestFileName("FooImpl")), cuFooImpl.getSource());
@@ -260,7 +260,7 @@ public class PullUpTests1d8 extends PullUpTests {
 		PullUpRefactoringProcessor processor= createRefactoringProcessor(methods);
 		Refactoring ref= processor.getRefactoring();
 
-		assertTrue("activation", ref.checkInitialConditions(new NullProgressMonitor()).isOK());
+		assertTrue(ref.checkInitialConditions(new NullProgressMonitor()).isOK(), "activation");
 		processor.setDestinationType(typeIGeneric);
 
 		processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));

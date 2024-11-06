@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Collections;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.internal.corext.refactoring.rename.RefactoringScanner;
 import org.eclipse.jdt.internal.corext.refactoring.rename.RefactoringScanner.TextMatch;
@@ -61,7 +61,7 @@ public class RefactoringScannerTests extends GenericRefactoringTest {
 	private void helper(String fileName, int expectedMatchCount)	throws Exception{
 		String text= getFileContents(getRefactoringPath() + fileName);
 		fScanner.scan(text);
-		assertEquals("results.length", expectedMatchCount, fScanner.getMatches().size());
+		assertEquals(expectedMatchCount, fScanner.getMatches().size(), "results.length");
 	}
 
 	private void helper2(String fileName, Position[] expectedMatches)	throws Exception{
@@ -77,7 +77,7 @@ public class RefactoringScannerTests extends GenericRefactoringTest {
 			matchesList.add(element.getStartPosition());
 		}
 		Collections.sort(matchesList);
-		assertEquals("results", expectedMatchesList.toString(), matchesList.toString());
+		assertEquals(expectedMatchesList.toString(), matchesList.toString(), "results");
 	}
 
 	//-- tests
@@ -85,7 +85,7 @@ public class RefactoringScannerTests extends GenericRefactoringTest {
 	public void test0() throws Exception{
 		String text= "";
 		fScanner.scan(text);
-		assertEquals("results.length", 0, fScanner.getMatches().size());
+		assertEquals(0, fScanner.getMatches().size(), "results.length");
 	}
 
 	@Test

@@ -16,10 +16,10 @@ package org.eclipse.jdt.ui.tests.quickfix;
 import java.util.ArrayList;
 import java.util.Map;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -44,8 +44,8 @@ import org.eclipse.jdt.ui.text.java.correction.CUCorrectionProposal;
 
 public class NullAnnotationsQuickFixTest9 extends QuickFixTest {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new Java9ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new Java9ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 
@@ -53,7 +53,7 @@ public class NullAnnotationsQuickFixTest9 extends QuickFixTest {
 
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws CoreException {
 		fJProject2= JavaProjectHelper.createJavaProject("annots", "bin");
 		JavaProjectHelper.set9CompilerOptions(fJProject2);
@@ -134,7 +134,7 @@ public class NullAnnotationsQuickFixTest9 extends QuickFixTest {
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		if (fJProject1 != null) {
 			JavaProjectHelper.delete(fJProject1);

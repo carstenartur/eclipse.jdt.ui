@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -64,7 +64,7 @@ public class ExtractInterfaceTests extends GenericRefactoringTest {
 		return REFACTORING_PATH;
 	}
 
-	@Before
+	@BeforeEach
 	public void setup() throws Exception {
 		StubUtility.setCodeTemplate(CodeTemplateContextType.NEWTYPE_ID,
 			"${package_declaration}" +
@@ -85,7 +85,7 @@ public class ExtractInterfaceTests extends GenericRefactoringTest {
 	    JavaCore.setOptions(options);
 	}
 
-    @After
+    @AfterEach
 	public void after() throws Exception {
     	JavaCore.setOptions(fOldOptions);
     	fOldOptions= null;
@@ -115,7 +115,7 @@ public class ExtractInterfaceTests extends GenericRefactoringTest {
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
 
 		processor.setTypeName(newInterfaceName);
-		assertEquals("interface name should be accepted", RefactoringStatus.OK, processor.checkTypeName(newInterfaceName).getSeverity());
+		assertEquals(RefactoringStatus.OK, processor.checkTypeName(newInterfaceName).getSeverity(), "interface name should be accepted");
 
 		ICompilationUnit[] cus= new ICompilationUnit[cuNames.length];
 		for (int i= 0; i < cuNames.length; i++) {
@@ -132,7 +132,7 @@ public class ExtractInterfaceTests extends GenericRefactoringTest {
 		if (newPackageFragment != null) {
 			processor.setPackageFragment(newPackageFragment);
 		}
-		assertNull("was supposed to pass", performRefactoring(ref));
+		assertNull(performRefactoring(ref), "was supposed to pass");
 
 		for (int i= 0; i < cus.length; i++) {
 			String expected= getFileContents(getOutputTestFileName(cuNames[i]));
@@ -155,13 +155,13 @@ public class ExtractInterfaceTests extends GenericRefactoringTest {
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
 
 		processor.setTypeName(newInterfaceName);
-		assertEquals("interface name should be accepted", RefactoringStatus.OK, processor.checkTypeName(newInterfaceName).getSeverity());
+		assertEquals(RefactoringStatus.OK, processor.checkTypeName(newInterfaceName).getSeverity(), "interface name should be accepted");
 
 		if (extractAll)
 			processor.setExtractedMembers(processor.getExtractableMembers());
 		processor.setReplace(replaceOccurrences);
 		processor.setAnnotations(fGenerateAnnotations);
-		assertNull("was supposed to pass", performRefactoring(ref));
+		assertNull(performRefactoring(ref), "was supposed to pass");
 		assertEqualLines("incorrect changes in " + className,
 			getFileContents(getOutputTestFileName(className)),
 			cu.getSource());
@@ -179,8 +179,8 @@ public class ExtractInterfaceTests extends GenericRefactoringTest {
 		processor.setTypeName(newInterfaceName);
 		if (extractAll)
 			processor.setExtractedMembers(processor.getExtractableMembers());
-		assertNotNull("was not supposed to pass", performRefactoring(ref));
-		assertEquals("was not supposed to fail with different severity", expectedSeverity, performRefactoring(ref).getSeverity());
+		assertNotNull(performRefactoring(ref), "was not supposed to pass");
+		assertEquals(expectedSeverity, performRefactoring(ref).getSeverity(), "was not supposed to fail with different severity");
 	}
 
 	private void standardPassingTest() throws Exception{

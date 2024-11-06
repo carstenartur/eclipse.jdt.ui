@@ -16,11 +16,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -108,14 +108,14 @@ public class InlineConstantTests extends GenericRefactoringTest {
 			ref= null;
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
 
-		assertTrue("activation was supposed to be successful", preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful");
 
 		ref.setReplaceAllReferences(replaceAll);
 		ref.setRemoveDeclaration(removeDeclaration);
 
 		preconditionResult.merge(ref.checkFinalConditions(new NullProgressMonitor()));
 
-		assertTrue("precondition was supposed to pass",preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(),"precondition was supposed to pass");
 
 		performChange(ref, false);
 
@@ -161,7 +161,7 @@ public class InlineConstantTests extends GenericRefactoringTest {
 
 		result.merge(ref.checkFinalConditions(new NullProgressMonitor()));
 
-		assertFalse("precondition checking is expected to fail.", result.isOK());
+		assertFalse(result.isOK(), "precondition checking is expected to fail.");
 		assertEquals(errorCode, result.getEntryMatchingSeverity(RefactoringStatus.ERROR).getCode());
 	}
 

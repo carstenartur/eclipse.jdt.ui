@@ -13,11 +13,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -43,14 +43,14 @@ public class UndoManagerTests extends GenericRefactoringTest {
 		return RefactoringCore.getUndoManager();
 	}
 
-	@After
+	@AfterEach
 	public void after() throws Exception {
 		RefactoringCore.getUndoManager().flush();
 	}
 
 	private void checkState(int iterationCount, boolean undo, boolean redo, int undoCount, int redoCount){
-		assertEquals(iterationCount + " undo", undo, RefactoringCore.getUndoManager().anythingToUndo());
-		assertEquals(iterationCount + " redo", redo, RefactoringCore.getUndoManager().anythingToRedo());
+		assertEquals(undo, RefactoringCore.getUndoManager().anythingToUndo(), iterationCount + " undo");
+		assertEquals(redo, RefactoringCore.getUndoManager().anythingToRedo(), iterationCount + " redo");
 		testCounts(iterationCount, undoCount, redoCount);
 	}
 
@@ -58,8 +58,8 @@ public class UndoManagerTests extends GenericRefactoringTest {
 		IUndoManager undoManager= RefactoringCore.getUndoManager();
 		if (undoManager instanceof UndoManager2) {
 			UndoManager2 manager= (UndoManager2)undoManager;
-			assertTrue(iterationCount + "undo stack", manager.testHasNumberOfUndos(undoCount));
-			assertTrue(iterationCount + "redo stack", manager.testHasNumberOfRedos(redoCount));
+			assertTrue(manager.testHasNumberOfUndos(undoCount), iterationCount + "undo stack");
+			assertTrue(manager.testHasNumberOfRedos(redoCount), iterationCount + "redo stack");
 		}
 	}
 

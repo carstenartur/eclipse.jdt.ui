@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.util.Collection;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.team.core.RepositoryProvider;
 
@@ -62,12 +62,12 @@ public class ValidateEditTests extends GenericRefactoringTest {
 		rts= new Java1d5Setup();
 	}
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		RepositoryProvider.map(getRoot().getJavaProject().getProject(), RefactoringTestRepositoryProvider.PROVIDER_ID);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		RepositoryProvider.unmap(getRoot().getJavaProject().getProject());
 	}
@@ -98,7 +98,7 @@ public class ValidateEditTests extends GenericRefactoringTest {
 		descriptor.setUpdateReferences(true);
 		RefactoringStatus status= performRefactoring(descriptor);
 		if (status != null)
-			assertTrue(status.toString(), status.isOK());
+			assertTrue(status.isOK(), status.toString());
 
 		Collection<IPath> validatedEditPaths= RefactoringTestRepositoryProvider.getValidatedEditPaths(getRoot().getJavaProject().getProject());
 		assertEquals(2, validatedEditPaths.size());
@@ -144,7 +144,7 @@ public class ValidateEditTests extends GenericRefactoringTest {
 		descriptor.setUpdateReferences(true);
 		RefactoringStatus status= performRefactoring(descriptor);
 		if (status != null)
-			assertTrue(status.toString(), status.isOK());
+			assertTrue(status.isOK(), status.toString());
 
 		Collection<IPath> validatedEditPaths= RefactoringTestRepositoryProvider.getValidatedEditPaths(getRoot().getJavaProject().getProject());
 		assertEquals(2, validatedEditPaths.size());
@@ -177,7 +177,7 @@ public class ValidateEditTests extends GenericRefactoringTest {
 		descriptor.setUpdateReferences(true);
 		RefactoringStatus status= performRefactoring(descriptor);
 		if (status != null)
-			assertTrue(status.toString(), status.isOK());
+			assertTrue(status.isOK(), status.toString());
 
 		Collection<IPath> validatedEditPaths= RefactoringTestRepositoryProvider.getValidatedEditPaths(getRoot().getJavaProject().getProject());
 		assertEquals(1, validatedEditPaths.size());
@@ -213,7 +213,7 @@ public class ValidateEditTests extends GenericRefactoringTest {
 		descriptor.setFileNamePatterns("*.properties");
 		RefactoringStatus status= performRefactoring(descriptor);
 		if (status != null)
-			assertTrue(status.toString(), status.isOK());
+			assertTrue(status.isOK(), status.toString());
 
 		Collection<IPath> validatedEditPaths= RefactoringTestRepositoryProvider.getValidatedEditPaths(getRoot().getJavaProject().getProject());
 		assertEquals(2, validatedEditPaths.size());
@@ -248,7 +248,7 @@ public class ValidateEditTests extends GenericRefactoringTest {
 		descriptor.setUpdateReferences(true);
 		RefactoringStatus status= performRefactoring(descriptor);
 		if (status != null)
-			assertTrue(status.toString(), status.isOK());
+			assertTrue(status.isOK(), status.toString());
 
 		Collection<IPath> validatedEditPaths= RefactoringTestRepositoryProvider.getValidatedEditPaths(getRoot().getJavaProject().getProject());
 		assertEquals(2, validatedEditPaths.size());
@@ -283,7 +283,7 @@ public class ValidateEditTests extends GenericRefactoringTest {
 		descriptor.setUpdateReferences(true);
 		RefactoringStatus status= performRefactoring(descriptor);
 		if (status != null)
-			assertTrue(status.toString(), status.isOK());
+			assertTrue(status.isOK(), status.toString());
 
 		Collection<IPath> validatedEditPaths= RefactoringTestRepositoryProvider.getValidatedEditPaths(getRoot().getJavaProject().getProject());
 		assertEquals(2, validatedEditPaths.size());
@@ -327,7 +327,7 @@ public class ValidateEditTests extends GenericRefactoringTest {
 		javaMoveProcessor.setReorgQueries(new MockReorgQueries());
 		RefactoringStatus status= performRefactoring(new MoveRefactoring(javaMoveProcessor));
 		if (status != null)
-			assertTrue(status.toString(), status.isOK());
+			assertTrue(status.isOK(), status.toString());
 
 		Collection<IPath> validatedEditPaths= RefactoringTestRepositoryProvider.getValidatedEditPaths(getRoot().getJavaProject().getProject());
 		assertEquals(2, validatedEditPaths.size());
@@ -360,7 +360,7 @@ public class ValidateEditTests extends GenericRefactoringTest {
 		javaMoveProcessor.setReorgQueries(new MockReorgQueries());
 		RefactoringStatus status= performRefactoring(new MoveRefactoring(javaMoveProcessor), true);
 		if (status != null)
-			assertTrue(status.toString(), status.isOK());
+			assertTrue(status.isOK(), status.toString());
 
 		Collection<IPath> validatedEditPaths= RefactoringTestRepositoryProvider.getValidatedEditPaths(getRoot().getJavaProject().getProject());
 		assertEquals(1, validatedEditPaths.size());
@@ -400,7 +400,7 @@ public class ValidateEditTests extends GenericRefactoringTest {
 		javaMoveProcessor.setReorgQueries(new MockReorgQueries());
 		RefactoringStatus status= performRefactoring(new MoveRefactoring(javaMoveProcessor), false);
 		if (status != null)
-			assertTrue(status.toString(), status.isOK());
+			assertTrue(status.isOK(), status.toString());
 
 		Collection<IPath> validatedEditPaths= RefactoringTestRepositoryProvider.getValidatedEditPaths(getRoot().getJavaProject().getProject());
 		assertEquals(2, validatedEditPaths.size());
@@ -440,7 +440,7 @@ public class ValidateEditTests extends GenericRefactoringTest {
 		javaCopyProcessor.setNewNameQueries(new MockReorgQueries());
 		RefactoringStatus status= performRefactoring(new CopyRefactoring(javaCopyProcessor), false);
 		if (status != null)
-			assertTrue(status.toString(), status.isOK());
+			assertTrue(status.isOK(), status.toString());
 
 		Collection<IPath> validatedEditPaths= RefactoringTestRepositoryProvider.getValidatedEditPaths(getRoot().getJavaProject().getProject());
 		assertEquals(1, validatedEditPaths.size());

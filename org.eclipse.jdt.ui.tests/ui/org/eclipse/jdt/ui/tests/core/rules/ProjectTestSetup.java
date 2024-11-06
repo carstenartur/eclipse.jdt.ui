@@ -18,7 +18,11 @@
 package org.eclipse.jdt.ui.tests.core.rules;
 
 
-import org.junit.rules.ExternalResource;
+import java.io.IOException;
+
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -40,7 +44,7 @@ import org.eclipse.jdt.internal.ui.util.CoreUtility;
 /**
  * Sets up an 1.5 project with rtstubs15.jar and compiler, code formatting, code generation, and template options.
  */
-public class ProjectTestSetup extends ExternalResource {
+public class ProjectTestSetup implements BeforeEachCallback, AfterEachCallback {
 
 	protected String projectname;
 	protected IPath ipath;
@@ -71,7 +75,7 @@ public class ProjectTestSetup extends ExternalResource {
 	private boolean fAutobuilding;
 
 	@Override
-	protected void before() throws Throwable {
+	public void beforeEach(ExtensionContext context) throws CoreException, IOException {
 
 		if (projectExists()) { // allow nesting of ProjectTestSetups
 			return;
@@ -98,7 +102,7 @@ public class ProjectTestSetup extends ExternalResource {
 	}
 
 	@Override
-	protected void after() {
+	public void afterEach(ExtensionContext context) {
 		if (fJProject != null) {
 			try {
 				JavaProjectHelper.delete(fJProject);

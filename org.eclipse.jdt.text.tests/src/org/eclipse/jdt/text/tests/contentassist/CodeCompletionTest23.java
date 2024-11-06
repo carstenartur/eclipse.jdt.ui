@@ -13,13 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.contentassist;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Hashtable;
 import java.util.List;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -65,7 +65,7 @@ import org.eclipse.jdt.internal.ui.text.java.JavaTypeCompletionProposalComputer;
  * Those tests are made to run on Java 23
  */
 public class CodeCompletionTest23 extends AbstractCompletionTest {
-	@Rule
+	@RegisterExtension
 	public Java23ProjectTestSetup j23s= new Java23ProjectTestSetup(true);
 
 	private IJavaProject fJProject1;

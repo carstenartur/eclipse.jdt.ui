@@ -13,9 +13,9 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.preferences;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -24,7 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.core.JavaCore;
 
@@ -75,9 +75,9 @@ public class OptionsConfigurationBlockTest {
 
 		removeUnusedOptions(coreFieldLookup);
 
-		assertEquals("Core constants missing in the UI",
-				Collections.EMPTY_MAP.toString(),
-				coreFieldLookup.toString().replace(',', '\n'));
+		assertEquals(Collections.EMPTY_MAP.toString(),
+				coreFieldLookup.toString().replace(',', '\n'),
+				"Core constants missing in the UI");
 	}
 
 	/**
@@ -131,12 +131,12 @@ public class OptionsConfigurationBlockTest {
 				boolean keyWasInKeySet= keySet.remove(key);
 				if (JavaCore.PLUGIN_ID.equals(key.getQualifier())) {
 					Object fieldName= coreFieldLookup.remove(key.getName());
-					assertNotNull("No core constant for key " + key.getName() + " in class " + configurationBlock.getName(), fieldName);
-					assertTrue(configurationBlock.getName() + "#getKeys() is missing key '" + key.getName() + "'", keyWasInKeySet);
+					assertNotNull(fieldName, "No core constant for key " + key.getName() + " in class " + configurationBlock.getName());
+					assertTrue(keyWasInKeySet, configurationBlock.getName() + "#getKeys() is missing key '" + key.getName() + "'");
 				}
 			}
 		}
 
-		assertEquals(configurationBlock.getName() + "#getKeys() includes keys that are not declared in the class", Collections.emptySet(), keySet);
+		assertEquals(Collections.emptySet(), keySet, configurationBlock.getName() + "#getKeys() includes keys that are not declared in the class");
 	}
 }

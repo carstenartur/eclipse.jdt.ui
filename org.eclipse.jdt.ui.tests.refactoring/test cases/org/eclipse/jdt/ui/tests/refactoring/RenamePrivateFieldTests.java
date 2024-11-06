@@ -13,18 +13,18 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -92,7 +92,7 @@ public class RenamePrivateFieldTests extends GenericRefactoringTest {
 		descriptor.setRenameGetters(renameGetter);
 		descriptor.setRenameSetters(renameSetter);
 		RefactoringStatus result= performRefactoring(descriptor);
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	private void helper1_0(String fieldName, String newFieldName) throws Exception{
@@ -120,8 +120,8 @@ public class RenamePrivateFieldTests extends GenericRefactoringTest {
 
 		RenameRefactoring refactoring= (RenameRefactoring) createRefactoring(descriptor);
 		RenameFieldProcessor processor= (RenameFieldProcessor) refactoring.getProcessor();
-		assertEquals("getter rename enabled", expectedGetterRenameEnabled, processor.canEnableGetterRenaming() == null);
-		assertEquals("setter rename enabled", expectedSetterRenameEnabled, processor.canEnableSetterRenaming() == null);
+		assertEquals(expectedGetterRenameEnabled, processor.canEnableGetterRenaming() == null, "getter rename enabled");
+		assertEquals(expectedSetterRenameEnabled, processor.canEnableSetterRenaming() == null, "setter rename enabled");
 
 		String newGetterName= processor.getNewGetterName();
 		String newSetterName= processor.getNewSetterName();
@@ -141,21 +141,21 @@ public class RenamePrivateFieldTests extends GenericRefactoringTest {
 		String[] renameHandles= ParticipantTesting.createHandles(elements.toArray());
 
 		RefactoringStatus result= performRefactoring(refactoring);
-		assertNull("was supposed to pass", result);
+		assertNull(result, "was supposed to pass");
 		assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName("A")), cu.getSource());
 
 		ParticipantTesting.testRename(
 			renameHandles,
 			args.toArray(new RenameArguments[args.size()]));
 
-		assertTrue("anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertFalse("! anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertTrue(RefactoringCore.getUndoManager().anythingToUndo(), "anythingToUndo");
+		assertFalse(RefactoringCore.getUndoManager().anythingToRedo(), "! anythingToRedo");
 
 		RefactoringCore.getUndoManager().performUndo(null, new NullProgressMonitor());
 		assertEqualLines("invalid undo", getFileContents(getInputTestFileName("A")), cu.getSource());
 
-		assertFalse("! anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertTrue("anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertFalse(RefactoringCore.getUndoManager().anythingToUndo(), "! anythingToUndo");
+		assertTrue(RefactoringCore.getUndoManager().anythingToRedo(), "anythingToRedo");
 
 		RefactoringCore.getUndoManager().performRedo(null, new NullProgressMonitor());
 		assertEqualLines("invalid redo", getFileContents(getOutputTestFileName("A")), cu.getSource());
@@ -281,14 +281,14 @@ public class RenamePrivateFieldTests extends GenericRefactoringTest {
 		helper2("fBig", "fSmall", true, false, true, true, true, true);
 	}
 
-	@Ignore("BUG_81084")
+	@Disabled("BUG_81084")
 	@Test
 	public void test10() throws Exception{
 		//regression test for 81084
 		helper2("fList", "fElements", true, false, false, false, false, false);
 	}
 
-	@Ignore("BUG_75642_GENERIC_METHOD_SEARCH")
+	@Disabled("BUG_75642_GENERIC_METHOD_SEARCH")
 	@Test
 	public void test11() throws Exception{
 		helper2("fList", "fElements", true, false, true, true, true, true);

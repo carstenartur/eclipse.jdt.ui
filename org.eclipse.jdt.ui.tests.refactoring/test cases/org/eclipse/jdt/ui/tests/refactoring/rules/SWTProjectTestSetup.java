@@ -13,6 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.rules;
 
+import org.junit.jupiter.api.extension.ExtensionContext;
+
 import org.eclipse.jdt.ui.tests.performance.SWTTestProject;
 
 public class SWTProjectTestSetup extends RefactoringPerformanceTestSetup {
@@ -20,18 +22,18 @@ public class SWTProjectTestSetup extends RefactoringPerformanceTestSetup {
 	private SWTTestProject fTestProject;
 
 	@Override
-	public void before() throws Exception {
-		super.before();
+	public void beforeEach(ExtensionContext context) throws Exception {
+		super.beforeEach(context);
 		fTestProject= new SWTTestProject();
 	}
 
 	@Override
-	public void after() {
+	public void afterEach(ExtensionContext context) {
 		try {
 			fTestProject.delete();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		super.after();
+		super.afterEach(context);
 	}
 }

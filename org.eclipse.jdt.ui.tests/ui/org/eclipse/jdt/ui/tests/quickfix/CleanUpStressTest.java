@@ -15,16 +15,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -51,8 +51,8 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 public class CleanUpStressTest extends CleanUpTestCase {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new ProjectTestSetup();
 
 	@Override
 	protected IJavaProject getProject() {
@@ -5355,8 +5355,8 @@ public class CleanUpStressTest extends CleanUpTestCase {
 
 			String expected= fExpectedChangesAllTests.get(compilationUnitName);
 
-			assertNotNull("No expected value in table for " + compilationUnitName, expected);
-			assertEquals("Content not as expected for " + compilationUnitName, expected, previewContent);
+			assertNotNull(expected, "No expected value in table for " + compilationUnitName);
+			assertEquals(expected, previewContent, "Content not as expected for " + compilationUnitName);
 		}
 	}
 

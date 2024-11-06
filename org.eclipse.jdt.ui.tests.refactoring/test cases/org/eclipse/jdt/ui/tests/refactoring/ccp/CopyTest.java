@@ -14,15 +14,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.ccp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -112,12 +112,12 @@ public class CopyTest extends GenericRefactoringTest {
 	}
 
 	private void verifyDisabled(IResource[] resources, IJavaElement[] javaElements) throws JavaModelException {
-		assertFalse("copy should be disabled", RefactoringAvailabilityTester.isCopyAvailable(resources, javaElements));
+		assertFalse(RefactoringAvailabilityTester.isCopyAvailable(resources, javaElements), "copy should be disabled");
 		assertFalse(ReorgPolicyFactory.createCopyPolicy(resources, javaElements).canEnable());
 	}
 
 	private JavaCopyProcessor verifyEnabled(IResource[] resources, IJavaElement[] javaElements, INewNameQueries newNameQueries, IReorgQueries reorgQueries) throws JavaModelException {
-		assertTrue("copy should be enabled", RefactoringAvailabilityTester.isCopyAvailable(resources, javaElements));
+		assertTrue(RefactoringAvailabilityTester.isCopyAvailable(resources, javaElements), "copy should be enabled");
 		ICopyPolicy copyPolicy= ReorgPolicyFactory.createCopyPolicy(resources, javaElements);
 		assertTrue(copyPolicy.canEnable());
 		JavaCopyProcessor processor= new JavaCopyProcessor(copyPolicy);
@@ -135,7 +135,7 @@ public class CopyTest extends GenericRefactoringTest {
 	private void verifyInvalidDestination(JavaCopyProcessor processor, Object destination) throws Exception {
 		RefactoringStatus status= processor.setDestination(ReorgDestinationFactory.createDestination(destination));
 
-		assertEquals("destination was expected to be not valid",  RefactoringStatus.FATAL, status.getSeverity());
+		assertEquals(RefactoringStatus.FATAL,  status.getSeverity(), "destination was expected to be not valid");
 	}
 
 	private void verifyValidDestination(JavaCopyProcessor processor, Object destination) throws Exception {
@@ -145,7 +145,7 @@ public class CopyTest extends GenericRefactoringTest {
 	private void verifyValidDestination(JavaCopyProcessor processor, Object destination, int location) throws Exception {
 		RefactoringStatus status= processor.setDestination(ReorgDestinationFactory.createDestination(destination, location));
 
-		assertEquals("destination was expected to be valid: " + status.getMessageMatchingSeverity(status.getSeverity()), RefactoringStatus.OK, status.getSeverity());
+		assertEquals(RefactoringStatus.OK, status.getSeverity(), "destination was expected to be valid: " + status.getMessageMatchingSeverity(status.getSeverity()));
 	}
 
 	private void verifyCopyingOfSubCuElements(ICompilationUnit[] cus, Object destination, IJavaElement[] javaElements) throws JavaModelException, Exception, IOException {
@@ -156,7 +156,7 @@ public class CopyTest extends GenericRefactoringTest {
 		JavaCopyProcessor processor= verifyEnabled(new IResource[0], javaElements, new MockNewNameQueries(), createReorgQueries());
 		verifyValidDestination(processor, destination, location);
 		RefactoringStatus status= performRefactoring(new CopyRefactoring(processor), false);
-		assertNull("failed precondition", status);
+		assertNull(status, "failed precondition");
 		for (ICompilationUnit cu : cus) {
 			assertEqualLines("different source in " + cu.getElementName(), getFileContents(getOutputTestFileName(removeExtension(cu.getElementName()))), cu.getSource());
 		}
@@ -1376,12 +1376,12 @@ public class CopyTest extends GenericRefactoringTest {
 		INewNameQueries queries= new MockNewNameQueries();
 		JavaCopyProcessor ref= verifyEnabled(resources, javaElements, queries, createReorgQueries());
 		verifyValidDestination(ref, destination);
-		assertTrue("source cu does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist before copying");
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
-		assertTrue("source cu does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist after copying");
 		ICompilationUnit newCu= getPackageP().getCompilationUnit(MockNewNameQueries.NEW_CU_NAME + ".java");
-		assertTrue("new cu does not exist after copying", newCu.exists());
+		assertTrue(newCu.exists(), "new cu does not exist after copying");
 		ReorgExecutionLog executionLog= new ReorgExecutionLog();
 		executionLog.setNewName(type.getCompilationUnit(), MockNewNameQueries.NEW_CU_NAME + ".java");
 		executionLog.setNewName(mapping, MockNewNameQueries.NEW_CU_NAME + ".java");
@@ -1406,7 +1406,7 @@ public class CopyTest extends GenericRefactoringTest {
 		INewNameQueries queries= new MockCancelNameQueries();
 		JavaCopyProcessor ref= verifyEnabled(resources, javaElements, queries, createReorgQueries());
 		verifyValidDestination(ref, destination);
-		assertTrue("source cu does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist before copying");
 		try {
 			performRefactoring(ref, false);
 		} catch (OperationCanceledException e) {
@@ -1435,12 +1435,12 @@ public class CopyTest extends GenericRefactoringTest {
 		INewNameQueries queries= new MockNewNameQueries();
 		JavaCopyProcessor ref= verifyEnabled(resources, javaElements, queries, createReorgQueries());
 		verifyValidDestination(ref, destination);
-		assertTrue("source cu does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist before copying");
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
-		assertTrue("source cu does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist after copying");
 		ICompilationUnit newCu= otherPackage.getCompilationUnit(cu.getElementName());
-		assertTrue("new cu does not exist after copying", newCu.exists());
+		assertTrue(newCu.exists(), "new cu does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.markAsProcessed(type.getCompilationUnit());
 		log.markAsProcessed(mapping);
@@ -1561,15 +1561,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= destinationFolder;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist after copying");
 
 		IFile newFile= destinationFolder.getFile(fileName);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.markAsProcessed(file);
 		ParticipantTesting.testCopy(handles, new CopyArguments[] {
@@ -1597,15 +1597,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= destinationFolder;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist after copying");
 
 		IFile newFile= destinationFolder.getFile(MockNewNameQueries.NEW_FILE_NAME);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.setNewName(file, MockNewNameQueries.NEW_FILE_NAME);
 		log.markAsProcessed(file);
@@ -1635,7 +1635,7 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= destinationFolder;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist before copying");
 
 		try {
 			performRefactoring(ref, false);
@@ -1664,15 +1664,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= file;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist after copying");
 
 		IFile newFile= parentFolder.getFile(MockNewNameQueries.NEW_FILE_NAME);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 	}
 
 	@Test
@@ -1716,15 +1716,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= file;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist after copying");
 
 		IFile newFile= parentFolder.getFile(MockNewNameQueries.NEW_FILE_NAME);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 		assertEquals(initialSuggestedName, ((MockNewNameQueries)queries).getResourceInitialSuggestedName());
 	}
 
@@ -1747,15 +1747,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= otherFile;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist after copying");
 
 		IFile newFile= rts.getProject().getProject().getFile(fileName);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 	}
 
 	@Test
@@ -1775,15 +1775,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= otherPackage;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist after copying");
 
 		IFile newFile= ((IFolder)otherPackage.getResource()).getFile(fileName);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 	}
 
 	@Test
@@ -1805,15 +1805,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= defaultPackage;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist after copying");
 
 		IFile newFile= ((IFolder)defaultPackage.getResource()).getFile(fileName);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 	}
 
 	@Test
@@ -1832,15 +1832,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= getRoot();
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist after copying");
 
 		IFile newFile= ((IFolder)getRoot().getResource()).getFile(fileName);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 	}
 
 	@Test
@@ -1859,15 +1859,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= rts.getProject();
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist after copying");
 
 		IFile newFile= rts.getProject().getProject().getFile(fileName);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 	}
 
 	@Test
@@ -1887,15 +1887,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= cu;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", file.exists());
+		assertTrue(file.exists(), "source file does not exist after copying");
 
 		IFile newFile= parentFolder.getFile(MockNewNameQueries.NEW_FILE_NAME);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 	}
 
 	@Test
@@ -1918,15 +1918,15 @@ public class CopyTest extends GenericRefactoringTest {
 			Object destination= simpleProject;
 			verifyValidDestination(ref, destination);
 
-			assertTrue("source file does not exist before copying", file.exists());
+			assertTrue(file.exists(), "source file does not exist before copying");
 
 			RefactoringStatus status= performRefactoring(ref, false);
 			assertNull(status);
 
-			assertTrue("source file does not exist after copying", file.exists());
+			assertTrue(file.exists(), "source file does not exist after copying");
 
 			IFile newFile= simpleProject.getFile(fileName);
-			assertTrue("new file does not exist after copying", newFile.exists());
+			assertTrue(newFile.exists(), "new file does not exist after copying");
 		} finally {
 			JavaProjectHelper.delete(simpleProject);
 		}
@@ -1950,15 +1950,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= destinationFolder;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source cu does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source cu does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist after copying");
 
 		IFile newFile= destinationFolder.getFile(fileName);
-		assertTrue("new cu does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new cu does not exist after copying");
 	}
 
 	@Test
@@ -1984,15 +1984,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= destinationFolder;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source cu does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source cu does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist after copying");
 
 		IFile newFile= destinationFolder.getFile(fileName);
-		assertTrue("new cu does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new cu does not exist after copying");
 
 		IPath newFilePath= newFile.getFullPath();
 		try {
@@ -2021,16 +2021,16 @@ public class CopyTest extends GenericRefactoringTest {
 		IPackageFragment destination= getPackageP();
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source cu does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source cu does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist after copying");
 
 		String newName= MockNewNameQueries.NEW_CU_NAME + ".java";
 		ICompilationUnit newCu= getPackageP().getCompilationUnit(newName);
-		assertTrue("new cu does not exist after copying", newCu.exists());
+		assertTrue(newCu.exists(), "new cu does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.setNewName(cu, newName);
 		log.setNewName(mapping, newName);
@@ -2058,7 +2058,7 @@ public class CopyTest extends GenericRefactoringTest {
 		IPackageFragment destination= getPackageP();
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source cu does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist before copying");
 
 		try {
 			performRefactoring(ref, false);
@@ -2085,15 +2085,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= otherCu;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source cu does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source cu does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source cu does not exist after copying");
 
 		ICompilationUnit newCu= getPackageP().getCompilationUnit(MockNewNameQueries.NEW_CU_NAME + ".java");
-		assertTrue("new cu does not exist after copying", newCu.exists());
+		assertTrue(newCu.exists(), "new cu does not exist after copying");
 	}
 
 	@Test
@@ -2110,15 +2110,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= cu;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist after copying");
 
 		ICompilationUnit newCu= getPackageP().getCompilationUnit(MockNewNameQueries.NEW_CU_NAME + ".java");
-		assertTrue("new file does not exist after copying", newCu.exists());
+		assertTrue(newCu.exists(), "new file does not exist after copying");
 		assertEquals("A2", ((MockNewNameQueries)queries).getCuInitialSuggestedName());
 	}
 
@@ -2140,15 +2140,15 @@ public class CopyTest extends GenericRefactoringTest {
 		IPackageFragment destination= otherPackage;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist after copying");
 
 		ICompilationUnit newCu= otherPackage.getCompilationUnit(fileName);
-		assertTrue("new file does not exist after copying", newCu.exists());
+		assertTrue(newCu.exists(), "new file does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.markAsProcessed(cu);
 		log.markAsProcessed(mapping);
@@ -2177,15 +2177,15 @@ public class CopyTest extends GenericRefactoringTest {
 		IPackageFragment destination= defaultPackage;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist after copying");
 
 		ICompilationUnit newCu= defaultPackage.getCompilationUnit(fileName);
-		assertTrue("new file does not exist after copying", newCu.exists());
+		assertTrue(newCu.exists(), "new file does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.markAsProcessed(cu);
 		log.markAsProcessed(mapping);
@@ -2208,15 +2208,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= getRoot();
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist after copying");
 
 		ICompilationUnit newCu= getRoot().getPackageFragment("").getCompilationUnit(fileName);
-		assertTrue("new file does not exist after copying", newCu.exists());
+		assertTrue(newCu.exists(), "new file does not exist after copying");
 	}
 
 	@Test
@@ -2233,15 +2233,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= rts.getProject();
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist after copying");
 
 		IFile newFile= rts.getProject().getProject().getFile(fileName);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 	}
 
 	@Test
@@ -2263,15 +2263,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= file;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist after copying");
 
 		ICompilationUnit newCu= getPackageP().getCompilationUnit(MockNewNameQueries.NEW_CU_NAME + ".java");
-		assertTrue("new file does not exist after copying", newCu.exists());
+		assertTrue(newCu.exists(), "new file does not exist after copying");
 
 		String expectedSource= "package p;class "+ MockNewNameQueries.NEW_CU_NAME +"{void foo(){}class Inner{}}";
 		assertEqualLines("source compare failed", expectedSource, newCu.getSource());
@@ -2295,15 +2295,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= file;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source file does not exist before copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source file does not exist after copying", cu.exists());
+		assertTrue(cu.exists(), "source file does not exist after copying");
 
 		IFile newFile= rts.getProject().getProject().getFile(fileName);
-		assertTrue("new file does not exist after copying", newFile.exists());
+		assertTrue(newFile.exists(), "new file does not exist after copying");
 	}
 
 	@Test
@@ -2325,15 +2325,15 @@ public class CopyTest extends GenericRefactoringTest {
 			Object destination= simpleProject;
 			verifyValidDestination(ref, destination);
 
-			assertTrue("source file does not exist before copying", cu.exists());
+			assertTrue(cu.exists(), "source file does not exist before copying");
 
 			RefactoringStatus status= performRefactoring(ref, false);
 			assertNull(status);
 
-			assertTrue("source file does not exist after copying", cu.exists());
+			assertTrue(cu.exists(), "source file does not exist after copying");
 
 			IFile newFile= simpleProject.getFile(fileName);
-			assertTrue("new file does not exist after copying", newFile.exists());
+			assertTrue(newFile.exists(), "new file does not exist after copying");
 		} finally {
 			JavaProjectHelper.delete(simpleProject);
 		}
@@ -2353,15 +2353,15 @@ public class CopyTest extends GenericRefactoringTest {
 		IPackageFragmentRoot destination= getRoot();
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source package does not exist before copying", getPackageP().exists());
+		assertTrue(getPackageP().exists(), "source package does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source package does not exist after copying", getPackageP().exists());
+		assertTrue(getPackageP().exists(), "source package does not exist after copying");
 
 		IPackageFragment newPackage= getRoot().getPackageFragment(MockNewNameQueries.NEW_PACKAGE_NAME);
-		assertTrue("new package does not exist after copying", newPackage.exists());
+		assertTrue(newPackage.exists(), "new package does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.setNewName(getPackageP(), MockNewNameQueries.NEW_PACKAGE_NAME);
 		log.setNewName(mapping, MockNewNameQueries.NEW_PACKAGE_NAME);
@@ -2387,7 +2387,7 @@ public class CopyTest extends GenericRefactoringTest {
 		IPackageFragmentRoot destination= getRoot();
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source package does not exist before copying", getPackageP().exists());
+		assertTrue(getPackageP().exists(), "source package does not exist before copying");
 
 		try {
 			performRefactoring(ref, false);
@@ -2415,15 +2415,15 @@ public class CopyTest extends GenericRefactoringTest {
 		IPackageFragment destination= getPackageP();
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source package does not exist before copying", getPackageP().exists());
+		assertTrue(getPackageP().exists(), "source package does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source package does not exist after copying", getPackageP().exists());
+		assertTrue(getPackageP().exists(), "source package does not exist after copying");
 
 		IPackageFragment newPackage= getRoot().getPackageFragment(MockNewNameQueries.NEW_PACKAGE_NAME);
-		assertTrue("new package does not exist after copying", newPackage.exists());
+		assertTrue(newPackage.exists(), "new package does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.markAsProcessed(getPackageP());
 		log.markAsProcessed(mapping);
@@ -2448,15 +2448,15 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= otherRoot;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source package does not exist before copying", getPackageP().exists());
+		assertTrue(getPackageP().exists(), "source package does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source package does not exist after copying", getPackageP().exists());
+		assertTrue(getPackageP().exists(), "source package does not exist after copying");
 
 		IPackageFragment newPackage= otherRoot.getPackageFragment(packageName);
-		assertTrue("new package does not exist after copying", newPackage.exists());
+		assertTrue(newPackage.exists(), "new package does not exist after copying");
 	}
 
 	@Test
@@ -2473,18 +2473,18 @@ public class CopyTest extends GenericRefactoringTest {
 			Object destination= otherProject;
 			verifyValidDestination(ref, destination);
 
-			assertTrue("source package does not exist before copying", getPackageP().exists());
+			assertTrue(getPackageP().exists(), "source package does not exist before copying");
 
 			RefactoringStatus status= performRefactoring(ref, false);
 			assertNull(status);
 
-			assertTrue("source package does not exist after copying", getPackageP().exists());
+			assertTrue(getPackageP().exists(), "source package does not exist after copying");
 
 			IPackageFragment newPackage= null;
 			for (IPackageFragmentRoot root : otherProject.getAllPackageFragmentRoots()) {
 				if (ReorgUtilsCore.isSourceFolder(root)) {
 					newPackage= root.getPackageFragment(getPackageP().getElementName());
-					assertTrue("new package does not exist after copying", newPackage.exists());
+					assertTrue(newPackage.exists(), "new package does not exist after copying");
 				}
 			}
 			assertNotNull(newPackage);
@@ -2512,13 +2512,13 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= otherFolder;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source does not exist before copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source does not exist after copying", folder.exists());
-		assertTrue("copied folder does not exist after copying", otherFolder.getFolder(folderName).exists());
+		assertTrue(folder.exists(), "source does not exist after copying");
+		assertTrue(otherFolder.getFolder(folderName).exists(), "copied folder does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.markAsProcessed(folder);
 		ParticipantTesting.testCopy(handles, new CopyArguments[] {
@@ -2544,14 +2544,14 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= superFolder;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source does not exist before copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source does not exist after copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist after copying");
 		IFolder newFolder= superFolder.getFolder(MockNewNameQueries.NEW_FOLDER_NAME);
-		assertTrue("copied folder does not exist after copying", newFolder.exists());
+		assertTrue(newFolder.exists(), "copied folder does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.markAsProcessed(folder);
 		log.setNewName(folder, MockNewNameQueries.NEW_FOLDER_NAME);
@@ -2591,14 +2591,14 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= superFolder;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source does not exist before copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist before copying");
 
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source does not exist after copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist after copying");
 		IFolder newFolder= superFolder.getFolder(MockNewNameQueries.NEW_FOLDER_NAME);
-		assertTrue("copied folder does not exist after copying", newFolder.exists());
+		assertTrue(newFolder.exists(), "copied folder does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.markAsProcessed(folder);
 		log.setNewName(folder, MockNewNameQueries.NEW_FOLDER_NAME);
@@ -2625,7 +2625,7 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= superFolder;
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source does not exist before copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist before copying");
 
 		try {
 			performRefactoring(ref, false);
@@ -2653,13 +2653,13 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= rts.getProject();
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source does not exist before copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist before copying");
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source does not exist after copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist after copying");
 
-		assertTrue("copied folder does not exist after copying", rts.getProject().getProject().getFolder(folderName).exists());
+		assertTrue(rts.getProject().getProject().getFolder(folderName).exists(), "copied folder does not exist after copying");
 	}
 
 	@Test
@@ -2676,13 +2676,13 @@ public class CopyTest extends GenericRefactoringTest {
 		Object destination= getRoot();
 		verifyValidDestination(ref, destination);
 
-		assertTrue("source does not exist before copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist before copying");
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source does not exist after copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist after copying");
 
-		assertTrue("copied folder does not exist after copying", ((IFolder)getRoot().getResource()).getFolder(folderName).exists());
+		assertTrue(((IFolder) getRoot().getResource()).getFolder(folderName).exists(), "copied folder does not exist after copying");
 	}
 
 	@Test
@@ -2698,12 +2698,12 @@ public class CopyTest extends GenericRefactoringTest {
 
 		IPackageFragment destination= getPackageP();
 		verifyValidDestination(ref, destination);
-		assertTrue("source does not exist before copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist before copying");
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source does not exist after copying", folder.exists());
-		assertTrue("copied folder does not exist after copying", ((IFolder)destination.getResource()).getFolder(folderName).exists());
+		assertTrue(folder.exists(), "source does not exist after copying");
+		assertTrue(((IFolder) destination.getResource()).getFolder(folderName).exists(), "copied folder does not exist after copying");
 	}
 
 	@Test
@@ -2720,12 +2720,12 @@ public class CopyTest extends GenericRefactoringTest {
 
 		ICompilationUnit destination= cu;
 		verifyValidDestination(ref, destination);
-		assertTrue("source does not exist before copying", folder.exists());
+		assertTrue(folder.exists(), "source does not exist before copying");
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source does not exist after copying", folder.exists());
-		assertTrue("copied folder does not exist after copying", ((IFolder)getPackageP().getResource()).getFolder(folderName).exists());
+		assertTrue(folder.exists(), "source does not exist after copying");
+		assertTrue(((IFolder) getPackageP().getResource()).getFolder(folderName).exists(), "copied folder does not exist after copying");
 	}
 
 	@Test
@@ -2745,12 +2745,12 @@ public class CopyTest extends GenericRefactoringTest {
 
 			Object destination= simpleProject;
 			verifyValidDestination(ref, destination);
-			assertTrue("source does not exist before copying", folder.exists());
+			assertTrue(folder.exists(), "source does not exist before copying");
 			RefactoringStatus status= performRefactoring(ref, false);
 			assertNull(status);
 
-			assertTrue("source does not exist after copying", folder.exists());
-			assertTrue("copied folder does not exist after copying", simpleProject.getFolder(folderName).exists());
+			assertTrue(folder.exists(), "source does not exist after copying");
+			assertTrue(simpleProject.getFolder(folderName).exists(), "copied folder does not exist after copying");
 		} finally{
 			JavaProjectHelper.delete(simpleProject);
 		}
@@ -2773,15 +2773,15 @@ public class CopyTest extends GenericRefactoringTest {
 
 		IJavaProject destination= getRoot().getJavaProject();
 		verifyValidDestination(ref, destination);
-		assertTrue("source does not exist before copying", getRoot().exists());
+		assertTrue(getRoot().exists(), "source does not exist before copying");
 		RefactoringStatus status= performRefactoring(ref, false);
 		assertNull(status);
 
-		assertTrue("source does not exist after copying", getRoot().exists());
+		assertTrue(getRoot().exists(), "source does not exist after copying");
 		String newName= MockNewNameQueries.NEW_PACKAGE_FRAGMENT_ROOT_NAME;
 		IPackageFragmentRoot newRoot= getSourceFolder(rts.getProject(), newName);
-		assertNotNull("copied folder does not exist after copying", newRoot);
-		assertTrue("copied folder does not exist after copying", newRoot.exists());
+		assertNotNull(newRoot, "copied folder does not exist after copying");
+		assertTrue(newRoot.exists(), "copied folder does not exist after copying");
 		ReorgExecutionLog log= new ReorgExecutionLog();
 		log.setNewName(getRoot(), newName);
 		log.setNewName(mapping, newName);
@@ -2803,7 +2803,7 @@ public class CopyTest extends GenericRefactoringTest {
 
 		IJavaProject destination= getRoot().getJavaProject();
 		verifyValidDestination(ref, destination);
-		assertTrue("source does not exist before copying", getRoot().exists());
+		assertTrue(getRoot().exists(), "source does not exist before copying");
 		try {
 			performRefactoring(ref, false);
 		} catch (OperationCanceledException e) {
@@ -2828,15 +2828,15 @@ public class CopyTest extends GenericRefactoringTest {
 
 			IJavaProject destination= otherJavaProject;
 			verifyValidDestination(ref, destination);
-			assertTrue("source does not exist before copying", getRoot().exists());
+			assertTrue(getRoot().exists(), "source does not exist before copying");
 			RefactoringStatus status= performRefactoring(ref, false);
 			assertNull(status);
 
-			assertTrue("source does not exist after copying", getRoot().exists());
+			assertTrue(getRoot().exists(), "source does not exist after copying");
 			String newName= getRoot().getElementName();
 			IPackageFragmentRoot newRoot= getSourceFolder(otherJavaProject, newName);
-			assertNotNull("copied folder does not exist after copying", newRoot);
-			assertTrue("copied folder does not exist after copying", newRoot.exists());
+			assertNotNull(newRoot, "copied folder does not exist after copying");
+			assertTrue(newRoot.exists(), "copied folder does not exist after copying");
 			ReorgExecutionLog log= new ReorgExecutionLog();
 			log.markAsProcessed(getRoot());
 			log.markAsProcessed(mapping);

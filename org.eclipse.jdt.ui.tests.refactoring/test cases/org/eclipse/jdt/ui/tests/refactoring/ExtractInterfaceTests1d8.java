@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 
 import org.eclipse.ltk.core.refactoring.Refactoring;
@@ -85,7 +85,7 @@ public class ExtractInterfaceTests1d8 extends ExtractInterfaceTests {
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
 
 		processor.setTypeName(newInterfaceName);
-		assertEquals("interface name should be accepted", RefactoringStatus.OK, processor.checkTypeName(newInterfaceName).getSeverity());
+		assertEquals(RefactoringStatus.OK, processor.checkTypeName(newInterfaceName).getSeverity(), "interface name should be accepted");
 
 		IMember[] extractableMembers= processor.getExtractableMembers();
 		final IMember[] members= new IMember[extractableMembers.length - 1];
@@ -99,7 +99,7 @@ public class ExtractInterfaceTests1d8 extends ExtractInterfaceTests {
 		processor.setReplace(true);
 		processor.setAnnotations(false);
 		RefactoringStatus performRefactoring= performRefactoring(ref);
-		assertNull("was supposed to pass", performRefactoring);
+		assertNull(performRefactoring, "was supposed to pass");
 		assertEqualLines("incorrect changes in " + className,
 				getFileContents(getOutputTestFileName(className)),
 				cu.getSource());

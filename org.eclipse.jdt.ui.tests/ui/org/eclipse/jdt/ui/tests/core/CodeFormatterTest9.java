@@ -15,9 +15,9 @@ package org.eclipse.jdt.ui.tests.core;
 
 import java.util.Hashtable;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -33,11 +33,11 @@ import org.eclipse.jdt.ui.tests.core.rules.Java9ProjectTestSetup;
 
 public class CodeFormatterTest9 extends CodeFormatterTest {
 
-	@Rule
+	@RegisterExtension
 	public Java9ProjectTestSetup j9p= new Java9ProjectTestSetup();
 
 	@Override
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
 		JavaProjectHelper.addRequiredProject(fJProject1, j9p.getProject());

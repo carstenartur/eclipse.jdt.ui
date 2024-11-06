@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.views;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.util.DisplayHelper;
@@ -59,7 +59,7 @@ public class SmokeViewsTest {
 	private IJavaProject javaProject ;
 	private IEditorPart editor;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		window = setupWindow();
 		javaProject = createProject();
@@ -67,7 +67,7 @@ public class SmokeViewsTest {
 		DisplayHelper.driveEventQueue(Display.getDefault());
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		if (window != null) {
 			if (editor != null) {
@@ -136,7 +136,7 @@ public class SmokeViewsTest {
 	@SuppressWarnings("restriction") // org.eclipse.ui.internal.ErrorViewPart
 	private void smokeTest(String viewId) throws PartInitException {
 		view = window.getActivePage().showView(viewId);
-		assertNotNull("View " + viewId + " should be created", view);
+		assertNotNull(view, "View " + viewId + " should be created");
 		DisplayHelper.driveEventQueue(Display.getDefault());
 		if(view instanceof org.eclipse.ui.internal.ErrorViewPart errorView) {
 			System.out.println(errorView.getContentDescription());
@@ -170,10 +170,10 @@ public class SmokeViewsTest {
 
 	private IEditorPart openClassEditor() throws JavaModelException, PartInitException {
 		IOrdinaryClassFile classfile = (IOrdinaryClassFile) javaProject.findElement(new Path("java/lang/String.java"));
-		assertNotNull("java.lang.String class not found", classfile);
+		assertNotNull(classfile, "java.lang.String class not found");
 		InternalClassFileEditorInput input = new InternalClassFileEditorInput(classfile);
 		IEditorPart ceditor = IDE.openEditor(window.getActivePage(), input, "org.eclipse.jdt.ui.ClassFileEditor", true);
-		assertNotNull("Class file editor should be opened", ceditor);
+		assertNotNull(ceditor, "Class file editor should be opened");
 		DisplayHelper.driveEventQueue(Display.getDefault());
 		return ceditor;
 	}

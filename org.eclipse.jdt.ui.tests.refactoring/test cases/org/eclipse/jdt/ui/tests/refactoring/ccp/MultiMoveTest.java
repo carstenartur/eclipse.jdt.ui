@@ -13,10 +13,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.ccp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -106,10 +106,10 @@ public class MultiMoveTest extends GenericRefactoringTest {
 		RefactoringStatus status= performRefactoring(processor, true);
 
 		//-- checks
-		assertNull("status should be ok here", status);
+		assertNull(status, "status should be ok here");
 
-		assertEquals("p1 files", 0, packP1.getChildren().length);
-		assertEquals("p2 files", 3, packP2.getChildren().length);
+		assertEquals(0, packP1.getChildren().length, "p1 files");
+		assertEquals(3, packP2.getChildren().length, "p2 files");
 
 		String expectedSource= getFileContents(getRefactoringPath() + getName() + outDir + p2Name + "/A.java");
 		assertEqualLines("incorrect update of A", expectedSource, packP2.getCompilationUnit("A.java").getSource());
@@ -164,10 +164,10 @@ public class MultiMoveTest extends GenericRefactoringTest {
 		RefactoringStatus status= performRefactoring(processor, true);
 
 		//-- checks
-		assertNull("status should be ok here", status);
+		assertNull(status, "status should be ok here");
 
-		assertEquals("p1 files", 0, packP1.getChildren().length);
-		assertEquals("p2 files", 3, packP2.getChildren().length);
+		assertEquals(0, packP1.getChildren().length, "p1 files");
+		assertEquals(3, packP2.getChildren().length, "p2 files");
 
 		String expectedSource= getFileContents(getRefactoringPath() + getName() + outDir + p2Name + "/A.java");
 		assertEqualLines("incorrect update of A", expectedSource, packP2.getCompilationUnit("A.java").getSource());
@@ -219,10 +219,10 @@ public class MultiMoveTest extends GenericRefactoringTest {
 		RefactoringStatus status= performRefactoring(processor, true);
 
 		//-- checks
-		assertNull("status should be ok here", status);
+		assertNull(status, "status should be ok here");
 
-		assertEquals("p1 files", 1, packP1.getChildren().length);
-		assertEquals("p2 files", 2, packP2.getChildren().length);
+		assertEquals(1, packP1.getChildren().length, "p1 files");
+		assertEquals(2, packP2.getChildren().length, "p2 files");
 
 		String expectedSource= getFileContents(getRefactoringPath() + getName() + outDir + p2Name + "/A.java");
 		assertEqualLines("incorrect update of A", expectedSource, packP2.getCompilationUnit("A.java").getSource());
@@ -273,11 +273,11 @@ public class MultiMoveTest extends GenericRefactoringTest {
 		RefactoringStatus status= performRefactoring(processor, true);
 
 		//-- checks
-		assertNull("status should be ok here", status);
+		assertNull(status, "status should be ok here");
 
-		assertEquals("p1 files", 0, packP1.getChildren().length);
-		assertEquals("p2 files", 1, packP2.getChildren().length);
-		assertEquals("p1 files", 1, packP3.getChildren().length);
+		assertEquals(0, packP1.getChildren().length, "p1 files");
+		assertEquals(1, packP2.getChildren().length, "p2 files");
+		assertEquals(1, packP3.getChildren().length, "p1 files");
 
 		String expectedSource= getFileContents(getRefactoringPath() + getName() + outDir + p2Name + "/Outer.java");
 		assertEqualLines("incorrect update of Outer", expectedSource, packP2.getCompilationUnit("Outer.java").getSource());
@@ -315,7 +315,7 @@ public class MultiMoveTest extends GenericRefactoringTest {
 		RefactoringStatus status= performRefactoring(processor, false);
 
 		//-- checks
-		assertNull("status should be ok here", status);
+		assertNull(status, "status should be ok here");
 
 		ParticipantTesting.testMove(
 				moveHandes,
@@ -350,7 +350,7 @@ public class MultiMoveTest extends GenericRefactoringTest {
 		RefactoringStatus status= performRefactoring(processor, false);
 
 		//-- checks
-		assertNull("status should be ok here", status);
+		assertNull(status, "status should be ok here");
 
 		IPath path= r2.getResource().getFullPath();
 		path= path.append(p1.getElementName().replace('.', '/'));
@@ -391,7 +391,7 @@ public class MultiMoveTest extends GenericRefactoringTest {
 		RefactoringStatus status= performRefactoring(processor, false);
 
 		//-- checks
-		assertNull("status should be ok here", status);
+		assertNull(status, "status should be ok here");
 
 		IPath path= r2.getResource().getFullPath();
 		path= path.append(p1.getElementName().replace('.', '/'));

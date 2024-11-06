@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -24,10 +24,10 @@ import java.util.Collections;
 import java.util.Hashtable;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -68,8 +68,8 @@ import org.eclipse.jdt.internal.ui.propertiesfileeditor.PropertiesQuickAssistPro
 
 public class PropertiesFileQuickAssistTest {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new ProjectTestSetup();
 
 	private IJavaProject fJProject;
 	private IPackageFragmentRoot fSourceFolder;
@@ -77,7 +77,7 @@ public class PropertiesFileQuickAssistTest {
 	private final String REMOVE_KEY= PropertiesFileEditorMessages.PropertiesCorrectionProcessor_remove_property_label;
 	private final String REMOVE_KEYS= PropertiesFileEditorMessages.PropertiesCorrectionProcessor_remove_properties_label;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
@@ -105,7 +105,7 @@ public class PropertiesFileQuickAssistTest {
 	}
 
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject, projectSetup.getDefaultClasspath());
 	}
@@ -133,7 +133,7 @@ public class PropertiesFileQuickAssistTest {
 
 		String expected2= (expectedLines == null ? null : Strings.concatenate(expectedLines, "\n"));
 		String actual2= (actualLines == null ? null : Strings.concatenate(actualLines, "\n"));
-		assertEquals(message, expected2, actual2);
+		assertEquals(expected2, actual2, message);
 	}
 
 	private static List<ICompletionProposal> collectAssists(PropertiesAssistContext context) throws Exception {
@@ -141,7 +141,7 @@ public class PropertiesFileQuickAssistTest {
 		if (assists == null)
 			return Collections.EMPTY_LIST;
 		if (assists.length > 0) {
-			assertTrue("should be marked as 'has assist'", PropertiesQuickAssistProcessor.hasAssists(context));
+			assertTrue(PropertiesQuickAssistProcessor.hasAssists(context), "should be marked as 'has assist'");
 		}
 		return Arrays.asList(assists);
 	}

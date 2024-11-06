@@ -14,19 +14,19 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -68,7 +68,7 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 		return REFACTORING_PATH;
 	}
 
-	@Before
+	@BeforeEach
 	public void before() throws Exception {
 		StubUtility.setCodeTemplate(CodeTemplateContextType.FIELDCOMMENT_ID, FIELD_COMMENT, null);
 		StubUtility.setCodeTemplate(CodeTemplateContextType.NEWTYPE_ID,
@@ -84,7 +84,7 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 		JavaCore.setOptions(options);
 	}
 
-	@After
+	@AfterEach
 	public void after() throws Exception {
 		Hashtable<String, String> options= JavaCore.getOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_ASSIGNMENT_OPERATOR, fCompactPref);
@@ -116,19 +116,19 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 	}
 
 	private void validatePassingTest(String className, IType clas, String[] cuNames, String[] packageNames, String enclosingInstanceName, boolean makeFinal, boolean possible, boolean mandatory, boolean createFieldIfPossible) throws JavaModelException, CoreException, Exception, IOException {
-		assertTrue("should be enabled", RefactoringAvailabilityTester.isMoveInnerAvailable(clas));
+		assertTrue(RefactoringAvailabilityTester.isMoveInnerAvailable(clas), "should be enabled");
 		MoveInnerToTopRefactoring ref= ((RefactoringAvailabilityTester.isMoveInnerAvailable(clas)) ? new MoveInnerToTopRefactoring(clas, JavaPreferencesSettings.getCodeGenerationSettings(clas.getJavaProject())) : null);
-		assertNotNull("Move to inner refactoring should be available", ref);
+		assertNotNull(ref, "Move to inner refactoring should be available");
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful" + preconditionResult.toString(), preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful" + preconditionResult.toString());
 
-		assertEquals("reference creation possible", possible, ref.isCreatingInstanceFieldPossible());
-		assertEquals("reference creation mandatory", mandatory, ref.isCreatingInstanceFieldMandatory());
+		assertEquals(possible, ref.isCreatingInstanceFieldPossible(), "reference creation possible");
+		assertEquals(mandatory, ref.isCreatingInstanceFieldMandatory(), "reference creation mandatory");
 		if (ref.isCreatingInstanceFieldPossible() && ! ref.isCreatingInstanceFieldMandatory())
 			ref.setCreateInstanceField(createFieldIfPossible);
 		if (enclosingInstanceName != null){
 			ref.setEnclosingInstanceName(enclosingInstanceName);
-			assertTrue("name should be ok ", ref.checkEnclosingInstanceName(enclosingInstanceName).isOK());
+			assertTrue(ref.checkEnclosingInstanceName(enclosingInstanceName).isOK(), "name should be ok ");
 		}
 		ref.setMarkInstanceFieldAsFinal(makeFinal);
 		ICompilationUnit[] cus= new ICompilationUnit[cuNames.length];
@@ -140,7 +140,7 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 		}
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
-		assertFalse("precondition was supposed to pass", checkInputResult.hasError());
+		assertFalse(checkInputResult.hasError(), "precondition was supposed to pass");
 		performChange(ref, false);
 
 		for (int i= 0; i < cus.length; i++) {
@@ -167,7 +167,7 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 		MoveInnerToTopRefactoring ref= ((RefactoringAvailabilityTester.isMoveInnerAvailable(clas)) ? new MoveInnerToTopRefactoring(clas, JavaPreferencesSettings.getCodeGenerationSettings(clas.getJavaProject())) : null);
 		if (expectedSeverity == NOT_AVAILABLE && ref == null)
 			return;
-		assertEquals("refactoring availability not as expected", expectedSeverity == NOT_AVAILABLE, ref == null);
+		assertEquals(expectedSeverity == NOT_AVAILABLE, ref == null, "refactoring availability not as expected");
 
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
 
@@ -188,7 +188,7 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 		RefactoringStatus result= new RefactoringStatus();
 		result.merge(preconditionResult);
 		result.merge(checkInputResult);
-		assertEquals("different severity expected", expectedSeverity, result.getSeverity());
+		assertEquals(expectedSeverity, result.getSeverity(), "different severity expected");
 	}
 	private IPackageFragment getPackage(String name) throws JavaModelException {
 		if ("p".equals(name))
@@ -293,7 +293,7 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 		validatePassingTest("A", "Inner", new String[]{"A", "A1"}, new String[]{"p", "p1"}, null, false, false);
 	}
 
-	@Ignore("bug 23078")
+	@Disabled("bug 23078")
 	@Test
 	public void test19() throws Exception{
 		validatePassingTest("A", "Inner", new String[]{"A", "A1"}, new String[]{"p", "p1"}, null, false, false);
@@ -344,7 +344,7 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 		validatePassingTest("A", "Inner", "", new String[]{"A"}, new String[]{""}, null, false, true, true, true);
 	}
 
-	@Ignore("disabled due to missing support for statically imported methods")
+	@Disabled("disabled due to missing support for statically imported methods")
 	@Test
 	public void test31() throws Exception{
 		 validatePassingTest("A", "Inner", "", new String[]{"A"}, new String[]{""}, null, false, true, true, true);
@@ -569,7 +569,7 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 //		printTestDisabledMessage("test for bug 23725");
 		validatePassingTest("A", "Inner", new String[]{"A"}, new String[]{"p"}, "a", true, false);
 	}
-	@Ignore("test for bug 23724")
+	@Disabled("test for bug 23724")
 	@Test
 	public void test_nonstatic_29() throws Exception{
 		validatePassingTest("A", "Inner", new String[]{"A"}, new String[]{"p"}, "a", true, false);
@@ -644,7 +644,7 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 		validatePassingTest("A", "Inner", "p", new String[]{"A"}, new String[]{"p"}, "a", false, true, false, false);
 	}
 
-	@Ignore("disabled due to missing support for statically imported methods")
+	@Disabled("disabled due to missing support for statically imported methods")
 	@Test
 	public void test_nonstatic_42() throws Exception{
 		validatePassingTest("A", "Inner", "p", new String[]{"A"}, new String[]{"p"}, "a", false, true, false, false);
@@ -717,7 +717,7 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 		IType nestedLocal= (IType) parentClas.getCompilationUnit().codeSelect(offset, 0)[0];
 
 		MoveInnerToTopRefactoring ref= ((RefactoringAvailabilityTester.isMoveInnerAvailable(nestedLocal)) ? new MoveInnerToTopRefactoring(nestedLocal, JavaPreferencesSettings.getCodeGenerationSettings(parentClas.getJavaProject())) : null);
-		assertNull("refactoring was not supposed to be available", ref);
+		assertNull(ref, "refactoring was not supposed to be available");
 	}
 
 	// --- Secondary classes
@@ -731,7 +731,7 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 		validatePassingTestSecondaryType("A", "Secondary", "p", new String[] { "A" }, new String[] { "p" }, null, false, false, false, false);
 	}
 
-	@Ignore("BUG_304827")
+	@Disabled("BUG_304827")
 	@Test
 	public void test_secondary_2() throws Exception {
 		validatePassingTestSecondaryType("A", "Secondary", "p", new String[] { "A" }, new String[] { "p" }, null, false, false, false, false);
@@ -742,19 +742,19 @@ public class MoveInnerToTopLevelTests extends GenericRefactoringTest {
 		validatePassingTestSecondaryType("A", "Secondary", "p", new String[] { "A", "S" }, new String[] { "p", "q" }, null, false, false, false, false);
 	}
 
-	@Ignore("too many imports, see https://bugs.eclipse.org/bugs/show_bug.cgi?id=304827")
+	@Disabled("too many imports, see https://bugs.eclipse.org/bugs/show_bug.cgi?id=304827")
 	@Test
 	public void test_secondary_4() throws Exception {
 		validatePassingTestSecondaryType("A", "Secondary", "p", new String[] { "A" }, new String[] { "p" }, null, false, false, false, false);
 	}
 
-	@Ignore("too many imports, see https://bugs.eclipse.org/bugs/show_bug.cgi?id=304827")
+	@Disabled("too many imports, see https://bugs.eclipse.org/bugs/show_bug.cgi?id=304827")
 	@Test
 	public void test_secondary_5() throws Exception {
 		validatePassingTestSecondaryType("A", "Secondary", "p", new String[] { "A" }, new String[] { "p" }, null, false, false, false, false);
 	}
 
-	@Ignore("too many imports, see https://bugs.eclipse.org/bugs/show_bug.cgi?id=304827")
+	@Disabled("too many imports, see https://bugs.eclipse.org/bugs/show_bug.cgi?id=304827")
 	@Test
 	public void test_secondary_6() throws Exception {
 		validatePassingTestSecondaryType("A", "Secondary", "p", new String[] { "A" }, new String[] { "p" }, null, false, false, false, false);

@@ -13,10 +13,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -42,12 +42,12 @@ import org.eclipse.jdt.ui.tests.core.rules.Java1d8ProjectTestSetup;
  * Those tests are made to run on Java Spider 1.8 .
  */
 public class JavaElementLabelsTest1d8 extends CoreTests {
-	@Rule
+	@RegisterExtension
 	public Java1d8ProjectTestSetup j18p= new Java1d8ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= j18p.getProject();
 
@@ -55,7 +55,7 @@ public class JavaElementLabelsTest1d8 extends CoreTests {
 		store.setValue(PreferenceConstants.APPEARANCE_COMPRESS_PACKAGE_NAMES, false);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, j18p.getDefaultClasspath());
 	}

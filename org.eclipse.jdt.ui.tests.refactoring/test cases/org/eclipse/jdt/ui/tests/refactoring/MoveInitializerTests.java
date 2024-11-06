@@ -14,10 +14,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.resources.IResource;
 
@@ -91,9 +91,9 @@ public class MoveInitializerTests extends GenericRefactoringTest {
 		RefactoringStatus status= performRefactoring(processor, true);
 
 		//-- checks
-		assertNull("status should be ok here", status);
+		assertNull(status, "status should be ok here");
 
-		assertEquals("p1 files", 2, packP1.getChildren().length);
+		assertEquals(2, packP1.getChildren().length, "p1 files");
 
 		String expectedSource= getFileContents(getRefactoringPath() + getName() + outDir + p1Name + "/A.java");
 		assertEqualLines("incorrect update of A", expectedSource, packP1.getCompilationUnit("A.java").getSource());
@@ -130,10 +130,10 @@ public class MoveInitializerTests extends GenericRefactoringTest {
 		RefactoringStatus status= performRefactoring(processor, true);
 
 		//-- checks
-		assertNull("status should be ok here", status);
+		assertNull(status, "status should be ok here");
 
-		assertEquals("p1 files", 1, packP1.getChildren().length);
-		assertEquals("p2 files", 1, packP2.getChildren().length);
+		assertEquals(1, packP1.getChildren().length, "p1 files");
+		assertEquals(1, packP2.getChildren().length, "p2 files");
 
 		String expectedSource= getFileContents(getRefactoringPath() + getName() + outDir + p1Name + "/A.java");
 		assertEqualLines("incorrect update of A", expectedSource, packP1.getCompilationUnit("A.java").getSource());

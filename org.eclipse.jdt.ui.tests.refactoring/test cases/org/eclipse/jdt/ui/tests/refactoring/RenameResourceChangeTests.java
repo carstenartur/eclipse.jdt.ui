@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -48,16 +48,16 @@ public class RenameResourceChangeTests extends GenericRefactoringTest {
 		String newName= "b.txt";
 		String oldName= "a.txt";
 		IFile file= folder.getFile(oldName);
-		assertFalse("should not exist", file.exists());
+		assertFalse(file.exists(), "should not exist");
 		String content= "aaaaaaaaa";
 		file.create(getStream(content), true, new NullProgressMonitor());
-		assertTrue("should exist", file.exists());
+		assertTrue(file.exists(), "should exist");
 
 		Change change= new RenameResourceChange(file.getFullPath(), newName);
 		change.initializeValidationData(new NullProgressMonitor());
 		performChange(change);
-		assertTrue("after: should exist", folder.getFile(newName).exists());
-		assertFalse("after: old should not exist", folder.getFile(oldName).exists());
+		assertTrue(folder.getFile(newName).exists(), "after: should exist");
+		assertFalse(folder.getFile(oldName).exists(), "after: old should not exist");
 	}
 
 	@Test
@@ -67,17 +67,17 @@ public class RenameResourceChangeTests extends GenericRefactoringTest {
 		String newName= "b.txt";
 		String oldName= "a.txt";
 		IFile file= folder.getFile(oldName);
-		assertFalse("should not exist", file.exists());
+		assertFalse(file.exists(), "should not exist");
 		String content= "";
 		file.create(getStream(content), true, new NullProgressMonitor());
-		assertTrue("should exist", file.exists());
+		assertTrue(file.exists(), "should exist");
 
 
 		Change change= new RenameResourceChange(file.getFullPath(), newName);
 		change.initializeValidationData(new NullProgressMonitor());
 		performChange(change);
-		assertTrue("after: should exist", folder.getFile(newName).exists());
-		assertFalse("after: old should not exist", folder.getFile(oldName).exists());
+		assertTrue(folder.getFile(newName).exists(), "after: should exist");
+		assertFalse(folder.getFile(oldName).exists(), "after: old should not exist");
 	}
 
 	@Test
@@ -86,23 +86,23 @@ public class RenameResourceChangeTests extends GenericRefactoringTest {
 		String oldName= "a.txt";
 		String newName= "b.txt";
 		IFile file= folder.getFile(oldName);
-		assertFalse("should not exist", file.exists());
+		assertFalse(file.exists(), "should not exist");
 		String content= "aaaaaaaaa";
 		file.create(getStream(content), true, new NullProgressMonitor());
-		assertTrue("should exist", file.exists());
+		assertTrue(file.exists(), "should exist");
 
 		Change change= new RenameResourceChange(file.getFullPath(), newName);
 		change.initializeValidationData(new NullProgressMonitor());
 		Change undo= performChange(change);
-		assertTrue("after: should exist", folder.getFile(newName).exists());
-		assertFalse("after: old should not exist", folder.getFile(oldName).exists());
+		assertTrue(folder.getFile(newName).exists(), "after: should exist");
+		assertFalse(folder.getFile(oldName).exists(), "after: old should not exist");
 		//------
 
-		assertNotNull("should be undoable", undo);
+		assertNotNull(undo, "should be undoable");
 		undo.initializeValidationData(new NullProgressMonitor());
 		performChange(undo);
-		assertTrue("after undo: should exist", folder.getFile(oldName).exists());
-		assertFalse("after undo: old should not exist", folder.getFile(newName).exists());
+		assertTrue(folder.getFile(oldName).exists(), "after undo: should exist");
+		assertFalse(folder.getFile(newName).exists(), "after undo: old should not exist");
 	}
 
 
@@ -112,16 +112,16 @@ public class RenameResourceChangeTests extends GenericRefactoringTest {
 		String newName= "b";
 		String oldName= "a";
 		IFolder subFolder= folder.getFolder(oldName);
-		assertFalse("should not exist", subFolder.exists());
+		assertFalse(subFolder.exists(), "should not exist");
 		subFolder.create(true, true, null);
-		assertTrue("should exist", subFolder.exists());
+		assertTrue(subFolder.exists(), "should exist");
 
 
 		Change change= new RenameResourceChange(subFolder.getFullPath(), newName);
 		change.initializeValidationData(new NullProgressMonitor());
 		performChange(change);
-		assertTrue("after: should exist", folder.getFolder(newName).exists());
-		assertFalse("after: old should not exist", folder.getFolder(oldName).exists());
+		assertTrue(folder.getFolder(newName).exists(), "after: should exist");
+		assertFalse(folder.getFolder(oldName).exists(), "after: old should not exist");
 	}
 
 	@Test
@@ -131,23 +131,23 @@ public class RenameResourceChangeTests extends GenericRefactoringTest {
 
 		String oldName= "a";
 		IFolder subFolder= folder.getFolder(oldName);
-		assertFalse("should not exist", subFolder.exists());
+		assertFalse(subFolder.exists(), "should not exist");
 		subFolder.create(true, true, null);
 		IFile file1= subFolder.getFile("a.txt");
 		IFile file2= subFolder.getFile("b.txt");
 		file1.create(getStream("123"), true, null);
 		file2.create(getStream("123345"), true, null);
 
-		assertTrue("should exist", subFolder.exists());
-		assertTrue("file1 should exist", file1.exists());
-		assertTrue("file2 should exist", file2.exists());
+		assertTrue(subFolder.exists(), "should exist");
+		assertTrue(file1.exists(), "file1 should exist");
+		assertTrue(file2.exists(), "file2 should exist");
 
 		Change change= new RenameResourceChange(subFolder.getFullPath(), newName);
 		change.initializeValidationData(new NullProgressMonitor());
 		performChange(change);
-		assertTrue("after: should exist", folder.getFolder(newName).exists());
-		assertFalse("after: old should not exist", folder.getFolder(oldName).exists());
-		assertEquals("after: child count", 2, folder.getFolder(newName).members().length);
+		assertTrue(folder.getFolder(newName).exists(), "after: should exist");
+		assertFalse(folder.getFolder(oldName).exists(), "after: old should not exist");
+		assertEquals(2, folder.getFolder(newName).members().length, "after: child count");
 	}
 
 	@Test
@@ -156,23 +156,23 @@ public class RenameResourceChangeTests extends GenericRefactoringTest {
 		String oldName= "a";
 		String newName= "b";
 		IFolder subFolder= folder.getFolder(oldName);
-		assertFalse("should not exist", subFolder.exists());
+		assertFalse(subFolder.exists(), "should not exist");
 		subFolder.create(true, true, null);
-		assertTrue("should exist", subFolder.exists());
+		assertTrue(subFolder.exists(), "should exist");
 
 
 		Change change= new RenameResourceChange(subFolder.getFullPath(), newName);
 		change.initializeValidationData(new NullProgressMonitor());
 		Change undo= performChange(change);
-		assertTrue("after: should exist", folder.getFolder(newName).exists());
-		assertFalse("after: old should not exist", folder.getFolder(oldName).exists());
+		assertTrue(folder.getFolder(newName).exists(), "after: should exist");
+		assertFalse(folder.getFolder(oldName).exists(), "after: old should not exist");
 
 		//---
-		assertNotNull("should be undoable", undo);
+		assertNotNull(undo, "should be undoable");
 		undo.initializeValidationData(new NullProgressMonitor());
 		performChange(undo);
-		assertTrue("after undo: should exist", folder.getFolder(oldName).exists());
-		assertFalse("after undo: old should not exist", folder.getFolder(newName).exists());
+		assertTrue(folder.getFolder(oldName).exists(), "after undo: should exist");
+		assertFalse(folder.getFolder(newName).exists(), "after undo: old should not exist");
 	}
 
 	@Test
@@ -197,9 +197,9 @@ public class RenameResourceChangeTests extends GenericRefactoringTest {
 			change.initializeValidationData(new NullProgressMonitor());
 			performChange(change);
 
-			assertTrue("after: linked folder should exist", project2.getFolder(linkName).exists());
-			assertTrue("after: linked folder should be linked", project2.getFolder(linkName).isLinked());
-			assertTrue("after: linked folder should contain cu", project2.getFolder(linkName).getFile("A.java").exists());
+			assertTrue(project2.getFolder(linkName).exists(), "after: linked folder should exist");
+			assertTrue(project2.getFolder(linkName).isLinked(), "after: linked folder should be linked");
+			assertTrue(project2.getFolder(linkName).getFile("A.java").exists(), "after: linked folder should contain cu");
 		} finally {
 			if (project.exists())
 				JavaProjectHelper.delete(project);

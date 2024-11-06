@@ -14,8 +14,8 @@
 package org.eclipse.jdt.ui.tests.refactoring.reorg;
 
 import org.junit.FixMethodOrder;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.runners.MethodSorters;
 
 import org.eclipse.test.performance.Dimension;
@@ -39,7 +39,7 @@ public class RenameTypePerfAcceptanceTests extends RefactoringPerformanceTestCas
 
 	private IJavaProject fProject;
 
-	@Rule
+	@RegisterExtension
 	public SWTProjectTestSetup spts= new SWTProjectTestSetup();
 
 	@Override

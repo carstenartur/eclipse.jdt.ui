@@ -15,10 +15,10 @@ package org.eclipse.jdt.ui.tests.activation;
 
 import java.util.Set;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.osgi.framework.Bundle;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -163,12 +163,12 @@ public class JavaActivationTest {
 			"org.mortbay.jetty.source"
 		);
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		project= JavaProjectHelper.createJavaProject("TestProject1", "bin");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 	    getPage().closeAllEditors(false);
 		JavaProjectHelper.delete(project);
@@ -201,7 +201,7 @@ public class JavaActivationTest {
 		Bundle bundle= Platform.getBundle("org.eclipse.jdt.ui.tests");
 		for (Bundle b : bundle.getBundleContext().getBundles()) {
 			if (b.getState() == Bundle.ACTIVE && inactiveBundles.contains(b.getSymbolicName())) {
-				Assert.fail("plugin should not be activated: " + b.getSymbolicName());
+				Assertions.fail("plugin should not be activated: " + b.getSymbolicName());
 			}
 		}
 	}

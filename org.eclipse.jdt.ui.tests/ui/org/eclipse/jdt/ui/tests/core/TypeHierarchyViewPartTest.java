@@ -13,16 +13,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -43,14 +43,14 @@ import org.eclipse.jdt.internal.ui.typehierarchy.TypeHierarchyViewPart;
 import org.eclipse.jdt.internal.ui.util.OpenTypeHierarchyUtil;
 
 public class TypeHierarchyViewPartTest {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new ProjectTestSetup();
 
 	private static final String SRC_CONTAINER= "src";
 
 	private IJavaProject fJProject1;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= projectSetup.getProject();
 
@@ -60,7 +60,7 @@ public class TypeHierarchyViewPartTest {
 		JavaProjectHelper.addSourceContainerWithImport(fJProject1, SRC_CONTAINER, junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());
 		fJProject1= null;
@@ -94,15 +94,15 @@ public class TypeHierarchyViewPartTest {
 
 		// When
 		viewPart.setInputElements(javaElements1);
-		assertEquals("Wrong first history entry number ", 2, viewPart.getHistoryEntries().size());
+		assertEquals(2, viewPart.getHistoryEntries().size(), "Wrong first history entry number ");
 
 		viewPart.setInputElements(javaElements2);
-		assertEquals("Wrong second history entry number ", 3, viewPart.getHistoryEntries().size());
+		assertEquals(3, viewPart.getHistoryEntries().size(), "Wrong second history entry number ");
 
 		viewPart.setInputElements(javaElements1);
-		assertEquals("Wrong third history entry number ", 3, viewPart.getHistoryEntries().size());
+		assertEquals(3, viewPart.getHistoryEntries().size(), "Wrong third history entry number ");
 
 		viewPart.setInputElements(javaElements2);
-		assertEquals("Wrong fourth history entry number ", 3, viewPart.getHistoryEntries().size());
+		assertEquals(3, viewPart.getHistoryEntries().size(), "Wrong fourth history entry number ");
     }
 }

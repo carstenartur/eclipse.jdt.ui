@@ -13,9 +13,9 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -45,18 +45,18 @@ public abstract class AbstractBindingLabelsTest extends CoreTests {
 	protected void assertLink(String lab, String display) {
 		Pattern pattern= Pattern.compile("<a class='header' href='eclipse-javadoc:.*'>(.*)</a>");
 		Matcher matcher= pattern.matcher(lab);
-		assertEquals("number of match groups", 1, matcher.groupCount());
-		assertTrue("Label doesn't match against expected pattern: "+lab, matcher.matches());
-		assertEquals("display label", display, matcher.group(1));
+		assertEquals(1, matcher.groupCount(), "number of match groups");
+		assertTrue(matcher.matches(), "Label doesn't match against expected pattern: " + lab);
+		assertEquals(display, matcher.group(1), "display label");
 	}
 
 	protected void assertLink(String lab, String display, String title) {
 		Pattern pattern= Pattern.compile("<a class='header' href='eclipse-javadoc:.*' title='(.*)'>(.*)</a>");
 		Matcher matcher= pattern.matcher(lab);
-		assertEquals("number of match groups", 2, matcher.groupCount());
-		assertTrue("Label doesn't match against expected pattern: "+lab, matcher.matches());
-		assertEquals("title", title, matcher.group(1));
-		assertEquals("display label", display, matcher.group(2));
+		assertEquals(2, matcher.groupCount(), "number of match groups");
+		assertTrue(matcher.matches(), "Label doesn't match against expected pattern: " + lab);
+		assertEquals(title, matcher.group(1), "title");
+		assertEquals(display, matcher.group(2), "display label");
 	}
 
 	/*
@@ -89,8 +89,8 @@ public abstract class AbstractBindingLabelsTest extends CoreTests {
 				// matching plain text:
 				String expected= expectedMarkup.substring(patternPos, open);
 				int end= label.indexOf("<a class", labelPos);
-				assertNotEquals("next anchor not found ("+fragmentCount+")", -1, end);
-				assertEquals("plain text ("+fragmentCount+")", escape(expected), label.substring(labelPos, end));
+				assertNotEquals(-1, end, "next anchor not found (" + fragmentCount + ")");
+				assertEquals(escape(expected), label.substring(labelPos, end), "plain text (" + fragmentCount + ")");
 				fragmentCount++;
 
 				labelPos= end;
@@ -98,34 +98,34 @@ public abstract class AbstractBindingLabelsTest extends CoreTests {
 
 			if (close != -1) {
 				// matching a link "<a class='header' href='eclipse-javadoc:IGNORE' title='LINK_TITLE'>LINK_TEXT</a>"
-				assertTrue("link found ("+fragmentCount+")", label.substring(labelPos).startsWith( "<a class='header' href='eclipse-javadoc:"));
+				assertTrue(label.substring(labelPos).startsWith("<a class='header' href='eclipse-javadoc:"), "link found (" + fragmentCount + ")");
 				String linkText= expectedMarkup.substring(hasTitle ? pipe+1 : open+2, close);
 				String linkTitle= hasTitle ? "in "+expectedMarkup.substring(open+2, pipe) : null;
 				if (linkTitle != null) {
 					// match linkTitle & linkText:
 					int start= label.indexOf("' title='", labelPos);
-					assertNotEquals("title start not found", -1, start);
+					assertNotEquals(-1, start, "title start not found");
 					start += "' title='".length();
 					int end= label.indexOf('\'', start);
-					assertNotEquals("title end not found", -1, end);
-					assertEquals("title ("+fragmentCount+")", linkTitle, label.substring(start, end));
+					assertNotEquals(-1, end, "title end not found");
+					assertEquals(linkTitle, label.substring(start, end), "title (" + fragmentCount + ")");
 					fragmentCount++;
 
 					start= label.indexOf("'>", end) + 2;
-					assertNotEquals("link text start not found", -1, start);
+					assertNotEquals(-1, start, "link text start not found");
 					end= label.indexOf("</a>", start);
-					assertNotEquals("link text end not found", -1, end);
-					assertEquals("link text ("+fragmentCount+")", escape(linkText), label.substring(start, end));
+					assertNotEquals(-1, end, "link text end not found");
+					assertEquals(escape(linkText), label.substring(start, end), "link text (" + fragmentCount + ")");
 					fragmentCount++;
 
 					labelPos= end + "</a>".length();
 				} else {
 					// match only linkText
 					int start= label.indexOf("'>", labelPos) + 2;
-					assertNotEquals("link text start not found", -1, start);
+					assertNotEquals(-1, start, "link text start not found");
 					int end= label.indexOf("</a>", start+1);
-					assertNotEquals("link text end not found", -1, end);
-					assertEquals("link text ("+fragmentCount+")", escape(linkText), label.substring(start, end));
+					assertNotEquals(-1, end, "link text end not found");
+					assertEquals(escape(linkText), label.substring(start, end), "link text (" + fragmentCount + ")");
 					fragmentCount++;
 
 					labelPos= end + "</a>".length();
@@ -136,7 +136,7 @@ public abstract class AbstractBindingLabelsTest extends CoreTests {
 		if (patternPos < expectedMarkup.length()) {
 			// matching tailing plain text:
 			String expected= expectedMarkup.substring(patternPos);
-			assertEquals("plain text ("+(fragmentCount)+")", escape(expected), label.substring(labelPos));
+			assertEquals(escape(expected), label.substring(labelPos), "plain text (" + (fragmentCount) + ")");
 		}
 	}
 

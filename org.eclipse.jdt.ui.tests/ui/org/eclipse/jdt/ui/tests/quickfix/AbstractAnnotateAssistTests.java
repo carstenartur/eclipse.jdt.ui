@@ -14,8 +14,8 @@
 package org.eclipse.jdt.ui.tests.quickfix;
 
 import static org.eclipse.jdt.core.IClasspathAttribute.EXTERNAL_ANNOTATION_PATH;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -25,7 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Path;
@@ -98,7 +98,7 @@ public abstract class AbstractAnnotateAssistTests extends QuickFixTest {
 		if (!(element instanceof ISourceReference)) {
 			return null;
 		}
-		assertNotNull("Should be child of a classfile: "+element, element.getAncestor(IJavaElement.CLASS_FILE));
+		assertNotNull(element.getAncestor(IJavaElement.CLASS_FILE), "Should be child of a classfile: " + element);
 		IEditorPart part= EditorUtility.openInSpecificEditor(element, JavaUI.ID_CF_EDITOR, activate);
 		if (reveal && part != null) {
 			EditorUtility.revealInEditor(part, element);
@@ -118,7 +118,7 @@ public abstract class AbstractAnnotateAssistTests extends QuickFixTest {
 			if (proposals==null) {
 				IClassFile classFile= ((IClassFileEditorInput) javaEditor.getEditorInput()).getClassFile();
 				ICompilationUnit cu= classFile.getWorkingCopy((WorkingCopyOwner) null, null);
-				Assert.assertNotNull("cu=" + cu + " source=" + classFile.getSource(), proposals);
+				Assertions.assertNotNull(proposals, "cu=" + cu + " source=" + classFile.getSource());
 			}
 			List<ICompletionProposal> list= Arrays.asList(proposals);
 			return list;
@@ -193,6 +193,6 @@ public abstract class AbstractAnnotateAssistTests extends QuickFixTest {
 
 		String expected2= (expectedLines == null ? null : Strings.concatenate(expectedLines, "\n"));
 		String actual2= (actualLines == null ? null : Strings.concatenate(actualLines, "\n"));
-		assertEquals(message, expected2, actual2);
+		assertEquals(expected2, actual2, message);
 	}
 }

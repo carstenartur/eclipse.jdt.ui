@@ -14,8 +14,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 
@@ -33,7 +33,7 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
  * Tests the cleanup features related to Java 10.
  */
 public class CleanUpTest10 extends CleanUpTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new Java10ProjectTestSetup();
 
 	@Override

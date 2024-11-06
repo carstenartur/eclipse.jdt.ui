@@ -13,7 +13,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -21,10 +21,10 @@ import java.util.Hashtable;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.osgi.framework.Bundle;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -65,14 +65,14 @@ import org.eclipse.jdt.internal.ui.text.correction.AssistContext;
  */
 public class NullAnnotationsQuickFixTest1d8 extends QuickFixTest {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new Java1d8ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new Java1d8ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 	private IPackageFragmentRoot fSourceFolder;
 	private String ANNOTATION_JAR_PATH;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
@@ -114,7 +114,7 @@ public class NullAnnotationsQuickFixTest1d8 extends QuickFixTest {
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());
 	}
@@ -1799,12 +1799,12 @@ public class NullAnnotationsQuickFixTest1d8 extends QuickFixTest {
 		ArrayList<IJavaCompletionProposal> proposals= collectCorrections(cu, astRoot);
 		assertNumberOfProposals(proposals, 3);
 		String actualProposals = proposals.stream().map(IJavaCompletionProposal::getDisplayString).sorted().collect(Collectors.joining("\n"));
-		assertEquals("proposals:",
-				"""
+		assertEquals("""
 				Add @SuppressWarnings 'null' to 'isValid()'
 				Add @SuppressWarnings 'null' to 'validationStatus'
 				Configure problem severity""",
-				actualProposals);
+				actualProposals,
+				"proposals:");
 	}
 
 	@Test
@@ -1907,13 +1907,13 @@ public class NullAnnotationsQuickFixTest1d8 extends QuickFixTest {
 		// should not propose to change signature of varargs method validateNewRefName(String...)
 		assertNumberOfProposals(proposals, 4);
 		String actualProposals = proposals.stream().map(IJavaCompletionProposal::getDisplayString).sorted().collect(Collectors.joining("\n"));
-		assertEquals("proposals:",
-				"""
+		assertEquals("""
 				Add @SuppressWarnings 'null' to 'isValid()'
 				Add @SuppressWarnings 'null' to 'validationStatus'
 				Change parameter 'refPrefix' to '@NonNull'
 				Configure problem severity""",
-				actualProposals);
+				actualProposals,
+				"proposals:");
 	}
 
 	@Test
@@ -1950,13 +1950,13 @@ public class NullAnnotationsQuickFixTest1d8 extends QuickFixTest {
 		// should propose to change signature of validateNewRefName(String...) since non-varargs parameter is concerned
 		assertNumberOfProposals(proposals, 5);
 		String actualProposals = proposals.stream().map(IJavaCompletionProposal::getDisplayString).sorted().collect(Collectors.joining("\n"));
-		assertEquals("proposals:",
-				"""
+		assertEquals("""
 				Add @SuppressWarnings 'null' to 'isValid()'
 				Add @SuppressWarnings 'null' to 'validationStatus'
 				Change parameter 'refPrefix' to '@NonNull'
 				Change parameter of 'validateNewRefName(..)' to '@Nullable'
 				Configure problem severity""",
-				actualProposals);
+				actualProposals,
+				"proposals:");
 	}
 }

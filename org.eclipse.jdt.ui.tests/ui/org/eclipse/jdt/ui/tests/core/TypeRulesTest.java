@@ -13,16 +13,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Hashtable;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -48,13 +48,13 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 public class TypeRulesTest extends CoreTests {
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(JavaCore.COMPILER_PB_NO_EFFECT_ASSIGNMENT, JavaCore.IGNORE);
@@ -67,7 +67,7 @@ public class TypeRulesTest extends CoreTests {
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, pts.getDefaultClasspath());
 	}
@@ -194,7 +194,7 @@ public class TypeRulesTest extends CoreTests {
 				}
 			}
 		}
-		assertEquals(errors.toString(), 0, errors.length());
+		assertEquals(0, errors.length(), errors.toString());
 	}
 
 	@Test
@@ -235,7 +235,7 @@ public class TypeRulesTest extends CoreTests {
 				}
 			}
 		}
-		assertEquals(errors.toString(), 0, errors.length());
+		assertEquals(0, errors.length(), errors.toString());
 	}
 
 	@Test
@@ -275,7 +275,7 @@ public class TypeRulesTest extends CoreTests {
 				}
 			}
 		}
-		assertEquals(errors.toString(), 0, errors.length());
+		assertEquals(0, errors.length(), errors.toString());
 	}
 
 	@Test
@@ -327,7 +327,7 @@ public class TypeRulesTest extends CoreTests {
 				}
 			}
 		}
-		assertEquals(errors.toString(), 0, errors.length());
+		assertEquals(0, errors.length(), errors.toString());
 	}
 
 }

@@ -14,18 +14,18 @@
 
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.zip.ZipInputStream;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -91,7 +91,7 @@ public class InferTypeArgumentsTests extends GenericRefactoringTest {
 
 		NullProgressMonitor pm= new NullProgressMonitor();
 		RefactoringStatus initialStatus= refactoring.checkInitialConditions(pm);
-		assertEquals("wrong initial condition status: " + initialStatus, expectedInitialStatus, initialStatus.getSeverity());
+		assertEquals(expectedInitialStatus, initialStatus.getSeverity(), "wrong initial condition status: " + initialStatus);
 		if (! initialStatus.isOK())
 			return false;
 
@@ -102,12 +102,12 @@ public class InferTypeArgumentsTests extends GenericRefactoringTest {
 				refactoring, CheckConditionsOperation.FINAL_CONDITIONS);
 		JavaCore.run(op, new NullProgressMonitor());
 		RefactoringStatus finalStatus= op.getConditionStatus();
-		assertEquals("wrong final condition status: " + finalStatus, expectedFinalStatus, finalStatus.getSeverity());
+		assertEquals(expectedFinalStatus, finalStatus.getSeverity(), "wrong final condition status: " + finalStatus);
 		if (finalStatus.getSeverity() == RefactoringStatus.FATAL)
 			return false;
 
-		assertFalse("Validation check failed: " + op.getValidationStatus(), op.getValidationStatus().hasFatalError());
-		assertNotNull("No Undo", op.getUndoChange());
+		assertFalse(op.getValidationStatus().hasFatalError(), "Validation check failed: " + op.getValidationStatus());
+		assertNotNull(op.getUndoChange(), "No Undo");
 		return true;
 	}
 
@@ -387,7 +387,7 @@ public class InferTypeArgumentsTests extends GenericRefactoringTest {
 		performCuOK();
 	}
 
-	@Ignore("currently, we don't follow flow through variables of type Object")
+	@Disabled("currently, we don't follow flow through variables of type Object")
 	@Test
 	public void testCuAddStringInteger() throws Exception {
 		performCuOK(); //TODO
@@ -398,7 +398,7 @@ public class InferTypeArgumentsTests extends GenericRefactoringTest {
 		performCuOK();
 	}
 
-	@Ignore("not implemented yet")
+	@Disabled("not implemented yet")
 	@Test
 	public void testCuInferFromCast() throws Exception {
 		performCuOK(); //TODO
@@ -414,13 +414,13 @@ public class InferTypeArgumentsTests extends GenericRefactoringTest {
 		performCuOK();
 	}
 
-	@Ignore("not implemented yet")
+	@Disabled("not implemented yet")
 	@Test
 	public void testCuCannotStringDouble() throws Exception {
 		performCuOK();
 	}
 
-	@Ignore("not implemented yet")
+	@Disabled("not implemented yet")
 	@Test
 	public void testCuRippleMethods3() throws Exception {
 		performCuOK();
@@ -451,7 +451,7 @@ public class InferTypeArgumentsTests extends GenericRefactoringTest {
 		performCuOK();
 	}
 
-	@Ignore("DETERMINE_ELEMENT_TYPE_FROM_CAST")
+	@Disabled("DETERMINE_ELEMENT_TYPE_FROM_CAST")
 	@Test
 	public void testCuArrays05() throws Exception {
 		performCuOK();
@@ -477,7 +477,7 @@ public class InferTypeArgumentsTests extends GenericRefactoringTest {
 		performCuOK();
 	}
 
-	@Ignore("BUG_map_entrySet_iterator")
+	@Disabled("BUG_map_entrySet_iterator")
 	@Test
 	public void testCuMapEntry01() throws Exception {
 		performCuOK();

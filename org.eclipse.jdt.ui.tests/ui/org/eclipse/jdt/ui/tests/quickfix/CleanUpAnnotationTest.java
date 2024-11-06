@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Hashtable;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 
@@ -50,8 +50,8 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 public class CleanUpAnnotationTest extends CleanUpTestCase {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new ProjectTestSetup();
 
 	@Override
 	protected IJavaProject getProject() {
@@ -255,6 +255,6 @@ public class CleanUpAnnotationTest extends CleanUpTestCase {
 			expected1
 		}, null);
 
-		assertTrue(status.toString(), status.isOK());
+		assertTrue(status.isOK(), status.toString());
 	}
 }

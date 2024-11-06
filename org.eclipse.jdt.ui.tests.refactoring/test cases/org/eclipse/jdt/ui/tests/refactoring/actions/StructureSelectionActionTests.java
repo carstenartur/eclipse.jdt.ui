@@ -13,11 +13,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.actions;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IPackageFragment;
@@ -126,7 +126,7 @@ public class StructureSelectionActionTests extends GenericRefactoringTest {
 	private void offsetTest(int line, int column, int expected) throws Exception {
 		String filePath= TEST_PATH_PREFIX + getRefactoringPath() + "OffsetTest.java";
 		ICompilationUnit cu= createCU(getPackageP(), "OffsetTest.java", getFileContents(filePath));
-		assertEquals("incorrect offset", expected, TextRangeUtil.getOffset(cu, line, column));
+		assertEquals(expected, TextRangeUtil.getOffset(cu, line, column), "incorrect offset");
 	}
 
 

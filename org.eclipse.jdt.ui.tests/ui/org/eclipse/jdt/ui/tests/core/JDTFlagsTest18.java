@@ -13,17 +13,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -69,16 +69,16 @@ public class JDTFlagsTest18 {
 
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Rule
+	@RegisterExtension
 	public Java1d8ProjectTestSetup j18p= new Java1d8ProjectTestSetup();
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= j18p.getProject();
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, j18p.getDefaultClasspath());
 	}
@@ -258,8 +258,8 @@ public class JDTFlagsTest18 {
 	@Test
 	public void testIsStaticInBinaryFile() throws Exception {
 		File clsJarPath= JavaTestPlugin.getDefault().getFileInPlugin(new Path("/testresources/JDTFlagsTest18.zip"));
-		assertNotNull("lib not found", clsJarPath);//$NON-NLS-1$
-		assertTrue("lib not found", clsJarPath.exists());
+		assertNotNull(clsJarPath, "lib not found");//$NON-NLS-1$
+		assertTrue(clsJarPath.exists(), "lib not found");
 		IPackageFragmentRoot jarRoot= JavaProjectHelper.addLibraryWithImport(fJProject1, new Path(clsJarPath.getAbsolutePath()), null, null);
 		fJProject1.open(null);
 		fJProject1.getProject().refreshLocal(IResource.DEPTH_INFINITE, null);
@@ -308,8 +308,8 @@ public class JDTFlagsTest18 {
 	@Test
 	public void testIsDefaultInBinaryFile() throws Exception {
 		File clsJarPath= JavaTestPlugin.getDefault().getFileInPlugin(new Path("/testresources/JDTFlagsTest18.zip"));
-		assertNotNull("lib not found", clsJarPath);//$NON-NLS-1$
-		assertTrue("lib not found", clsJarPath.exists());//$NON-NLS-1$
+		assertNotNull(clsJarPath, "lib not found");//$NON-NLS-1$
+		assertTrue(clsJarPath.exists(), "lib not found");//$NON-NLS-1$
 		IPackageFragmentRoot jarRoot= JavaProjectHelper.addLibraryWithImport(fJProject1, new Path(clsJarPath.getAbsolutePath()), null, null);
 		fJProject1.open(null);
 		fJProject1.getProject().refreshLocal(IResource.DEPTH_INFINITE, null);
@@ -438,8 +438,8 @@ public class JDTFlagsTest18 {
 	@Test
 	public void testExplicitAbstractInBinaryFile() throws Exception {
 		File clsJarPath= JavaTestPlugin.getDefault().getFileInPlugin(new Path("/testresources/JDTFlagsTest18.zip"));
-		assertNotNull("lib not found", clsJarPath);//$NON-NLS-1$
-		assertTrue("lib not found", clsJarPath.exists());//$NON-NLS-1$
+		assertNotNull(clsJarPath, "lib not found");//$NON-NLS-1$
+		assertTrue(clsJarPath.exists(), "lib not found");//$NON-NLS-1$
 		IPackageFragmentRoot jarRoot= JavaProjectHelper.addLibraryWithImport(fJProject1, new Path(clsJarPath.getAbsolutePath()), null, null);
 		fJProject1.open(null);
 		fJProject1.getProject().refreshLocal(IResource.DEPTH_INFINITE, null);
@@ -457,8 +457,8 @@ public class JDTFlagsTest18 {
 	@Test
 	public void testImplicitAbstractInBinaryFile() throws Exception {
 		File clsJarPath= JavaTestPlugin.getDefault().getFileInPlugin(new Path("/testresources/JDTFlagsTest18.zip"));
-		assertNotNull("lib not found", clsJarPath);//$NON-NLS-1$
-		assertTrue("lib not found", clsJarPath.exists());//$NON-NLS-1$
+		assertNotNull(clsJarPath, "lib not found");//$NON-NLS-1$
+		assertTrue(clsJarPath.exists(), "lib not found");//$NON-NLS-1$
 		IPackageFragmentRoot jarRoot= JavaProjectHelper.addLibraryWithImport(fJProject1, new Path(clsJarPath.getAbsolutePath()), null, null);
 		fJProject1.open(null);
 		fJProject1.getProject().refreshLocal(IResource.DEPTH_INFINITE, null);

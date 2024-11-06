@@ -15,17 +15,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -79,7 +79,7 @@ public class ExtractClassTests extends GenericRefactoringTest {
 	private void checkAdditionalFile(String fileName) throws Exception, JavaModelException, IOException {
 		ICompilationUnit cu= fPack.getCompilationUnit(fileName + ".java");
 		assertNotNull(cu);
-		assertTrue(cu.getPath() + " does not exist", cu.exists());
+		assertTrue(cu.exists(), cu.getPath() + " does not exist");
 		String actual= cu.getSource();
 		String expected= getFileContents(getOutputTestFileName(fileName));
 		assertEqualLines(expected, actual);
@@ -132,11 +132,11 @@ public class ExtractClassTests extends GenericRefactoringTest {
 	protected RefactoringStatus runRefactoring(boolean expectError) throws Exception {
 		RefactoringStatus status= performRefactoring(fDescriptor);
 		if (expectError) {
-			assertNotNull(status + "", status);
+			assertNotNull(status, status + "");
 			return status;
 		} else {
 			if (status!=null)
-				assertTrue(status+"",status.getEntryWithHighestSeverity().getSeverity() <= RefactoringStatus.WARNING);
+				assertTrue(status.getEntryWithHighestSeverity().getSeverity() <= RefactoringStatus.WARNING,status + "");
 		}
 		String expected= getFileContents(getOutputTestFileName(getCUName()));
 		assertNotNull(expected);
@@ -163,7 +163,7 @@ public class ExtractClassTests extends GenericRefactoringTest {
 		return status;
 	}
 
-	@Before
+	@BeforeEach
 	public void before() throws Exception {
 		IPreferenceStore store= JavaPlugin.getDefault().getPreferenceStore();
 		store.setValue(PreferenceConstants.CODEGEN_ADD_COMMENTS, false);
@@ -172,7 +172,7 @@ public class ExtractClassTests extends GenericRefactoringTest {
 		fPack= getPackageP();
 	}
 
-	@After
+	@AfterEach
 	public void after() throws Exception {
 		fDescriptor= null;
 		fPack= null;
@@ -245,7 +245,7 @@ public class ExtractClassTests extends GenericRefactoringTest {
 		//Warning for no IFields moved
 		assertEquals(1, entries.length);
 		for (RefactoringStatusEntry refactoringStatusEntry : entries) {
-			assertTrue("Status was:" + refactoringStatusEntry, refactoringStatusEntry.isFatalError());
+			assertTrue(refactoringStatusEntry.isFatalError(), "Status was:" + refactoringStatusEntry);
 		}
 	}
 

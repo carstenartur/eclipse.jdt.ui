@@ -13,17 +13,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core.source;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -64,7 +64,7 @@ import org.eclipse.jdt.internal.ui.preferences.formatter.FormatterProfileManager
 
 public class AddUnimplementedConstructorsTest extends CoreTests {
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private IType fClassA, fClassB, fClassC;
@@ -91,10 +91,10 @@ public class AddUnimplementedConstructorsTest extends CoreTests {
 	private void checkMethods(String[] expected, IMethod[] methods) {
 		int nMethods= methods.length;
 		int nExpected= expected.length;
-		assertEquals("" + nExpected + " methods expected, is " + nMethods, nExpected, nMethods);
+		assertEquals(nExpected, nMethods, "" + nExpected + " methods expected, is " + nMethods);
 		for (int i= 0; i < nExpected; i++) {
 			String methName= expected[i];
-			assertTrue("method " + methName + " expected", nameContained(methName, methods));
+			assertTrue(nameContained(methName, methods), "method " + methName + " expected");
 		}
 	}
 
@@ -110,9 +110,9 @@ public class AddUnimplementedConstructorsTest extends CoreTests {
 		RefactoringASTParser parser= new RefactoringASTParser(IASTSharedValues.SHARED_AST_LEVEL);
 		CompilationUnit unit= parser.parse(type.getCompilationUnit(), true);
 		AbstractTypeDeclaration declaration= ASTNodes.getParent(NodeFinder.perform(unit, type.getNameRange()), AbstractTypeDeclaration.class);
-		assertNotNull("Could not find type declararation node", declaration);
+		assertNotNull(declaration, "Could not find type declararation node");
 		ITypeBinding binding= declaration.resolveBinding();
-		assertNotNull("Binding for type declaration could not be resolved", binding);
+		assertNotNull(binding, "Binding for type declaration could not be resolved");
 
 		return new AddUnimplementedConstructorsOperation(unit, binding, null, insertPos, true, true, true, FormatterProfileManager.getProjectSettings(type.getJavaProject()));
 	}
@@ -146,12 +146,12 @@ public class AddUnimplementedConstructorsTest extends CoreTests {
 	/**
 	 * Creates a new test Java project.
 	 */
-	@Before
+	@BeforeEach
 	public void setUp() {
 		initCodeTemplates();
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fJavaProject);
 		fJavaProject= null;

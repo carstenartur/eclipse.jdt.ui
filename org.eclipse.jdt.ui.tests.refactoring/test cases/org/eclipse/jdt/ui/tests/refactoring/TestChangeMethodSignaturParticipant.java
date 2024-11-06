@@ -14,7 +14,7 @@
 package org.eclipse.jdt.ui.tests.refactoring;
 
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -41,13 +41,13 @@ public class TestChangeMethodSignaturParticipant extends ChangeMethodSignaturePa
 	static TestChangeMethodSignaturParticipant fgInstance;
 
 	public static void testParticipant(IType type) throws JavaModelException {
-		Assert.assertNotNull(fgInstance);
+		Assertions.assertNotNull(fgInstance);
 		fgInstance.test(type);
 	}
 
 	private void test(IType type) throws JavaModelException {
-		Assert.assertNotNull(fElement);
-		Assert.assertNotNull(fArguments);
+		Assertions.assertNotNull(fElement);
+		Assertions.assertNotNull(fArguments);
 
 		JavaModelUtil.reconcile(type.getCompilationUnit());
 
@@ -59,19 +59,19 @@ public class TestChangeMethodSignaturParticipant extends ChangeMethodSignaturePa
 		}
 
 		IMethod newMethod= JavaModelUtil.findMethod(name, parameterTypesSigs, fIsConstructor, type);
-		Assert.assertNotNull(newMethod);
+		Assertions.assertNotNull(newMethod);
 
 		assertEqualSignature(newMethod.getReturnType(), fArguments.getNewReturnType());
-		Assert.assertEquals(JdtFlags.getVisibilityCode(newMethod), fArguments.getNewVisibility());
+		Assertions.assertEquals(JdtFlags.getVisibilityCode(newMethod), fArguments.getNewVisibility());
 
 		String[] parameterNames= newMethod.getParameterNames();
 		for (int i= 0; i < newParameters.length; i++) {
-			Assert.assertEquals(parameterNames[i], newParameters[i].getName());
+			Assertions.assertEquals(parameterNames[i], newParameters[i].getName());
 		}
 
 		ThrownException[] thrownExceptions= fArguments.getThrownExceptions();
 		String[] exceptionTypes= newMethod.getExceptionTypes();
-		Assert.assertEquals(exceptionTypes.length, thrownExceptions.length);
+		Assertions.assertEquals(exceptionTypes.length, thrownExceptions.length);
 
 		for (int i= 0; i < exceptionTypes.length; i++) {
 			assertEqualSignature(exceptionTypes[i], thrownExceptions[i].getType());
@@ -83,7 +83,7 @@ public class TestChangeMethodSignaturParticipant extends ChangeMethodSignaturePa
 			String t1= Signature.getSimpleName(Signature.toString(expected));
 			String t2= Signature.getSimpleName(Signature.toString(actual));
 			if (!t1.equals(t2)) {
-				Assert.assertEquals(expected, actual);
+				Assertions.assertEquals(expected, actual);
 			}
 		}
 	}

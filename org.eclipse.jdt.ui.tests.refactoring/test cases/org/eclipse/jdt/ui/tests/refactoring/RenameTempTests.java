@@ -13,13 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.ltk.core.refactoring.Refactoring;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
@@ -79,7 +79,7 @@ public class RenameTempTests extends GenericRefactoringTest{
 	private void helper1(String newName, boolean updateReferences, ISourceRange selection, ICompilationUnit cu) throws Exception {
 		IJavaElement[] elements= cu.codeSelect(selection.getOffset(), selection.getLength());
 		assertEquals(1, elements.length);
-		assertTrue(elements[0].getClass().toString(), elements[0] instanceof ILocalVariable);
+		assertTrue(elements[0] instanceof ILocalVariable, elements[0].getClass().toString());
 
 		final RenameJavaElementDescriptor descriptor= RefactoringSignatureDescriptorFactory.createRenameJavaElementDescriptor(IJavaRefactorings.RENAME_LOCAL_VARIABLE);
 		descriptor.setJavaElement(elements[0]);
@@ -88,16 +88,16 @@ public class RenameTempTests extends GenericRefactoringTest{
 
 		final RefactoringStatus status= new RefactoringStatus();
 		final Refactoring refactoring= descriptor.createRefactoring(status);
-		assertTrue("status should be ok", status.isOK());
-		assertNotNull("refactoring should not be null", refactoring);
+		assertTrue(status.isOK(), "status should be ok");
+		assertNotNull(refactoring, "refactoring should not be null");
 
 		RefactoringStatus result= performRefactoring(refactoring);
-		assertNull("precondition was supposed to pass", result);
+		assertNull(result, "precondition was supposed to pass");
 
 		IPackageFragment pack= (IPackageFragment) cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		assertEqualLines("incorrect renaming", getFileContents(getTestFileName(true, false)), newcu.getSource());
 	}
 
@@ -126,7 +126,7 @@ public class RenameTempTests extends GenericRefactoringTest{
 	private void failTestHelper(String newName, boolean updateReferences, ICompilationUnit cu, ISourceRange selection) throws Exception {
 		IJavaElement[] elements= cu.codeSelect(selection.getOffset(), selection.getLength());
 		assertEquals(1, elements.length);
-		assertTrue(elements[0].getClass().toString(), elements[0] instanceof ILocalVariable);
+		assertTrue(elements[0] instanceof ILocalVariable, elements[0].getClass().toString());
 
 		final RenameJavaElementDescriptor descriptor= RefactoringSignatureDescriptorFactory.createRenameJavaElementDescriptor(IJavaRefactorings.RENAME_LOCAL_VARIABLE);
 		descriptor.setJavaElement(elements[0]);
@@ -135,11 +135,11 @@ public class RenameTempTests extends GenericRefactoringTest{
 
 		final RefactoringStatus status= new RefactoringStatus();
 		final Refactoring refactoring= descriptor.createRefactoring(status);
-		assertTrue("status should be ok", status.isOK());
-		assertNotNull("refactoring should not be null", refactoring);
+		assertTrue(status.isOK(), "status should be ok");
+		assertNotNull(refactoring, "refactoring should not be null");
 
 		RefactoringStatus result= performRefactoring(refactoring);
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	private void helper2(String newName, boolean updateReferences) throws Exception{
@@ -498,7 +498,7 @@ public class RenameTempTests extends GenericRefactoringTest{
 	}
 
 // -----
-	@Ignore("BUG_checkDeclInNestedClass fails - must revisit")
+	@Disabled("BUG_checkDeclInNestedClass fails - must revisit")
 	@Test
 	public void testFail0() throws Exception{
 		helper2("j");
@@ -529,7 +529,7 @@ public class RenameTempTests extends GenericRefactoringTest{
 		helper2("j");
 	}
 
-	@Ignore("BUG_checkDeclInNestedClass fails - must revisit")
+	@Disabled("BUG_checkDeclInNestedClass fails - must revisit")
 	@Test
 	public void testFail6() throws Exception{
 		helper2("j");
@@ -632,7 +632,7 @@ public class RenameTempTests extends GenericRefactoringTest{
 		helper2("j");
 	}
 
-	@Ignore("BUG_checkShadowing Test disabled until it is clear how 1.4 treats this")
+	@Disabled("BUG_checkShadowing Test disabled until it is clear how 1.4 treats this")
 	@Test
 	public void testFail26() throws Exception{
 		helper2("j");

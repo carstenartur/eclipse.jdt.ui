@@ -15,8 +15,8 @@ package org.eclipse.jdt.ui.tests.refactoring;
 
 import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCase.TestMode.COMPARE_WITH_OUTPUT;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.runner.RunWith;
 
 import org.eclipse.jdt.core.IPackageFragment;
@@ -28,7 +28,7 @@ import org.eclipse.jdt.ui.tests.IgnoreInheritedTests;
 @RunWith(CustomBaseRunner.class)
 public class InlineMethodTests16 extends InlineMethodTests {
 
-	@Rule
+	@RegisterExtension
 	public InlineMethodTestSetup16 fgSetup= new InlineMethodTestSetup16();
 
 	protected void performSimpleTest() throws Exception {

@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -42,14 +42,14 @@ import org.eclipse.jdt.internal.corext.dom.IASTSharedValues;
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 public class BindingsNameTest {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 	private IPackageFragmentRoot fSourceFolder;
 	private ICompilationUnit fCompilationUnit;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");
 		JavaProjectHelper.addRTJar13(fJProject1);
@@ -80,7 +80,7 @@ public class BindingsNameTest {
 		fCompilationUnit= pack1.createCompilationUnit("E.java", str1, false, null);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fJProject1);
 	}
@@ -198,7 +198,7 @@ public class BindingsNameTest {
 	}
 
 	private void assertEqualArray(Object[] elements, Object[] list) {
-		assertEquals("different length", list.length, elements.length);
+		assertEquals(list.length, elements.length, "different length");
 		for (int i= 0; i < list.length; i++) {
 			assertEquals(elements[i], list[i]);
 		}

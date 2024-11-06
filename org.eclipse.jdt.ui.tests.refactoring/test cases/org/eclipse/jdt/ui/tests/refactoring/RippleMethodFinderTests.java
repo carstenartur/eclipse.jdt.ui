@@ -13,16 +13,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -43,7 +43,7 @@ public class RippleMethodFinderTests extends AbstractJunit4CUTestCase {
 	private static final String TARGET= "/*target*/";
 	private static final String RIPPLE= "/*ripple*/";
 
-	@Rule
+	@RegisterExtension
 	public RefactoringTestSetup rts= new RefactoringTestSetup();
 
 	@Override
@@ -85,9 +85,9 @@ public class RippleMethodFinderTests extends AbstractJunit4CUTestCase {
 		}
 
 		for (IMethod method : RippleMethodFinder2.getRelatedMethods(target, new NullProgressMonitor(), null)) {
-			assertTrue("method not found: " + method, rippleMethods.remove(method));
+			assertTrue(rippleMethods.remove(method), "method not found: " + method);
 		}
-		assertEquals("found wrong ripple methods: " + rippleMethods, 0, rippleMethods.size());
+		assertEquals(0, rippleMethods.size(), "found wrong ripple methods: " + rippleMethods);
 	}
 
 	@Test

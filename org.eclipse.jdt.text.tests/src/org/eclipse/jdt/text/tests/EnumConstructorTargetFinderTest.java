@@ -13,13 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -47,7 +47,7 @@ import org.eclipse.jdt.internal.ui.javaeditor.JavaElementHyperlinkDetector;
  * @since 3.22
  */
 public class EnumConstructorTargetFinderTest {
-	@Rule
+	@RegisterExtension
 	public Java1d8ProjectTestSetup f18p= new Java1d8ProjectTestSetup();
 
 	private ASTParser fASTParser;
@@ -56,14 +56,14 @@ public class EnumConstructorTargetFinderTest {
 
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fASTParser= ASTParser.newParser(AST.getJLSLatest());
 		fJavaProject= f18p.getProject();
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJavaProject, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJavaProject, f18p.getDefaultClasspath());
 	}
@@ -83,9 +83,9 @@ public class EnumConstructorTargetFinderTest {
 
 	private void checkSelection(CompilationUnit root, int offset, int length, OccurrenceLocation expected) throws Exception {
 		OccurrenceLocation selectedNode= getTarget(root, offset, length);
-		assertNotNull("Selection null", selectedNode);
-		assertEquals("Offset\n" + expected.getDescription(), expected.getOffset(), selectedNode.getOffset());
-		assertEquals("Length\n" + expected.getDescription(), expected.getLength(), selectedNode.getLength());
+		assertNotNull(selectedNode, "Selection null");
+		assertEquals(expected.getOffset(), selectedNode.getOffset(), "Offset\n" + expected.getDescription());
+		assertEquals(expected.getLength(), selectedNode.getLength(), "Length\n" + expected.getDescription());
 	}
 
 	@Test

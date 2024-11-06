@@ -13,10 +13,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.testplugin.util;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Point;
@@ -67,7 +67,7 @@ public class DialogCheck {
 			//force the creation of the verify dialog
 			getShell();
 		}
-		assertNotEquals(_verifyDialog.getFailureText(), IDialogConstants.NO_ID, _verifyDialog.open(dialog));
+		assertNotEquals(IDialogConstants.NO_ID, _verifyDialog.open(dialog), _verifyDialog.getFailureText());
 	}
 
 
@@ -162,7 +162,7 @@ public class DialogCheck {
 		if (preferred.x > size.x) {
 			//close the dialog
 			button.getShell().dispose();
-			Assert.fail(message.toString());
+			Assertions.fail(message.toString());
 		}
 	}
 
@@ -196,7 +196,7 @@ public class DialogCheck {
 		if (preferred.x > size.x) {
 			//close the dialog
 			label.getShell().dispose();
-			Assert.fail(message.toString());
+			Assertions.fail(message.toString());
 		}
 	}
 

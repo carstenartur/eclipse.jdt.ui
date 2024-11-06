@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Arrays;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -49,7 +49,7 @@ import org.eclipse.jdt.internal.ui.JavaPlugin;
  * Those tests should run on Java Dolphin 1.7 .
  */
 public class MarkOccurrenceTest1d7 {
-	@Rule
+	@RegisterExtension
 	public Java1d8ProjectTestSetup j7s= new Java1d8ProjectTestSetup();
 
 	private ASTParser fParser;
@@ -60,7 +60,7 @@ public class MarkOccurrenceTest1d7 {
 
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fParser= ASTParser.newParser(AST.getJLSLatest());
 
@@ -70,7 +70,7 @@ public class MarkOccurrenceTest1d7 {
 		JavaPlugin.getDefault().getPreferenceStore().setValue(PreferenceConstants.EDITOR_MARK_IMPLEMENTORS, true);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, j7s.getDefaultClasspath());
 	}
@@ -92,7 +92,7 @@ public class MarkOccurrenceTest1d7 {
 
 	private void checkSelection(StringBuffer s, int offset, int length, OccurrenceLocation[] expected) throws Exception {
 		OccurrenceLocation[] selectedNodes= getHighlights(s, offset, length);
-		assertEquals("number of selections", expected.length, selectedNodes.length);
+		assertEquals(expected.length, selectedNodes.length, "number of selections");
 		sortByStartIndex(selectedNodes);
 		sortByStartIndex(expected);
 		for (int i= 0; i < selectedNodes.length; i++) {

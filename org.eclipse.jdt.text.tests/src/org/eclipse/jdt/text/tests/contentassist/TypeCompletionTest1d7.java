@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.contentassist;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 
@@ -29,7 +29,7 @@ import org.eclipse.jdt.ui.PreferenceConstants;
  * @since 3.7
  */
 public class TypeCompletionTest1d7 extends TypeCompletionTest {
-	@Rule
+	@RegisterExtension
 	public Java1d7CompletionTestSetup cts1d7= new Java1d7CompletionTestSetup();
 
 	/*

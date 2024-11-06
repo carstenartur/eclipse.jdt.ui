@@ -40,7 +40,7 @@ import com.sun.jdi.event.VMDeathEvent;
 import com.sun.jdi.request.BreakpointRequest;
 import com.sun.jdi.request.EventRequest;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.jdi.Bootstrap;
 import org.eclipse.test.internal.performance.InternalDimensions;
@@ -341,7 +341,7 @@ public class InvocationCountPerformanceMeter extends InternalPerformanceMeter {
 	 */
 	public InvocationCountPerformanceMeter(String scenarioId, java.lang.reflect.Method[] methods, Constructor<?>[] constructors) {
 		super(scenarioId);
-		Assert.assertNotNull("Could not create performance meter: check the command line arguments (see InvocationCountPerformanceMeter for details)", System.getProperty(DEBUG_PORT_PROPERTY));
+		Assertions.assertNotNull(System.getProperty(DEBUG_PORT_PROPERTY), "Could not create performance meter: check the command line arguments (see InvocationCountPerformanceMeter for details)");
 
 		fMethods= methods;
 		fConstructors= constructors;
@@ -395,7 +395,7 @@ public class InvocationCountPerformanceMeter extends InternalPerformanceMeter {
 		} catch (IOException | IllegalConnectorArgumentsException x) {
 			x.printStackTrace();
 		} finally {
-			Assert.assertNotNull("Could not start performance meter, hints:\n1) check the command line arguments (see InvocationCountPerformanceMeter for details)\n2) use a different port number", fEventReader);
+			Assertions.assertNotNull(fEventReader, "Could not start performance meter, hints:\n1) check the command line arguments (see InvocationCountPerformanceMeter for details)\n2) use a different port number");
 		}
 	}
 

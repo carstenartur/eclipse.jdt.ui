@@ -12,15 +12,15 @@
 
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -119,9 +119,9 @@ public class MakeStaticRefactoringTests extends GenericRefactoringTest {
 	}
 
 	public void assertHasNoCommonErrors(RefactoringStatus status) {
-		assertFalse("Failed but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.FATAL), status.hasFatalError());
-		assertFalse("Had errors but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.ERROR), status.hasError());
-		assertFalse("Had warnings but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.WARNING), status.hasWarning());
+		assertFalse(status.hasFatalError(), "Failed but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.FATAL));
+		assertFalse(status.hasError(), "Had errors but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.ERROR));
+		assertFalse(status.hasWarning(), "Had warnings but shouldn't: " + status.getMessageMatchingSeverity(RefactoringStatus.WARNING));
 	}
 
 	@Test

@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core.source;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -55,21 +55,21 @@ import org.eclipse.jdt.ui.tests.core.rules.Java1d8ProjectTestSetup;
  * Those tests are made to run on Java Spider 1.8 .
  */
 public class AddUnimplementedMethodsTest1d8 {
-	@Rule
+	@RegisterExtension
 	public Java1d8ProjectTestSetup j18p= new Java1d8ProjectTestSetup();
 
 	private IJavaProject fJavaProject;
 
 	private IPackageFragment fPackage;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJavaProject= j18p.getProject();
 		IPackageFragmentRoot root= JavaProjectHelper.addSourceContainer(fJavaProject, "src");
 		fPackage= root.createPackageFragment("ibm.util", true, null);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJavaProject, j18p.getDefaultClasspath());
 		fJavaProject= null;
@@ -113,7 +113,7 @@ public class AddUnimplementedMethodsTest1d8 {
 
 		IMethod[] methods= testClass.getMethods();
 		checkMethods(new String[] { "foo", "hashCode", "equals", "clone", "toString", "finalize" }, methods);
-		assertTrue("Optional.empty method not found", cu2.getSource().contains("return Optional.empty();"));
+		assertTrue(cu2.getSource().contains("return Optional.empty();"), "Optional.empty method not found");
 	}
 
 	@Test
@@ -151,17 +151,17 @@ public class AddUnimplementedMethodsTest1d8 {
 
 		IMethod[] methods= testClass.getMethods();
 		checkMethods(new String[] { "b", "a", "hashCode", "equals", "clone", "toString", "finalize" }, methods);
-		assertTrue("method b not added to C3", cu2.getSource().contains("void b() {"));
-		assertFalse("method a should not be added to C3", cu2.getSource().contains("void a()"));
+		assertTrue(cu2.getSource().contains("void b() {"), "method b not added to C3");
+		assertFalse(cu2.getSource().contains("void a()"), "method a should not be added to C3");
 	}
 
 	private void testHelper(IType testClass, int insertionPos, boolean implementAllOverridable) throws JavaModelException, CoreException {
 		RefactoringASTParser parser= new RefactoringASTParser(IASTSharedValues.SHARED_AST_LEVEL);
 		CompilationUnit unit= parser.parse(testClass.getCompilationUnit(), true);
 		AbstractTypeDeclaration declaration= ASTNodes.getParent(NodeFinder.perform(unit, testClass.getNameRange()), AbstractTypeDeclaration.class);
-		assertNotNull("Could not find type declaration node", declaration);
+		assertNotNull(declaration, "Could not find type declaration node");
 		ITypeBinding binding= declaration.resolveBinding();
-		assertNotNull("Binding for type declaration could not be resolved", binding);
+		assertNotNull(binding, "Binding for type declaration could not be resolved");
 
 		IMethodBinding[] overridableMethods= implementAllOverridable ? StubUtility2Core.getOverridableMethods(unit.getAST(), binding, false) : null;
 
@@ -173,10 +173,10 @@ public class AddUnimplementedMethodsTest1d8 {
 	private void checkMethods(String[] expected, IMethod[] methods) {
 		int nMethods= methods.length;
 		int nExpected= expected.length;
-		assertEquals("" + nExpected + " methods expected, is " + nMethods, nExpected, nMethods);
+		assertEquals(nExpected, nMethods, "" + nExpected + " methods expected, is " + nMethods);
 		for (int i= 0; i < nExpected; i++) {
 			String methName= expected[i];
-			assertTrue("method " + methName + " expected", nameContained(methName, methods));
+			assertTrue(nameContained(methName, methods), "method " + methName + " expected");
 		}
 	}
 

@@ -14,8 +14,12 @@
 package org.eclipse.jdt.ui.tests.core.rules;
 
 import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -34,7 +38,7 @@ import org.eclipse.jdt.internal.ui.search.SearchParticipantRecord;
 import org.eclipse.jdt.internal.ui.search.SearchParticipantsExtensionPoint;
 
 
-public class JUnitSourceSetup extends ExternalResource {
+public class JUnitSourceSetup implements BeforeEachCallback, AfterEachCallback {
 	public static final String PROJECT_NAME= "JUnitSource";
 	public static final String SRC_CONTAINER= "src";
 
@@ -62,7 +66,7 @@ public class JUnitSourceSetup extends ExternalResource {
 	}
 
 	@Override
-	public void before() throws Throwable {
+	public void beforeEach(ExtensionContext context) throws CoreException, InvocationTargetException, IOException {
 		SearchParticipantsExtensionPoint.debugSetInstance(fExtensionPoint);
 		fProject= JavaProjectHelper.createJavaProject(PROJECT_NAME, "bin");
 		JavaProjectHelper.addRTJar(fProject);
@@ -74,7 +78,7 @@ public class JUnitSourceSetup extends ExternalResource {
 	}
 
 	@Override
-	public void after() {
+	public void afterEach(ExtensionContext context) {
 		try {
 			JavaProjectHelper.delete(fProject);
 		} catch (CoreException e) {

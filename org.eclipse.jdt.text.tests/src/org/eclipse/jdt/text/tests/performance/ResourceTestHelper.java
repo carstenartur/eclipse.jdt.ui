@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipException;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Path;
@@ -118,7 +118,7 @@ public class ResourceTestHelper {
 
 	public static IFile findFile(String pathStr) {
 		IFile file= getFile(pathStr);
-		Assert.assertTrue(file != null && file.exists());
+		Assertions.assertTrue(file != null && file.exists());
 		return file;
 	}
 

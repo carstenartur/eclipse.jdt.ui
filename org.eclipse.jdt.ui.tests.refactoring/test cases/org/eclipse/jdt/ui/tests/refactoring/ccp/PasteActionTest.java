@@ -13,16 +13,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.ccp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.swt.SWTError;
 import org.eclipse.swt.dnd.Clipboard;
@@ -97,11 +97,11 @@ public class PasteActionTest extends GenericRefactoringTest {
 		CopyToClipboardAction copyToClipboardAction= new CopyToClipboardAction(new MockWorkbenchSite(merge(copySelectedResources, copySelectedJavaElements)), fClipboard);
 		copyToClipboardAction.setAutoRepeatOnFailure(true);
 		copyToClipboardAction.update(copyToClipboardAction.getSelection());
-		assertTrue("copy not enabled", copyToClipboardAction.isEnabled());
+		assertTrue(copyToClipboardAction.isEnabled(), "copy not enabled");
 		copyToClipboardAction.run();
 
 		pasteAction.update(pasteAction.getSelection());
-		assertTrue("paste should be enabled", pasteAction.isEnabled());
+		assertTrue(pasteAction.isEnabled(), "paste should be enabled");
 		return pasteAction;
 	}
 
@@ -110,11 +110,11 @@ public class PasteActionTest extends GenericRefactoringTest {
 		CopyToClipboardAction copyToClipboardAction= new CopyToClipboardAction(new MockWorkbenchSite(merge(copySelectedResources, copySelectedJavaElements)), fClipboard);
 		copyToClipboardAction.setAutoRepeatOnFailure(true);
 		copyToClipboardAction.update(copyToClipboardAction.getSelection());
-		assertTrue("copy not enabled", copyToClipboardAction.isEnabled());
+		assertTrue(copyToClipboardAction.isEnabled(), "copy not enabled");
 		copyToClipboardAction.run();
 
 		pasteAction.update(pasteAction.getSelection());
-		assertTrue("paste should be enabled", pasteAction.isEnabled());
+		assertTrue(pasteAction.isEnabled(), "paste should be enabled");
 		return pasteAction;
 	}
 
@@ -146,7 +146,7 @@ public class PasteActionTest extends GenericRefactoringTest {
 		assertEqualLines(cuName, getFileContents(getOutputTestFileName(cuName)), getPackageP().getCompilationUnit(cuName + ".java").getSource());
 	}
 
-	@Ignore("not implemented yet")
+	@Disabled("not implemented yet")
 	@Test
 	public void test0() throws Exception {
 
@@ -156,8 +156,8 @@ public class PasteActionTest extends GenericRefactoringTest {
 		IType typeA= cuA.getType("A");
 		IType typeB= cuB.getType("B");
 
-		assertTrue("A does not exist", typeA.exists());
-		assertTrue("B does not exist", typeB.exists());
+		assertTrue(typeA.exists(), "A does not exist");
+		assertTrue(typeB.exists(), "B does not exist");
 
 		IJavaElement[] copyJavaElements= {typeA};
 		IResource[] copyResources= {};
@@ -177,8 +177,8 @@ public class PasteActionTest extends GenericRefactoringTest {
 		IField fieldY= cuA.getType("A").getField("y");
 		IType typeB= cuB.getType("B");
 
-		assertTrue("y does not exist", fieldY.exists());
-		assertTrue("B does not exist", typeB.exists());
+		assertTrue(fieldY.exists(), "y does not exist");
+		assertTrue(typeB.exists(), "B does not exist");
 
 		IJavaElement[] copyJavaElements= {fieldY};
 		IResource[] copyResources= {};
@@ -199,8 +199,8 @@ public class PasteActionTest extends GenericRefactoringTest {
 		IJavaElement elem0= cuA.getImport("java.lang.*");
 		IImportContainer importContainer= cuB.getImportContainer();
 
-		assertTrue("y does not exist", elem0.exists());
-		assertTrue("B does not exist", importContainer.exists());
+		assertTrue(elem0.exists(), "y does not exist");
+		assertTrue(importContainer.exists(), "B does not exist");
 
 		IJavaElement[] copyJavaElements= {elem0};
 		IResource[] copyResources= {};
@@ -219,8 +219,8 @@ public class PasteActionTest extends GenericRefactoringTest {
 		IJavaElement elem0= cuA.getType("A").getMethod("f", new String[0]);
 		IMethod method= cuA.getType("A").getMethod("f1", new String[0]);
 
-		assertTrue("y does not exist", elem0.exists());
-		assertTrue("B does not exist", method.exists());
+		assertTrue(elem0.exists(), "y does not exist");
+		assertTrue(method.exists(), "B does not exist");
 
 		IJavaElement[] copyJavaElements= {elem0};
 		IResource[] copyResources= {};
@@ -239,7 +239,7 @@ public class PasteActionTest extends GenericRefactoringTest {
 			IJavaElement[] jElements= {rts.getProject()};
 			PasteAction paste= verifyEnabled(resources , jElements, ws);
 			paste.run((IStructuredSelection)paste.getSelection());
-			assertEquals("Only one element", 1, ws.getElements().length);
+			assertEquals(1, ws.getElements().length, "Only one element");
 			assertEquals(rts.getProject(), ws.getElements()[0]);
 		} finally {
 			PlatformUI.getWorkbench().getWorkingSetManager().removeWorkingSet(ws);
@@ -256,7 +256,7 @@ public class PasteActionTest extends GenericRefactoringTest {
 			IJavaElement[] jElements= {};
 			PasteAction paste= verifyEnabled(resources , jElements, ws);
 			paste.run((IStructuredSelection)paste.getSelection());
-			assertEquals("Only one element", 1, ws.getElements().length);
+			assertEquals(1, ws.getElements().length, "Only one element");
 			assertEquals(folder, ws.getElements()[0]);
 		} finally {
 			PlatformUI.getWorkbench().getWorkingSetManager().removeWorkingSet(ws);
@@ -271,7 +271,7 @@ public class PasteActionTest extends GenericRefactoringTest {
 			IJavaElement[] jElements= {};
 			PasteAction paste= verifyEnabled(resources , jElements, ws);
 			paste.run((IStructuredSelection)paste.getSelection());
-			assertEquals("Only one element", 1, ws.getElements().length);
+			assertEquals(1, ws.getElements().length, "Only one element");
 			assertEquals(rts.getProject(), ws.getElements()[0]);
 		} finally {
 			PlatformUI.getWorkbench().getWorkingSetManager().removeWorkingSet(ws);
@@ -287,7 +287,7 @@ public class PasteActionTest extends GenericRefactoringTest {
 			IJavaElement[] jElements= {rts.getProject()};
 			PasteAction paste= verifyEnabled(resources , jElements, ws);
 			paste.run((IStructuredSelection)paste.getSelection());
-			assertEquals("Only one element", 1, ws.getElements().length);
+			assertEquals(1, ws.getElements().length, "Only one element");
 			assertEquals(rts.getProject(), ws.getElements()[0]);
 		} finally {
 			PlatformUI.getWorkbench().getWorkingSetManager().removeWorkingSet(ws);
@@ -303,7 +303,7 @@ public class PasteActionTest extends GenericRefactoringTest {
 			IJavaElement[] jElements= {getPackageP()};
 			PasteAction paste= verifyEnabled(resources , jElements, ws);
 			paste.run((IStructuredSelection)paste.getSelection());
-			assertEquals("Only one element", 1, ws.getElements().length);
+			assertEquals(1, ws.getElements().length, "Only one element");
 			assertEquals(rts.getProject(), ws.getElements()[0]);
 		} finally {
 			PlatformUI.getWorkbench().getWorkingSetManager().removeWorkingSet(ws);
@@ -323,7 +323,7 @@ public class PasteActionTest extends GenericRefactoringTest {
 			IJavaElement[] jElements= {};
 			PasteAction paste= verifyEnabled(resources , jElements, ws);
 			paste.run((IStructuredSelection)paste.getSelection());
-			assertEquals("Only one element", 1, ws.getElements().length);
+			assertEquals(1, ws.getElements().length, "Only one element");
 			assertEquals(folder, ws.getElements()[0]);
 		} finally {
 			PlatformUI.getWorkbench().getWorkingSetManager().removeWorkingSet(ws);
@@ -341,7 +341,7 @@ public class PasteActionTest extends GenericRefactoringTest {
 			IJavaElement[] jElements= {};
 			PasteAction paste= verifyEnabled(resources , jElements, ws);
 			paste.run((IStructuredSelection)paste.getSelection());
-			assertEquals("Only one element", 1, ws.getElements().length);
+			assertEquals(1, ws.getElements().length, "Only one element");
 			assertEquals(rts.getProject(), ws.getElements()[0]);
 		} finally {
 			PlatformUI.getWorkbench().getWorkingSetManager().removeWorkingSet(ws);
@@ -363,7 +363,7 @@ public class PasteActionTest extends GenericRefactoringTest {
 		setClipboardContents(TypedSource.createTypedSources(elemsForClipboard), 0);
 		PasteAction pasteAction= new PasteAction(new MockWorkbenchSite(pasteSelectedJavaElements), fClipboard);
 		pasteAction.update(pasteAction.getSelection());
-		assertEquals("action enablement", pasteEnabled, pasteAction.isEnabled());
+		assertEquals(pasteEnabled, pasteAction.isEnabled(), "action enablement");
 		if (pasteEnabled)
 			pasteAction.run((IStructuredSelection)pasteAction.getSelection());
 	}

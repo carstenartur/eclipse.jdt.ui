@@ -13,19 +13,19 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Hashtable;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -52,8 +52,8 @@ import org.eclipse.jdt.internal.ui.text.correction.proposals.FixCorrectionPropos
 
 public final class ConvertIterableLoopQuickFixTest extends QuickFixTest {
 
-	@Rule
-    public ProjectTestSetup projectSetup= new ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup= new ProjectTestSetup();
 
 	private FixCorrectionProposal fConvertLoopProposal;
 
@@ -73,7 +73,7 @@ public final class ConvertIterableLoopQuickFixTest extends QuickFixTest {
 		return proposals;
 	}
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
@@ -89,7 +89,7 @@ public final class ConvertIterableLoopQuickFixTest extends QuickFixTest {
 		fConvertLoopProposal= null;
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fProject, projectSetup.getDefaultClasspath());
 		fConvertLoopProposal= null;
@@ -336,7 +336,7 @@ public final class ConvertIterableLoopQuickFixTest extends QuickFixTest {
 
 		List<IJavaCompletionProposal> proposals= fetchConvertingProposal(sample, unit);
 
-		assertNotNull("A quickfix should be proposed", fConvertLoopProposal);
+		assertNotNull(fConvertLoopProposal, "A quickfix should be proposed");
 
 		assertCorrectLabels(proposals);
 
@@ -478,7 +478,7 @@ public final class ConvertIterableLoopQuickFixTest extends QuickFixTest {
 	 * see https://bugs.eclipse.org/bugs/show_bug.cgi?id=553635
 	 * @throws Exception Any exception
 	 */
-	@Ignore("Bug 553635")
+	@Disabled("Bug 553635")
 	@Test
 	public void testIndentation() throws Exception {
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test", false, null);

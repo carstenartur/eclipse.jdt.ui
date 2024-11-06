@@ -16,7 +16,7 @@ package org.eclipse.jdt.text.tests.performance;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.test.internal.performance.InternalPerformanceMeter;
 import org.eclipse.test.internal.performance.OSPerformanceMeter;
@@ -85,7 +85,7 @@ final class DifferenceMeter extends InternalPerformanceMeter {
 		Sample measured= fMeasuredMeter.getSample();
 		DataPoint[] measuredPoints= measured.getDataPoints();
 
-		Assert.assertEquals(referencePoints.length, measuredPoints.length);
+		Assertions.assertEquals(referencePoints.length, measuredPoints.length);
 
 		DataPoint[] data= new DataPoint[referencePoints.length];
 		for (int i= 0; i < measuredPoints.length; i++) {
@@ -103,7 +103,7 @@ final class DifferenceMeter extends InternalPerformanceMeter {
 	 */
 	private DataPoint difference(DataPoint minuend, DataPoint subtrahend) {
 		int step= minuend.getStep();
-		Assert.assertEquals(step, subtrahend.getStep());
+		Assertions.assertEquals(step, subtrahend.getStep());
 
 		Map<Dim, Scalar> scalars= new HashMap<>();
 		for (Dim dimension : minuend.getDimensions2()) {

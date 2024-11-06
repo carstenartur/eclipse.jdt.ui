@@ -14,7 +14,7 @@
 
 package org.eclipse.jdt.junit.tests;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.junit.JUnitCore;
 import org.eclipse.jdt.junit.TestRunListener;

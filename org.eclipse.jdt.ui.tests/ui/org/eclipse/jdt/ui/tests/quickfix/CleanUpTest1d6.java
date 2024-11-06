@@ -14,13 +14,13 @@
 package org.eclipse.jdt.ui.tests.quickfix;
 
 import static org.eclipse.jdt.internal.ui.fix.MultiFixMessages.ConstantsCleanUp_description;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.util.Arrays;
 import java.util.HashSet;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 
@@ -41,7 +41,7 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
  * Tests the cleanup features related to Java 6 (i.e. Mustang).
  */
 public class CleanUpTest1d6 extends CleanUpTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new Java1d8ProjectTestSetup();
 
 	@Override
@@ -110,7 +110,7 @@ public class CleanUpTest1d6 extends CleanUpTestCase {
 		bld.append("}\n");
 		String expected= bld.toString();
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected }, null);
 	}
 
@@ -162,7 +162,7 @@ public class CleanUpTest1d6 extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu}, new String[] {expected}, null);
 	}
 
@@ -210,7 +210,7 @@ public class CleanUpTest1d6 extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu}, new String[] {expected}, null);
 	}
 
@@ -271,7 +271,7 @@ public class CleanUpTest1d6 extends CleanUpTestCase {
 		enable(CleanUpConstants.CONSTANTS_FOR_SYSTEM_PROPERTY_BOXED);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(Messages.format(ConstantsCleanUp_description,UpdateProperty.FILE_SEPARATOR.toString()),
 						Messages.format(ConstantsCleanUp_description,UpdateProperty.PATH_SEPARATOR.toString()),

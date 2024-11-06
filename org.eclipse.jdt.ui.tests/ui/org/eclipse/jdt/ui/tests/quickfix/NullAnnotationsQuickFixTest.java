@@ -14,19 +14,19 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -74,14 +74,14 @@ import org.eclipse.jdt.internal.ui.text.correction.proposals.CreatePackageInfoWi
 
 public class NullAnnotationsQuickFixTest extends QuickFixTest {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 	private IPackageFragmentRoot fSourceFolder;
 	private String ANNOTATION_JAR_PATH;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
@@ -124,7 +124,7 @@ public class NullAnnotationsQuickFixTest extends QuickFixTest {
 		return FileLocator.toFileURL(libEntry).getPath();
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());
 	}
@@ -2316,8 +2316,8 @@ public class NullAnnotationsQuickFixTest extends QuickFixTest {
 
 			ICompilationUnit packageInfoCU= pack1.getCompilationUnit("package-info.java");
 			ICompilationUnit packageInfoCU2= pack2.getCompilationUnit("package-info.java");
-			assertTrue("a package-info.java should have been created in src", packageInfoCU.exists());
-			assertFalse("no package-info.java should have been created in src-tests", packageInfoCU2.exists());
+			assertTrue(packageInfoCU.exists(), "a package-info.java should have been created in src");
+			assertFalse(packageInfoCU2.exists(), "no package-info.java should have been created in src-tests");
 
 			String str2= """
 				/**
@@ -2413,8 +2413,8 @@ public class NullAnnotationsQuickFixTest extends QuickFixTest {
 
 			ICompilationUnit packageInfoCU= pack1.getCompilationUnit("package-info.java");
 			ICompilationUnit packageInfoCU2= pack2.getCompilationUnit("package-info.java");
-			assertTrue("a package-info.java should have been created in fJProject1", packageInfoCU.exists());
-			assertFalse("no package-info.java should have been created in proj2", packageInfoCU2.exists());
+			assertTrue(packageInfoCU.exists(), "a package-info.java should have been created in fJProject1");
+			assertFalse(packageInfoCU2.exists(), "no package-info.java should have been created in proj2");
 
 			String str2= """
 				/**
@@ -2512,8 +2512,8 @@ public class NullAnnotationsQuickFixTest extends QuickFixTest {
 
 			ICompilationUnit packageInfoCU= pack1.getCompilationUnit("package-info.java");
 			ICompilationUnit packageInfoCU2= pack2.getCompilationUnit("package-info.java");
-			assertTrue("a package-info.java should have been created in fJProject1", packageInfoCU.exists());
-			assertTrue("a package-info.java should have been created in proj2", packageInfoCU2.exists());
+			assertTrue(packageInfoCU.exists(), "a package-info.java should have been created in fJProject1");
+			assertTrue(packageInfoCU2.exists(), "a package-info.java should have been created in proj2");
 
 			String str2= """
 				/**

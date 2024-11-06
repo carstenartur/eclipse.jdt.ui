@@ -13,13 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.util.Arrays;
 import java.util.HashSet;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 
@@ -39,7 +39,7 @@ import org.eclipse.jdt.internal.ui.fix.MultiFixMessages;
  * Tests the cleanup features related to Java 9.
  */
 public class CleanUpTest9 extends CleanUpTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new Java9ProjectTestSetup();
 
 	@Override
@@ -216,7 +216,7 @@ public class CleanUpTest9 extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.TryWithResourceCleanup_description)));
 	}

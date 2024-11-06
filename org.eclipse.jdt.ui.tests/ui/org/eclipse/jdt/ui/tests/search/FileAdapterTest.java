@@ -13,11 +13,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.search;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.resources.IResource;
 
@@ -32,7 +32,7 @@ import org.eclipse.jdt.internal.ui.search.JavaSearchResult;
 
 public class FileAdapterTest {
 
-	@Rule
+	@RegisterExtension
 	public JUnitSourceSetup projectSetup = new JUnitSourceSetup();
 
 	@Test

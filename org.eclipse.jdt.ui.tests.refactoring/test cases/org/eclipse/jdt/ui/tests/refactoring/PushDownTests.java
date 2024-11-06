@@ -13,16 +13,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.tests.harness.FussyProgressMonitor;
 
@@ -74,7 +74,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
 
 		FussyProgressMonitor monitor= new FussyProgressMonitor();
-		assertTrue("activation", ref.checkInitialConditions(monitor).isOK());
+		assertTrue(ref.checkInitialConditions(monitor).isOK(), "activation");
 		monitor.assertUsedUp();
 
 		prepareForInputCheck(processor, selectedMethods, selectedFields, namesOfMethodsToPullUp, signaturesOfMethodsToPullUp, namesOfFieldsToPullUp, namesOfMethodsToDeclareAbstract,
@@ -116,7 +116,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		FussyProgressMonitor monitor= new FussyProgressMonitor();
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(monitor);
 		monitor.assertUsedUp();
-		assertFalse("precondition was supposed to pass but got " + checkInputResult.toString(), checkInputResult.hasError());
+		assertFalse(checkInputResult.hasError(), "precondition was supposed to pass but got " + checkInputResult.toString());
 		performChange(ref, false);
 
 		String expected= getFileContents(getOutputTestFileName("A"));
@@ -170,7 +170,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
 
 		FussyProgressMonitor monitor= new FussyProgressMonitor();
-		assertEquals("activation was expected to fail", expectedSeverity, ref.checkInitialConditions(monitor).getSeverity());
+		assertEquals(expectedSeverity, ref.checkInitialConditions(monitor).getSeverity(), "activation was expected to fail");
 		monitor.assertUsedUp();
 	}
 
@@ -187,7 +187,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		FussyProgressMonitor monitor= new FussyProgressMonitor();
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(monitor);
 		monitor.assertUsedUp();
-		assertEquals("precondition was expected to fail", expectedSeverity, checkInputResult.getSeverity());
+		assertEquals(expectedSeverity, checkInputResult.getSeverity(), "precondition was expected to fail");
 	}
 
 	private void addRequiredMembersHelper(String[] fieldNames, String[] methodNames, String[][] methodSignatures, String[] expectedFieldNames, String[] expectedMethodNames, String[][] expectedMethodSignatures) throws Exception {
@@ -201,7 +201,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		PushDownRefactoringProcessor processor= new PushDownRefactoringProcessor(members);
 		Refactoring ref= new ProcessorBasedRefactoring(processor);
 		FussyProgressMonitor monitor= new FussyProgressMonitor();
-		assertTrue("activation", ref.checkInitialConditions(monitor).isOK());
+		assertTrue(ref.checkInitialConditions(monitor).isOK(), "activation");
 		monitor.assertUsedUp();
 		monitor.prepare();
 		processor.computeAdditionalRequiredMembersToPushDown(monitor);
@@ -211,12 +211,12 @@ public class PushDownTests extends GenericRefactoringTest {
 		IField[] expectedFields= getFields(type, expectedFieldNames);
 		IMethod[] expectedMethods= getMethods(type, expectedMethodNames, expectedMethodSignatures);
 		List<IMember> expected= Arrays.asList(merge(expectedFields, expectedMethods));
-		assertEquals("incorrect size", expected.size(), required.size());
+		assertEquals(expected.size(), required.size(), "incorrect size");
 		for (IMember each : expected) {
-			assertTrue ("required does not contain " + each, required.contains(each));
+			assertTrue (required.contains(each), "required does not contain " + each);
 		}
 		for (IMember each : required) {
-			assertTrue ("expected does not contain " + each, expected.contains(each));
+			assertTrue (expected.contains(each), "expected does not contain " + each);
 		}
 	}
 
@@ -852,7 +852,7 @@ public class PushDownTests extends GenericRefactoringTest {
 				new String[]{"B", "C"}, new String[]{"p", "p"});
 	}
 
-	@Ignore("disabled due to missing support for statically imported methods")
+	@Disabled("disabled due to missing support for statically imported methods")
 	@Test
 	public void test34() throws Exception{
 
@@ -1427,7 +1427,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeA= cu.getType("A");
 		IMember[] members= {typeA};
-		assertTrue("should be enabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertTrue(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be enabled");
 	}
 
 	@Test
@@ -1435,7 +1435,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeA= cu.getType("A");
 		IMember[] members= {typeA};
-		assertFalse("should be disabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertFalse(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be disabled");
 	}
 
 	@Test
@@ -1443,7 +1443,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeB= cu.getType("Outer").getType("B");
 		IMember[] members= {typeB};
-		assertFalse("should be disabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertFalse(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be disabled");
 	}
 
 	@Test
@@ -1452,7 +1452,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		IType typeA= cu.getType("A");
 		IType typeB= cu.getType("B");
 		IMember[] members= {typeA, typeB};
-		assertFalse("should be disabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertFalse(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be disabled");
 	}
 
 	@Test
@@ -1460,7 +1460,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeA= cu.getType("A");
 		IMember[] members= {typeA};
-		assertTrue("should be enabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertTrue(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be enabled");
 	}
 
 	@Test
@@ -1468,7 +1468,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeA= cu.getType("A");
 		IMember[] members= {typeA};
-		assertTrue("should be enabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertTrue(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be enabled");
 	}
 
 	@Test
@@ -1476,7 +1476,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeA= cu.getType("A");
 		IMember[] members= {typeA};
-		assertTrue("should be enabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertTrue(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be enabled");
 	}
 
 	@Test
@@ -1484,7 +1484,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeA= cu.getType("A");
 		IMember[] members= {typeA};
-		assertTrue("should be enabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertTrue(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be enabled");
 	}
 
 	@Test
@@ -1492,7 +1492,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeA= cu.getType("A");
 		IMember[] members= {typeA};
-		assertTrue("should be enabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertTrue(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be enabled");
 	}
 
 	@Test
@@ -1500,7 +1500,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeA= cu.getType("A");
 		IMember[] members= {typeA};
-		assertFalse("should be disabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertFalse(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be disabled");
 	}
 
 	@Test
@@ -1508,7 +1508,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeA= cu.getType("A");
 		IMember[] members= {typeA};
-		assertFalse("should be disabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertFalse(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be disabled");
 	}
 
 	@Test
@@ -1516,7 +1516,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeA= cu.getType("A");
 		IMember[] members= {typeA};
-		assertFalse("should be disabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertFalse(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be disabled");
 	}
 
 	@Test
@@ -1524,7 +1524,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeB= cu.getType("Outer").getType("B");
 		IMember[] members= {typeB};
-		assertFalse("should be disabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertFalse(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be disabled");
 	}
 
 	@Test
@@ -1532,7 +1532,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeB= cu.getType("Outer").getType("B");
 		IMember[] members= {typeB};
-		assertFalse("should be disabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertFalse(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be disabled");
 	}
 
 	@Test
@@ -1540,7 +1540,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeB= cu.getType("Outer").getType("B");
 		IMember[] members= {typeB};
-		assertFalse("should be disabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertFalse(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be disabled");
 	}
 
 	@Test
@@ -1548,7 +1548,7 @@ public class PushDownTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType typeB= cu.getType("Outer").getType("B");
 		IMember[] members= {typeB};
-		assertFalse("should be disabled", RefactoringAvailabilityTester.isPushDownAvailable(members));
+		assertFalse(RefactoringAvailabilityTester.isPushDownAvailable(members), "should be disabled");
 	}
 
 	@Test

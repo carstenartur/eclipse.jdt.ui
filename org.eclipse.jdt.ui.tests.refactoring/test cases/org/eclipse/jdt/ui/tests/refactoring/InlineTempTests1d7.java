@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.runner.RunWith;
 
 import org.eclipse.jdt.ui.tests.CustomBaseRunner;
@@ -28,7 +28,7 @@ import org.eclipse.jdt.ui.tests.refactoring.rules.RefactoringTestSetup;
 @IgnoreInheritedTests
 @RunWith(CustomBaseRunner.class)
 public class InlineTempTests1d7 extends InlineTempTests {
-	@Rule
+	@RegisterExtension
 	public RefactoringTestSetup js= new Java1d7Setup();
 
 	@Override

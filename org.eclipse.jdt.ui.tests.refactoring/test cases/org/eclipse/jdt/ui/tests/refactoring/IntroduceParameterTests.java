@@ -14,12 +14,12 @@
 
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.StringTokenizer;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -36,7 +36,7 @@ import org.eclipse.jdt.ui.tests.refactoring.rules.RefactoringTestSetup;
 public class IntroduceParameterTests extends LineColumnSelectionTestCase {
 	private static final String SLASH_OUT= "/out";
 
-	@Rule
+	@RegisterExtension
 	public RefactoringTestSetup rts;
 
 	public IntroduceParameterTests() {
@@ -88,7 +88,7 @@ public class IntroduceParameterTests extends LineColumnSelectionTestCase {
 
 		NullProgressMonitor pm= new NullProgressMonitor();
 		RefactoringStatus status= refactoring.checkInitialConditions(pm);
-		assertEquals("wrong activation status", expectedActivationStatus, status.getSeverity());
+		assertEquals(expectedActivationStatus, status.getSeverity(), "wrong activation status");
 		if (! status.isOK())
 			return;
 
@@ -96,12 +96,12 @@ public class IntroduceParameterTests extends LineColumnSelectionTestCase {
 		if (names == null) {
 			refactoring.setParameterName(refactoring.guessedParameterName());
 		} else {
-			assertEquals("incorrectly guessed parameter name", names[0], refactoring.guessedParameterName());
+			assertEquals(names[0], refactoring.guessedParameterName(), "incorrectly guessed parameter name");
 			refactoring.setParameterName(names[1]);
 		}
 
 		status.merge(refactoring.checkFinalConditions(pm));
-		assertEquals("wrong input status", expectedInputStatus, status.getSeverity());
+		assertEquals(expectedInputStatus, status.getSeverity(), "wrong input status");
 		if (status.getSeverity() == RefactoringStatus.FATAL)
 			return;
 

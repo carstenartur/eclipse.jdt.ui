@@ -15,7 +15,7 @@ package org.eclipse.jdt.ui.tests.refactoring;
 
 import java.util.Collection;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 
 import org.eclipse.jdt.testplugin.StringAsserts;

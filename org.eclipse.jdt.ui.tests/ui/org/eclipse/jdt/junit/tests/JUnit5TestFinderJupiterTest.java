@@ -22,9 +22,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -93,7 +93,7 @@ public class JUnit5TestFinderJupiterTest {
 
 	private static ICompilationUnit compilationUnit;
 
-	@BeforeClass
+	@BeforeAll
 	public static void beforeClass() throws Exception {
 		javaProject= JavaProjectHelper.createJavaProject("TestProject", "bin");
 		JavaProjectHelper.addRTJar(javaProject);
@@ -107,7 +107,7 @@ public class JUnit5TestFinderJupiterTest {
 		compilationUnit= createCompilationUnit(packageFragment);
 	}
 
-	@AfterClass
+	@AfterAll
 	public static void afterClass() throws Exception {
 		JavaProjectHelper.delete(javaProject);
 	}

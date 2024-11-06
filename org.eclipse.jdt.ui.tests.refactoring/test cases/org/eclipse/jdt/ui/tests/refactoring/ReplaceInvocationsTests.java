@@ -14,13 +14,13 @@
 package org.eclipse.jdt.ui.tests.refactoring;
 
 import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCase.TestMode.COMPARE_WITH_OUTPUT;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IPackageFragment;
@@ -33,7 +33,7 @@ import org.eclipse.jdt.internal.corext.refactoring.util.RefactoringASTParser;
 
 public class ReplaceInvocationsTests extends AbstractJunit4SelectionTestCase {
 
-	@Rule
+	@RegisterExtension
 	public RewriteMethodInvocationsTestSetup fgTestSetup= new RewriteMethodInvocationsTestSetup();
 
 	public ReplaceInvocationsTests() {

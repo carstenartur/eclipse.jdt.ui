@@ -13,19 +13,19 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.model;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.ComparisonFailure;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -69,7 +69,7 @@ public class ContentProviderTests {
 	private IPackageFragment fPackageFragment2;
 	private IFile fFile1;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fWorkspace= ResourcesPlugin.getWorkspace();
 		assertNotNull(fWorkspace);
@@ -81,7 +81,7 @@ public class ContentProviderTests {
 		assertNotNull(fWorkspace);
 
 		fJProject1= JavaProjectHelper.createJavaProject("TestProject1", "bin");//$NON-NLS-1$//$NON-NLS-2$
-		assertNotNull("project1 null", fJProject1);//$NON-NLS-1$
+		assertNotNull(fJProject1, "project1 null");//$NON-NLS-1$
 		// Use the project root as the classpath
 		fJProject1.setRawClasspath(null, null);
 
@@ -100,7 +100,7 @@ public class ContentProviderTests {
 		setUpMockView();
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fJProject1);
 		if (fEnableAutoBuildAfterTesting)

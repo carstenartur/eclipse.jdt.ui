@@ -16,8 +16,8 @@ package org.eclipse.jdt.junit.tests;
 
 import java.io.File;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.junit.JUnitCore;
 import org.eclipse.jdt.junit.TestRunListener;
@@ -36,7 +36,7 @@ import org.eclipse.jdt.ui.tests.core.rules.JUnitWorkspaceTestSetup;
 
 public class TestRunSessionSerializationTests4 extends AbstractTestRunSessionSerializationTests {
 
-	@Rule
+	@RegisterExtension
 	public JUnit4WorkspaceTestSetup jwts= new JUnit4WorkspaceTestSetup();
 
 	@Test

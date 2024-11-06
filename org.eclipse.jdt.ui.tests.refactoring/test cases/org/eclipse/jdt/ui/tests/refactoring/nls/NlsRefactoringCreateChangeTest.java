@@ -13,17 +13,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.nls;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Properties;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -54,14 +54,14 @@ public class NlsRefactoringCreateChangeTest {
 	private IJavaProject fJavaProject;
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJavaProject= pts.getProject();
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJavaProject, "src");
 		fHelper= new NlsRefactoringTestHelper(fJavaProject);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJavaProject, pts.getDefaultClasspath());
 	}
@@ -310,7 +310,7 @@ public class NlsRefactoringCreateChangeTest {
 		NLSRefactoring nls= NLSRefactoring.create(cu);
 
 		NLSSubstitution[] substitutions= nls.getSubstitutions();
-		assertEquals("number of substitutions", 3, substitutions.length);
+		assertEquals(3, substitutions.length, "number of substitutions");
 		substitutions[0].setState(NLSSubstitution.IGNORED);
 
 		performChange(nls);
@@ -361,7 +361,7 @@ public class NlsRefactoringCreateChangeTest {
 		NLSRefactoring nls= NLSRefactoring.create(cu);
 
 		NLSSubstitution[] substitutions= nls.getSubstitutions();
-		assertEquals("number of substitutions", 3, substitutions.length);
+		assertEquals(3, substitutions.length, "number of substitutions");
 		NLSSubstitution sub= substitutions[2];
 
 		sub.setState(NLSSubstitution.EXTERNALIZED);
@@ -416,7 +416,7 @@ public class NlsRefactoringCreateChangeTest {
 		NLSRefactoring nls= NLSRefactoring.create(cu);
 
 		NLSSubstitution[] substitutions= nls.getSubstitutions();
-		assertEquals("number of substitutions", 3, substitutions.length);
+		assertEquals(3, substitutions.length, "number of substitutions");
 		NLSSubstitution sub= substitutions[2];
 		sub.setKey("Test.1");
 		sub.setValue("Hello1");
@@ -469,7 +469,7 @@ public class NlsRefactoringCreateChangeTest {
 		NLSRefactoring nls= NLSRefactoring.create(cu);
 
 		NLSSubstitution[] substitutions= nls.getSubstitutions();
-		assertEquals("number of substitutions", 3, substitutions.length);
+		assertEquals(3, substitutions.length, "number of substitutions");
 		NLSSubstitution sub= substitutions[2];
 		sub.setKey("Test.3");
 		sub.setValue("Hello3");
@@ -523,7 +523,7 @@ public class NlsRefactoringCreateChangeTest {
 		NLSRefactoring nls= NLSRefactoring.create(cu);
 
 		NLSSubstitution[] substitutions= nls.getSubstitutions();
-		assertEquals("number of substitutions", 3, substitutions.length);
+		assertEquals(3, substitutions.length, "number of substitutions");
 		NLSSubstitution sub= substitutions[2];
 		sub.setState(NLSSubstitution.INTERNALIZED);
 
@@ -575,7 +575,7 @@ public class NlsRefactoringCreateChangeTest {
 		NLSRefactoring nls= NLSRefactoring.create(cu);
 
 		NLSSubstitution[] substitutions= nls.getSubstitutions();
-		assertEquals("number of substitutions", 3, substitutions.length);
+		assertEquals(3, substitutions.length, "number of substitutions");
 		NLSSubstitution sub= substitutions[0];
 		sub.setState(NLSSubstitution.INTERNALIZED);
 
@@ -632,7 +632,7 @@ public class NlsRefactoringCreateChangeTest {
 		NLSRefactoring nls= NLSRefactoring.create(cu);
 
 		NLSSubstitution[] substitutions= nls.getSubstitutions();
-		assertEquals("number of substitutions", 3, substitutions.length);
+		assertEquals(3, substitutions.length, "number of substitutions");
 		NLSSubstitution sub= substitutions[2];
 		sub.setValue("Hello3");
 
@@ -685,7 +685,7 @@ public class NlsRefactoringCreateChangeTest {
 		NLSRefactoring nls= NLSRefactoring.create(cu);
 
 		NLSSubstitution[] substitutions= nls.getSubstitutions();
-		assertEquals("number of substitutions", 3, substitutions.length);
+		assertEquals(3, substitutions.length, "number of substitutions");
 		NLSSubstitution sub= substitutions[1];
 		sub.setValue("Hello22");
 
@@ -738,7 +738,7 @@ public class NlsRefactoringCreateChangeTest {
 		NLSRefactoring nls= NLSRefactoring.create(cu);
 
 		NLSSubstitution[] substitutions= nls.getSubstitutions();
-		assertEquals("number of substitutions", 2, substitutions.length);
+		assertEquals(2, substitutions.length, "number of substitutions");
 		NLSSubstitution sub= substitutions[1];
 		sub.setState(NLSSubstitution.EXTERNALIZED);
 		sub.setKey("2");
@@ -788,7 +788,7 @@ public class NlsRefactoringCreateChangeTest {
 		NLSRefactoring nls= NLSRefactoring.create(cu);
 
 		NLSSubstitution[] substitutions= nls.getSubstitutions();
-		assertEquals("number of substitutions", 3, substitutions.length);
+		assertEquals(3, substitutions.length, "number of substitutions");
 		NLSSubstitution sub= substitutions[1];
 		sub.setState(NLSSubstitution.EXTERNALIZED);
 		sub.setKey("2");

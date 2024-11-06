@@ -16,7 +16,7 @@ package org.eclipse.jdt.ui.tests.refactoring;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -90,10 +90,10 @@ public class TestCopyParticipantShared extends CopyParticipant implements IShara
 
 	public static void testNumberOfElements(int expected) {
 		if (expected == 0) {
-			Assert.assertNull(fgInstance);
+			Assertions.assertNull(fgInstance);
 		} else {
-			Assert.assertEquals(expected, fgInstance.fElements.size());
-			Assert.assertEquals(expected, fgInstance.fArguments.size());
+			Assertions.assertEquals(expected, fgInstance.fElements.size());
+			Assertions.assertEquals(expected, fgInstance.fArguments.size());
 		}
 	}
 
@@ -107,23 +107,23 @@ public class TestCopyParticipantShared extends CopyParticipant implements IShara
 	}
 
 	public static void compareArguments(CopyArguments expected, CopyArguments actual) {
-		Assert.assertEquals("Destination: ", expected.getDestination(), actual.getDestination());
+		Assertions.assertEquals(expected.getDestination(), actual.getDestination(), "Destination: ");
 		compareExecutionLog(expected.getExecutionLog(), actual.getExecutionLog());
 	}
 
 	private static void compareExecutionLog(ReorgExecutionLog expected, ReorgExecutionLog actual) {
-		Assert.assertEquals("Canceled: ", expected.isCanceled(), actual.isCanceled());
+		Assertions.assertEquals(expected.isCanceled(), actual.isCanceled(), "Canceled: ");
 		Object[] expectedRenamed= expected.getRenamedElements();
 		Object[] actualRenamed= actual.getRenamedElements();
-		Assert.assertEquals(expectedRenamed.length, actualRenamed.length);
+		Assertions.assertEquals(expectedRenamed.length, actualRenamed.length);
 		for (int j= 0; j < expectedRenamed.length; j++) {
-			Assert.assertEquals(expected.getNewName(expectedRenamed[j]), actual.getNewName(actualRenamed[j]));
+			Assertions.assertEquals(expected.getNewName(expectedRenamed[j]), actual.getNewName(actualRenamed[j]));
 		}
 		Object[] expectedProcessed= expected.getProcessedElements();
 		Object[] actualProcessed= actual.getProcessedElements();
-		Assert.assertEquals(expectedProcessed.length, actualProcessed.length);
+		Assertions.assertEquals(expectedProcessed.length, actualProcessed.length);
 		for (int j= 0; j < expectedProcessed.length; j++) {
-			Assert.assertEquals(expectedProcessed[j], actualProcessed[j]);
+			Assertions.assertEquals(expectedProcessed[j], actualProcessed[j]);
 		}
 	}
 

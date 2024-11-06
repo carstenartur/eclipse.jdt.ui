@@ -15,10 +15,10 @@ package org.eclipse.jdt.ui.tests.quickfix;
 
 import java.util.ArrayList;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -34,13 +34,13 @@ import org.eclipse.jdt.ui.text.java.IJavaCompletionProposal;
 
 public class QuickFixEnablementTest extends QuickFixTest {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= projectSetup.getProject();
 
@@ -48,7 +48,7 @@ public class QuickFixEnablementTest extends QuickFixTest {
 	}
 
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		TestOptions.initializeProjectOptions(fJProject1);
 		JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());

@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 
@@ -49,7 +49,7 @@ public class UseSupertypeWherePossibleTests extends GenericRefactoringTest {
 		return REFACTORING_PATH;
 	}
 
-	@Before
+	@BeforeEach
 	public void before() throws Exception {
 		StubUtility.setCodeTemplate(CodeTemplateContextType.NEWTYPE_ID,
 				"${package_declaration}" +
@@ -82,9 +82,9 @@ public class UseSupertypeWherePossibleTests extends GenericRefactoringTest {
 		descriptor.setReplaceInstanceof(replaceInstanceOf);
 		final RefactoringStatus status= new RefactoringStatus();
 		final Refactoring refactoring= descriptor.createRefactoring(status);
-		assertTrue("status should be ok", status.isOK());
-		assertNotNull("refactoring should not be null", refactoring);
-		assertNull("was supposed to pass", performRefactoring(refactoring));
+		assertTrue(status.isOK(), "status should be ok");
+		assertNotNull(refactoring, "refactoring should not be null");
+		assertNull(performRefactoring(refactoring), "was supposed to pass");
 
 		for (int i= 0; i < units.length; i++) {
 			String expected= getFileContents(getOutputTestFileName(cuNames[i]));

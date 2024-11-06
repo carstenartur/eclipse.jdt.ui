@@ -10,11 +10,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.After;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -32,7 +32,7 @@ import org.eclipse.jdt.internal.ui.viewsupport.JavaElementLinks;
 
 public class BindingLabels9Test extends AbstractBindingLabelsTest {
 
-	@Rule
+	@RegisterExtension
 	public Java9ProjectTestSetup j9p= new Java9ProjectTestSetup();
 
 	public void setUp() throws Exception {
@@ -42,7 +42,7 @@ public class BindingLabels9Test extends AbstractBindingLabelsTest {
 		store.setValue(PreferenceConstants.APPEARANCE_COMPRESS_PACKAGE_NAMES, false);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, j9p.getDefaultClasspath());
 	}
@@ -83,6 +83,6 @@ public class BindingLabels9Test extends AbstractBindingLabelsTest {
 		IJavaElement link= JavaElementLinks.parseURI(extractURI(lab));
 		String linkID= link.getHandleIdentifier();
 		String jreBaseID= fJProject1.findModule("java.base", null).getAncestor(IJavaElement.PACKAGE_FRAGMENT_ROOT).getHandleIdentifier();
-		assertEquals("Linked element", jreBaseID+"<java.lang(Deprecated.class[Deprecated", linkID);
+		assertEquals(jreBaseID + "<java.lang(Deprecated.class[Deprecated", linkID, "Linked element");
 	}
 }

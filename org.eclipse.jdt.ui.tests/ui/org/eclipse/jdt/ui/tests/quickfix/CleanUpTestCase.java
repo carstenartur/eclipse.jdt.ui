@@ -13,9 +13,9 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -24,9 +24,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -90,7 +90,7 @@ public abstract class CleanUpTestCase extends QuickFixTest {
 
 	private CustomProfile fProfile;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
@@ -122,7 +122,7 @@ public abstract class CleanUpTestCase extends QuickFixTest {
 		disableAll();
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(getProject(), getDefaultClasspath());
 		disableAll();
@@ -287,11 +287,11 @@ public abstract class CleanUpTestCase extends QuickFixTest {
 			throw new CoreException(new StatusInfo(status.getSeverity(), status.getMessageMatchingSeverity(status.getSeverity())));
 		}
 
-		assertTrue("Change wasn't executed", perform.changeExecuted());
+		assertTrue(perform.changeExecuted(), "Change wasn't executed");
 
 		Change undo= perform.getUndoChange();
-		assertNotNull("Undo doesn't exist", undo);
-		assertTrue("Undo manager is empty", undoManager.anythingToUndo());
+		assertNotNull(undo, "Undo doesn't exist");
+		assertTrue(undoManager.anythingToUndo(), "Undo manager is empty");
 
 		if (setOfExpectedGroupCategories != null) {
 			Change change= create.getChange();

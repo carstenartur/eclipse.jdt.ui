@@ -16,8 +16,8 @@ package org.eclipse.jdt.ui.tests.refactoring.type;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.ltk.core.refactoring.Refactoring;
 import org.eclipse.ltk.core.refactoring.participants.ProcessorBasedRefactoring;
@@ -40,7 +40,7 @@ public class ExtractInterfaceHeapAcceptanceTests extends RefactoringHeapTestCase
 	private SWTTestProject fProject;
 	private Refactoring fRefactoring;
 
-	@Rule
+	@RegisterExtension
 	public RefactoringPerformanceTestSetup rpts= new RefactoringPerformanceTestSetup();
 
 	@Override

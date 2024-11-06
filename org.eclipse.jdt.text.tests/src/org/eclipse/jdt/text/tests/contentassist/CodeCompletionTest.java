@@ -14,11 +14,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.contentassist;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -33,8 +33,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.junit.runners.MethodSorters;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -830,7 +830,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 			    }
 			}
 			""";
-		assertEquals("", str1, doc.get());
+		assertEquals(str1, doc.get(), "");
 	}
 
 	@Test
@@ -881,7 +881,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 			    }
 			}
 			""";
-		assertEquals("", str1, doc.get());
+		assertEquals(str1, doc.get(), "");
 	}
 
 	@Test
@@ -932,7 +932,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 			    }
 			}
 			""";
-		assertEquals("", str1, doc.get());
+		assertEquals(str1, doc.get(), "");
 	}
 
 	@Test
@@ -1030,7 +1030,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 					proposal= p;
 				}
 			}
-			assertNotNull("no proposal for MyClass()", proposal);
+			assertNotNull(proposal, "no proposal for MyClass()");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			proposal.apply(doc);
@@ -1096,7 +1096,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				proposal= p;
 			}
 		}
-		assertNotNull("no proposal for enum Natural()", proposal);
+		assertNotNull(proposal, "no proposal for enum Natural()");
 
 		IDocument doc= new Document(contents);
 		proposal.apply(doc);
@@ -1169,7 +1169,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 					proposal= p;
 				}
 			}
-			assertNotNull("no proposal for getWriter()", proposal);
+			assertNotNull(proposal, "no proposal for getWriter()");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			proposal.apply(doc);
@@ -1231,7 +1231,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 					proposal= p;
 				}
 			}
-			assertNotNull("no proposal for foo()", proposal);
+			assertNotNull(proposal, "no proposal for foo()");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			proposal.apply(doc);
@@ -1449,7 +1449,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				proposal= p;
 			}
 		}
-		assertNotNull("no proposal for foomethod()", proposal);
+		assertNotNull(proposal, "no proposal for foomethod()");
 
 		IDocument doc= new Document(contents);
 		proposal.apply(doc);
@@ -1505,7 +1505,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				toStringProposal= proposal;
 			}
 		}
-		assertNotNull("no proposal for toString()", toStringProposal);
+		assertNotNull(toStringProposal, "no proposal for toString()");
 
 		IDocument doc= new Document(contents);
 		toStringProposal.apply(doc);
@@ -1567,7 +1567,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				closeProposal= proposal;
 			}
 		}
-		assertNotNull("no proposal for close()", closeProposal);
+		assertNotNull(closeProposal, "no proposal for close()");
 
 		IDocument doc= new Document(contents);
 		closeProposal.apply(doc);
@@ -1630,7 +1630,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				closeProposal= proposal;
 			}
 		}
-		assertNotNull("no proposal for close()", closeProposal);
+		assertNotNull(closeProposal, "no proposal for close()");
 
 		IDocument doc= new Document(contents);
 		closeProposal.apply(doc);
@@ -1710,7 +1710,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				closeProposal= proposal;
 			}
 		}
-		assertNotNull("no proposal for foo()", closeProposal);
+		assertNotNull(closeProposal, "no proposal for foo()");
 
 		IDocument doc= new Document(contents);
 		closeProposal.apply(doc);
@@ -1732,7 +1732,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 		assertEquals(str4, doc.get());
 	}
 
-	@Ignore("BUG_80782")
+	@Disabled("BUG_80782")
 	@Test
 	public void testOverrideCompletion5() throws Exception {
 
@@ -1771,7 +1771,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				toStringProposal= proposal;
 			}
 		}
-		assertNotNull("no proposal for toString()", toStringProposal);
+		assertNotNull(toStringProposal, "no proposal for toString()");
 
 		IDocument doc= new Document(contents);
 		toStringProposal.apply(doc);
@@ -1841,7 +1841,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				closeProposal= proposal;
 			}
 		}
-		assertNotNull("no proposal for foo(Sub)", closeProposal);
+		assertNotNull(closeProposal, "no proposal for foo(Sub)");
 
 		IDocument doc= new Document(contents);
 		closeProposal.apply(doc);
@@ -1903,7 +1903,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				toStringProposal= proposal;
 			}
 		}
-		assertNotNull("no proposal for foo(...)", toStringProposal);
+		assertNotNull(toStringProposal, "no proposal for foo(...)");
 
 		IDocument doc= new Document(contents);
 		toStringProposal.apply(doc);
@@ -1971,7 +1971,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				toStringProposal= proposal;
 			}
 		}
-		assertNotNull("no proposal for foo(...)", toStringProposal);
+		assertNotNull(toStringProposal, "no proposal for foo(...)");
 
 		IDocument doc= new Document(contents);
 		toStringProposal.apply(doc);
@@ -2041,7 +2041,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				toStringProposal= proposal;
 			}
 		}
-		assertNotNull("no proposal for foo(...)", toStringProposal);
+		assertNotNull(toStringProposal, "no proposal for foo(...)");
 
 		IDocument doc= new Document(contents);
 		toStringProposal.apply(doc);
@@ -2105,7 +2105,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				toStringProposal= proposal;
 			}
 		}
-		assertNotNull("no proposal for foo(...)", toStringProposal);
+		assertNotNull(toStringProposal, "no proposal for foo(...)");
 
 		IDocument doc= new Document(contents);
 		toStringProposal.apply(doc);
@@ -2164,7 +2164,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 				toStringProposal= proposal;
 			}
 		}
-		assertNotNull("no proposal for foo(...)", toStringProposal);
+		assertNotNull(toStringProposal, "no proposal for foo(...)");
 
 		IDocument doc= new Document(contents);
 		toStringProposal.apply(doc);
@@ -2225,7 +2225,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 					proposal= p;
 				}
 			}
-			assertNotNull("no proposal for setWriter()", proposal);
+			assertNotNull(proposal, "no proposal for setWriter()");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			proposal.apply(doc);
@@ -2302,7 +2302,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 					proposal= curr;
 				}
 			}
-			assertNotNull("no proposal for foo()", proposal);
+			assertNotNull(proposal, "no proposal for foo()");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			proposal.apply(doc);
@@ -2382,7 +2382,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 					proposal= curr;
 				}
 			}
-			assertNotNull("no proposal for foo()", proposal);
+			assertNotNull(proposal, "no proposal for foo()");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			proposal.apply(doc);
@@ -2436,7 +2436,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 		SharedASTProviderCore.getAST(cu, SharedASTProviderCore.WAIT_YES, null);
 
 		List<ICompletionProposal> proposals= computer.computeCompletionProposals(context, null);
-		assertEquals("Expecting 1 proposal", 1, proposals.size());
+		assertEquals(1, proposals.size(), "Expecting 1 proposal");
 
 		IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 		proposals.get(0).apply(doc);
@@ -2478,7 +2478,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 		codeComplete(cu, offset, collector);
 		IJavaCompletionProposal[] proposals= collector.getJavaCompletionProposals();
 
-		assertEquals("expect 1 proposal", 1, proposals.length);
+		assertEquals(1, proposals.length, "expect 1 proposal");
 
 		IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 		proposals[0].apply(doc);
@@ -2521,7 +2521,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 		codeComplete(cu, offset, collector);
 		IJavaCompletionProposal[] proposals= collector.getJavaCompletionProposals();
 
-		assertEquals("expect 1 proposal", 1, proposals.length);
+		assertEquals(1, proposals.length, "expect 1 proposal");
 
 		IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 		proposals[0].apply(doc);
@@ -2713,7 +2713,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 					}
 				}
 			}
-			assertNotNull("proposal not found", proposal);
+			assertNotNull(proposal, "proposal not found");
 
 			IDocument doc= new Document(contents);
 			proposal.apply(doc);
@@ -2731,7 +2731,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 	}
 
 	private static void assertNumberOf(String name, int is, int expected) {
-		assertEquals("Wrong number of " + name + ", is: " + is + ", expected: " + expected, expected, is);
+		assertEquals(expected, is, "Wrong number of " + name + ", is: " + is + ", expected: " + expected);
 	}
 
 	@Test
@@ -2789,7 +2789,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 		int offset = contents.indexOf("(fred().x") + "(fred().x".length();
 		JavaCompletionProposalComputer computer= new JavaNoTypeCompletionProposalComputer();
 		List<ICompletionProposal> proposals= computer.computeCompletionProposals(createContext(offset, cu), null);
-		assertEquals("expect 1 proposal", 1, proposals.size());
+		assertEquals(1, proposals.size(), "expect 1 proposal");
 
 		IDocument doc= new Document(contents);
 		proposals.get(0).apply(doc);
@@ -2833,7 +2833,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 		int offset = contents.indexOf("argv") + "argv".length();
 		JavaCompletionProposalComputer computer= new JavaNoTypeCompletionProposalComputer();
 		List<ICompletionProposal> proposals= computer.computeCompletionProposals(createContext(offset, cu), null);
-		assertEquals("expect 1 proposal", 1, proposals.size());
+		assertEquals(1, proposals.size(), "expect 1 proposal");
 
 		IDocument doc= new Document(contents);
 		proposals.get(0).apply(doc);
@@ -2882,7 +2882,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 		ICompilationUnit cu= pack0.createCompilationUnit("X.java", contents, false, null);
 		JavaCompletionProposalComputer computer= new JavaNoTypeCompletionProposalComputer();
 		List<ICompletionProposal> proposals= computer.computeCompletionProposals(createContext(cursorLocation, cu), null);
-		assertEquals("expect 1 proposal", 1, proposals.size());
+		assertEquals(1, proposals.size(), "expect 1 proposal");
 
 		IDocument doc= new Document(contents);
 		proposals.get(0).apply(doc);
@@ -2930,7 +2930,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 		ICompilationUnit cu= pack0.createCompilationUnit("X.java", contents, false, null);
 		JavaCompletionProposalComputer computer= new JavaNoTypeCompletionProposalComputer();
 		List<ICompletionProposal> proposals= computer.computeCompletionProposals(createContext(cursorLocation, cu), null);
-		assertEquals("expect 1 proposal", 1, proposals.size());
+		assertEquals(1, proposals.size(), "expect 1 proposal");
 
 		IDocument doc= new Document(contents);
 		proposals.get(0).apply(doc);
@@ -2977,7 +2977,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 		ICompilationUnit cu= pack0.createCompilationUnit("X.java", contents, false, null);
 		JavaCompletionProposalComputer computer= new JavaNoTypeCompletionProposalComputer();
 		List<ICompletionProposal> proposals= computer.computeCompletionProposals(createContext(cursorLocation, cu), null);
-		assertEquals("expect 1 proposal", 1, proposals.size());
+		assertEquals(1, proposals.size(), "expect 1 proposal");
 
 		IDocument doc= new Document(contents);
 		proposals.get(0).apply(doc);
@@ -3021,7 +3021,7 @@ public class CodeCompletionTest extends AbstractCompletionTest {
 		ICompilationUnit cu= pack0.createCompilationUnit("X.java", contents, false, null);
 		JavaCompletionProposalComputer computer= new JavaNoTypeCompletionProposalComputer();
 		List<ICompletionProposal> proposals= computer.computeCompletionProposals(createContext(cursorLocation, cu), null);
-		assertEquals("expect 1 proposal", 1, proposals.size());
+		assertEquals(1, proposals.size(), "expect 1 proposal");
 
 		IDocument doc= new Document(contents);
 		proposals.get(0).apply(doc);

@@ -13,6 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.rules;
 
+import org.junit.jupiter.api.extension.ExtensionContext;
+
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
 import org.eclipse.core.runtime.CoreException;
@@ -66,8 +68,8 @@ public class RefactoringTestSetup extends AbstractRefactoringTestSetup {
 	}
 
 	@Override
-	public void before() throws Exception {
-		super.before();
+	public void beforeEach(ExtensionContext context) throws Exception {
+		super.beforeEach(context);
 		if (JavaPlugin.getActivePage() != null)
 			JavaPlugin.getActivePage().close(); // Closed perspective is NOT restored in tearDown()!
 
@@ -83,13 +85,13 @@ public class RefactoringTestSetup extends AbstractRefactoringTestSetup {
 	}
 
 	@Override
-	public void after() {
+	public void afterEach(ExtensionContext context) {
 		try {
 			JavaProjectHelper.delete(fgJavaTestProject);
 		} catch (CoreException e) {
 			e.printStackTrace();
 		}
-		super.after();
+		super.afterEach(context);
 	}
 }
 

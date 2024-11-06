@@ -13,13 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -43,19 +43,19 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 import org.eclipse.jdt.internal.ui.JavaPlugin;
 
 public class TypeHierarchyTest {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private IJavaProject fJavaProject1;
 	private IJavaProject fJavaProject2;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJavaProject1= pts.getProject();
 		fJavaProject2= JavaProjectHelper.createJavaProject("TestProject2", "bin");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown () throws Exception {
 		JavaProjectHelper.clear(fJavaProject1, pts.getDefaultClasspath());
 		JavaProjectHelper.delete(fJavaProject2);
@@ -80,10 +80,10 @@ public class TypeHierarchyTest {
 		ITypeHierarchy hierarchy= type2.newSupertypeHierarchy(null);
 		IType[] allTypes= hierarchy.getAllTypes();
 
-		assertEquals("Should contain 3 types, contains: " + allTypes.length, 3, allTypes.length);
+		assertEquals(3, allTypes.length, "Should contain 3 types, contains: " + allTypes.length);
 
 		IType type= fJavaProject2.findType("pack1.A");
-		assertNotNull("Type not found", type);
+		assertNotNull(type, "Type not found");
 	}
 
 	@Test
@@ -107,8 +107,8 @@ public class TypeHierarchyTest {
 
 		IType[] allTypes= hierarchy.getAllTypes();
 
-		assertEquals("Should contain 3 types, contains: " + allTypes.length, 3, allTypes.length);
-		assertEquals("Update count should be 0, is: " + updateCount[0], 0, updateCount[0]);
+		assertEquals(3, allTypes.length, "Should contain 3 types, contains: " + allTypes.length);
+		assertEquals(0, updateCount[0], "Update count should be 0, is: " + updateCount[0]);
 
 		IEditorPart part= JavaUI.openInEditor(type2);
 		try {
@@ -122,8 +122,8 @@ public class TypeHierarchyTest {
 			allTypes= hierarchy.getAllTypes();
 
 			// no update of hierarchies on working copies
-			assertEquals("Update count should be 0, is: " + updateCount[0], 0, updateCount[0]);
-			assertEquals("Should contain 3 types, contains: " + allTypes.length, 3, allTypes.length);
+			assertEquals(0, updateCount[0], "Update count should be 0, is: " + updateCount[0]);
+			assertEquals(3, allTypes.length, "Should contain 3 types, contains: " + allTypes.length);
 
 			part.doSave(null);
 			SharedASTProviderCore.getAST(cu2, SharedASTProviderCore.WAIT_YES, null);
@@ -132,9 +132,9 @@ public class TypeHierarchyTest {
 			allTypes= hierarchy.getAllTypes();
 
 			// update after save
-			assertEquals("Update count should be 1, is: " + updateCount[0], 1, updateCount[0]);
+			assertEquals(1, updateCount[0], "Update count should be 1, is: " + updateCount[0]);
 			hierarchy.refresh(null);
-			assertEquals("Should contain 2 types, contains: " + allTypes.length, 2, allTypes.length);
+			assertEquals(2, allTypes.length, "Should contain 2 types, contains: " + allTypes.length);
 
 		} finally {
 			JavaPlugin.getActivePage().closeAllEditors(false);
@@ -143,8 +143,8 @@ public class TypeHierarchyTest {
 		allTypes= hierarchy.getAllTypes();
 
 		// update after save
-		assertEquals("Update count should be 1, is: " + updateCount[0], 1, updateCount[0]);
-		assertEquals("Should contain 2 types, contains: " + allTypes.length, 2, allTypes.length);
+		assertEquals(1, updateCount[0], "Update count should be 1, is: " + updateCount[0]);
+		assertEquals(2, allTypes.length, "Should contain 2 types, contains: " + allTypes.length);
 
 
 	}
@@ -172,8 +172,8 @@ public class TypeHierarchyTest {
 
 		IType[] allTypes= hierarchy.getAllTypes();
 
-		assertEquals("Update count should be 0, is: " + updateCount[0], 0, updateCount[0]);
-		assertEquals("Should contain 3 types, contains: " + allTypes.length, 3, allTypes.length);
+		assertEquals(0, updateCount[0], "Update count should be 0, is: " + updateCount[0]);
+		assertEquals(3, allTypes.length, "Should contain 3 types, contains: " + allTypes.length);
 
 		try {
 
@@ -187,8 +187,8 @@ public class TypeHierarchyTest {
 			allTypes= hierarchy.getAllTypes();
 
 			// no update of hierarchies on working copies
-			assertEquals("Update count should be 0, is: " + updateCount[0], 0, updateCount[0]);
-			assertEquals("Should contain 3 types, contains: " + allTypes.length, 3, allTypes.length);
+			assertEquals(0, updateCount[0], "Update count should be 0, is: " + updateCount[0]);
+			assertEquals(3, allTypes.length, "Should contain 3 types, contains: " + allTypes.length);
 
 			part.doSave(null);
 			SharedASTProviderCore.getAST(cu2, SharedASTProviderCore.WAIT_YES, null);
@@ -197,9 +197,9 @@ public class TypeHierarchyTest {
 			allTypes= hierarchy.getAllTypes();
 
 			// update after save
-			assertEquals("Update count should be 1, is: " + updateCount[0], 1, updateCount[0]);
+			assertEquals(1, updateCount[0], "Update count should be 1, is: " + updateCount[0]);
 			hierarchy.refresh(null);
-			assertEquals("Should contain 2 types, contains: " + allTypes.length, 2, allTypes.length);
+			assertEquals(2, allTypes.length, "Should contain 2 types, contains: " + allTypes.length);
 
 		} finally {
 			JavaPlugin.getActivePage().closeAllEditors(false);
@@ -208,8 +208,8 @@ public class TypeHierarchyTest {
 		allTypes= hierarchy.getAllTypes();
 
 		// update after save
-		assertEquals("Update count should be 1, is: " + updateCount[0], 1, updateCount[0]);
-		assertEquals("Should contain 2 types, contains: " + allTypes.length, 2, allTypes.length);
+		assertEquals(1, updateCount[0], "Update count should be 1, is: " + updateCount[0]);
+		assertEquals(2, allTypes.length, "Should contain 2 types, contains: " + allTypes.length);
 
 	}
 
@@ -237,8 +237,8 @@ public class TypeHierarchyTest {
 
 		IType[] allTypes= hierarchy.getAllTypes();
 
-		assertEquals("Should contain 3 types, contains: " + allTypes.length, 3, allTypes.length);
-		assertEquals("Update count should be 0, is: " + updateCount[0], 0, updateCount[0]);
+		assertEquals(3, allTypes.length, "Should contain 3 types, contains: " + allTypes.length);
+		assertEquals(0, updateCount[0], "Update count should be 0, is: " + updateCount[0]);
 
 		try {
 			IDocument document= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
@@ -253,8 +253,8 @@ public class TypeHierarchyTest {
 			allTypes= hierarchy.getAllTypes();
 
 			// no update of hierarchies on working copies
-			assertEquals("Should contain 3 types, contains: " + allTypes.length, 3, allTypes.length);
-			assertEquals("Update count should be 0, is: " + updateCount[0], 0, updateCount[0]);
+			assertEquals(3, allTypes.length, "Should contain 3 types, contains: " + allTypes.length);
+			assertEquals(0, updateCount[0], "Update count should be 0, is: " + updateCount[0]);
 
 			// no save
 
@@ -265,7 +265,7 @@ public class TypeHierarchyTest {
 		allTypes= hierarchy.getAllTypes();
 
 		// update after close: hierarchy changed because of reconcile delta from closeAllEditors
-		assertEquals("Should contain 3 types, contains: " + allTypes.length, 3, allTypes.length);
-		assertEquals("Update count should be 1, is: " + updateCount[0], 1, updateCount[0]);
+		assertEquals(3, allTypes.length, "Should contain 3 types, contains: " + allTypes.length);
+		assertEquals(1, updateCount[0], "Update count should be 1, is: " + updateCount[0]);
 	}
 }

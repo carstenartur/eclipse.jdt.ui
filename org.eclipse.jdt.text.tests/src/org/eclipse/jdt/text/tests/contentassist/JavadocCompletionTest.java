@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.contentassist;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.core.JavaCore;
 
@@ -118,7 +118,7 @@ public class JavadocCompletionTest extends AbstractCompletionTest {
 		assertTypeJavadocProposal(" * @see java.util.List#siz|", "size(", " * @see java.util.List#size()|");
 	}
 
-	@Ignore("JavadocCompletionTest.testSeeMethodWithoutImport() - no best-effort imports with Core completion")
+	@Disabled("JavadocCompletionTest.testSeeMethodWithoutImport() - no best-effort imports with Core completion")
 	@Test
 	public void testSeeMethodWithoutImport() throws Exception {
 		assertTypeJavadocProposal(" * @see List#siz|", "size(", " * @see List#size()|");
@@ -157,7 +157,7 @@ public class JavadocCompletionTest extends AbstractCompletionTest {
 	public void testDirectLinkType() throws Exception {
 		assertTypeJavadocProposal(" * Prefix List|", "{@link List}", " * Prefix {@link java.util.List}|");
 	}
-	@Ignore("BUG_113544 not testing autoclosing behavior, see https://bugs.eclipse.org/bugs/show_bug.cgi?id=113544")
+	@Disabled("BUG_113544 not testing autoclosing behavior, see https://bugs.eclipse.org/bugs/show_bug.cgi?id=113544")
 	@Test
 	public void testDirectLinkTypeNoAutoClose() throws Exception {
 		getJDTUIPrefs().setValue(PreferenceConstants.EDITOR_CLOSE_BRACKETS, false);
@@ -212,7 +212,7 @@ public class JavadocCompletionTest extends AbstractCompletionTest {
 		assertTypeJavadocProposal(" * Prefix java.text.DF|", "{@link DateFormat}", " * Prefix {@link java.text.DateFormat}|");
 	}
 
-	@Ignore("BUG_113544 not testing autoclosing behavior, see https://bugs.eclipse.org/bugs/show_bug.cgi?id=113544")
+	@Disabled("BUG_113544 not testing autoclosing behavior, see https://bugs.eclipse.org/bugs/show_bug.cgi?id=113544")
 	@Test
 	public void testDirectLinkTypeNoAutoCloseImportsOn() throws Exception {
 		expectImport("java.util.List");
@@ -239,7 +239,7 @@ public class JavadocCompletionTest extends AbstractCompletionTest {
 		assertTypeJavadocProposal(" * Prefix {@link Comple|}", "Completion_testLinkTypeSameTypeClosed", " * Prefix {@link Completion_testLinkTypeSameTypeClosed|}");
 	}
 
-	@Ignore("JavadocCompletionTest.testLinkMethodWithoutImport() - no best-effort imports with Core completion")
+	@Disabled("JavadocCompletionTest.testLinkMethodWithoutImport() - no best-effort imports with Core completion")
 	@Test
 	public void testLinkMethodWithoutImport() throws Exception {
 		assertTypeJavadocProposal(" * Prefix {@link List#siz|", "size(", " * Prefix {@link List#size()|");
@@ -432,7 +432,7 @@ public class JavadocCompletionTest extends AbstractCompletionTest {
 		setUp();
 	}
 
-	@Ignore("no HTML tag proposals in core jdoc assist")
+	@Disabled("no HTML tag proposals in core jdoc assist")
 	@Test
 	public void testHTMLTags() throws Exception {
 		tearDown();

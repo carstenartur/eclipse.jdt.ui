@@ -16,8 +16,8 @@ package org.eclipse.jdt.ui.tests.refactoring;
 import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCase.TestMode.COMPARE_WITH_OUTPUT;
 import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCase.TestMode.INVALID_SELECTION;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.runner.RunWith;
 
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -36,7 +36,7 @@ import org.eclipse.jdt.ui.tests.IgnoreInheritedTests;
 @RunWith(CustomBaseRunner.class)
 public class SurroundWithResourcesTests1d8 extends AbstractJunit4SelectionTestCase {
 
-	@Rule
+	@RegisterExtension
 	public SurroundWithResourcesTestSetup1d8 fgTestSetup=new SurroundWithResourcesTestSetup1d8();
 
 	protected IPackageFragmentRoot getRoot() {

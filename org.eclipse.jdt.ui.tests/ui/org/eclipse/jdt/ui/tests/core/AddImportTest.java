@@ -14,14 +14,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -61,12 +61,12 @@ import org.eclipse.jdt.internal.ui.text.correction.AssistContext;
 
 public class AddImportTest extends CoreTests {
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= pts.getProject();
 		JavaProjectHelper.set18CompilerOptions(fJProject1);
@@ -76,7 +76,7 @@ public class AddImportTest extends CoreTests {
 		JavaCore.setOptions(options);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, pts.getDefaultClasspath());
 	}
@@ -1996,7 +1996,7 @@ public class AddImportTest extends CoreTests {
 		ImportRewrite importRewrite= newImportsRewrite(context.getASTRoot(), importOrder, threshold, staticThreshold, true);
 
 		String qualifier= importRewrite.addImport(toImport, new ContextSensitiveImportRewriteContext(context.getASTRoot(), offset, importRewrite));
-		assertEquals("Type conflict not detected", expectedQualifier, qualifier);
+		assertEquals(expectedQualifier, qualifier, "Type conflict not detected");
 		return importRewrite.getAddedImports();
 	}
 
@@ -2010,7 +2010,7 @@ public class AddImportTest extends CoreTests {
 		ImportRewrite importRewrite= newImportsRewrite(context.getASTRoot(), importOrder, threshold, staticThreshold, true);
 
 		String qualifier= importRewrite.addStaticImport(declaringClassName, fieldName, true, new ContextSensitiveImportRewriteContext(context.getASTRoot(), offset, importRewrite));
-		assertEquals("Type conflict not detected", expectedQualifier, qualifier);
+		assertEquals(expectedQualifier, qualifier, "Type conflict not detected");
 		return importRewrite.getAddedStaticImports();
 	}
 

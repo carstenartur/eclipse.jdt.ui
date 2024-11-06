@@ -20,11 +20,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.jarexport;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,12 +34,12 @@ import java.util.zip.ZipFile;
 
 import javax.xml.parsers.DocumentBuilder;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.xml.sax.InputSource;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -104,22 +104,26 @@ import org.eclipse.jdt.internal.ui.util.BusyIndicatorRunnableContext;
 
 public class FatJarExportTests {
 
-	@Rule
-	public ProjectTestSetup pts=new ProjectTestSetup();
+	private String testName;
 
-	@Rule
-	public TestName tn=new TestName();
+	@BeforeEach
+	void init(TestInfo testInfo) {
+		this.testName= testInfo.getDisplayName();
+	}
+
+	@RegisterExtension
+	public ProjectTestSetup pts=new ProjectTestSetup();
 
 	private static final int JAVA_RUN_TIMEOUT= 300; // 10th of a second
 
-	@BeforeClass
+	@BeforeAll
 	public static void setUpTest() {
 	}
 
 	private IJavaProject fProject;
 	private IPackageFragmentRoot fMainRoot;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fProject= pts.getProject();
 
@@ -139,7 +143,7 @@ public class FatJarExportTests {
 		fragment.createCompilationUnit("Main.java", str, true, null); //$NON-NLS-1$
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fProject, pts.getDefaultClasspath());
 	}
@@ -217,7 +221,7 @@ public class FatJarExportTests {
 
 		FatJarAntExporter antExporter= libraryHandler.getAntExporter(antScriptLocation(testName), data.getAbsoluteJarLocation(), createTempLaunchConfig(project));
 		antExporter.run(status);
-		assertTrue(getProblems(status), status.getSeverity() == IStatus.OK || status.getSeverity() == IStatus.INFO);
+		assertTrue(status.getSeverity() == IStatus.OK || status.getSeverity() == IStatus.INFO, getProblems(status));
 
 		return data;
 	}
@@ -251,19 +255,19 @@ public class FatJarExportTests {
 				minorVersion = ((in.read() << 8) + in.read());
 				majorVersion = ((in.read() << 8) + in.read());
 			}
-			assertEquals("loader is a class file", 0xCAFEBABE, magic); //$NON-NLS-1$
-			assertEquals("loader compiled with JDK 1.8", "52.0", majorVersion + "." + minorVersion); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			assertEquals(0xCAFEBABE, magic, "loader is a class file"); //$NON-NLS-1$
+			assertEquals("52.0", majorVersion + "." + minorVersion, "loader compiled with JDK 1.8"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 		}
 
 		MultiStatus status= new MultiStatus(JavaUI.ID_PLUGIN, 0, "", null); //$NON-NLS-1$
 
 		FatJarAntExporter antExporter= libraryHandler.getAntExporter(antScriptLocation(testName), data.getAbsoluteJarLocation(), createTempLaunchConfig(project));
 		antExporter.run(status);
-		assertTrue(getProblems(status), status.getSeverity() == IStatus.OK || status.getSeverity() == IStatus.INFO);
+		assertTrue(status.getSeverity() == IStatus.OK || status.getSeverity() == IStatus.INFO, getProblems(status));
 
 		// check that jar-rsrc-loader.zip file was created next to build.xml
 		IPath zipLocation= antScriptLocation(testName).removeLastSegments(1).append(FatJarRsrcUrlBuilder.JAR_RSRC_LOADER_ZIP);
-		assertTrue("loader zip missing: " + zipLocation.toOSString(), zipLocation.toFile().exists());
+		assertTrue(zipLocation.toFile().exists(), "loader zip missing: " + zipLocation.toOSString());
 
 		return data;
 	}
@@ -288,14 +292,14 @@ public class FatJarExportTests {
 			File jarFile= new File(generatedArchive.getName());
 			String subFolderName= jarFile.getName().replaceFirst("^(.*)[.]jar$", "$1_lib"); //$NON-NLS-1$//$NON-NLS-2$
 			File subFolderDir= new File(jarFile.getParentFile(), subFolderName);
-			assertTrue("actual: '" + subFolderDir.toString() + "'", subFolderDir.isDirectory()); //$NON-NLS-1$//$NON-NLS-2$
+			assertTrue(subFolderDir.isDirectory(), "actual: '" + subFolderDir.toString() + "'"); //$NON-NLS-1$//$NON-NLS-2$
 		}
 
 		MultiStatus status= new MultiStatus(JavaUI.ID_PLUGIN, 0, "", null); //$NON-NLS-1$
 
 		FatJarAntExporter antExporter= libraryHandler.getAntExporter(antScriptLocation(testName), data.getAbsoluteJarLocation(), createTempLaunchConfig(project));
 		antExporter.run(status);
-		assertTrue(getProblems(status), status.getSeverity() == IStatus.OK || status.getSeverity() == IStatus.INFO);
+		assertTrue(status.getSeverity() == IStatus.OK || status.getSeverity() == IStatus.INFO, getProblems(status));
 
 		return data;
 	}
@@ -304,7 +308,7 @@ public class FatJarExportTests {
 		ResourcesPlugin.getWorkspace().build(IncrementalProjectBuilder.FULL_BUILD, null);
 
 		for (IMarker marker : ResourcesPlugin.getWorkspace().getRoot().findMarkers(null, true, IResource.DEPTH_INFINITE)) {
-			assertNotEquals((String) marker.getAttribute(IMarker.MESSAGE), IMarker.SEVERITY_ERROR, marker.getAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO));
+			assertNotEquals(IMarker.SEVERITY_ERROR, marker.getAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO), (String) marker.getAttribute(IMarker.MESSAGE));
 		}
 	}
 
@@ -325,7 +329,7 @@ public class FatJarExportTests {
 
 		MultiStatus status= new MultiStatus(JavaUI.ID_PLUGIN, 0, "", null); //$NON-NLS-1$
 		Object[] children= FatJarPackageWizardPage.getSelectedElementsWithoutContainedChildren(launchConfig, data, new BusyIndicatorRunnableContext(), status);
-		assertTrue(getProblems(status), status.getSeverity() == IStatus.OK || status.getSeverity() == IStatus.INFO);
+		assertTrue(status.getSeverity() == IStatus.OK || status.getSeverity() == IStatus.INFO, getProblems(status));
 		data.setElements(children);
 
 		data.setJarBuilder(libraryHandler.getBuilder(data));
@@ -477,7 +481,7 @@ public class FatJarExportTests {
 		assertEquals("create_run_jar", xmlTarget.getAttribute("name")); //$NON-NLS-1$//$NON-NLS-2$
 
 		Element xmlJar= (Element)xmlTarget.getElementsByTagName("jar").item(0); //$NON-NLS-1$
-		assertTrue("actual: " + xmlJar.getAttribute("destfile"), xmlJar.getAttribute("destfile").endsWith(archiveName)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		assertTrue(xmlJar.getAttribute("destfile").endsWith(archiveName), "actual: " + xmlJar.getAttribute("destfile")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
 		Element xmlManifest= (Element)xmlJar.getElementsByTagName("manifest").item(0); //$NON-NLS-1$
 
@@ -487,7 +491,7 @@ public class FatJarExportTests {
 
 		Element xmlAttribute2= (Element)xmlManifest.getElementsByTagName("attribute").item(1); //$NON-NLS-1$
 		assertEquals("Class-Path", xmlAttribute2.getAttribute("name")); //$NON-NLS-1$ //$NON-NLS-2$
-		assertTrue("actual value: " + xmlAttribute2.getAttribute("value"), xmlAttribute2.getAttribute("value").startsWith(".")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+		assertTrue(xmlAttribute2.getAttribute("value").startsWith("."), "actual value: " + xmlAttribute2.getAttribute("value")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 
 		NodeList xmlFilesets= xmlJar.getElementsByTagName("fileset"); //$NON-NLS-1$
 		assertEquals(filesets.length, xmlFilesets.getLength());
@@ -501,14 +505,14 @@ public class FatJarExportTests {
 					break;
 				}
 			}
-			assertTrue("found fileset: '" + dir + "'", found); //$NON-NLS-1$//$NON-NLS-2$
+			assertTrue(found, "found fileset: '" + dir + "'"); //$NON-NLS-1$//$NON-NLS-2$
 		}
 
 		Element xmlDelete= (Element)xmlTarget.getElementsByTagName("delete").item(0); //$NON-NLS-1$
-		assertTrue("actual: " + xmlDelete.getAttribute("dir"), xmlDelete.getAttribute("dir").endsWith(subfolderName)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		assertTrue(xmlDelete.getAttribute("dir").endsWith(subfolderName), "actual: " + xmlDelete.getAttribute("dir")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
 		Element xmlMkdir= (Element)xmlTarget.getElementsByTagName("mkdir").item(0); //$NON-NLS-1$
-		assertTrue("actual: " + xmlMkdir.getAttribute("dir"), xmlMkdir.getAttribute("dir").endsWith(subfolderName)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		assertTrue(xmlMkdir.getAttribute("dir").endsWith(subfolderName), "actual: " + xmlMkdir.getAttribute("dir")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
 		NodeList xmlCopies= xmlTarget.getElementsByTagName("copy"); //$NON-NLS-1$
 		assertEquals(zipfilesets.length, xmlCopies.getLength());
@@ -523,7 +527,7 @@ public class FatJarExportTests {
 					break;
 				}
 			}
-			assertTrue("find zipfileset lib: '" + libName + "'", found); //$NON-NLS-1$  //$NON-NLS-2$
+			assertTrue(found, "find zipfileset lib: '" + libName + "'"); //$NON-NLS-1$  //$NON-NLS-2$
 		}
 
 	}
@@ -541,7 +545,7 @@ public class FatJarExportTests {
 		assertEquals("create_run_jar", xmlTarget.getAttribute("name")); //$NON-NLS-1$//$NON-NLS-2$
 
 		Element xmlJar= (Element)xmlTarget.getElementsByTagName("jar").item(0); //$NON-NLS-1$
-		assertTrue("actual: " + xmlJar.getAttribute("destfile"), xmlJar.getAttribute("destfile").endsWith(archiveName)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		assertTrue(xmlJar.getAttribute("destfile").endsWith(archiveName), "actual: " + xmlJar.getAttribute("destfile")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
 		Element xmlManifest= (Element)xmlJar.getElementsByTagName("manifest").item(0); //$NON-NLS-1$
 
@@ -559,7 +563,7 @@ public class FatJarExportTests {
 
 		Element xmlAttribute4= (Element)xmlManifest.getElementsByTagName("attribute").item(3); //$NON-NLS-1$
 		assertEquals("Rsrc-Class-Path", xmlAttribute4.getAttribute("name")); //$NON-NLS-1$ //$NON-NLS-2$
-		assertTrue("actual value: " + xmlAttribute4.getAttribute("value"), xmlAttribute4.getAttribute("value").startsWith("./")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+		assertTrue(xmlAttribute4.getAttribute("value").startsWith("./"), "actual value: " + xmlAttribute4.getAttribute("value")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 
 		NodeList xmlFilesets= xmlJar.getElementsByTagName("fileset"); //$NON-NLS-1$
 		assertEquals(filesets.length, xmlFilesets.getLength());
@@ -576,7 +580,7 @@ public class FatJarExportTests {
 					break;
 				}
 			}
-			assertTrue("found fileset: '" + dir + "'", found); //$NON-NLS-1$//$NON-NLS-2$
+			assertTrue(found, "found fileset: '" + dir + "'"); //$NON-NLS-1$//$NON-NLS-2$
 		}
 
 		for (int i= 0; i < xmlZipfilesets.getLength(); i++) {
@@ -592,7 +596,7 @@ public class FatJarExportTests {
 					break;
 				}
 			}
-			assertTrue("find zipfileset lib: '" + libName + "'", found); //$NON-NLS-1$  //$NON-NLS-2$
+			assertTrue(found, "find zipfileset lib: '" + libName + "'"); //$NON-NLS-1$  //$NON-NLS-2$
 		}
 	}
 
@@ -608,7 +612,7 @@ public class FatJarExportTests {
 		assertEquals("create_run_jar", xmlTarget.getAttribute("name")); //$NON-NLS-1$//$NON-NLS-2$
 
 		Element xmlJar= (Element)xmlTarget.getElementsByTagName("jar").item(0); //$NON-NLS-1$
-		assertTrue("actual: " + xmlJar.getAttribute("destfile"), xmlJar.getAttribute("destfile").endsWith(archiveName)); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		assertTrue(xmlJar.getAttribute("destfile").endsWith(archiveName), "actual: " + xmlJar.getAttribute("destfile")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 		assertEquals("mergewithoutmain", xmlJar.getAttribute("filesetmanifest")); //$NON-NLS-1$ //$NON-NLS-2$
 
 		Element xmlManifest= (Element)xmlJar.getElementsByTagName("manifest").item(0); //$NON-NLS-1$
@@ -636,7 +640,7 @@ public class FatJarExportTests {
 					break;
 				}
 			}
-			assertTrue("found fileset: '" + dir + "'", found); //$NON-NLS-1$//$NON-NLS-2$
+			assertTrue(found, "found fileset: '" + dir + "'"); //$NON-NLS-1$//$NON-NLS-2$
 		}
 
 		for (int i= 0; i < xmlZipfilesets.getLength(); i++) {
@@ -650,7 +654,7 @@ public class FatJarExportTests {
 					break;
 				}
 			}
-			assertTrue("found zipfileset: '" + src + "'", found); //$NON-NLS-1$  //$NON-NLS-2$
+			assertTrue(found, "found zipfileset: '" + src + "'"); //$NON-NLS-1$  //$NON-NLS-2$
 		}
 	}
 
@@ -673,7 +677,7 @@ public class FatJarExportTests {
 	}
 
 	private String getName() {
-		return tn.getMethodName();
+		return testName;
 	}
 
 	@Test
@@ -979,8 +983,8 @@ public class FatJarExportTests {
 	@Test
 	public void externalClassFolder() throws Exception {
 		File classFolder= JavaTestPlugin.getDefault().getFileInPlugin(new Path("testresources/externalClassFolder/"));//$NON-NLS-1$
-		assertNotNull("class folder not found", classFolder);//$NON-NLS-1$
-		assertTrue("class folder not found", classFolder.exists());
+		assertNotNull(classFolder, "class folder not found");//$NON-NLS-1$
+		assertTrue(classFolder.exists(), "class folder not found");
 		IPackageFragmentRoot externalRoot= JavaProjectHelper.addLibrary(fProject, Path.fromOSString(classFolder.getPath()), null, null);
 
 		try {

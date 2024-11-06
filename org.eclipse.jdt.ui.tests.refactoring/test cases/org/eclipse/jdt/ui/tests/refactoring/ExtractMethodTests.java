@@ -24,15 +24,15 @@ package org.eclipse.jdt.ui.tests.refactoring;
 import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCase.TestMode.COMPARE_WITH_OUTPUT;
 import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCase.TestMode.INVALID_SELECTION;
 import static org.eclipse.jdt.ui.tests.refactoring.AbstractJunit4SelectionTestCase.TestMode.VALID_SELECTION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -52,7 +52,7 @@ public class ExtractMethodTests extends AbstractJunit4SelectionTestCase {
 
 	private static final boolean BUG_405778= true; //XXX: [1.8][dom ast] method body recovery broken (empty body)
 
-	@Rule
+	@RegisterExtension
 	public ExtractMethodTestSetup fgTestSetup= new ExtractMethodTestSetup();
 
 	@Override

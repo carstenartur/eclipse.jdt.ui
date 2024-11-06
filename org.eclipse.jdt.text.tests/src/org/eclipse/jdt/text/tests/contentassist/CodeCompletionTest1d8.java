@@ -14,17 +14,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.contentassist;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Hashtable;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.NullTestUtils;
@@ -75,7 +75,7 @@ import org.eclipse.jdt.internal.ui.text.java.JavaLambdaCompletionProposal;
  * Those tests are made to run on Java Spider 1.8 .
  */
 public class CodeCompletionTest1d8 extends AbstractCompletionTest {
-	@Rule
+	@RegisterExtension
 	public Java1d8ProjectTestSetup j18s= new Java1d8ProjectTestSetup();
 
 	private IJavaProject fJProject1;
@@ -180,11 +180,11 @@ public class CodeCompletionTest1d8 extends AbstractCompletionTest {
 
 		for (IJavaCompletionProposal curr : collector.getJavaCompletionProposals()) {
 			if (curr.getDisplayString().startsWith("thenComparingLong")) {
-				assertNull("more than one proposal for thenComparingLong()", proposal);
+				assertNull(proposal, "more than one proposal for thenComparingLong()");
 				proposal= curr;
 			}
 		}
-		assertNotNull("no proposal for thenComparingLong()", proposal);
+		assertNotNull(proposal, "no proposal for thenComparingLong()");
 		IEditorPart part= JavaUI.openInEditor(cu);
 		IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 		proposal.apply(doc);
@@ -815,7 +815,7 @@ public class CodeCompletionTest1d8 extends AbstractCompletionTest {
 		assertEquals(str2, doc.get());
 	}
 	private static void assertNumberOf(String name, int is, int expected) {
-		assertEquals("Wrong number of " + name + ", is: " + is + ", expected: " + expected, expected, is);
+		assertEquals(expected, is, "Wrong number of " + name + ", is: " + is + ", expected: " + expected);
 	}
 
 	@Test
@@ -931,7 +931,7 @@ public class CodeCompletionTest1d8 extends AbstractCompletionTest {
 					proposal= p;
 				}
 			}
-			assertNotNull("no proposal for run()", proposal);
+			assertNotNull(proposal, "no proposal for run()");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			proposal.apply(doc);
@@ -989,11 +989,11 @@ public class CodeCompletionTest1d8 extends AbstractCompletionTest {
 			for (IJavaCompletionProposal iJavaCompletionProposal : proposals) {
 				System.out.println(iJavaCompletionProposal);
 			}
-			assertEquals("number of proposals", 1, proposals.length);
+			assertEquals(1, proposals.length, "number of proposals");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			IJavaCompletionProposal proposal= proposals[0];
-			assertTrue("valid proposal", ((ICompletionProposalExtension2)proposal).validate(doc, offset, null));
+			assertTrue(((ICompletionProposalExtension2) proposal).validate(doc, offset, null), "valid proposal");
 			proposal.apply(doc);
 
 			String str1= """
@@ -1044,11 +1044,11 @@ public class CodeCompletionTest1d8 extends AbstractCompletionTest {
 
 			IJavaCompletionProposal[] proposals= collector.getJavaCompletionProposals();
 			Optional<IJavaCompletionProposal> result = Stream.of(proposals).filter(JavaLambdaCompletionProposal.class::isInstance).findFirst();
-			assertTrue("doesn't contain JavaLambdaCompletionProposal", result.isPresent());
+			assertTrue(result.isPresent(), "doesn't contain JavaLambdaCompletionProposal");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			IJavaCompletionProposal proposal= result.get();
-			assertTrue("valid proposal", ((ICompletionProposalExtension2)proposal).validate(doc, offset, null));
+			assertTrue(((ICompletionProposalExtension2) proposal).validate(doc, offset, null), "valid proposal");
 			proposal.apply(doc);
 
 			String str1= """
@@ -1099,11 +1099,11 @@ public class CodeCompletionTest1d8 extends AbstractCompletionTest {
 
 			IJavaCompletionProposal[] proposals= collector.getJavaCompletionProposals();
 			Optional<IJavaCompletionProposal> result = Stream.of(proposals).filter(JavaLambdaCompletionProposal.class::isInstance).findFirst();
-			assertTrue("doesn't contain JavaLambdaCompletionProposal", result.isPresent());
+			assertTrue(result.isPresent(), "doesn't contain JavaLambdaCompletionProposal");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			IJavaCompletionProposal proposal= result.get();
-			assertTrue("valid proposal", ((ICompletionProposalExtension2)proposal).validate(doc, offset, null));
+			assertTrue(((ICompletionProposalExtension2) proposal).validate(doc, offset, null), "valid proposal");
 			proposal.apply(doc);
 
 			String str1= """
@@ -1152,11 +1152,11 @@ public class CodeCompletionTest1d8 extends AbstractCompletionTest {
 
 			IJavaCompletionProposal[] proposals= collector.getJavaCompletionProposals();
 			Optional<IJavaCompletionProposal> result = Stream.of(proposals).filter(JavaLambdaCompletionProposal.class::isInstance).findFirst();
-			assertTrue("doesn't contain JavaLambdaCompletionProposal", result.isPresent());
+			assertTrue(result.isPresent(), "doesn't contain JavaLambdaCompletionProposal");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			IJavaCompletionProposal proposal= result.get();
-			assertTrue("valid proposal", ((ICompletionProposalExtension2)proposal).validate(doc, offset, null));
+			assertTrue(((ICompletionProposalExtension2) proposal).validate(doc, offset, null), "valid proposal");
 			proposal.apply(doc);
 
 			String str1= """
@@ -1204,11 +1204,11 @@ public class CodeCompletionTest1d8 extends AbstractCompletionTest {
 
 			IJavaCompletionProposal[] proposals= collector.getJavaCompletionProposals();
 			Optional<IJavaCompletionProposal> result = Stream.of(proposals).filter(JavaLambdaCompletionProposal.class::isInstance).findFirst();
-			assertTrue("doesn't contain JavaLambdaCompletionProposal", result.isPresent());
+			assertTrue(result.isPresent(), "doesn't contain JavaLambdaCompletionProposal");
 
 			IDocument doc= JavaUI.getDocumentProvider().getDocument(part.getEditorInput());
 			IJavaCompletionProposal proposal= result.get();
-			assertTrue("valid proposal", ((ICompletionProposalExtension2)proposal).validate(doc, offset, null));
+			assertTrue(((ICompletionProposalExtension2) proposal).validate(doc, offset, null), "valid proposal");
 			proposal.apply(doc);
 
 			String str1= """

@@ -22,8 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipFile;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -54,15 +54,15 @@ public class ImporterTest{
 			unzip(sourceZip, expandedZip);
 			SmartImportJob job = new SmartImportJob(expandedZip, Collections.EMPTY_SET, true, true);
 			Map<File, List<ProjectConfigurator>> importProposals = job.getImportProposals(new NullProgressMonitor());
-			Assert.assertEquals("No folder should be immediatly detected as project", 0, importProposals.size());
+			Assertions.assertEquals(0, importProposals.size(), "No folder should be immediatly detected as project");
 			job.run(new NullProgressMonitor());
 			project = ResourcesPlugin.getWorkspace().getRoot().getProject(expandedZip.getName());
-			Assert.assertTrue("Project wasn't created", project.exists());
-			Assert.assertTrue("Project doesn't have Java nature", project.hasNature(JavaCore.NATURE_ID));
+			Assertions.assertTrue(project.exists(), "Project wasn't created");
+			Assertions.assertTrue(project.hasNature(JavaCore.NATURE_ID), "Project doesn't have Java nature");
 			IJavaProject javaProject = JavaCore.create(project);
 			project.build(IncrementalProjectBuilder.FULL_BUILD, new NullProgressMonitor());
-			Assert.assertNotNull("Couldn't resolve type from Java project", javaProject.findType("junit.framework.TestCase"));
-			Assert.assertNotNull("Couldn't resolve JRE type from Java project", javaProject.findType("java.util.List"));
+			Assertions.assertNotNull(javaProject.findType("junit.framework.TestCase"), "Couldn't resolve type from Java project");
+			Assertions.assertNotNull(javaProject.findType("java.util.List"), "Couldn't resolve JRE type from Java project");
 		} finally {
 			if (project != null) {
 				JavaProjectHelper.delete(project);

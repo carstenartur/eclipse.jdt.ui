@@ -13,13 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.nls;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -40,13 +40,13 @@ public class NlsRefactoringCheckInitialConditionsTest {
 	private NlsRefactoringTestHelper fHelper;
 	private IJavaProject javaProject;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		javaProject= pts.getProject();
 		fHelper= new NlsRefactoringTestHelper(javaProject);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(javaProject, pts.getDefaultClasspath());
 	}
@@ -61,7 +61,7 @@ public class NlsRefactoringCheckInitialConditionsTest {
 		Refactoring refac= NLSRefactoring.create(cu);
 
 		RefactoringStatus res= refac.checkInitialConditions(fHelper.fNpm);
-		assertFalse("no nls needed", res.isOK()); //$NON-NLS-1$
+		assertFalse(res.isOK(), "no nls needed"); //$NON-NLS-1$
 	}
 
 	@Test
@@ -70,6 +70,6 @@ public class NlsRefactoringCheckInitialConditionsTest {
 		Refactoring refac= NLSRefactoring.create(cu);
 
 		RefactoringStatus res= refac.checkInitialConditions(fHelper.fNpm);
-		assertTrue("nls needed", res.isOK()); //$NON-NLS-1$
+		assertTrue(res.isOK(), "nls needed"); //$NON-NLS-1$
 	}
 }

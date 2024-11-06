@@ -13,9 +13,9 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.actions;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.ISourceRange;
@@ -57,8 +57,8 @@ public class GoToNextPreviousMemberActionTests extends GenericRefactoringTest{
 		ISourceRange selection= TextRangeUtil.getSelection(cu, startLine, startColumn, endLine, endColumn);
 		ISourceRange actualNewRange= new GoToNextPreviousMemberAction(isSelectNext).getNewSelectionRange(selection, cu.getAllTypes());
 		ISourceRange expectedNewRange= TextRangeUtil.getSelection(cu, expectedStartLine, expectedStartColumn, expectedStartLine, expectedStartColumn);
-		assertEquals("incorrect selection offset", expectedNewRange.getOffset(), actualNewRange.getOffset());
-		assertEquals("incorrect selection length", expectedNewRange.getLength(), actualNewRange.getLength());
+		assertEquals(expectedNewRange.getOffset(), actualNewRange.getOffset(), "incorrect selection offset");
+		assertEquals(expectedNewRange.getLength(), actualNewRange.getLength(), "incorrect selection length");
 	}
 
 	private void helperNext(int startLine, int startColumn, int expectedStartLine, int expectedStartColumn) throws Exception{

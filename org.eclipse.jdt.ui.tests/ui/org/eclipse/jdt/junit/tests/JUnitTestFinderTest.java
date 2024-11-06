@@ -13,7 +13,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.util.Arrays;
@@ -22,10 +22,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.function.Consumer;
 
-import org.junit.After;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
@@ -75,7 +75,7 @@ public class JUnitTestFinderTest {
 	@Parameter
 	public TestScenario fScenario;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fProject= JavaProjectHelper.createJavaProject("TestProject", "bin");
 		JavaProjectHelper.addRTJar(fProject);
@@ -87,7 +87,7 @@ public class JUnitTestFinderTest {
 		fRoot= JavaProjectHelper.addSourceContainer(fProject, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fProject);
 	}
@@ -499,7 +499,7 @@ public class JUnitTestFinderTest {
 	@Test
 	public void testInnerClassWithNestedAnnotationIsFound() throws Exception {
 
-		Assume.assumeTrue("@Nested only works with JUnit5", fScenario.testKindId().equals(TestKindRegistry.JUNIT5_TEST_KIND_ID));
+		Assumptions.assumeTrue(fScenario.testKindId().equals(TestKindRegistry.JUNIT5_TEST_KIND_ID), "@Nested only works with JUnit5");
 
 		IPackageFragment p= fRoot.createPackageFragment("p", true, null);
 		String content= """
@@ -530,7 +530,7 @@ public class JUnitTestFinderTest {
 		if (container instanceof IType) {
 			IType type= (IType) container;
 			boolean isTest= expectedTypes.length == 1 && type.getFullyQualifiedName('.').equals(expectedTypes[0]);
-			assertEquals(type.getFullyQualifiedName(), isTest, finder.isTest(type));
+			assertEquals(isTest, finder.isTest(type), type.getFullyQualifiedName());
 		}
 
 		HashSet<IType> set= new HashSet<>(Arrays.asList(JUnitCore.findTestTypes(container, null)));

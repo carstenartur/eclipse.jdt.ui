@@ -14,15 +14,15 @@
 
 package org.eclipse.jdt.ui.tests.search;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.swt.events.TreeListener;
 import org.eclipse.swt.widgets.Control;
@@ -49,7 +49,7 @@ import org.eclipse.jdt.internal.ui.search.LevelTreeContentProvider;
 
 public class TreeContentProviderTest {
 
-	@Rule
+	@RegisterExtension
 	public JUnitSourceSetup projectSetup = new JUnitSourceSetup();
 
 	private LevelTreeContentProvider fProvider;
@@ -133,7 +133,7 @@ public class TreeContentProviderTest {
 		}
 	}
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fProvider= new LevelTreeContentProvider(new JavaSearchResultPage() {
 			StructuredViewer fViewer= new MockTreeViewer();
@@ -151,7 +151,7 @@ public class TreeContentProviderTest {
 		fProvider.inputChanged(null, null, fResult);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 	}
 

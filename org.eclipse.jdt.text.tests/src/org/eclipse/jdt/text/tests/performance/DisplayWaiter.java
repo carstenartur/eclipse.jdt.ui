@@ -16,7 +16,7 @@ package org.eclipse.jdt.text.tests.performance;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.swt.widgets.Display;
 
@@ -96,7 +96,7 @@ final class DisplayWaiter {
 	 *        running after timing out
 	 */
 	public DisplayWaiter(Display display, boolean keepRunning) {
-		Assert.assertNotNull(display);
+		Assertions.assertNotNull(display);
 		fDisplay= display;
 		fState= STOPPED;
 		fKeepRunningOnTimeout= keepRunning;
@@ -110,7 +110,7 @@ final class DisplayWaiter {
 	 * @return the timeout state which can be queried for its timed out status
 	 */
 	public Timeout start(long delay) {
-		Assert.assertTrue(delay > 0);
+		Assertions.assertTrue(delay > 0);
 		synchronized (fMutex) {
 			switch (fState) {
 				case STOPPED:
@@ -152,7 +152,7 @@ final class DisplayWaiter {
 	 * @return the timeout state which can be queried for its timed out status
 	 */
 	public Timeout restart(long delay) {
-		Assert.assertTrue(delay > 0);
+		Assertions.assertTrue(delay > 0);
 		synchronized (fMutex) {
 			switch (fState) {
 				case STOPPED:
@@ -373,7 +373,7 @@ final class DisplayWaiter {
 	 *         in <code>states</code>
 	 */
 	private void assertStates(int states) {
-		Assert.assertTrue("illegal state", isState(states));
+		Assertions.assertTrue(isState(states), "illegal state");
 	}
 
 	/**

@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Arrays;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -48,7 +48,7 @@ import org.eclipse.jdt.internal.ui.JavaPlugin;
  * Those tests are made to run on Java Spider 1.8 .
  */
 public class MarkOccurrenceTest1d8 {
-	@Rule
+	@RegisterExtension
 	public Java1d8ProjectTestSetup f18p= new Java1d8ProjectTestSetup();
 
 	private ASTParser fParser;
@@ -59,7 +59,7 @@ public class MarkOccurrenceTest1d8 {
 
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fParser= ASTParser.newParser(AST.getJLSLatest());
 
@@ -68,7 +68,7 @@ public class MarkOccurrenceTest1d8 {
 		JavaPlugin.getDefault().getPreferenceStore().setValue(PreferenceConstants.EDITOR_MARK_OCCURRENCES, true);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, f18p.getDefaultClasspath());
 	}
@@ -90,7 +90,7 @@ public class MarkOccurrenceTest1d8 {
 
 	private void checkSelection(String s, int offset, int length, OccurrenceLocation[] expected) throws Exception {
 		OccurrenceLocation[] selectedNodes= getHighlights(s, offset, length);
-		assertEquals("number of selections", expected.length, selectedNodes.length);
+		assertEquals(expected.length, selectedNodes.length, "number of selections");
 		sortByStartIndex(selectedNodes);
 		sortByStartIndex(expected);
 		for (int i= 0; i < selectedNodes.length; i++) {

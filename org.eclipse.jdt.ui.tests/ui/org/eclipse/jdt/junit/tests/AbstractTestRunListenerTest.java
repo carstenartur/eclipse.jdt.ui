@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import org.eclipse.jdt.junit.JUnitCore;
 import org.eclipse.jdt.junit.launcher.JUnitLaunchShortcut;
@@ -91,7 +91,7 @@ public class AbstractTestRunListenerTest {
 	IJavaProject fProject;
 	private boolean fLaunchHasTerminated= false;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fProject= JavaProjectHelper.createJavaProject("TestRunListenerTest", "bin");
 		// have to set up an 1.3 project to avoid requiring a 5.0 VM
@@ -99,7 +99,7 @@ public class AbstractTestRunListenerTest {
 		JavaProjectHelper.addToClasspath(fProject, JavaCore.newContainerEntry(JUnitCore.JUNIT4_CONTAINER_PATH));
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fProject);
 	}
@@ -199,7 +199,7 @@ public class AbstractTestRunListenerTest {
 			lm.removeLaunches(lm.getLaunches());
 			configuration.delete();
 		}
-		assertTrue("Launch has not terminated", fLaunchHasTerminated);
+		assertTrue(fLaunchHasTerminated, "Launch has not terminated");
 	}
 
 	protected String[] launchJUnit(IJavaElement aTest, final TestRunLog log) throws CoreException {

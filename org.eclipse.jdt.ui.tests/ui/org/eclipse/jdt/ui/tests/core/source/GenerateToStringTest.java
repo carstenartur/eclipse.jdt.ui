@@ -17,14 +17,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core.source;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.ArrayList;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -62,12 +62,12 @@ import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 public class GenerateToStringTest extends SourceTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	protected ToStringGenerationSettings fSettings2;
 
-	@Before
+	@BeforeEach
 	public void before() throws CoreException {
 		fSettings2= new ToStringGenerationSettings();
 		fSettings.setSettings(fSettings2);
@@ -130,7 +130,7 @@ public class GenerateToStringTest extends SourceTestCase {
 
 		Object[] fKeys= new Object[members.length];
 		for (int i= 0; i < members.length; i++) {
-			Assert.assertTrue(members[i].exists());
+			Assertions.assertTrue(members[i].exists());
 			if (members[i] instanceof IField) {
 				VariableDeclarationFragment frag= ASTNodeSearchUtil.getFieldDeclarationFragmentNode((IField)members[i], unit);
 				fKeys[i]= frag.resolveBinding();
@@ -141,7 +141,7 @@ public class GenerateToStringTest extends SourceTestCase {
 				fKeys[i]= decl.resolveBinding();
 				continue;
 			}
-			Assert.fail("Member " + members[i] + " not a field nor a method");
+			Assertions.fail("Member " + members[i] + " not a field nor a method");
 		}
 
 		AbstractTypeDeclaration decl= ASTNodeSearchUtil.getAbstractTypeDeclarationNode(type, unit);
@@ -157,7 +157,7 @@ public class GenerateToStringTest extends SourceTestCase {
 			members[i]= type.getField(names[i]);
 			if (!members[i].exists())
 				members[i]= type.getMethod(names[i], new String[0]);
-			Assert.assertTrue(members[i].exists());
+			Assertions.assertTrue(members[i].exists());
 		}
 		return members;
 	}
@@ -176,7 +176,7 @@ public class GenerateToStringTest extends SourceTestCase {
 		compareSource(expected, cu.getSource());
 		CompilationUnit newCUNode= getCUNode(cu);
 		for (IProblem problem : RefactoringAnalyzeUtil.getIntroducedCompileProblems(newCUNode, oldCUNode)) {
-			assertFalse(problem.toString(), problem.isError());
+			assertFalse(problem.isError(), problem.toString());
 		}
 	}
 

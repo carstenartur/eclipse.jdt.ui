@@ -13,13 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -94,7 +94,7 @@ public final class ExtractSupertypeTests extends GenericRefactoringTest {
 		ExtractSupertypeProcessor processor= createRefactoringProcessor(members);
 		Refactoring refactoring= processor.getRefactoring();
 
-		assertTrue("activation", refactoring.checkInitialConditions(new NullProgressMonitor()).isOK());
+		assertTrue(refactoring.checkInitialConditions(new NullProgressMonitor()).isOK(), "activation");
 
 		processor.setMembersToMove(members);
 		processor.setTypesToExtract(new IType[] { type});
@@ -108,7 +108,7 @@ public final class ExtractSupertypeTests extends GenericRefactoringTest {
 			processor.setDeletedMethods(getMethods(processor.getMatchingElements(new NullProgressMonitor(), false)));
 
 		RefactoringStatus status= refactoring.checkFinalConditions(new NullProgressMonitor());
-		assertFalse("precondition was supposed to pass", status.hasError());
+		assertFalse(status.hasError(), "precondition was supposed to pass");
 		performChange(refactoring, false);
 
 		String expected= getFileContents(getOutputTestFileName("A"));
@@ -118,7 +118,7 @@ public final class ExtractSupertypeTests extends GenericRefactoringTest {
 
 		expected= getFileContents(getOutputTestFileName("Z"));
 		unit= getPackageP().getCompilationUnit("Z.java");
-		assertTrue("extracted compilation unit does not exist", unit.exists());
+		assertTrue(unit.exists(), "extracted compilation unit does not exist");
 		actual= unit.getBuffer().getContents();
 		assertEqualLines(expected, actual);
 	}

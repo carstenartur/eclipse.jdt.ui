@@ -18,10 +18,10 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -50,8 +50,8 @@ import org.eclipse.jdt.internal.ui.text.correction.proposals.TypeChangeCorrectio
 
 public class AssistQuickFixTest10 extends QuickFixTest {
 
-	@Rule
-    public ProjectTestSetup projectSetup= new Java10ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup= new Java10ProjectTestSetup();
 
 	private static final Class<?>[] TYPE_CHANGE_PROPOSAL_TYPE= { TypeChangeCorrectionProposal.class };
 	private static final Class<?>[] LINKED_PROPOSAL_TYPE= { LinkedCorrectionProposal.class };
@@ -76,7 +76,7 @@ public class AssistQuickFixTest10 extends QuickFixTest {
 //		};
 //	}
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
@@ -92,7 +92,7 @@ public class AssistQuickFixTest10 extends QuickFixTest {
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());
 	}

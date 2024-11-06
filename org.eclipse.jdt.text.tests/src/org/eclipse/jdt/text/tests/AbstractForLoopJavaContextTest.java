@@ -17,8 +17,8 @@ package org.eclipse.jdt.text.tests;
 
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -74,7 +74,7 @@ public abstract class AbstractForLoopJavaContextTest {
 
 	private ICompilationUnit fCU;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		if (JavaCore.getPlugin() != null) {
 			Hashtable<String, String> options= JavaCore.getDefaultOptions();
@@ -97,7 +97,7 @@ public abstract class AbstractForLoopJavaContextTest {
 		fCU.becomeWorkingCopy(null);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		fCU.discardWorkingCopy();
 		JavaProjectHelper.delete(fProject);

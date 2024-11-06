@@ -16,7 +16,9 @@ package org.eclipse.jdt.ui.tests.refactoring;
 
 import java.util.Hashtable;
 
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -37,7 +39,7 @@ import org.eclipse.jdt.internal.core.manipulation.StubUtility;
 import org.eclipse.jdt.internal.ui.JavaPlugin;
 import org.eclipse.jdt.internal.ui.util.CoreUtility;
 
-public class SurroundWithTestSetup16 extends ExternalResource {
+public class SurroundWithTestSetup16 implements BeforeEachCallback, AfterEachCallback {
 	private IJavaProject fJavaProject;
 	private IPackageFragmentRoot fRoot;
 	private static final String CONTAINER= "src";
@@ -49,7 +51,7 @@ public class SurroundWithTestSetup16 extends ExternalResource {
 	}
 
 	@Override
-	public void before() throws Exception {
+	public void beforeEach(ExtensionContext context) throws Exception {
 
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.TAB);
@@ -71,7 +73,7 @@ public class SurroundWithTestSetup16 extends ExternalResource {
 	}
 
 	@Override
-	public void after() {
+	public void afterEach(ExtensionContext context) {
 		try {
 			JavaProjectHelper.delete(fJavaProject);
 		} catch (CoreException e) {

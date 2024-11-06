@@ -20,10 +20,10 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -45,17 +45,17 @@ import org.eclipse.jdt.internal.corext.dom.IASTSharedValues;
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 public class BindingsHierarchyTest {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 	private IPackageFragment fPackage;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws CoreException {
 		IPackageFragmentRoot src= JavaProjectHelper.addSourceContainer(pts.getProject(), "src");
 		fPackage= src.createPackageFragment("test1", false, new NullProgressMonitor());
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 			JavaProjectHelper.clear(pts.getProject(), pts.getDefaultClasspath());
 	}

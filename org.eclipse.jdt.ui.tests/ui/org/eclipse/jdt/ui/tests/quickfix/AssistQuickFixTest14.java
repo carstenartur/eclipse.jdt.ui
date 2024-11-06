@@ -16,10 +16,10 @@ package org.eclipse.jdt.ui.tests.quickfix;
 
 import java.util.ArrayList;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -38,18 +38,18 @@ import org.eclipse.jdt.ui.text.java.correction.CUCorrectionProposal;
 
 public class AssistQuickFixTest14 extends QuickFixTest {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new Java14ProjectTestSetup(true);
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new Java14ProjectTestSetup(true);
 
 	private IJavaProject fJProject1;
 
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		if (fJProject1 != null) {
 			JavaProjectHelper.delete(fJProject1);

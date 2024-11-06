@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.text.Collator;
 import java.util.Arrays;
 import java.util.Comparator;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.w3c.dom.Element;
 
@@ -29,7 +29,7 @@ import org.eclipse.jdt.internal.corext.util.History;
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 public class SelectionHistoryTest {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private void assertEquals(String[] actual, String[] expected) {

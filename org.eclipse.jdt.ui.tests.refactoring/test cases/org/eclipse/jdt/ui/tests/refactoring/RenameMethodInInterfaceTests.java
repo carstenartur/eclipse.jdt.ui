@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -73,7 +73,7 @@ public class RenameMethodInInterfaceTests extends GenericRefactoringTest {
 		descriptor.setNewName(newMethodName);
 
 		RefactoringStatus result= performRefactoring(descriptor);
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	private void helper1() throws Exception{
@@ -92,22 +92,22 @@ public class RenameMethodInInterfaceTests extends GenericRefactoringTest {
 		descriptor.setKeepOriginal(createDelegate);
 		descriptor.setDeprecateDelegate(true);
 
-		assertNull("was supposed to pass", performRefactoring(descriptor));
+		assertNull(performRefactoring(descriptor), "was supposed to pass");
 		if (!shouldPass){
-			assertNotEquals("incorrect renaming because of a java model bug", getFileContents(getOutputTestFileName("A")), cu.getSource());
+			assertNotEquals(getFileContents(getOutputTestFileName("A")), cu.getSource(), "incorrect renaming because of a java model bug");
 			return;
 		}
 		assertEqualLines("incorrect renaming", getFileContents(getOutputTestFileName("A")), cu.getSource());
 
-		assertTrue("anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertFalse("! anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertTrue(RefactoringCore.getUndoManager().anythingToUndo(), "anythingToUndo");
+		assertFalse(RefactoringCore.getUndoManager().anythingToRedo(), "! anythingToRedo");
 		//assertEquals("1 to undo", 1, Refactoring.getUndoManager().getRefactoringLog().size());
 
 		RefactoringCore.getUndoManager().performUndo(null, new NullProgressMonitor());
 		assertEqualLines("invalid undo", getFileContents(getInputTestFileName("A")), cu.getSource());
 
-		assertFalse("! anythingToUndo", RefactoringCore.getUndoManager().anythingToUndo());
-		assertTrue("anythingToRedo", RefactoringCore.getUndoManager().anythingToRedo());
+		assertFalse(RefactoringCore.getUndoManager().anythingToUndo(), "! anythingToUndo");
+		assertTrue(RefactoringCore.getUndoManager().anythingToRedo(), "anythingToRedo");
 		//assertEquals("1 to redo", 1, Refactoring.getUndoManager().getRedoStack().size());
 
 		RefactoringCore.getUndoManager().performRedo(null, new NullProgressMonitor());
@@ -425,7 +425,7 @@ public class RenameMethodInInterfaceTests extends GenericRefactoringTest {
 		helper2();
 	}
 	//anonymous inner class
-	@Ignore("must fix - incorrect warnings")
+	@Disabled("must fix - incorrect warnings")
 	@Test
 	public void test21() throws Exception{
 		//helper2_fail();

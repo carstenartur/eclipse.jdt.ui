@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.util.Arrays;
 import java.util.HashSet;
 
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 
@@ -40,7 +40,7 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 import org.eclipse.jdt.internal.ui.fix.MultiFixMessages;
 
 public class CleanUpTest1d8 extends CleanUpTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new Java1d8ProjectTestSetup();
 
 	@Override
@@ -1916,7 +1916,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		enable(CleanUpConstants.SIMPLIFY_LAMBDA_EXPRESSION_AND_METHOD_REF);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.LambdaExpressionAndMethodRefCleanUp_description)));
 	}
@@ -1967,7 +1967,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		enable(CleanUpConstants.SIMPLIFY_LAMBDA_EXPRESSION_AND_METHOD_REF);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.LambdaExpressionAndMethodRefCleanUp_description)));
 	}
@@ -2096,7 +2096,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		enable(CleanUpConstants.SIMPLIFY_LAMBDA_EXPRESSION_AND_METHOD_REF);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.LambdaExpressionAndMethodRefCleanUp_description)));
 	}
@@ -2155,7 +2155,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		enable(CleanUpConstants.SIMPLIFY_LAMBDA_EXPRESSION_AND_METHOD_REF);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu, cu1 }, new String[] { expected, given1 },
 				new HashSet<>(Arrays.asList(MultiFixMessages.LambdaExpressionAndMethodRefCleanUp_description)));
 	}
@@ -2211,7 +2211,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		enable(CleanUpConstants.SIMPLIFY_LAMBDA_EXPRESSION_AND_METHOD_REF);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu, cu1 }, new String[] { expected, given1 },
 				new HashSet<>(Arrays.asList(MultiFixMessages.LambdaExpressionAndMethodRefCleanUp_description)));
 	}
@@ -2267,7 +2267,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		enable(CleanUpConstants.SIMPLIFY_LAMBDA_EXPRESSION_AND_METHOD_REF);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu, cu1 }, new String[] { expected, given1 },
 				new HashSet<>(Arrays.asList(MultiFixMessages.LambdaExpressionAndMethodRefCleanUp_description)));
 	}
@@ -2323,7 +2323,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		enable(CleanUpConstants.SIMPLIFY_LAMBDA_EXPRESSION_AND_METHOD_REF);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu, cu1 }, new String[] { expected, given1 },
 				new HashSet<>(Arrays.asList(MultiFixMessages.LambdaExpressionAndMethodRefCleanUp_description)));
 	}
@@ -2399,7 +2399,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		enable(CleanUpConstants.SIMPLIFY_LAMBDA_EXPRESSION_AND_METHOD_REF);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.LambdaExpressionAndMethodRefCleanUp_description)));
 	}
@@ -3198,7 +3198,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		enable(CleanUpConstants.COMPARING_ON_CRITERIA);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.ComparingOnCriteriaCleanUp_description)));
 	}
@@ -4217,7 +4217,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", input, output);
+		assertNotEquals(input, output, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { output },
 				new HashSet<>(Arrays.asList(MultiFixMessages.JoinCleanup_description)));
 	}
@@ -5910,7 +5910,7 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 		assertRefactoringHasNoChange(new ICompilationUnit[] { cu });
 	}
 
-	@Ignore("""
+	@Disabled("""
 		Either check exactly the data type (eg CopyOnWriteArrayList allows modifications)\
 		 or stay away from refactoring when deletions/additions happen.\
 		btw simple for loop to enhanced for loop should do the same.""")

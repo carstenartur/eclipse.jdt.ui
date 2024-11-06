@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.ccp;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.widgets.Display;
@@ -60,7 +60,7 @@ public class CopyResourcesToClipboardActionTest extends GenericRefactoringTest{
 		return file;
 	}
 
-	@Before
+	@BeforeEach
 	public void before() throws Exception {
 		fClipboard= new MockClipboard(Display.getDefault());
 		fDefaultPackage= rts.getDefaultSourceFolder().createPackageFragment("", true, null);
@@ -74,14 +74,14 @@ public class CopyResourcesToClipboardActionTest extends GenericRefactoringTest{
 
 		faTxt= createFile((IFolder)getPackageP().getUnderlyingResource(), "a.txt");
 
-		assertTrue("A.java does not exist", fCuA.exists());
-		assertTrue("B.java does not exist", fCuB.exists());
-		assertTrue("q does not exist", fPackage_Q.exists());
-		assertTrue("q.r does not exist", fPackage_Q_R.exists());
+		assertTrue(fCuA.exists(), "A.java does not exist");
+		assertTrue(fCuB.exists(), "B.java does not exist");
+		assertTrue(fPackage_Q.exists(), "q does not exist");
+		assertTrue(fPackage_Q_R.exists(), "q.r does not exist");
 		assertTrue(faTxt.exists());
 	}
 
-	@After
+	@AfterEach
 	public void after() throws Exception {
 		fClipboard.dispose();
 	}
@@ -89,13 +89,13 @@ public class CopyResourcesToClipboardActionTest extends GenericRefactoringTest{
 	private void checkEnabled(Object[] elements) {
 		SelectionDispatchAction copyAction= new CopyToClipboardAction(new MockWorkbenchSite(elements), fClipboard);
 		copyAction.update(copyAction.getSelection());
-		assertTrue("action should be enabled", copyAction.isEnabled());
+		assertTrue(copyAction.isEnabled(), "action should be enabled");
 	}
 
 	private void checkDisabled(Object[] elements) {
 		SelectionDispatchAction copyAction= new CopyToClipboardAction(new MockWorkbenchSite(elements), fClipboard);
 		copyAction.update(copyAction.getSelection());
-		assertFalse("action should not be enabled", copyAction.isEnabled());
+		assertFalse(copyAction.isEnabled(), "action should not be enabled");
 	}
 
 	@Test

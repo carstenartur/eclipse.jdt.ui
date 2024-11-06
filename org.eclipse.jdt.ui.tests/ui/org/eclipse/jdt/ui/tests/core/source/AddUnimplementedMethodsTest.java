@@ -13,18 +13,18 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core.source;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -71,14 +71,14 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 import org.eclipse.jdt.internal.ui.util.ASTHelper;
 
 public class AddUnimplementedMethodsTest {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private IJavaProject fJavaProject;
 	private IPackageFragment fPackage;
 	private IType fClassA, fInterfaceB, fClassC, fClassD, fInterfaceE;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJavaProject= JavaProjectHelper.createJavaProject("DummyProject", "bin");
 
@@ -126,7 +126,7 @@ public class AddUnimplementedMethodsTest {
 	}
 
 
-	@After
+	@AfterEach
 	public void tearDown () throws Exception {
 		JavaProjectHelper.delete(fJavaProject);
 		fJavaProject= null;
@@ -427,9 +427,9 @@ public class AddUnimplementedMethodsTest {
 		RefactoringASTParser parser= new RefactoringASTParser(astLevel);
 		CompilationUnit unit= parser.parse(cu, true);
 		AbstractTypeDeclaration declaration= ASTNodes.getParent(NodeFinder.perform(unit, testClass.getNameRange()), AbstractTypeDeclaration.class);
-		assertNotNull("Could not find type declaration node", declaration);
+		assertNotNull(declaration, "Could not find type declaration node");
 		ITypeBinding binding= declaration.resolveBinding();
-		assertNotNull("Binding for type declaration could not be resolved", binding);
+		assertNotNull(binding, "Binding for type declaration could not be resolved");
 
 		IMethodBinding[] overridableMethods= StubUtility2Core.getOverridableMethods(unit.getAST(), binding, false);
 
@@ -454,9 +454,9 @@ public class AddUnimplementedMethodsTest {
 		RefactoringASTParser parser= new RefactoringASTParser(IASTSharedValues.SHARED_AST_LEVEL);
 		CompilationUnit unit= parser.parse(testClass.getCompilationUnit(), true);
 		AbstractTypeDeclaration declaration= ASTNodes.getParent(NodeFinder.perform(unit, testClass.getNameRange()), AbstractTypeDeclaration.class);
-		assertNotNull("Could not find type declaration node", declaration);
+		assertNotNull(declaration, "Could not find type declaration node");
 		ITypeBinding binding= declaration.resolveBinding();
-		assertNotNull("Binding for type declaration could not be resolved", binding);
+		assertNotNull(binding, "Binding for type declaration could not be resolved");
 
 		IMethodBinding[] overridableMethods= implementAllOverridable ? StubUtility2Core.getOverridableMethods(unit.getAST(), binding, false) : null;
 
@@ -476,10 +476,10 @@ public class AddUnimplementedMethodsTest {
 	private void checkMethods(String[] expected, IMethod[] methods) {
 		int nMethods= methods.length;
 		int nExpected= expected.length;
-		assertEquals("" + nExpected + " methods expected, is " + nMethods, nExpected, nMethods);
+		assertEquals(nExpected, nMethods, "" + nExpected + " methods expected, is " + nMethods);
 		for (int i= 0; i < nExpected; i++) {
 			String methName= expected[i];
-			assertTrue("method " + methName + " expected", nameContained(methName, methods));
+			assertTrue(nameContained(methName, methods), "method " + methName + " expected");
 		}
 	}
 
@@ -501,7 +501,7 @@ public class AddUnimplementedMethodsTest {
 		}
 		for (int i= 0; i < nExpected; i++) {
 			String impName= expected[i];
-			assertTrue("import " + impName + " expected", nameContained(impName, imports));
+			assertTrue(nameContained(impName, imports), "import " + impName + " expected");
 		}
 	}
 

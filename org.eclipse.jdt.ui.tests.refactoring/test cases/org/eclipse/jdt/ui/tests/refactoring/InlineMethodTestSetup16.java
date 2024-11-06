@@ -13,6 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
+import org.junit.jupiter.api.extension.ExtensionContext;
+
 import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IPackageFragmentRoot;
 
@@ -29,8 +31,8 @@ public class InlineMethodTestSetup16 extends Java16Setup {
 	private final String simplePkgOutName= "simple14_out";
 
 	@Override
-	public void before() throws Exception {
-		super.before();
+	public void beforeEach(ExtensionContext context) throws Exception {
+		super.beforeEach(context);
 
 		IPackageFragmentRoot root= getDefaultSourceFolder();
 		fSimple14= root.createPackageFragment(simplePkgInName, true, null);

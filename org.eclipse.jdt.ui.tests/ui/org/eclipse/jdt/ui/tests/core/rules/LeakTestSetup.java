@@ -13,6 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core.rules;
 
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+
+import org.junit.jupiter.api.extension.ExtensionContext;
+
+import org.eclipse.core.runtime.CoreException;
+
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.intro.IIntroManager;
 
@@ -28,8 +35,8 @@ public class LeakTestSetup extends JUnitSourceSetup {
 	}
 
 	@Override
-	public void before() throws Throwable {
-		super.before();
+	public void beforeEach(ExtensionContext context) throws InvocationTargetException, CoreException, IOException {
+		super.beforeEach(context);
 		if (fgCurrentSetup != this) {
 			return;
 		}
@@ -38,8 +45,8 @@ public class LeakTestSetup extends JUnitSourceSetup {
 	}
 
 	@Override
-	public void after() {
-		super.after();
+	public void afterEach(ExtensionContext context) {
+		super.afterEach(context);
 		if (fgCurrentSetup != this) {
 			return;
 		}

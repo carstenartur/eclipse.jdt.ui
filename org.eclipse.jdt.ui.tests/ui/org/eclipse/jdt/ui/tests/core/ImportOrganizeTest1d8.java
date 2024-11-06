@@ -15,10 +15,10 @@ package org.eclipse.jdt.ui.tests.core;
 
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -38,12 +38,12 @@ import org.eclipse.jdt.ui.tests.core.rules.Java1d8ProjectTestSetup;
  * Those tests are made to run on Java Spider 1.8 .
  */
 public class ImportOrganizeTest1d8 extends ImportOrganizeTest {
-	@Rule
+	@RegisterExtension
 	public Java1d8ProjectTestSetup j18p= new Java1d8ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 
-	@Before
+	@BeforeEach
 	public void before() throws Exception {
 		fJProject1= j18p.getProject();
 
@@ -53,7 +53,7 @@ public class ImportOrganizeTest1d8 extends ImportOrganizeTest {
 	}
 
 
-	@After
+	@AfterEach
 	public void after() throws Exception {
 		setOrganizeImportSettings(null, 99, 99, fJProject1);
 		JavaProjectHelper.clear(fJProject1, j18p.getDefaultClasspath());

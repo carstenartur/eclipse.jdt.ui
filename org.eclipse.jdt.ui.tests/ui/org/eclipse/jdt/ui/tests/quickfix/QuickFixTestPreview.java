@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import org.junit.After;
-import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -25,14 +25,14 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 public class QuickFixTestPreview extends QuickFixTest {
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectsetup= new Java16ProjectTestSetup(true);
 
 	private IJavaProject fJProject1;
 
 //    private IPackageFragmentRoot fSourceFolder;
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		if (fJProject1 != null) {
 			JavaProjectHelper.delete(fJProject1);

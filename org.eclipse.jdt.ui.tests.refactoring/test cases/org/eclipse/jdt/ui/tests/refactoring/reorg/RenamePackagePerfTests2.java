@@ -14,7 +14,7 @@
 package org.eclipse.jdt.ui.tests.refactoring.reorg;
 
 import org.junit.FixMethodOrder;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.runners.MethodSorters;
 
 import org.eclipse.test.performance.Dimension;
@@ -24,7 +24,7 @@ import org.eclipse.jdt.ui.tests.refactoring.rules.RefactoringPerformanceTestSetu
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class RenamePackagePerfTests2 extends AbstractRenamePackagePerfTest {
 
-	@Rule
+	@RegisterExtension
 	public RefactoringPerformanceTestSetup rpts= new RefactoringPerformanceTestSetup();
 
 	public void testACold_10_10() throws Exception {

@@ -16,8 +16,8 @@ package org.eclipse.jdt.ui.tests.refactoring.infra;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IPackageFragment;
@@ -26,11 +26,15 @@ import org.eclipse.jdt.ui.tests.refactoring.GenericRefactoringTest;
 
 public abstract class AbstractJunit4CUTestCase {
 
-	@Rule
-	public TestName tn= new TestName();
+	private String testName;
+
+	@BeforeEach
+	void init(TestInfo testInfo) {
+		this.testName= testInfo.getDisplayName();
+	}
 
 	protected String getName() {
-		return tn.getMethodName();
+		return testName;
 	}
 
 	protected String getFileContents(InputStream in) throws IOException {

@@ -13,8 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.runner.RunWith;
 
 import org.eclipse.jdt.ui.tests.CustomBaseRunner;
@@ -24,7 +24,7 @@ import org.eclipse.jdt.ui.tests.refactoring.rules.Java13Setup;
 @IgnoreInheritedTests
 @RunWith(CustomBaseRunner.class)
 public class ExtractTempTests13 extends ExtractTempTests {
-	@Rule
+	@RegisterExtension
 	public Java13Setup js= new Java13Setup();
 
 	@Override

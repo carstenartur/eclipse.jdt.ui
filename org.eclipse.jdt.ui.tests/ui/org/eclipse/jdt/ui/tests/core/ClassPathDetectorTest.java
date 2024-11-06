@@ -13,16 +13,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -49,14 +49,14 @@ import org.eclipse.jdt.internal.ui.util.CoreUtility;
 import org.eclipse.jdt.internal.ui.wizards.ClassPathDetector;
 
 public class ClassPathDetectorTest {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 
 	private boolean fEnableAutoBuildAfterTesting;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 
 		IWorkspace workspace= JavaTestPlugin.getWorkspace();
@@ -75,7 +75,7 @@ public class ClassPathDetectorTest {
 		fJProject1= null;
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		if (fJProject1 != null) {
 			JavaProjectHelper.delete(fJProject1);
@@ -115,10 +115,10 @@ public class ClassPathDetectorTest {
 
 
 	private void assertSameClasspath(IClasspathEntry[] projectEntries, IClasspathEntry[] entries) throws Exception {
-		assertEquals("Number of classpath entries", projectEntries.length, entries.length);
+		assertEquals(projectEntries.length, entries.length, "Number of classpath entries");
 
 		for (IClasspathEntry curr : projectEntries) {
-			assertNotNull("entry not found: " + curr.getPath(), findEntry(curr, entries));
+			assertNotNull(findEntry(curr, entries), "entry not found: " + curr.getPath());
 		}
 	}
 
@@ -140,14 +140,14 @@ public class ClassPathDetectorTest {
 		// source folder & internal JAR
 
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("junit src not found", junitSrcArchive);
-		assertTrue("junit src not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "junit src not found");
+		assertTrue(junitSrcArchive.exists(), "junit src not found");
 
 		JavaProjectHelper.addSourceContainerWithImport(fJProject1, "src", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 
 		File mylibJar= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.MYLIB);
-		assertNotNull("lib not found", junitSrcArchive);
-		assertTrue("lib not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "lib not found");
+		assertTrue(junitSrcArchive.exists(), "lib not found");
 
 		JavaProjectHelper.addLibraryWithImport(fJProject1, Path.fromOSString(mylibJar.getPath()), null, null);
 
@@ -164,12 +164,12 @@ public class ClassPathDetectorTest {
 		ClassPathDetector detector= new ClassPathDetector(fJProject1.getProject(), null);
 		IPath outputLocation= detector.getOutputLocation();
 		IClasspathEntry[] entries= detector.getClasspath();
-		assertNotNull("No classpath detected", entries);
-		assertNotNull("No outputLocation detected", outputLocation);
+		assertNotNull(entries, "No classpath detected");
+		assertNotNull(outputLocation, "No outputLocation detected");
 
 		assertSameClasspath(projectEntries, entries);
 
-		assertTrue("Output folder", outputLocation.equals(projectOutput));
+		assertTrue(outputLocation.equals(projectOutput), "Output folder");
 	}
 
 	@Test
@@ -178,8 +178,8 @@ public class ClassPathDetectorTest {
 		// 2 source folders
 
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("junit src not found", junitSrcArchive);
-		assertTrue("junit src not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "junit src not found");
+		assertTrue(junitSrcArchive.exists(), "junit src not found");
 
 		JavaProjectHelper.addSourceContainerWithImport(fJProject1, "src1", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 
@@ -208,12 +208,12 @@ public class ClassPathDetectorTest {
 		ClassPathDetector detector= new ClassPathDetector(fJProject1.getProject(), null);
 		IPath outputLocation= detector.getOutputLocation();
 		IClasspathEntry[] entries= detector.getClasspath();
-		assertNotNull("No classpath detected", entries);
-		assertNotNull("No outputLocation detected", outputLocation);
+		assertNotNull(entries, "No classpath detected");
+		assertNotNull(outputLocation, "No outputLocation detected");
 
 		assertSameClasspath(projectEntries, entries);
 
-		assertTrue("Output folder", outputLocation.equals(projectOutput));
+		assertTrue(outputLocation.equals(projectOutput), "Output folder");
 	}
 
 	@Test
@@ -222,8 +222,8 @@ public class ClassPathDetectorTest {
 		// 2 nested source folders
 
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("junit src not found", junitSrcArchive);
-		assertTrue("junit src not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "junit src not found");
+		assertTrue(junitSrcArchive.exists(), "junit src not found");
 
 		IPath[] exclusionFilter= new IPath[] { new Path("src2/") };
 		JavaProjectHelper.addSourceContainerWithImport(fJProject1, "src1", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING, exclusionFilter);
@@ -253,12 +253,12 @@ public class ClassPathDetectorTest {
 		ClassPathDetector detector= new ClassPathDetector(fJProject1.getProject(), null);
 		IPath outputLocation= detector.getOutputLocation();
 		IClasspathEntry[] entries= detector.getClasspath();
-		assertNotNull("No classpath detected", entries);
-		assertNotNull("No outputLocation detected", outputLocation);
+		assertNotNull(entries, "No classpath detected");
+		assertNotNull(outputLocation, "No outputLocation detected");
 
 		assertSameClasspath(projectEntries, entries);
 
-		assertTrue("Output folder", outputLocation.equals(projectOutput));
+		assertTrue(outputLocation.equals(projectOutput), "Output folder");
 	}
 
 	@Test
@@ -268,8 +268,8 @@ public class ClassPathDetectorTest {
 		// source folder & internal JAR
 
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("junit src not found", junitSrcArchive);
-		assertTrue("junit src not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "junit src not found");
+		assertTrue(junitSrcArchive.exists(), "junit src not found");
 		JavaProjectHelper.addSourceContainerWithImport(fJProject1, "", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 
 		for (IClasspathEntry jreEntry : PreferenceConstants.getDefaultJRELibrary()) {
@@ -285,12 +285,12 @@ public class ClassPathDetectorTest {
 		ClassPathDetector detector= new ClassPathDetector(fJProject1.getProject(), null);
 		IPath outputLocation= detector.getOutputLocation();
 		IClasspathEntry[] entries= detector.getClasspath();
-		assertNotNull("No classpath detected", entries);
-		assertNotNull("No outputLocation detected", outputLocation);
+		assertNotNull(entries, "No classpath detected");
+		assertNotNull(outputLocation, "No outputLocation detected");
 
 		assertSameClasspath(projectEntries, entries);
 
-		assertTrue("Output folder", outputLocation.equals(projectOutput));
+		assertTrue(outputLocation.equals(projectOutput), "Output folder");
 	}
 
 	@Test
@@ -311,8 +311,8 @@ public class ClassPathDetectorTest {
 		pack1.createCompilationUnit("E.java", str, false, null);
 
 		File lib= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.MYLIB);
-		assertNotNull("lib not found", lib);
-		assertTrue("lib not found", lib.exists());
+		assertNotNull(lib, "lib not found");
+		assertTrue(lib.exists(), "lib not found");
 
 		IPackageFragmentRoot cfroot= JavaProjectHelper.addClassFolderWithImport(fJProject1, "cf", null, null, lib);
 
@@ -331,10 +331,10 @@ public class ClassPathDetectorTest {
 		ClassPathDetector detector= new ClassPathDetector(fJProject1.getProject(), null);
 		IPath outputLocation= detector.getOutputLocation();
 		IClasspathEntry[] entries= detector.getClasspath();
-		assertNotNull("No classpath detected", entries);
-		assertNotNull("No outputLocation detected", outputLocation);
+		assertNotNull(entries, "No classpath detected");
+		assertNotNull(outputLocation, "No outputLocation detected");
 
 		assertSameClasspath(projectEntries, entries);
-		assertTrue("Output folder", outputLocation.equals(projectOutput));
+		assertTrue(outputLocation.equals(projectOutput), "Output folder");
 	}
 }

@@ -13,10 +13,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.search;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.util.DisplayHelper;
 
@@ -45,7 +45,7 @@ import org.eclipse.jdt.internal.ui.search.JavaSearchResult;
 @SuppressWarnings("restriction") // org.eclipse.search.internal
 public class SearchLeakTest extends LeakTestCase {
 
-	@Rule
+	@RegisterExtension
 	public LeakTestSetup projectSetup = new LeakTestSetup();
 
 	@Test

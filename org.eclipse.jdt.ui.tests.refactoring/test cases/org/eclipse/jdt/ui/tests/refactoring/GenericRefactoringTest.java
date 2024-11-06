@@ -13,11 +13,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -31,10 +31,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -81,13 +81,17 @@ import org.eclipse.jdt.ui.tests.refactoring.infra.RefactoringTestPlugin;
 import org.eclipse.jdt.ui.tests.refactoring.rules.RefactoringTestSetup;
 
 public abstract class GenericRefactoringTest {
+	private String testName;
+
+	@BeforeEach
+	void init(TestInfo testInfo) {
+		this.testName= testInfo.getDisplayName();
+	}
+
 	protected static final Charset ENCODING= StandardCharsets.UTF_8;
 
-	@Rule
+	@RegisterExtension
 	public RefactoringTestSetup rts;
-
-	@Rule
-	public TestName tn= new TestName();
 
 	public GenericRefactoringTest() {
 	}
@@ -119,7 +123,7 @@ public abstract class GenericRefactoringTest {
 
 	protected static final List<String> PROJECT_RESOURCE_CHILDREN= Collections.unmodifiableList(Arrays.asList(".project", ".classpath", ".settings"));
 
-	@Before
+	@BeforeEach
 	public void genericbefore() throws Exception {
 		fRoot= rts.getDefaultSourceFolder();
 		fPackageP= rts.getPackageP();
@@ -134,7 +138,7 @@ public abstract class GenericRefactoringTest {
 	}
 
 	protected String getName() {
-		return tn.getMethodName();
+		return testName;
 	}
 
 	protected void mustPerformDummySearch() throws Exception {
@@ -151,7 +155,7 @@ public abstract class GenericRefactoringTest {
 	 *
 	 * @throws Exception in case of errors
 	 */
-	@After
+	@AfterEach
 	public void genericafter() throws Exception {
 		refreshFromLocal();
 		performDummySearch();
@@ -279,8 +283,8 @@ public abstract class GenericRefactoringTest {
     protected final Refactoring createRefactoring(RefactoringDescriptor descriptor) throws CoreException {
 	    RefactoringStatus status= new RefactoringStatus();
 		Refactoring refactoring= descriptor.createRefactoring(status);
-		assertNotNull("refactoring should not be null", refactoring);
-		assertTrue("status should be ok", status.isOK());
+		assertNotNull(refactoring, "refactoring should not be null");
+		assertTrue(status.isOK(), "status should be ok");
 	    return refactoring;
     }
 
@@ -350,13 +354,13 @@ public abstract class GenericRefactoringTest {
 		RefactoringStatus status= create.getConditionCheckingStatus();
 		if (!status.isOK())
 			return status;
-		assertTrue("Change wasn't executed", perform.changeExecuted());
+		assertTrue(perform.changeExecuted(), "Change wasn't executed");
 		Change undo= perform.getUndoChange();
 		if (providesUndo) {
-			assertNotNull("Undo doesn't exist", undo);
-			assertTrue("Undo manager is empty", undoManager.anythingToUndo());
+			assertNotNull(undo, "Undo doesn't exist");
+			assertTrue(undoManager.anythingToUndo(), "Undo manager is empty");
 		} else {
-			assertNull("Undo manager contains undo but shouldn't", undo);
+			assertNull(undo, "Undo manager contains undo but shouldn't");
 		}
 		return null;
 	}
@@ -379,14 +383,14 @@ public abstract class GenericRefactoringTest {
 			perform.setUndoManager(getUndoManager(), refactoring.getName());
 		}
 		ResourcesPlugin.getWorkspace().run(perform, new NullProgressMonitor());
-		assertTrue("Change wasn't executed", perform.changeExecuted());
+		assertTrue(perform.changeExecuted(), "Change wasn't executed");
 		return perform.getUndoChange();
 	}
 
 	protected final Change performChange(final Change change) throws Exception {
 		PerformChangeOperation perform= new PerformChangeOperation(change);
 		ResourcesPlugin.getWorkspace().run(perform, new NullProgressMonitor());
-		assertTrue("Change wasn't executed", perform.changeExecuted());
+		assertTrue(perform.changeExecuted(), "Change wasn't executed");
 		return perform.getUndoChange();
 	}
 
@@ -533,7 +537,7 @@ public abstract class GenericRefactoringTest {
 		Set<IField> fields= new HashSet<>();
 		for (String name : names) {
 			IField field= type.getField(name);
-			assertTrue("field " + field.getElementName() + " does not exist", field.exists());
+			assertTrue(field.exists(), "field " + field.getElementName() + " does not exist");
 			fields.add(field);
 		}
 		return fields.toArray(new IField[fields.size()]);
@@ -554,7 +558,7 @@ public abstract class GenericRefactoringTest {
 			} else {
 				memberType= type.getType(name);
 			}
-			assertTrue("member type " + memberType.getElementName() + " does not exist", memberType.exists());
+			assertTrue(memberType.exists(), "member type " + memberType.getElementName() + " does not exist");
 			memberTypes.add(memberType);
 		}
 		return memberTypes.toArray(new IType[memberTypes.size()]);
@@ -566,7 +570,7 @@ public abstract class GenericRefactoringTest {
 		List<IMethod> methods= new ArrayList<>(names.length);
 		for (int i = 0; i < names.length; i++) {
 			IMethod method= type.getMethod(names[i], signatures[i]);
-			assertTrue("method " + method.getElementName() + " does not exist", method.exists());
+			assertTrue(method.exists(), "method " + method.getElementName() + " does not exist");
 			if (!methods.contains(method))
 				methods.add(method);
 		}
@@ -645,7 +649,7 @@ public abstract class GenericRefactoringTest {
 
 		String expected2= (expectedLines == null ? null : Strings.concatenate(expectedLines, "\n"));
 		String actual2= (actualLines == null ? null : Strings.concatenate(actualLines, "\n"));
-		assertEquals(message, expected2, actual2);
+		assertEquals(expected2, actual2, message);
 	}
 
 }

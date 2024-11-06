@@ -14,15 +14,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Hashtable;
 import java.util.Map;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -68,7 +68,7 @@ public class IntroduceParameterObjectTests extends GenericRefactoringTest {
 		IPackageFragment pack= getSubPackage(subdir);
 		ICompilationUnit cu= pack.getCompilationUnit(fileName+".java");
 		assertNotNull(cu);
-		assertTrue(cu.getPath() + " does not exist", cu.exists());
+		assertTrue(cu.exists(), cu.getPath() + " does not exist");
 		String actual= cu.getSource();
 		String expected= getFileContents(getOutputTestFileName(fileName));
 		assertEqualLines(expected, actual);
@@ -139,7 +139,7 @@ public class IntroduceParameterObjectTests extends GenericRefactoringTest {
 				return;
 			}
 		}
-		assertNull(status+"",status);
+		assertNull(status,status + "");
 		String expected= getFileContents(getOutputTestFileName(getCUName(false)));
 		assertNotNull(expected);
 		ICompilationUnit resultCU= fPack.getCompilationUnit(getCUFileName(false));

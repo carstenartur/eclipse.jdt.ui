@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.util.Hashtable;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -120,7 +120,7 @@ public class PromoteTempToFieldTests extends GenericRefactoringTest{
         PromoteTempToFieldRefactoring ref= new PromoteTempToFieldRefactoring(cu, selection.getOffset(), selection.getLength());
 
 		RefactoringStatus activationResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful", activationResult.isOK());
+		assertTrue(activationResult.isOK(), "activation was supposed to be successful");
 
         ref.setFieldName(newName);
         ref.setDeclareFinal(declareFinal);
@@ -129,14 +129,14 @@ public class PromoteTempToFieldTests extends GenericRefactoringTest{
         ref.setVisibility(accessModifier);
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
-		assertTrue("precondition was supposed to pass", checkInputResult.isOK());
+		assertTrue(checkInputResult.isOK(), "precondition was supposed to pass");
 
 		performChange(ref, false);
 
 		IPackageFragment pack= (IPackageFragment)cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		assertEqualLines("incorrect changes", getFileContents(getTestFileName(true, false)), newcu.getSource());
 	}
 
@@ -160,9 +160,9 @@ public class PromoteTempToFieldTests extends GenericRefactoringTest{
 		result.merge(ref.checkFinalConditions(new NullProgressMonitor()));
 		if (result.isOK())
 			result= null;
-		assertNotNull("precondition was supposed to fail",result);
+		assertNotNull(result,"precondition was supposed to fail");
 
-		assertEquals("incorrect severity:", expectedSeverity, result.getSeverity());
+		assertEquals(expectedSeverity, result.getSeverity(), "incorrect severity:");
 	}
 
 	private void enablementHelper(int startLine, int startColumn, int endLine, int endColumn,
@@ -186,13 +186,13 @@ public class PromoteTempToFieldTests extends GenericRefactoringTest{
         ref.setInitializeIn(initializeIn);
         ref.setVisibility(accessModifier);
 
-		assertEquals("activation checking was supposed to pass", RefactoringStatus.OK, result.getSeverity());
+		assertEquals(RefactoringStatus.OK, result.getSeverity(), "activation checking was supposed to pass");
 
-		assertEquals("incorrect in-constructor enablement", expectedCanEnableInitInConstructors, 	ref.canEnableSettingDeclareInConstructors());
-		assertEquals("incorrect in-field enablement", 		expectedCanEnableInitInField, 			ref.canEnableSettingDeclareInFieldDeclaration());
-		assertEquals("incorrect in-method enablement", 		expectedCanEnableInitInMethod, 			ref.canEnableSettingDeclareInMethod());
-		assertEquals("incorrect static enablement", 		expectedCanEnableSettingStatic, 		ref.canEnableSettingStatic());
-		assertEquals("incorrect final enablement", 			expectedCanEnableSettingFinal, 			ref.canEnableSettingFinal());
+		assertEquals(expectedCanEnableInitInConstructors, ref.canEnableSettingDeclareInConstructors(), 	"incorrect in-constructor enablement");
+		assertEquals(expectedCanEnableInitInField, 		ref.canEnableSettingDeclareInFieldDeclaration(), 			"incorrect in-field enablement");
+		assertEquals(expectedCanEnableInitInMethod, 		ref.canEnableSettingDeclareInMethod(), 			"incorrect in-method enablement");
+		assertEquals(expectedCanEnableSettingStatic, 		ref.canEnableSettingStatic(), 		"incorrect static enablement");
+		assertEquals(expectedCanEnableSettingFinal, 			ref.canEnableSettingFinal(), 			"incorrect final enablement");
 	}
 	private void enablementHelper1(int startLine, int startColumn, int endLine, int endColumn,
 						  boolean expectedCanEnableSettingFinal,

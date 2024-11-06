@@ -14,15 +14,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.hover;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -53,18 +53,18 @@ import org.eclipse.jdt.internal.ui.text.java.hover.JavadocHover;
 
 public class JavadocHoverTests extends CoreTests {
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fJProject1= pts.getProject();
 		JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, pts.getDefaultClasspath());
 	}
@@ -107,7 +107,7 @@ public class JavadocHoverTests extends CoreTests {
 			}
 			""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/TestClass.java", source, null);
-		assertNotNull("TestClass.java", cu);
+		assertNotNull(cu, "TestClass.java");
 
 		IType type= cu.getType("TestClass");
 		// check javadoc on each member:
@@ -118,7 +118,7 @@ public class JavadocHoverTests extends CoreTests {
 			String actualHtmlContent= hoverInfo.getHtml();
 
 			// value should be expanded:
-			assertTrue(actualHtmlContent, actualHtmlContent.contains("&lt;script&gt;"));
+			assertTrue(actualHtmlContent.contains("&lt;script&gt;"), actualHtmlContent);
 		}
 	}
 
@@ -136,7 +136,7 @@ public class JavadocHoverTests extends CoreTests {
 				+ "}\n"
 				+ "";
 		ICompilationUnit myEnumCu= getWorkingCopy("/TestSetupProject/src/test/MyEnum.java", myEnumSource, null);
-		assertNotNull("MyEnum.java", myEnumCu);
+		assertNotNull(myEnumCu, "MyEnum.java");
 
 		IType type= myEnumCu.getType("MyEnum");
 		IField field = type.getField("ENUM1");
@@ -179,7 +179,7 @@ public class JavadocHoverTests extends CoreTests {
 			}
 			""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/TestClass.java", source, null);
-		assertNotNull("TestClass.java", cu);
+		assertNotNull(cu, "TestClass.java");
 
 		IType type= cu.getType("TestClass");
 		// check javadoc on each member:
@@ -206,7 +206,7 @@ public class JavadocHoverTests extends CoreTests {
 			int index= actualHtmlContent.indexOf("<pre><code>");
 			assertNotEquals(-1, index);
 			String actualSnippet= actualHtmlContent.substring(index, index + expectedCodeSequence.length());
-			assertEquals("sequence doesn't match", expectedCodeSequence, actualSnippet);
+			assertEquals(expectedCodeSequence, actualSnippet, "sequence doesn't match");
 		}
 	}
 
@@ -236,7 +236,7 @@ public class JavadocHoverTests extends CoreTests {
 			}
 			""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/TestClass.java", source, null);
-		assertNotNull("TestClass.java", cu);
+		assertNotNull(cu, "TestClass.java");
 
 		IType type= cu.getType("TestClass");
 		// check javadoc on each member:
@@ -257,7 +257,7 @@ public class JavadocHoverTests extends CoreTests {
 			int index= actualHtmlContent.indexOf("<pre>{");
 			assertNotEquals(-1, index);
 			String actualSnippet= actualHtmlContent.substring(index, index + expectedCodeSequence.length());
-			assertEquals("sequence doesn't match", expectedCodeSequence, actualSnippet);
+			assertEquals(expectedCodeSequence, actualSnippet, "sequence doesn't match");
 		}
 	}
 
@@ -294,7 +294,7 @@ public class JavadocHoverTests extends CoreTests {
 			}
 			""";
 		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/TestClass.java", source, null);
-		assertNotNull("TestClass.java", cu);
+		assertNotNull(cu, "TestClass.java");
 
 		IType type= cu.getType("TestClass");
 		// check javadoc on each member:
@@ -321,7 +321,7 @@ public class JavadocHoverTests extends CoreTests {
 			int index= actualHtmlContent.indexOf("<pre><code>");
 			assertNotEquals(-1, index);
 			String actualSnippet= actualHtmlContent.substring(index, index + expectedCodeSequence.length());
-			assertEquals("sequence doesn't match", actualSnippet, expectedCodeSequence);
+			assertEquals(actualSnippet, expectedCodeSequence, "sequence doesn't match");
 		}
 	}
 

@@ -16,7 +16,7 @@ package org.eclipse.jdt.ui.tests.refactoring;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -79,10 +79,10 @@ public class TestDeleteParticipantShared extends DeleteParticipant implements IS
 
 	public static void testNumberOfElements(int expected) {
 		if (expected == 0) {
-			Assert.assertNull(fgInstance);
+			Assertions.assertNull(fgInstance);
 		} else {
-			Assert.assertEquals(expected, fgInstance.fElements.size());
-			Assert.assertEquals(expected, fgInstance.fArguments.size());
+			Assertions.assertEquals(expected, fgInstance.fElements.size());
+			Assertions.assertEquals(expected, fgInstance.fArguments.size());
 		}
 	}
 

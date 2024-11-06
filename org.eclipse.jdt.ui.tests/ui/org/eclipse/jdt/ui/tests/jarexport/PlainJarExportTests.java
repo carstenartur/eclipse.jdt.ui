@@ -13,9 +13,9 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.jarexport;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -26,12 +26,12 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -57,13 +57,17 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 import org.eclipse.jdt.internal.ui.jarpackager.JarPackagerUtil;
 
 public class PlainJarExportTests {
-	@Rule
+	private String testName;
+
+	@BeforeEach
+	void init(TestInfo testInfo) {
+		this.testName= testInfo.getDisplayName();
+	}
+
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
-	@Rule
-	public TestName tn= new TestName();
-
-	@BeforeClass
+	@BeforeAll
 	public static void setUpTest() {
 	}
 
@@ -71,7 +75,7 @@ public class PlainJarExportTests {
 	private IPackageFragmentRoot fMainRoot;
 	private ICompilationUnit fCU;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fProject= pts.getProject();
 
@@ -92,7 +96,7 @@ public class PlainJarExportTests {
 		fCU= fragment.createCompilationUnit("Main.java", str, true, null);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fProject, pts.getDefaultClasspath());
 	}
@@ -134,8 +138,8 @@ public class PlainJarExportTests {
 		JarPackageData data= createJarPackageData();
 
 		File classFolder= JavaTestPlugin.getDefault().getFileInPlugin(new Path("testresources/externalClassFolder/"));//$NON-NLS-1$
-		assertNotNull("class folder not found", classFolder);//$NON-NLS-1$
-		assertTrue("class folder not found", classFolder.exists());//$NON-NLS-1$
+		assertNotNull(classFolder, "class folder not found");//$NON-NLS-1$
+		assertTrue(classFolder.exists(), "class folder not found");//$NON-NLS-1$
 
 		IPackageFragmentRoot externalRoot= JavaProjectHelper.addLibrary(fProject, Path.fromOSString(classFolder.getPath()), null, null);
 
@@ -159,7 +163,7 @@ public class PlainJarExportTests {
 	}
 
 	private String getName() {
-		return tn.getMethodName();
+		return testName;
 	}
 
 	private static ZipFile createArchive(JarPackageData data) throws Exception, CoreException {

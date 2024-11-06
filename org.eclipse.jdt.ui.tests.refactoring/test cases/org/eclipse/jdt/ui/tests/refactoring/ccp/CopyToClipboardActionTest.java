@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.ccp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.FileTransfer;
@@ -114,12 +114,12 @@ public class CopyToClipboardActionTest extends GenericRefactoringTest {
 		fLabelProvider= new JavaElementLabelProvider(	JavaElementLabelProvider.SHOW_VARIABLE +
 														JavaElementLabelProvider.SHOW_PARAMETERS +
 														JavaElementLabelProvider.SHOW_TYPE);
-		assertTrue("A.java does not exist", fCuA.exists());
-		assertTrue("B.java does not exist", fCuB.exists());
-		assertTrue("q does not exist", fPackage_Q.exists());
-		assertTrue("q.r does not exist", fPackage_Q_R.exists());
-		assertTrue("a.txt does not exist", faTxt.exists());
-		assertTrue("fOlder does not exist", fOlder.exists());
+		assertTrue(fCuA.exists(), "A.java does not exist");
+		assertTrue(fCuB.exists(), "B.java does not exist");
+		assertTrue(fPackage_Q.exists(), "q does not exist");
+		assertTrue(fPackage_Q_R.exists(), "q.r does not exist");
+		assertTrue(faTxt.exists(), "a.txt does not exist");
+		assertTrue(fOlder.exists(), "fOlder does not exist");
 	}
 
 	@Override
@@ -146,14 +146,14 @@ public class CopyToClipboardActionTest extends GenericRefactoringTest {
 		CopyToClipboardAction copyAction= new CopyToClipboardAction(new MockWorkbenchSite(elements), fClipboard);
 		copyAction.setAutoRepeatOnFailure(true);
 		copyAction.update(copyAction.getSelection());
-		assertFalse("action should be disabled", copyAction.isEnabled());
+		assertFalse(copyAction.isEnabled(), "action should be disabled");
 	}
 
 	private void checkEnabled(Object[] elements) throws Exception {
 		CopyToClipboardAction copyAction= new CopyToClipboardAction(new MockWorkbenchSite(elements), fClipboard);
 		copyAction.setAutoRepeatOnFailure(true);
 		copyAction.update(copyAction.getSelection());
-		assertTrue("action should be enabled", copyAction.isEnabled());
+		assertTrue(copyAction.isEnabled(), "action should be enabled");
 		copyAction.run();
 		checkClipboard(elements);
 	}
@@ -181,11 +181,11 @@ public class CopyToClipboardActionTest extends GenericRefactoringTest {
 
 	private void checkTypedSources(IJavaElement[] javaElementsCopied, TypedSource[] clipboardTypedSources) throws Exception {
 		TypedSource[] typedSources= TypedSource.createTypedSources(javaElementsCopied);
-		assertEquals("different number", typedSources.length, clipboardTypedSources.length);
+		assertEquals(typedSources.length, clipboardTypedSources.length, "different number");
 		TypedSource.sortByType(typedSources);
 		TypedSource.sortByType(clipboardTypedSources);
 		for (int i= 0; i < typedSources.length; i++) {
-			assertEquals("different typed sources", typedSources[i], clipboardTypedSources[i]);
+			assertEquals(typedSources[i], clipboardTypedSources[i], "different typed sources");
 		}
 	}
 
@@ -206,13 +206,13 @@ public class CopyToClipboardActionTest extends GenericRefactoringTest {
 	}
 
 	private static void checkElements(Object[] copied, Object[] retreivedFromClipboard) {
-		assertEquals("different number of elements", copied.length, retreivedFromClipboard.length);
+		assertEquals(copied.length, retreivedFromClipboard.length, "different number of elements");
 		sortByName(copied);
 		sortByName(retreivedFromClipboard);
 		for (int i= 0; i < retreivedFromClipboard.length; i++) {
 			Object retreived= retreivedFromClipboard[i];
-			assertTrue("element does not exist", exists(retreived));
-			assertEquals("different copied " + getName(copied[i]) + " retreived: " + getName(retreived), copied[i], retreivedFromClipboard[i]);
+			assertTrue(exists(retreived), "element does not exist");
+			assertEquals(copied[i], retreivedFromClipboard[i], "different copied " + getName(copied[i]) + " retreived: " + getName(retreived));
 		}
 	}
 
@@ -239,15 +239,15 @@ public class CopyToClipboardActionTest extends GenericRefactoringTest {
 
 	private void checkNames(IResource[] resourcesCopied, IJavaElement[] javaElementsCopied, String clipboardText){
 		List<String> stringLines= Arrays.asList(Strings.convertIntoLines(clipboardText));
-		assertEquals("different number of names", resourcesCopied.length + javaElementsCopied.length, stringLines.size());
+		assertEquals(resourcesCopied.length + javaElementsCopied.length, stringLines.size(), "different number of names");
 		for (IResource resource : resourcesCopied) {
 			String name= getName(resource);
-			assertTrue("name not in set:" + name, stringLines.contains(name));
+			assertTrue(stringLines.contains(name), "name not in set:" + name);
 		}
 		for (IJavaElement element : javaElementsCopied) {
 			if (! ReorgUtilsCore.isInsideCompilationUnit(element)){
 				String name= getName(element);
-				assertTrue("name not in set:" + name, stringLines.contains(name));
+				assertTrue(stringLines.contains(name), "name not in set:" + name);
 			}
 		}
 	}
@@ -259,7 +259,7 @@ public class CopyToClipboardActionTest extends GenericRefactoringTest {
 		expected += mainTypes.length;
 
 		//we cannot compare file names here because they're absolute and depend on the worspace location
-		assertEquals("different number of files in clipboard", expected, clipboardFiles.length);
+		assertEquals(expected, clipboardFiles.length, "different number of files in clipboard");
 	}
 
 	private static int countResources(IJavaElement[] javaElementsCopied) {

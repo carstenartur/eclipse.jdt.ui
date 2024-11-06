@@ -16,7 +16,7 @@ package org.eclipse.jdt.ui.tests.refactoring;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import org.eclipse.core.resources.IResource;
 
@@ -77,7 +77,7 @@ public class ParticipantTesting {
 	}
 
 	public static void testRename(String[] expectedHandles, RenameArguments[] args) {
-		Assert.assertEquals(expectedHandles.length, args.length);
+		Assertions.assertEquals(expectedHandles.length, args.length);
 		if (expectedHandles.length == 0) {
 			TestRenameParticipantShared.testNumberOfElements(0);
 			TestRenameParticipantSingle.testNumberOfInstances(0);
@@ -92,7 +92,7 @@ public class ParticipantTesting {
 	}
 
 	public static void testMove(String[] expectedHandles, MoveArguments[] args) {
-		Assert.assertEquals(expectedHandles.length, args.length);
+		Assertions.assertEquals(expectedHandles.length, args.length);
 		if (expectedHandles.length == 0) {
 			TestMoveParticipantShared.testNumberOfElements(0);
 			TestMoveParticipantSingle.testNumberOfInstances(0);
@@ -145,7 +145,7 @@ public class ParticipantTesting {
 	}
 
 	public static void testSimilarElements(List<String> similarList, List<String> similarNewNameList, List<String> similarNewHandleList) {
-		Assert.assertEquals(similarList.size(), similarNewNameList.size());
+		Assertions.assertEquals(similarList.size(), similarNewNameList.size());
 		if (similarList.isEmpty()) {
 			TestRenameParticipantShared.testNumberOfSimilarElements(0);
 		} else {
@@ -156,7 +156,7 @@ public class ParticipantTesting {
 
 	private static void testElementsShared(String[] expected, List<String> actual) {
 		for (String handle : expected) {
-			Assert.assertTrue("Expected handle not found: " + handle, actual.contains(handle));
+			Assertions.assertTrue(actual.contains(handle), "Expected handle not found: " + handle);
 		}
 		testNumberOfElements(expected.length, actual);
 	}
@@ -164,6 +164,6 @@ public class ParticipantTesting {
 	private static void testNumberOfElements(int expected, List<String> actual) {
 		if (expected == 0 && actual == null)
 			return;
-		Assert.assertEquals(expected, actual.size());
+		Assertions.assertEquals(expected, actual.size());
 	}
 }

@@ -13,9 +13,9 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.contentassist;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.Preferences;
 
@@ -139,7 +139,7 @@ public class ContentAssistHistoryTest {
 		assertEquals(list(STRING), history.getHistory(CHAR_SEQUENCE).getTypes());
 
 		history.remember(fgStringT, fgStringT);
-		assertTrue("history must not remember final left hand sides", history.getHistory(STRING).getTypes().isEmpty());
+		assertTrue(history.getHistory(STRING).getTypes().isEmpty(), "history must not remember final left hand sides");
 
 		history.remember(fgCharSequenceT, fgStringBufferT);
 		assertTrue(history.getHistory(STRING).getTypes().isEmpty());
@@ -147,7 +147,7 @@ public class ContentAssistHistoryTest {
 
 		history.remember(fgStringT, fgStringT);
 		assertTrue(history.getHistory(STRING).getTypes().isEmpty());
-		assertEquals("order not correct", list(STRING_BUFFER, STRING), history.getHistory(CHAR_SEQUENCE).getTypes());
+		assertEquals(list(STRING_BUFFER, STRING), history.getHistory(CHAR_SEQUENCE).getTypes(), "order not correct");
 	}
 
 	@Test
@@ -248,10 +248,10 @@ public class ContentAssistHistoryTest {
 	}
 
 	private static void assertEqualMap(String message, Map<String, List<String>> expected, Map<String, RHSHistory> actual) {
-		assertEquals(message, expected.size(), actual.size());
+		assertEquals(expected.size(), actual.size(), message);
 		for (Map.Entry<String, List<String>> entry : expected.entrySet()) {
 			String type = entry.getKey();
-			assertEquals(message, entry.getValue(), actual.get(type).getTypes());
+			assertEquals(entry.getValue(), actual.get(type).getTypes(), message);
 		}
 	}
 

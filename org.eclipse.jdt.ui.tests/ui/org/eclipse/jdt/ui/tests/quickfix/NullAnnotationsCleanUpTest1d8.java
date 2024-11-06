@@ -17,8 +17,8 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Hashtable;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.osgi.framework.Bundle;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -49,8 +49,8 @@ import org.eclipse.jdt.internal.ui.fix.NullAnnotationsCleanUp;
  */
 public class NullAnnotationsCleanUpTest1d8 extends CleanUpTestCase {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new Java1d8ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new Java1d8ProjectTestSetup();
 
 	private String ANNOTATION_JAR_PATH;
 

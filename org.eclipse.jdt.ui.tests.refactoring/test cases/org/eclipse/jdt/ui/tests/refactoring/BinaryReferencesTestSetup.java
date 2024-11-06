@@ -13,6 +13,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.osgi.framework.Bundle;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -46,8 +47,8 @@ public class BinaryReferencesTestSetup extends AbstractRefactoringTestSetup {
 	}
 
 	@Override
-	public void before() throws Exception {
-		super.before();
+	public void beforeEach(ExtensionContext context) throws Exception {
+		super.beforeEach(context);
 		Bundle bundle= RefactoringTestPlugin.getDefault().getBundle();
 
 		fSource= JavaProjectHelper.createJavaProject("Source", "bin");
@@ -75,7 +76,7 @@ public class BinaryReferencesTestSetup extends AbstractRefactoringTestSetup {
 	}
 
 	@Override
-	public void after() {
+	public void afterEach(ExtensionContext context) {
 		try {
 			JavaProjectHelper.delete(fSource);
 			JavaProjectHelper.delete(fBinaryReference);
@@ -83,6 +84,6 @@ public class BinaryReferencesTestSetup extends AbstractRefactoringTestSetup {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		super.after();
+		super.afterEach(context);
 	}
 }

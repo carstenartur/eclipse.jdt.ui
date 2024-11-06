@@ -13,9 +13,9 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -23,7 +23,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.Assert;
 
@@ -464,18 +464,18 @@ public class HierarchicalASTVisitorTest {
 			 * method corresponding to XX's superclass, YY. We check here that
 			 * fNodeClassForCalledMethod was set to the superclass of clazz.
 			 */
-			assertEquals(getSuperMethodNotCalledMessageFor(clazz, isEndVisit), clazz.getSuperclass(), fNodeClassForCalledMethod);
+			assertEquals(clazz.getSuperclass(), fNodeClassForCalledMethod, getSuperMethodNotCalledMessageFor(clazz, isEndVisit));
 		}
 		private String getSuperMethodNotCalledMessageFor(Class<? extends ASTNode> clazz, boolean isEndVisit) {
 			return getMethodSignatureFor(clazz, isEndVisit) + " in HierarchicalASTVisitor should call " + getMethodSignatureFor(clazz.getSuperclass(), isEndVisit) + ", the visitor method for its superclass.";
 		}
 
 		private void registerCall(Class<? extends ASTNode> nodeClassForMethod) {
-			assertNull("""
-				The invocation of a visit(XX) method in HierarchicalASTVisitor has caused \
-				more than one other visit(XX) method to be called.  Every visit(XX) method in \
-				HierarchicalASTVisitor, except visit(ASTNode), should simply call visit(YY), \
-				where YY is the superclass of XX.""", fNodeClassForCalledMethod);
+			assertNull(fNodeClassForCalledMethod, """
+						The invocation of a visit(XX) method in HierarchicalASTVisitor has caused \
+						more than one other visit(XX) method to be called.  Every visit(XX) method in \
+						HierarchicalASTVisitor, except visit(ASTNode), should simply call visit(YY), \
+						where YY is the superclass of XX.""");
 			fNodeClassForCalledMethod= nodeClassForMethod;
 		}
 	}

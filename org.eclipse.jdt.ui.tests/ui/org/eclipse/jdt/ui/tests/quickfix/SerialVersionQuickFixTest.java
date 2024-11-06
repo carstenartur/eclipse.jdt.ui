@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -49,8 +49,8 @@ import org.eclipse.jdt.internal.ui.JavaPlugin;
 
 public class SerialVersionQuickFixTest extends QuickFixTest {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new ProjectTestSetup();
 
 	private static final String DEFAULT_VALUE= "1L";
 
@@ -60,8 +60,8 @@ public class SerialVersionQuickFixTest extends QuickFixTest {
 
 	public static void assertEqualPreview(final String preview, final String buffer) {
 		final int index= buffer.indexOf(SerialVersionQuickFixTest.FIELD_DECLARATION);
-		assertTrue("Could not find the field declaration", index > 0);
-		assertTrue("Resulting source should be larger", preview.length() >= buffer.length());
+		assertTrue(index > 0, "Could not find the field declaration");
+		assertTrue(preview.length() >= buffer.length(), "Resulting source should be larger");
 		final int start= index + FIELD_DECLARATION.length();
 		assertEqualString(preview.substring(0, start), buffer.substring(0, start));
 		final int end= start + DEFAULT_VALUE.length();
@@ -72,7 +72,7 @@ public class SerialVersionQuickFixTest extends QuickFixTest {
 
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		JavaRuntime.getDefaultVMInstall();
 		fProject= projectSetup.getProject();
@@ -99,7 +99,7 @@ public class SerialVersionQuickFixTest extends QuickFixTest {
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fProject, "src"); //$NON-NLS-1$
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fProject, projectSetup.getDefaultClasspath());
 	}

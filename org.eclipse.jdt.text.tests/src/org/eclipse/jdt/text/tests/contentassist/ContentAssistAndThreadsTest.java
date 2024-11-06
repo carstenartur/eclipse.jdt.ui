@@ -10,9 +10,9 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.contentassist;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,8 +22,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -56,7 +56,7 @@ import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 import org.eclipse.jdt.internal.ui.text.java.JavaCompletionProcessor;
 
 public class ContentAssistAndThreadsTest extends AbstractCompletionTest {
-	@After
+	@AfterEach
 	public void resetPreference() {
 		JavaPlugin.getDefault().getPreferenceStore().setToDefault(PreferenceConstants.CODEASSIST_NONUITHREAD_COMPUTATION);
 	}
@@ -113,22 +113,22 @@ public class ContentAssistAndThreadsTest extends AbstractCompletionTest {
 		thread.start();
 		display.asyncExec(() -> action.run()); // mustn't be synchronous or CheckUIThreadReactivityTest can miss it.
 		try {
-			assertTrue("Missing completion proposal", new org.eclipse.jdt.text.tests.performance.DisplayHelper() {
+			assertTrue(new org.eclipse.jdt.text.tests.performance.DisplayHelper() {
 				@Override
 				protected boolean condition() {
-					Set<Shell> newShells = Arrays.stream(part.getSite().getShell().getDisplay().getShells()).filter(Shell::isVisible).collect(Collectors.toSet());
+					Set<Shell> newShells= Arrays.stream(part.getSite().getShell().getDisplay().getShells()).filter(Shell::isVisible).collect(Collectors.toSet());
 					newShells.removeAll(beforeShells);
 					if (!newShells.isEmpty()) {
-						Table completionTable = findCompletionSelectionControl(newShells.iterator().next());
+						Table completionTable= findCompletionSelectionControl(newShells.iterator().next());
 						return Arrays.stream(completionTable.getItems()).map(TableItem::getText).anyMatch(LongCompletionProposalComputer.CONTENT_TRIGGER_STRING::equals);
 					}
 					return false;
 				}
-			}.waitForCondition(display, 3000));
+			}.waitForCondition(display, 3000), "Missing completion proposal");
 		} finally {
 			thread.interrupt();
 		}
-		assertTrue("UI was frozen for " + thread.getMaxDuration(), thread.getMaxDuration() < 1000);
+		assertTrue(thread.getMaxDuration() < 1000, "UI was frozen for " + thread.getMaxDuration());
 	}
 
 	private Table findCompletionSelectionControl(Widget control) {

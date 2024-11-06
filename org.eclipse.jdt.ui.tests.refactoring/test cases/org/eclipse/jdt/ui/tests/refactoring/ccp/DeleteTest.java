@@ -13,20 +13,20 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.ccp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Before;
 import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.runners.MethodSorters;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -78,7 +78,7 @@ public class DeleteTest extends GenericRefactoringTest {
 		rts= new RefactoringTestSetup();
 	}
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fIsPreDeltaTest= true;
 	}
@@ -91,13 +91,13 @@ public class DeleteTest extends GenericRefactoringTest {
 	private void verifyDisabled(Object[] elements) throws CoreException {
 		JavaDeleteProcessor processor= new JavaDeleteProcessor(elements);
 		DeleteRefactoring ref= new DeleteRefactoring(processor);
-		assertFalse("delete should be disabled", ref.isApplicable());
+		assertFalse(ref.isApplicable(), "delete should be disabled");
 	}
 
 	private void verifyEnabled(Object[] elements) throws CoreException {
 		JavaDeleteProcessor processor= new JavaDeleteProcessor(elements);
 		DeleteRefactoring ref= new DeleteRefactoring(processor);
-		assertTrue("delete should be enabled", ref.isApplicable());
+		assertTrue(ref.isApplicable(), "delete should be enabled");
 	}
 
 	private IPackageFragmentRoot getArchiveRoot() throws JavaModelException, Exception {
@@ -114,17 +114,17 @@ public class DeleteTest extends GenericRefactoringTest {
 
 	private void loadFileSetup() throws Exception{
 		fCuA= createCUfromTestFile(getPackageP(), CU_NAME);
-		assertTrue("A.java does not exist", fCuA.exists());
+		assertTrue(fCuA.exists(), "A.java does not exist");
 	}
 
 	private void checkDelete(IJavaElement[] elems, boolean deleteCu) throws JavaModelException, Exception {
 		DeleteRefactoring refactoring= createRefactoring(elems);
 		assertNotNull(refactoring);
 		RefactoringStatus status= performRefactoring(refactoring, true);
-		assertNull("precondition was supposed to pass", status);
+		assertNull(status, "precondition was supposed to pass");
 
 		ICompilationUnit newCuA= getPackageP().getCompilationUnit(CU_NAME + ".java");
-		assertEquals("A.java does not exist", newCuA.exists(), !deleteCu);
+		assertEquals(newCuA.exists(), !deleteCu, "A.java does not exist");
 		if (! deleteCu)
 			assertEqualLines("incorrect content of A.java", getFileContents(getOutputTestFileName(CU_NAME)), newCuA.getSource());
 	}
@@ -186,7 +186,7 @@ public class DeleteTest extends GenericRefactoringTest {
 		DeleteRefactoring ref= createRefactoring(markedForDelete);
 		((JavaDeleteProcessor)ref.getProcessor()).setDeleteSubPackages(deleteSubs);
 		RefactoringStatus status= performRefactoring(ref, true);
-		assertNull("expected to pass", status);
+		assertNull(status, "expected to pass");
 
 		// assure participants got notified of everything.
 		ParticipantTesting.testDelete(deleteHandles);
@@ -218,18 +218,18 @@ public class DeleteTest extends GenericRefactoringTest {
 		if (resourceOrElement instanceof IResource) {
 			IResource resource= (IResource) resourceOrElement;
 			if (exists) {
-				assertTrue("expected to exist: " + resource.getFullPath(), resource.exists());
+				assertTrue(resource.exists(), "expected to exist: " + resource.getFullPath());
 			} else {
-				assertFalse("expected NOT to exist: " + resource.getFullPath(), resource.exists());
+				assertFalse(resource.exists(), "expected NOT to exist: " + resource.getFullPath());
 			}
 		} else 	if (resourceOrElement instanceof IJavaElement) {
 			IJavaElement javaElement= (IJavaElement) resourceOrElement;
 			if (exists) {
-				assertTrue("expected to exist: " + javaElement.getHandleIdentifier(), javaElement.exists());
+				assertTrue(javaElement.exists(), "expected to exist: " + javaElement.getHandleIdentifier());
 			} else {
-				assertFalse("expected NOT to exist: " + javaElement.getHandleIdentifier(), javaElement.exists());
+				assertFalse(javaElement.exists(), "expected NOT to exist: " + javaElement.getHandleIdentifier());
 				IResource resource= javaElement.getResource();
-				assertFalse("expected NOT to exist: " + resource.getFullPath(), resource.exists());
+				assertFalse(resource.exists(), "expected NOT to exist: " + resource.getFullPath());
 			}
 		}
 	}
@@ -771,7 +771,7 @@ public class DeleteTest extends GenericRefactoringTest {
 		String content= "123";
 		IFile file= folder.getFile("a.txt");
 		file.create(getStream(content), true, null);
-		assertTrue("file does not exist", file.exists());
+		assertTrue(file.exists(), "file does not exist");
 		Object[] elem= {file};
 		verifyEnabled(elem);
 		mustPerformDummySearch();
@@ -780,8 +780,8 @@ public class DeleteTest extends GenericRefactoringTest {
 
 		DeleteRefactoring ref= createRefactoring(elem);
 		RefactoringStatus status= performRefactoring(ref, true);
-		assertNull("expected to pass", status);
-		assertFalse("file not deleted", file.exists());
+		assertNull(status, "expected to pass");
+		assertFalse(file.exists(), "file not deleted");
 		ParticipantTesting.testDelete(handles);
 
 		IUndoManager undoManager= RefactoringCore.getUndoManager();
@@ -803,7 +803,7 @@ public class DeleteTest extends GenericRefactoringTest {
 		IFolder subFolder= folder.getFolder("subFolder");
 		subFolder.create(true, true, null);
 
-		assertTrue("folder does not exist", subFolder.exists());
+		assertTrue(subFolder.exists(), "folder does not exist");
 		Object[] elements= {subFolder};
 		verifyEnabled(elements);
 		mustPerformDummySearch();
@@ -811,8 +811,8 @@ public class DeleteTest extends GenericRefactoringTest {
 		String[] handles= ParticipantTesting.createHandles(subFolder);
 		DeleteRefactoring ref= createRefactoring(elements);
 		RefactoringStatus status= performRefactoring(ref, true);
-		assertNull("expected to pass", status);
-		assertFalse("folder not deleted", subFolder.exists());
+		assertNull(status, "expected to pass");
+		assertFalse(subFolder.exists(), "folder not deleted");
 		ParticipantTesting.testDelete(handles);
 	}
 
@@ -825,8 +825,8 @@ public class DeleteTest extends GenericRefactoringTest {
 		IFolder subsubFolder= subFolder.getFolder("subSubFolder");
 		subsubFolder.create(true, true, null);
 
-		assertTrue("folder does not exist", subFolder.exists());
-		assertTrue("folder does not exist", subsubFolder.exists());
+		assertTrue(subFolder.exists(), "folder does not exist");
+		assertTrue(subsubFolder.exists(), "folder does not exist");
 		Object[] elements= {subFolder, subsubFolder};
 		verifyEnabled(elements);
 		mustPerformDummySearch();
@@ -834,9 +834,9 @@ public class DeleteTest extends GenericRefactoringTest {
 		String[] handles= ParticipantTesting.createHandles(subFolder);
 		DeleteRefactoring ref= createRefactoring(elements);
 		RefactoringStatus status= performRefactoring(ref, true);
-		assertNull("expected to pass", status);
-		assertFalse("folder not deleted", subFolder.exists());
-		assertFalse("folder not deleted", subsubFolder.exists());
+		assertNull(status, "expected to pass");
+		assertFalse(subFolder.exists(), "folder not deleted");
+		assertFalse(subsubFolder.exists(), "folder not deleted");
 		ParticipantTesting.testDelete(handles);
 
 		IUndoManager undoManager= RefactoringCore.getUndoManager();
@@ -857,7 +857,7 @@ public class DeleteTest extends GenericRefactoringTest {
 		ParticipantTesting.reset();
 		final String contents= "package p; class X{}";
 		ICompilationUnit newCU= getPackageP().createCompilationUnit("X.java", contents, true, new NullProgressMonitor());
-		assertTrue("cu not created", newCU.exists());
+		assertTrue(newCU.exists(), "cu not created");
 
 		Object[] elements= {newCU};
 		String[] handles= ParticipantTesting.createHandles(newCU, newCU.getTypes()[0], newCU.getResource());
@@ -867,8 +867,8 @@ public class DeleteTest extends GenericRefactoringTest {
 
 		DeleteRefactoring ref= createRefactoring(elements);
 		RefactoringStatus status= performRefactoring(ref, true);
-		assertNull("expected to pass", status);
-		assertFalse("cu not deleted", newCU.exists());
+		assertNull(status, "expected to pass");
+		assertFalse(newCU.exists(), "cu not deleted");
 		ParticipantTesting.testDelete(handles);
 
 		IWorkbenchOperationSupport operationSupport= PlatformUI.getWorkbench().getOperationSupport();
@@ -890,7 +890,7 @@ public class DeleteTest extends GenericRefactoringTest {
 	public void testDeleteSourceFolder() throws Exception{
 		ParticipantTesting.reset();
 		IPackageFragmentRoot fredRoot= JavaProjectHelper.addSourceContainer(rts.getProject(), "fred");
-		assertTrue("not created", fredRoot.exists());
+		assertTrue(fredRoot.exists(), "not created");
 
 		Object[] elements= {fredRoot};
 		verifyEnabled(elements);
@@ -898,8 +898,8 @@ public class DeleteTest extends GenericRefactoringTest {
 		String[] handles= ParticipantTesting.createHandles(fredRoot, fredRoot.getResource());
 		DeleteRefactoring ref= createRefactoring(elements);
 		RefactoringStatus status= performRefactoring(ref, true);
-		assertNull("expected to pass", status);
-		assertFalse("not deleted", fredRoot.exists());
+		assertNull(status, "expected to pass");
+		assertFalse(fredRoot.exists(), "not deleted");
 		ParticipantTesting.testDelete(handles);
 	}
 
@@ -907,7 +907,7 @@ public class DeleteTest extends GenericRefactoringTest {
 	public void testDeleteInternalJAR() throws Exception{
 		ParticipantTesting.reset();
 		File lib= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.MYLIB);
-		assertTrue("lib does not exist",  lib.exists());
+		assertTrue(lib.exists(),  "lib does not exist");
 		IPackageFragmentRoot internalJAR= JavaProjectHelper.addLibraryWithImport(rts.getProject(), Path.fromOSString(lib.getPath()), null, null);
 
 		Object[] elements= {internalJAR};
@@ -917,8 +917,8 @@ public class DeleteTest extends GenericRefactoringTest {
 
 		DeleteRefactoring ref= createRefactoring(elements);
 		RefactoringStatus status= performRefactoring(ref, true);
-		assertNull("expected to pass", status);
-		assertFalse("not deleted", internalJAR.exists());
+		assertNull(status, "expected to pass");
+		assertFalse(internalJAR.exists(), "not deleted");
 		ParticipantTesting.testDelete(handles);
 	}
 
@@ -936,7 +936,7 @@ public class DeleteTest extends GenericRefactoringTest {
 		// Notification of package delete and folder delete
 		ParticipantTesting.reset();
 		IPackageFragment newPackage= getRoot().createPackageFragment("newPackage", true, new NullProgressMonitor());
-		assertTrue("package not created", newPackage.exists());
+		assertTrue(newPackage.exists(), "package not created");
 		String cuContents= "public class A {}";
 		ICompilationUnit cu= newPackage.createCompilationUnit("A.java", cuContents, false, null);
 		IFile file= ((IContainer)newPackage.getResource()).getFile(new Path("Z.txt"));
@@ -949,8 +949,8 @@ public class DeleteTest extends GenericRefactoringTest {
 
 		DeleteRefactoring ref= createRefactoring(elements);
 		RefactoringStatus status= performRefactoring(ref, true);
-		assertNull("expected to pass", status);
-		assertFalse("package not deleted", newPackage.exists());
+		assertNull(status, "expected to pass");
+		assertFalse(newPackage.exists(), "package not deleted");
 
 		ParticipantTesting.testDelete(deleteHandles);
 
@@ -973,7 +973,7 @@ public class DeleteTest extends GenericRefactoringTest {
 		ParticipantTesting.reset();
 		IPackageFragment p1= getRoot().createPackageFragment("p1", true, new NullProgressMonitor());
 		IPackageFragment p1p2= getRoot().createPackageFragment("p1.p2", true, new NullProgressMonitor());
-		assertTrue("package not created", p1.exists());
+		assertTrue(p1.exists(), "package not created");
 		String cuContents= "public class A {}";
 		ICompilationUnit cu= p1.createCompilationUnit("A.java", cuContents, false, null);
 		IFile file= ((IContainer)p1.getResource()).getFile(new Path("Z.txt"));
@@ -986,9 +986,9 @@ public class DeleteTest extends GenericRefactoringTest {
 
 		DeleteRefactoring ref= createRefactoring(elements);
 		RefactoringStatus status= performRefactoring(ref, true);
-		assertNull("expected to pass", status);
+		assertNull(status, "expected to pass");
 		//Package is not delete since it had sub packages
-		assertTrue("package deleted", p1.exists());
+		assertTrue(p1.exists(), "package deleted");
 		assertEquals(0, p1.getChildren().length);
 		assertTrue(p1p2.exists());
 		assertFalse(file.exists());
@@ -1121,7 +1121,7 @@ public class DeleteTest extends GenericRefactoringTest {
 		mustPerformDummySearch();
 		DeleteRefactoring ref= createRefactoring(markedForDelete);
 		RefactoringStatus status= performRefactoring(ref, true);
-		assertNull("expected to pass", status);
+		assertNull(status, "expected to pass");
 
 		// test handles (!! only the package, not the resource)
 		ParticipantTesting.testDelete(deleteHandles);
@@ -1157,8 +1157,8 @@ public class DeleteTest extends GenericRefactoringTest {
 		IFolder folder= project.getFolder("folder");
 		folder.create(true, true, null);
 		IPackageFragment newPackage= getRoot().createPackageFragment("newPackage", true, new NullProgressMonitor());
-		assertTrue("folder does not exist", folder.exists());
-		assertTrue("package not created", newPackage.exists());
+		assertTrue(folder.exists(), "folder does not exist");
+		assertTrue(newPackage.exists(), "package not created");
 		String cuContents= "public class A {}";
 		ICompilationUnit cu= newPackage.createCompilationUnit("A.java", cuContents, false, null);
 		IFile file= ((IContainer)newPackage.getResource()).getFile(new Path("Z.txt"));
@@ -1171,9 +1171,9 @@ public class DeleteTest extends GenericRefactoringTest {
 
 		DeleteRefactoring ref= createRefactoring(elements);
 		RefactoringStatus status= performRefactoring(ref, true);
-		assertNull("expected to pass", status);
-		assertFalse("folder not deleted", folder.exists());
-		assertFalse("package not deleted", newPackage.exists());
+		assertNull(status, "expected to pass");
+		assertFalse(folder.exists(), "folder not deleted");
+		assertFalse(newPackage.exists(), "package not deleted");
 
 		ParticipantTesting.testDelete(deleteHandles);
 

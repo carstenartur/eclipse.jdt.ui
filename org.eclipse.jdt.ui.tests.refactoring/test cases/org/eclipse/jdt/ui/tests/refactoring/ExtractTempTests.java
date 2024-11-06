@@ -23,16 +23,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -84,7 +84,7 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		return createCU(pack, getSimpleTestFileName(canExtract, input), getFileContents(getTestFileName(canExtract, input)));
 	}
 
-	@Before
+	@BeforeEach
 	public void before() throws Exception {
 		Hashtable<String, String> options= JavaCore.getOptions();
 
@@ -94,7 +94,7 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		JavaCore.setOptions(options);
 	}
 
-	@After
+	@AfterEach
 	public void after() throws Exception {
 		Hashtable<String, String> options= JavaCore.getOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_INSERT_SPACE_BEFORE_ASSIGNMENT_OPERATOR, fCompactPref);
@@ -106,23 +106,23 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		ISourceRange selection= TextRangeUtil.getSelection(cu, startLine, startColumn, endLine, endColumn);
 		ExtractTempRefactoring ref= new ExtractTempRefactoring(cu, selection.getOffset(), selection.getLength());
 		RefactoringStatus activationResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful", activationResult.isOK());
+		assertTrue(activationResult.isOK(), "activation was supposed to be successful");
 
 		ref.setReplaceAllOccurrences(replaceAll);
 		ref.setDeclareFinal(makeFinal);
 		ref.setTempName(tempName);
 
-		assertEquals("temp name incorrectly guessed", guessedTempName, ref.guessTempNameWithContext());
+		assertEquals(guessedTempName, ref.guessTempNameWithContext(), "temp name incorrectly guessed");
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
-		assertTrue("precondition was supposed to pass but was " + checkInputResult.toString(), checkInputResult.isOK());
+		assertTrue(checkInputResult.isOK(), "precondition was supposed to pass but was " + checkInputResult.toString());
 
 		performChange(ref, false);
 
 		IPackageFragment pack= (IPackageFragment) cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		assertEqualLines(getFileContents(getTestFileName(true, false)), newcu.getSource());
 	}
 
@@ -131,24 +131,24 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		ISourceRange selection= TextRangeUtil.getSelection(cu, startLine, startColumn, endLine, endColumn);
 		ExtractTempRefactoring ref= new ExtractTempRefactoring(cu, selection.getOffset(), selection.getLength());
 		RefactoringStatus activationResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful", activationResult.isOK());
+		assertTrue(activationResult.isOK(), "activation was supposed to be successful");
 
 		ref.setReplaceAllOccurrences(replaceAll);
 		ref.setReplaceAllOccurrencesInThisFile(replaceAllInThisFile);
 		ref.setDeclareFinal(makeFinal);
 		ref.setTempName(tempName);
 
-		assertEquals("temp name incorrectly guessed", guessedTempName, ref.guessTempNameWithContext());
+		assertEquals(guessedTempName, ref.guessTempNameWithContext(), "temp name incorrectly guessed");
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
-		assertTrue("precondition was supposed to pass but was " + checkInputResult.toString(), checkInputResult.isOK());
+		assertTrue(checkInputResult.isOK(), "precondition was supposed to pass but was " + checkInputResult.toString());
 
 		performChange(ref, false);
 
 		IPackageFragment pack= (IPackageFragment) cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		assertEqualLines(getFileContents(getTestFileName(true, false)), newcu.getSource());
 	}
 
@@ -159,23 +159,23 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		ExtractTempRefactoring ref= new ExtractTempRefactoring(cu, selection.getOffset(), selection.getLength());
 
 		RefactoringStatus activationResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful", activationResult.isOK());
+		assertTrue(activationResult.isOK(), "activation was supposed to be successful");
 
 		ref.setReplaceAllOccurrences(replaceAll);
 		ref.setDeclareFinal(makeFinal);
 		ref.setTempName(tempName);
 
-		assertEquals("temp name incorrectly guessed", guessedTempName, ref.guessTempNameWithContext());
+		assertEquals(guessedTempName, ref.guessTempNameWithContext(), "temp name incorrectly guessed");
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
-		assertEquals("status", expectedStatus, checkInputResult.getSeverity());
+		assertEquals(expectedStatus, checkInputResult.getSeverity(), "status");
 
 		performChange(ref, false);
 
 		IPackageFragment pack= (IPackageFragment) cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		assertEqualLines(getFileContents(getTestFileName(true, false)), newcu.getSource());
 	}
 
@@ -187,8 +187,8 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		ref.setDeclareFinal(makeFinal);
 		ref.setTempName(tempName);
 		RefactoringStatus result= performRefactoring(ref);
-		assertNotNull("precondition was supposed to fail", result);
-		assertEquals("status", expectedStatus, result.getSeverity());
+		assertNotNull(result, "precondition was supposed to fail");
+		assertEquals(expectedStatus, result.getSeverity(), "status");
 	}
 
 	//--- TESTS
@@ -657,7 +657,7 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		helper1(5, 1, 6, 1, true, false, "one", "integer");
 	}
 
-	@Ignore("BUG_82166_ImportRewrite_context")
+	@Disabled("BUG_82166_ImportRewrite_context")
 	@Test
 	public void test83() throws Exception {
 		helper1(7, 17, 7, 27, false, false, "temp", "test");
@@ -668,7 +668,7 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		helper1(5, 16, 5, 17, false, false, "temp", "j");
 	}
 
-	@Ignore("BUG_82166_ImportRewrite_context")
+	@Disabled("BUG_82166_ImportRewrite_context")
 	@Test
 	public void test85() throws Exception {
 		helper1(10, 22, 10, 32, true, true, "temp", "test2");
@@ -760,7 +760,7 @@ public class ExtractTempTests extends GenericRefactoringTest {
 		helper1(7, 32, 7, 36, true, false, "temp", "a");
 	}
 
-	@Ignore("BUG_161617_ASTRewrite_space")
+	@Disabled("BUG_161617_ASTRewrite_space")
 	@Test
 	public void test100() throws Exception {
 		helper1(5, 28, 5, 40, true, false, "temp", "object");

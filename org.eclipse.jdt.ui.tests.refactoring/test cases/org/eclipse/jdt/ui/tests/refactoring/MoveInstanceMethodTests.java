@@ -17,12 +17,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -69,7 +69,7 @@ public class MoveInstanceMethodTests extends GenericRefactoringTest {
 				break;
 			}
 		}
-		assertNotNull("Expected new target not available.", target);
+		assertNotNull(target, "Expected new target not available.");
 		processor.setTarget(target);
 	}
 
@@ -129,7 +129,7 @@ public class MoveInstanceMethodTests extends GenericRefactoringTest {
 
 			result.merge(ref.checkFinalConditions(new NullProgressMonitor()));
 
-			assertFalse("precondition checking is expected to fail.", result.isOK());
+			assertFalse(result.isOK(), "precondition checking is expected to fail.");
 		}
 	}
 
@@ -180,10 +180,10 @@ public class MoveInstanceMethodTests extends GenericRefactoringTest {
 		MoveInstanceMethodProcessor processor= new MoveInstanceMethodProcessor(method, JavaPreferencesSettings.getCodeGenerationSettings(selectionCu.getJavaProject()));
 		Refactoring ref= new MoveRefactoring(processor);
 
-		assertNotNull("refactoring should be created", ref);
+		assertNotNull(ref, "refactoring should be created");
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
 
-		assertTrue("activation was supposed to be successful", preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful");
 
 		chooseNewTarget(processor, newTargetType, newTargetName);
 
@@ -195,7 +195,7 @@ public class MoveInstanceMethodTests extends GenericRefactoringTest {
 
 		preconditionResult.merge(ref.checkFinalConditions(new NullProgressMonitor()));
 
-		assertFalse("precondition was supposed to pass", preconditionResult.hasError());
+		assertFalse(preconditionResult.hasError(), "precondition was supposed to pass");
 
 		performChange(ref, false);
 
@@ -219,10 +219,10 @@ public class MoveInstanceMethodTests extends GenericRefactoringTest {
 		MoveInstanceMethodProcessor processor= new MoveInstanceMethodProcessor(method, JavaPreferencesSettings.getCodeGenerationSettings(selectionCu.getJavaProject()));
 		Refactoring ref= new MoveRefactoring(processor);
 
-		assertNotNull("refactoring should be created", ref);
+		assertNotNull(ref, "refactoring should be created");
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
 
-		assertTrue("activation was supposed to be successful", preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful");
 
 		chooseNewTarget(processor, newTargetType, newTargetName);
 
@@ -234,7 +234,7 @@ public class MoveInstanceMethodTests extends GenericRefactoringTest {
 
 		preconditionResult.merge(ref.checkFinalConditions(new NullProgressMonitor()));
 
-		assertFalse("precondition was supposed to pass", preconditionResult.hasError());
+		assertFalse(preconditionResult.hasError(), "precondition was supposed to pass");
 
 		performChange(ref, false);
 
@@ -415,7 +415,7 @@ public class MoveInstanceMethodTests extends GenericRefactoringTest {
 	}
 
 	// extended junit case with generics, enums, static imports and deprecation message
-	@Ignore("disabled due to missing support for statically imported methods")
+	@Disabled("disabled due to missing support for statically imported methods")
 	@Test
 	public void test31() throws Exception {
 		helper1(new String[] { "p1.TR", "p1.TC", "p1.P"}, "p1.TR", 10, 21, 10, 21, PARAMETER, "test", false, false, true);
@@ -790,7 +790,7 @@ public class MoveInstanceMethodTests extends GenericRefactoringTest {
 	}
 
 	// Cannot move method - annotations are not supported
-	@Ignore("disabled - jcore does not have elements for annotation members")
+	@Disabled("disabled - jcore does not have elements for annotation members")
 	@Test
 	public void testFail13() throws Exception {
 		failHelper2(new String[] { "p1.A", "p2.B"}, "p1.A", 5, 12, 5, 13, PARAMETER, "b", "a", true, true);

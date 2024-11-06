@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -53,13 +53,37 @@ public class QuickFixTest9 extends QuickFixTest {
 	 * Project 3 depends on Project 2
 	 * Project 2 depends on Project 1
 	 */
-	@Rule
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
 	public ProjectTestSetup projectSetup1= new Java9ProjectTestSetup();
 
-	@Rule
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
 	public ProjectTestSetup projectSetup2= new Java9ProjectTestSetup("TestProject2");
 
-	@Rule
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
+	@RegisterExtension
 	public ProjectTestSetup projectSetup3= new Java9ProjectTestSetup("TestProject3");
 
 	private IJavaProject fJProject2;
@@ -69,7 +93,7 @@ public class QuickFixTest9 extends QuickFixTest {
 
 	private List<ICompilationUnit> fCus;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws CoreException {
 		fJProject2= projectSetup2.getProject();
 		JavaProjectHelper.set9CompilerOptions(fJProject2);
@@ -102,7 +126,7 @@ public class QuickFixTest9 extends QuickFixTest {
 		fCus= new ArrayList<>();
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		for (ICompilationUnit cu : fCus) {
 			IEditorPart part= EditorUtility.isOpenInEditor(cu);

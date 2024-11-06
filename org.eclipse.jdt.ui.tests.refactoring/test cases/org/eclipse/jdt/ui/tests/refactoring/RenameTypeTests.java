@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -26,8 +26,8 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
@@ -94,7 +94,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 	private void helper1_0(String className, String newName) throws Exception {
 		IType classA= getClassFromTestFile(getPackageP(), className);
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, newName));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 		if (fIsVerbose)
 			DebugUtils.dump("result: " + result);
 	}
@@ -119,14 +119,14 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		descriptor.setUpdateReferences(updateReferences);
 		descriptor.setUpdateTextualOccurrences(updateTextualMatches);
 		Refactoring refactoring= createRefactoring(descriptor);
-		assertNull("was supposed to pass", performRefactoring(refactoring));
+		assertNull(performRefactoring(refactoring), "was supposed to pass");
 		ICompilationUnit newcu= pack.getCompilationUnit(newCUName + ".java");
-		assertTrue("cu " + newcu.getElementName()+ " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), "cu " + newcu.getElementName() + " does not exist");
 		assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName(newCUName)), newcu.getSource());
 
 		INameUpdating nameUpdating= refactoring.getAdapter(INameUpdating.class);
 		IType newElement = (IType) nameUpdating.getNewElement();
-		assertTrue("new element does not exist:\n" + newElement.toString(), newElement.exists());
+		assertTrue(newElement.exists(), "new element does not exist:\n" + newElement.toString());
 
 		checkMappers(refactoring, classA, newCUName + ".java", classAMembers);
 
@@ -165,7 +165,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		RefactoringDescriptor descriptor= initWithAllOptions(oldName, oldName, newName, updateRef, updateTextual, updateSimilar, nonJavaFiles, RenamingNameSuggestor.STRATEGY_EMBEDDED);
 		Refactoring ref= createRefactoring(descriptor);
 		RefactoringStatus status= performRefactoring(ref);
-		assertNull("was supposed to pass", status);
+		assertNull(status, "was supposed to pass");
 		checkResultInClass(newName);
 		checkMappedSimilarElementsExist(ref);
 	}
@@ -173,7 +173,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 	private void helper3_inner(String oldName, String oldInnerName, String newName, String innerNewName, boolean updateRef, boolean updateTextual, boolean updateSimilar, String nonJavaFiles) throws JavaModelException, CoreException, IOException, Exception {
 		RefactoringDescriptor descriptor= initWithAllOptions(oldName, oldInnerName, innerNewName, updateRef, updateTextual, updateSimilar, nonJavaFiles, RenamingNameSuggestor.STRATEGY_EMBEDDED);
 		Refactoring ref= createRefactoring(descriptor);
-		assertNull("was supposed to pass", performRefactoring(ref));
+		assertNull(performRefactoring(ref), "was supposed to pass");
 		checkResultInClass(newName);
 		checkMappedSimilarElementsExist(ref);
 	}
@@ -196,12 +196,12 @@ public class RenameTypeTests extends GenericRefactoringTest {
 
 	private void helper3_fail(String oldName, String newName, boolean updateSimilar, boolean updateTextual, boolean updateRef, int matchStrategy) throws JavaModelException, CoreException, IOException, Exception {
 		RefactoringDescriptor descriptor= initWithAllOptions(oldName, oldName, newName, updateRef, updateTextual, updateSimilar, null, matchStrategy);
-		assertNotNull("was supposed to fail", performRefactoring(descriptor));
+		assertNotNull(performRefactoring(descriptor), "was supposed to fail");
 	}
 
 	private void helper3_fail(String oldName, String newName, boolean updateSimilar, boolean updateTextual, boolean updateRef) throws JavaModelException, CoreException, IOException, Exception {
 		RefactoringDescriptor descriptor= initWithAllOptions(oldName, oldName, newName, updateRef, updateTextual, updateSimilar, null, RenamingNameSuggestor.STRATEGY_SUFFIX);
-		assertNotNull("was supposed to fail", performRefactoring(descriptor));
+		assertNotNull(performRefactoring(descriptor), "was supposed to fail");
 	}
 
 	private RefactoringDescriptor initWithAllOptions(String oldName, String innerOldName, String innerNewName, boolean updateReferences, boolean updateTextualMatches, boolean updateSimilar, String nonJavaFiles, int matchStrategy) throws Exception, JavaModelException, CoreException {
@@ -225,7 +225,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 
 	private void checkResultInClass(String typeName) throws JavaModelException, IOException {
 		ICompilationUnit newcu= getPackageP().getCompilationUnit(typeName + ".java");
-		assertTrue("cu " + newcu.getElementName()+ " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), "cu " + newcu.getElementName() + " does not exist");
 		assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName(typeName)), newcu.getSource());
 	}
 
@@ -316,7 +316,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
         } catch (IllegalArgumentException exception) {
 	        result= exception;
         }
-        assertNotNull("empty name was supposed to trigger IAE", result);
+        assertNotNull(result, "empty name was supposed to trigger IAE");
 	}
 
 	@Test
@@ -344,7 +344,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		IType classA= getClassFromTestFile(getPackageP(), "A");
 		getClassFromTestFile(getPackageP(), "B");
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -354,7 +354,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(getPackageP(), "C");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -364,7 +364,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(getPackageP(), "C");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -378,7 +378,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(getPackageP(), "B");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -430,7 +430,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(packageP2, "AA");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -439,7 +439,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(getPackageP(), "B");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -453,7 +453,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(packageP2, "Bogus");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -465,7 +465,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(packageP2, "B");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -477,7 +477,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(packageP2, "B");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -489,7 +489,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(packageP2, "B");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -501,22 +501,22 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(packageP2, "B");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail28() throws Exception {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail29() throws Exception {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail30() throws Exception {
 		helper1();
@@ -533,7 +533,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(packageP3, "C");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -543,7 +543,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(packageP1, "B");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -551,19 +551,19 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail34() throws Exception {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail35() throws Exception {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail36() throws Exception {
 		helper1();
@@ -575,7 +575,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(getPackageP(), "B");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -593,43 +593,43 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail41() throws Exception {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail42() throws Exception {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail43() throws Exception {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail44() throws Exception {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail45() throws Exception {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail46() throws Exception {
 		helper1();
 	}
 
-	@Ignore("obscuring")
+	@Disabled("obscuring")
 	@Test
 	public void testFail47() throws Exception {
 		helper1();
@@ -825,13 +825,13 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		helper1();
 	}
 
-	@Ignore("native method with A as parameter (same CU)")
+	@Disabled("native method with A as parameter (same CU)")
 	@Test
 	public void testFail86() throws Exception {
 		helper1();
 	}
 
-	@Ignore("native method with A as parameter (same CU)")
+	@Disabled("native method with A as parameter (same CU)")
 	@Test
 	public void testFail87() throws Exception {
 		helper1();
@@ -890,7 +890,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		getClassFromTestFile(packageP2, "C");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "C"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -924,7 +924,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		IType myClass= getClassFromTestFile(myPackage, "Blinky");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(myClass, "B"));
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 	}
 
 	@Test
@@ -1005,7 +1005,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(packageA, "A");
 		IType classA= getType(cu, "A");
 
-		assertNull("was supposed to pass", performRefactoring(createRefactoringDescriptor(classA, "B")));
+		assertNull(performRefactoring(createRefactoringDescriptor(classA, "B")), "was supposed to pass");
 
 		ICompilationUnit newcu= packageA.getCompilationUnit("B.java");
 		assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName("B")), newcu.getSource());
@@ -1059,7 +1059,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType classA= getType(cu, "A");
 
-		assertNull("was supposed to pass", performRefactoring(createRefactoringDescriptor(classA, "B")));
+		assertNull(performRefactoring(createRefactoringDescriptor(classA, "B")), "was supposed to pass");
 
 		ICompilationUnit newcu= getPackageP().getCompilationUnit("B.java");
 		ICompilationUnit newcuC= packageP1.getCompilationUnit("C.java");
@@ -1080,7 +1080,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType classA= getType(cu, "A");
 
-		assertNull("was supposed to pass", performRefactoring(createRefactoringDescriptor(classA, "B")));
+		assertNull(performRefactoring(createRefactoringDescriptor(classA, "B")), "was supposed to pass");
 
 		ICompilationUnit newcu= getPackageP().getCompilationUnit("B.java");
 		ICompilationUnit newcuAA= getPackageP().getCompilationUnit("AA.java");
@@ -1094,7 +1094,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType classA= getType(cu, "A");
 
-		assertNull("was supposed to pass", performRefactoring(createRefactoringDescriptor(classA, "B")));
+		assertNull(performRefactoring(createRefactoringDescriptor(classA, "B")), "was supposed to pass");
 
 		ICompilationUnit newcu= getPackageP().getCompilationUnit("B.java");
 		ICompilationUnit newcuAA= getPackageP().getCompilationUnit("AA.java");
@@ -1185,7 +1185,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType classA= getType(cu, "A");
 
-		assertNull("was supposed to pass", performRefactoring(createRefactoringDescriptor(classA, "B")));
+		assertNull(performRefactoring(createRefactoringDescriptor(classA, "B")), "was supposed to pass");
 
 		ICompilationUnit newcu= getPackageP().getCompilationUnit("B.java");
 		ICompilationUnit newcuC= packageP1.getCompilationUnit("C.java");
@@ -1208,7 +1208,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		helper2("A", "B");
 	}
 
-	@Ignore("https://bugs.eclipse.org/bugs/show_bug.cgi?id=54948")
+	@Disabled("https://bugs.eclipse.org/bugs/show_bug.cgi?id=54948")
 	@Test
 	public void test50() throws Exception {
 		helper2("A", "B");
@@ -1222,7 +1222,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		ICompilationUnit cu= createCUfromTestFile(getPackageP(), "A");
 		IType classA= getType(cu, "A");
 
-		assertNull("was supposed to pass", performRefactoring(createRefactoringDescriptor(classA, "B")));
+		assertNull(performRefactoring(createRefactoringDescriptor(classA, "B")), "was supposed to pass");
 
 		ICompilationUnit newcu= getPackageP().getCompilationUnit("B.java");
 		ICompilationUnit newcuC= packageP1.getCompilationUnit("C.java");
@@ -1329,7 +1329,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		IType classC= getClassFromTestFile(packageP2, "C");
 
 		RefactoringStatus result= performRefactoring(createRefactoringDescriptor(classA, "C"));
-		assertNull("was supposed to pass", result);
+		assertNull(result, "was supposed to pass");
 
 		assertEqualLines("invalid renaming A", getFileContents(getOutputTestFileName("NewC")), packageP1.getCompilationUnit("C.java").getSource());
 		assertEqualLines("invalid renaming in B", getFileContents(getOutputTestFileName("B")), classB.getCompilationUnit().getSource());
@@ -1396,7 +1396,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		descriptor.setUpdateQualifiedNames(true);
 		descriptor.setFileNamePatterns(filePatterns);
 
-		assertNull("was supposed to pass", performRefactoring(descriptor));
+		assertNull(performRefactoring(descriptor), "was supposed to pass");
 
 		ICompilationUnit newcu= getPackageP().getCompilationUnit(newName + ".java");
 		assertEqualLines("invalid renaming", getFileContents(getOutputTestFileName(newName)), newcu.getSource());
@@ -1641,7 +1641,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		RenameJavaElementDescriptor descriptor= createRefactoringDescriptor(someClass, newName);
 		setTheOptions(descriptor, true, false, true, null, RenamingNameSuggestor.STRATEGY_EMBEDDED);
 		RefactoringStatus status= performRefactoring(descriptor);
-		assertNull("was supposed to pass", status);
+		assertNull(status, "was supposed to pass");
 
 		checkResultInClass(newName);
 		checkResultInClass("SomeOtherClass");
@@ -1752,7 +1752,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		RenameJavaElementDescriptor descriptor= createRefactoringDescriptor(someClass, newName);
 		setTheOptions(descriptor, true, false, true, null, RenamingNameSuggestor.STRATEGY_EMBEDDED);
 		RefactoringStatus status= performRefactoring(descriptor);
-		assertNull("was supposed to pass", status);
+		assertNull(status, "was supposed to pass");
 
 		checkResultInClass(newName);
 
@@ -1804,7 +1804,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		RenameJavaElementDescriptor descriptor= createRefactoringDescriptor(someClass, newName);
 		setTheOptions(descriptor, true, false, true, null, RenamingNameSuggestor.STRATEGY_EMBEDDED);
 		RefactoringStatus status= performRefactoring(descriptor);
-		assertNull("was supposed to pass", status);
+		assertNull(status, "was supposed to pass");
 
 		checkResultInClass(newName);
 
@@ -1825,7 +1825,7 @@ public class RenameTypeTests extends GenericRefactoringTest {
 		setTheOptions(descriptor, true, false, true, null, RenamingNameSuggestor.STRATEGY_EMBEDDED);
 		Refactoring ref= createRefactoring(descriptor);
 		RefactoringStatus status= performRefactoring(ref);
-		assertNull("was supposed to pass", status);
+		assertNull(status, "was supposed to pass");
 
 		checkResultInClass("SomeNewClass");
 

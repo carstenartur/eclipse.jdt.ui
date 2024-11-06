@@ -13,10 +13,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core.source;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -54,7 +54,7 @@ import org.eclipse.jdt.internal.ui.JavaPlugin;
  * @see org.eclipse.jdt.internal.corext.codemanipulation.AddGetterSetterOperation
  */
 public class GenerateGettersSettersTest extends SourceTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private static final IField[] NOFIELDS= new IField[] {};
@@ -926,7 +926,7 @@ public class GenerateGettersSettersTest extends SourceTestCase {
 				IJavaElement[] newChildren= type.getChildren();
 				assertEquals(NUM_MEMBERS + 1, newChildren.length);
 				String source= ((IMember) newChildren[i]).getSource(); // new element expected at index i
-				assertEquals("Insert before " + insertBefore, expectedMethod, source);
+				assertEquals(expectedMethod, source, "Insert before " + insertBefore);
 			} finally {
 				if (unit != null) {
 					JavaProjectHelper.delete(unit);
@@ -990,7 +990,7 @@ public class GenerateGettersSettersTest extends SourceTestCase {
 				IJavaElement[] newChildren= type.getChildren();
 				assertEquals(NUM_MEMBERS + 1, newChildren.length);
 				String source= ((IMember) newChildren[i]).getSource(); // new element expected at index i
-				assertEquals("Insert before " + insertBefore, expectedMethod, source);
+				assertEquals(expectedMethod, source, "Insert before " + insertBefore);
 			} finally {
 				if (unit != null) {
 					JavaProjectHelper.delete(unit);

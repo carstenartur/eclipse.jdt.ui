@@ -13,9 +13,9 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -23,8 +23,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Hashtable;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -64,7 +64,7 @@ import org.eclipse.jdt.internal.ui.text.correction.CorrectionMarkerResolutionGen
  * Tests the cleanup features related to Java 5 (i.e. Tiger).
  */
 public class CleanUpTest1d5 extends CleanUpTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new Java1d8ProjectTestSetup();
 
 	@Override
@@ -119,7 +119,7 @@ public class CleanUpTest1d5 extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu}, new String[] {expected}, null);
 	}
 
@@ -471,7 +471,7 @@ public class CleanUpTest1d5 extends CleanUpTestCase {
 			}
 			""";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.AddAllCleanup_description)));
 	}
@@ -2560,7 +2560,7 @@ public class CleanUpTest1d5 extends CleanUpTestCase {
 		enable(CleanUpConstants.USE_AUTOBOXING);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.AutoboxingCleanup_description)));
 	}
@@ -2844,7 +2844,7 @@ public class CleanUpTest1d5 extends CleanUpTestCase {
 		enable(CleanUpConstants.USE_UNBOXING);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(MultiFixMessages.UnboxingCleanup_description)));
 	}
@@ -3197,7 +3197,7 @@ public class CleanUpTest1d5 extends CleanUpTestCase {
 			enable(CleanUpConstants.REMOVE_UNNECESSARY_ARRAY_CREATION);
 
 			// Then
-			assertNotEquals("The class must be changed", expected, given);
+			assertNotEquals(expected, given, "The class must be changed");
 			assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 					new HashSet<>(Arrays.asList(FixMessages.UnusedCodeFix_RemoveUnnecessaryArrayCreation_description)));
 		} catch (Exception e) {
@@ -3245,7 +3245,7 @@ public class CleanUpTest1d5 extends CleanUpTestCase {
 			enable(CleanUpConstants.REMOVE_UNNECESSARY_ARRAY_CREATION);
 
 			// Then
-			assertNotEquals("The class must be changed", expected, given);
+			assertNotEquals(expected, given, "The class must be changed");
 			assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 					new HashSet<>(Arrays.asList(FixMessages.UnusedCodeFix_RemoveUnnecessaryArrayCreation_description)));
 		} catch (Exception e) {
@@ -3356,7 +3356,7 @@ public class CleanUpTest1d5 extends CleanUpTestCase {
 		enable(CleanUpConstants.REMOVE_UNNECESSARY_ARRAY_CREATION);
 
 		// Then
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
 				new HashSet<>(Arrays.asList(FixMessages.UnusedCodeFix_RemoveUnnecessaryArrayCreation_description)));
 	}

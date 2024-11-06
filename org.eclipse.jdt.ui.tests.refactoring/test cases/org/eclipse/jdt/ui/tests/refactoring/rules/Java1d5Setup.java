@@ -13,12 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring.rules;
 
+import org.junit.jupiter.api.extension.ExtensionContext;
+
 /**
  * TODO: replace by RefactoringTestSetup
  */
 public class Java1d5Setup extends RefactoringTestSetup {
 	@Override
-	public void before() throws Exception {
-		super.before();
+	public void beforeEach(ExtensionContext context) throws Exception {
+		super.beforeEach(context);
 	}
 }

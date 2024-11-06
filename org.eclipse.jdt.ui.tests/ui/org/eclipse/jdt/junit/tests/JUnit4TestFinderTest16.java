@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Arrays;
 import java.util.HashSet;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.junit.JUnitCore;
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -51,11 +51,11 @@ public class JUnit4TestFinderTest16 {
 	private IJavaProject fProject;
 	private IPackageFragmentRoot fRoot;
 
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectsetup= new Java16ProjectTestSetup(false);
 
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fProject= projectsetup.getProject();
 		fProject.setRawClasspath(projectsetup.getDefaultClasspath(), null);
@@ -65,7 +65,7 @@ public class JUnit4TestFinderTest16 {
 		fRoot= JavaProjectHelper.addSourceContainer(fProject, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 	}
 
@@ -107,7 +107,7 @@ public class JUnit4TestFinderTest16 {
 		if (container instanceof IType) {
 			IType type= (IType) container;
 			boolean isTest= expectedTypes.length == 1 && type.getFullyQualifiedName('.').equals(expectedTypes[0]);
-			assertEquals(type.getFullyQualifiedName(), isTest, finder.isTest(type));
+			assertEquals(isTest, finder.isTest(type), type.getFullyQualifiedName());
 		}
 
 		HashSet<IType> set= new HashSet<>(Arrays.asList(JUnitCore.findTestTypes(container, null)));

@@ -13,15 +13,15 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Arrays;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -45,7 +45,7 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
  * @since 3.2
  */
 public class BreakContinueTargetFinderTest {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private ASTParser fParser;
@@ -53,7 +53,7 @@ public class BreakContinueTargetFinderTest {
 	private IJavaProject fJProject1;
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		fParser = ASTParser.newParser(AST.getJLSLatest());
 		fFinder= new BreakContinueTargetFinder();
@@ -62,7 +62,7 @@ public class BreakContinueTargetFinderTest {
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, pts.getDefaultClasspath());
 	}
@@ -83,7 +83,7 @@ public class BreakContinueTargetFinderTest {
 
 	private void checkSelection(StringBuffer s, int offset, int length, OccurrenceLocation[] expected) throws Exception {
 		OccurrenceLocation[] selectedNodes= getHighlights(s, offset, length);
-		assertEquals("number of selections", expected.length, selectedNodes.length);
+		assertEquals(expected.length, selectedNodes.length, "number of selections");
 		sortByStartIndex(selectedNodes);
 		sortByStartIndex(expected);
 		for (int i= 0; i < selectedNodes.length; i++) {

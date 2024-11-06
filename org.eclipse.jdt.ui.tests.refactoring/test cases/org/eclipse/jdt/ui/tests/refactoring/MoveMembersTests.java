@@ -13,12 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 import org.eclipse.ltk.core.refactoring.participants.MoveArguments;
@@ -105,7 +105,7 @@ public class MoveMembersTests extends GenericRefactoringTest {
 		delUp.setDelegateUpdating(addDelegate);
 
 		RefactoringStatus result= performRefactoringWithStatus(ref);
-		assertTrue("precondition was supposed to pass", result.getSeverity() <= RefactoringStatus.WARNING);
+		assertTrue(result.getSeverity() <= RefactoringStatus.WARNING, "precondition was supposed to pass");
 		ParticipantTesting.testMove(handles, args);
 
 		String expected;
@@ -176,8 +176,8 @@ public class MoveMembersTests extends GenericRefactoringTest {
 		RefactoringStatus result= performRefactoring(ref);
 		if (fIsVerbose)
 			DebugUtils.dump("status:" + result);
-		assertNotNull("precondition was supposed to fail", result);
-		assertEquals("precondition was supposed to fail", errorLevel, result.getSeverity());
+		assertNotNull(result, "precondition was supposed to fail");
+		assertEquals(errorLevel, result.getSeverity(), "precondition was supposed to fail");
 
 	}
 
@@ -301,7 +301,7 @@ public class MoveMembersTests extends GenericRefactoringTest {
 		methodHelper_passing(new String[]{"m"}, new String[][]{new String[0]});
 	}
 
-	@Ignore("not currently handling visibility issues induced by moving more than one static member")
+	@Disabled("not currently handling visibility issues induced by moving more than one static member")
 	@Test
 	public void test21() throws Exception{
 		fieldHelper_passing(new String[]{"F", "i"});
@@ -360,7 +360,7 @@ public class MoveMembersTests extends GenericRefactoringTest {
 		fieldHelper_passing(new String[]{"odd"});
 	}
 
-	@Ignore("test for 41734")
+	@Disabled("test for 41734")
 	@Test
 	public void test32() throws Exception{ //test for bug 41734, 41691
 		methodHelper_passing(new String[]{"m"}, new String[][]{new String[0]});
@@ -388,7 +388,7 @@ public class MoveMembersTests extends GenericRefactoringTest {
 		typeHelper_passing(new String[]{"I"});
 	}
 
-	@Ignore("qualified access to source")
+	@Disabled("qualified access to source")
 	@Test
 	public void test37() throws Exception {
 		typeHelper_passing(new String[] {"Inner"});
@@ -399,7 +399,7 @@ public class MoveMembersTests extends GenericRefactoringTest {
 		fieldMethodTypeABHelper_passing(new String[0], new String[0], new String[0][0], new String[]{"Inner"});
 	}
 
-	@Ignore("complex imports - need more work")
+	@Disabled("complex imports - need more work")
 	@Test
 	public void test39() throws Exception {
 //		fieldMethodType3CUsHelper_passing(new String[0], new String[0], new String[0][0],

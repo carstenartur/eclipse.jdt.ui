@@ -13,18 +13,18 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -70,13 +70,13 @@ import org.eclipse.jdt.internal.ui.text.correction.proposals.CorrectPackageDecla
 
 public class ReorgQuickFixTest extends QuickFixTest {
 
-	@Rule
-    public ProjectTestSetup projectSetup = new ProjectTestSetup();
+	@RegisterExtension
+	public ProjectTestSetup projectSetup = new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
 	private IPackageFragmentRoot fSourceFolder;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.SPACE);
@@ -92,7 +92,7 @@ public class ReorgQuickFixTest extends QuickFixTest {
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject1, "src");
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject1, projectSetup.getDefaultClasspath());
 	}
@@ -265,7 +265,7 @@ public class ReorgQuickFixTest extends QuickFixTest {
 		for (IJavaCompletionProposal proposal2 : proposals) {
 			ChangeCorrectionProposal curr= (ChangeCorrectionProposal) proposal2;
 			if (curr instanceof CorrectPackageDeclarationProposal) {
-				assertTrue("Duplicated proposal", hasRename);
+				assertTrue(hasRename, "Duplicated proposal");
 				hasRename= false;
 
 				CUCorrectionProposal proposal= (CUCorrectionProposal) curr;
@@ -278,13 +278,13 @@ public class ReorgQuickFixTest extends QuickFixTest {
 					""";
 				assertEqualString(preview, str1);
 			} else {
-				assertTrue("Duplicated proposal", hasMove);
+				assertTrue(hasMove, "Duplicated proposal");
 				hasMove= false;
 				curr.apply(null);
 
 				IPackageFragment pack2= fSourceFolder.getPackageFragment("test2");
 				ICompilationUnit cu2= pack2.getCompilationUnit("E.java");
-				assertTrue("CU does not exist", cu2.exists());
+				assertTrue(cu2.exists(), "CU does not exist");
 				String str2= """
 					package test2;
 					
@@ -317,7 +317,7 @@ public class ReorgQuickFixTest extends QuickFixTest {
 		for (IJavaCompletionProposal proposal2 : proposals) {
 			ChangeCorrectionProposal curr= (ChangeCorrectionProposal) proposal2;
 			if (curr instanceof CorrectPackageDeclarationProposal) {
-				assertTrue("Duplicated proposal", hasRename);
+				assertTrue(hasRename, "Duplicated proposal");
 				hasRename= false;
 
 				CUCorrectionProposal proposal= (CUCorrectionProposal) curr;
@@ -330,13 +330,13 @@ public class ReorgQuickFixTest extends QuickFixTest {
 					""";
 				assertEqualString(preview, str1);
 			} else {
-				assertTrue("Duplicated proposal", hasMove);
+				assertTrue(hasMove, "Duplicated proposal");
 				hasMove= false;
 				curr.apply(null);
 
 				IPackageFragment pack2= fSourceFolder.getPackageFragment("test2");
 				ICompilationUnit cu2= pack2.getCompilationUnit("E.java");
-				assertTrue("CU does not exist", cu2.exists());
+				assertTrue(cu2.exists(), "CU does not exist");
 				String str2= """
 					package test2;
 					
@@ -369,7 +369,7 @@ public class ReorgQuickFixTest extends QuickFixTest {
 		for (IJavaCompletionProposal proposal2 : proposals) {
 			ChangeCorrectionProposal curr= (ChangeCorrectionProposal) proposal2;
 			if (curr instanceof CorrectPackageDeclarationProposal) {
-				assertTrue("Duplicated proposal", hasRename);
+				assertTrue(hasRename, "Duplicated proposal");
 				hasRename= false;
 
 				CUCorrectionProposal proposal= (CUCorrectionProposal) curr;
@@ -382,13 +382,13 @@ public class ReorgQuickFixTest extends QuickFixTest {
 					""";
 				assertEqualString(preview, str1);
 			} else {
-				assertTrue("Duplicated proposal", hasMove);
+				assertTrue(hasMove, "Duplicated proposal");
 				hasMove= false;
 				curr.apply(null);
 
 				IPackageFragment pack2= fSourceFolder.getPackageFragment("test2");
 				ICompilationUnit cu2= pack2.getCompilationUnit("E.java");
-				assertTrue("CU does not exist", cu2.exists());
+				assertTrue(cu2.exists(), "CU does not exist");
 				String str2= """
 					package test2;
 					
@@ -419,7 +419,7 @@ public class ReorgQuickFixTest extends QuickFixTest {
 		for (IJavaCompletionProposal proposal2 : proposals) {
 			ChangeCorrectionProposal curr= (ChangeCorrectionProposal) proposal2;
 			if (curr instanceof CorrectPackageDeclarationProposal) {
-				assertTrue("Duplicated proposal", hasRename);
+				assertTrue(hasRename, "Duplicated proposal");
 				hasRename= false;
 
 				CUCorrectionProposal proposal= (CUCorrectionProposal) curr;
@@ -432,13 +432,13 @@ public class ReorgQuickFixTest extends QuickFixTest {
 					""";
 				assertEqualString(preview, str1);
 			} else {
-				assertTrue("Duplicated proposal", hasMove);
+				assertTrue(hasMove, "Duplicated proposal");
 				hasMove= false;
 				curr.apply(null);
 
 				IPackageFragment pack2= fSourceFolder.getPackageFragment("");
 				ICompilationUnit cu2= pack2.getCompilationUnit("E.java");
-				assertTrue("CU does not exist", cu2.exists());
+				assertTrue(cu2.exists(), "CU does not exist");
 				String str2= """
 					public class E {
 					}
@@ -502,7 +502,7 @@ public class ReorgQuickFixTest extends QuickFixTest {
 		for (IJavaCompletionProposal proposal2 : proposals) {
 			ChangeCorrectionProposal curr= (ChangeCorrectionProposal) proposal2;
 			if (curr instanceof CorrectMainTypeNameProposal) {
-				assertTrue("Duplicated proposal", hasRename);
+				assertTrue(hasRename, "Duplicated proposal");
 				hasRename= false;
 
 				CUCorrectionProposal proposal= (CUCorrectionProposal) curr;
@@ -515,12 +515,12 @@ public class ReorgQuickFixTest extends QuickFixTest {
 					""";
 				assertEqualString(preview, str1);
 			} else {
-				assertTrue("Duplicated proposal", hasMove);
+				assertTrue(hasMove, "Duplicated proposal");
 				hasMove= false;
 				curr.apply(null);
 
 				ICompilationUnit cu2= pack1.getCompilationUnit("E.java");
-				assertTrue("CU does not exist", cu2.exists());
+				assertTrue(cu2.exists(), "CU does not exist");
 				String str2= """
 					package test1;
 					
@@ -553,7 +553,7 @@ public class ReorgQuickFixTest extends QuickFixTest {
 		for (IJavaCompletionProposal proposal2 : proposals) {
 			ChangeCorrectionProposal curr= (ChangeCorrectionProposal) proposal2;
 			if (curr instanceof CorrectMainTypeNameProposal) {
-				assertTrue("Duplicated proposal", hasRename);
+				assertTrue(hasRename, "Duplicated proposal");
 				hasRename= false;
 
 				CUCorrectionProposal proposal= (CUCorrectionProposal) curr;
@@ -565,12 +565,12 @@ public class ReorgQuickFixTest extends QuickFixTest {
 					""";
 				assertEqualString(preview, str1);
 			} else {
-				assertTrue("Duplicated proposal", hasMove);
+				assertTrue(hasMove, "Duplicated proposal");
 				hasMove= false;
 				curr.apply(null);
 
 				ICompilationUnit cu2= pack1.getCompilationUnit("B.java");
-				assertTrue("CU does not exist", cu2.exists());
+				assertTrue(cu2.exists(), "CU does not exist");
 				String str2= """
 					package p;
 					public class \\u0042 {
@@ -1026,8 +1026,8 @@ public class ReorgQuickFixTest extends QuickFixTest {
 		IJavaProject otherProject= JavaProjectHelper.createJavaProject("other", "bin");
 		try {
 			File lib= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.MYLIB);
-			assertNotNull("lib does not exist", lib);
-			assertTrue("lib does not exist", lib.exists());
+			assertNotNull(lib, "lib does not exist");
+			assertTrue(lib.exists(), "lib does not exist");
 			IPackageFragmentRoot otherRoot= JavaProjectHelper.addLibraryWithImport(otherProject, Path.fromOSString(lib.getPath()), null, null);
 
 			MultiStatus status= new MultiStatus(JavaUI.ID_PLUGIN, IStatus.OK, "", null);
@@ -1065,8 +1065,8 @@ public class ReorgQuickFixTest extends QuickFixTest {
 		IJavaProject otherProject= JavaProjectHelper.createJavaProject("other", "bin");
 		try {
 			File lib= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.MYLIB);
-			assertNotNull("lib does not exist", lib);
-			assertTrue("lib does not exist", lib.exists());
+			assertNotNull(lib, "lib does not exist");
+			assertTrue(lib.exists(), "lib does not exist");
 
 			IPath path= Path.fromOSString(lib.getPath());
 
@@ -1102,8 +1102,8 @@ public class ReorgQuickFixTest extends QuickFixTest {
 		IJavaProject otherProject= JavaProjectHelper.createJavaProject("other", "bin");
 		try {
 			File lib= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.MYLIB);
-			assertNotNull("lib does not exist", lib);
-			assertTrue("lib does not exist", lib.exists());
+			assertNotNull(lib, "lib does not exist");
+			assertTrue(lib.exists(), "lib does not exist");
 			IPath path= Path.fromOSString(lib.getPath());
 			final IClasspathEntry[] entries= { JavaCore.newLibraryEntry(path, null, null) };
 			final IPath containerPath= new Path(JavaCore.USER_LIBRARY_CONTAINER_ID).append("MyUserLibrary");

@@ -14,14 +14,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Hashtable;
 
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.core.runtime.NullProgressMonitor;
 
@@ -111,8 +111,8 @@ public class ExtractConstantTests extends GenericRefactoringTest {
 		ISourceRange selection= TextRangeUtil.getSelection(cu, startLine, startColumn, endLine, endColumn);
 		ExtractConstantRefactoring ref= new ExtractConstantRefactoring(cu, selection.getOffset(), selection.getLength());
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful" + preconditionResult.toString(), preconditionResult.isOK());
-		assertEquals("constant name not guessed", expectedGuessedName, ref.guessConstantName());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful" + preconditionResult.toString());
+		assertEquals(expectedGuessedName, ref.guessConstantName(), "constant name not guessed");
 	}
 
 	private void helper1(int startLine, int startColumn, int endLine, int endColumn, boolean replaceAll, boolean allowLoadtime, boolean qualifyReferencesWithConstantName, String constantName, String guessedConstantName) throws Exception{
@@ -120,26 +120,26 @@ public class ExtractConstantTests extends GenericRefactoringTest {
 		ISourceRange selection= TextRangeUtil.getSelection(cu, startLine, startColumn, endLine, endColumn);
 		ExtractConstantRefactoring ref= new ExtractConstantRefactoring(cu, selection.getOffset(), selection.getLength());
 		RefactoringStatus preconditionResult= ref.checkInitialConditions(new NullProgressMonitor());
-		assertTrue("activation was supposed to be successful" + preconditionResult.toString(), preconditionResult.isOK());
+		assertTrue(preconditionResult.isOK(), "activation was supposed to be successful" + preconditionResult.toString());
 
 		if(!allowLoadtime)
-			assertTrue("The selected expression has been erroneously reported to contain references to non-static or non-final fields.", ref.selectionAllStaticFinal());
+			assertTrue(ref.selectionAllStaticFinal(), "The selected expression has been erroneously reported to contain references to non-static or non-final fields.");
 
 		ref.setReplaceAllOccurrences(replaceAll);
 		ref.setQualifyReferencesWithDeclaringClassName(qualifyReferencesWithConstantName);
 		ref.setConstantName(constantName);
 
-		assertEquals("constant name incorrectly guessed", guessedConstantName, ref.guessConstantName());
+		assertEquals(guessedConstantName, ref.guessConstantName(), "constant name incorrectly guessed");
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
-		assertTrue("precondition was supposed to pass", checkInputResult.isOK());
+		assertTrue(checkInputResult.isOK(), "precondition was supposed to pass");
 
 		performChange(ref, false);
 
 		IPackageFragment pack= (IPackageFragment)cu.getParent();
 		String newCuName= getSimpleTestFileName(true, true);
 		ICompilationUnit newcu= pack.getCompilationUnit(newCuName);
-		assertTrue(newCuName + " does not exist", newcu.exists());
+		assertTrue(newcu.exists(), newCuName + " does not exist");
 		assertEqualLines(getFileContents(getTestFileName(true, false)), newcu.getSource());
 	}
 
@@ -162,7 +162,7 @@ public class ExtractConstantTests extends GenericRefactoringTest {
 		if(!allowLoadtime && !ref.selectionAllStaticFinal())
 			return;
 
-		assertNotNull("precondition was supposed to fail", result);
+		assertNotNull(result, "precondition was supposed to fail");
 		if(checkCode)
 			assertEquals(errorCode, result.getEntryMatchingSeverity(RefactoringStatus.ERROR).getCode());
 	}
@@ -289,7 +289,7 @@ public class ExtractConstantTests extends GenericRefactoringTest {
 		helper1(14, 12, 14, 15, true, false, "COLOR", "RED2");
 	}
 
-	@Ignore("BUG_86113_ImportRewrite")
+	@Disabled("BUG_86113_ImportRewrite")
 	@Test
 	public void test24() throws Exception {
 		helper1(9, 28, 9, 36, true, false, "NUM", "ENUM");
@@ -340,7 +340,7 @@ public class ExtractConstantTests extends GenericRefactoringTest {
 		helper1(7, 20, 7, 35, true, false, "STRING", "STRING");
 	}
 
-	@Ignore("BUG 405780 [1.8][compiler] Bad syntax error 'insert \":: IdentifierOrNew\"' for missing semicolon")
+	@Disabled("BUG 405780 [1.8][compiler] Bad syntax error 'insert \":: IdentifierOrNew\"' for missing semicolon")
 	@Test
 	public void test34() throws Exception { // syntax error
 		helper1(7, 20, 7, 35, true, false, "STRING", "STRING");

@@ -13,10 +13,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -37,7 +37,7 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
  * Tests the cleanup features related to Java 1.4 (i.e. Merlin).
  */
 public class CleanUpTest1d4 extends CleanUpTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup projectSetup= new Java1d8ProjectTestSetup();
 
 	@Override
@@ -75,7 +75,7 @@ public class CleanUpTest1d4 extends CleanUpTestCase {
 				+ "    private static final long serialVersionUID = 1L;\n" //
 				+ "}\n";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpectedIgnoreHashValue(new ICompilationUnit[] {cu}, new String[] {expected});
 	}
 
@@ -116,7 +116,7 @@ public class CleanUpTest1d4 extends CleanUpTestCase {
 				+ "    }\n" //
 				+ "}\n";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpectedIgnoreHashValue(new ICompilationUnit[] {cu}, new String[] {expected});
 	}
 
@@ -197,7 +197,7 @@ public class CleanUpTest1d4 extends CleanUpTestCase {
 				+ "    }\n" //
 				+ "}\n";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpectedIgnoreHashValue(new ICompilationUnit[] {cu}, new String[] {expected});
 	}
 
@@ -235,7 +235,7 @@ public class CleanUpTest1d4 extends CleanUpTestCase {
 				+ "    };\n" //
 				+ "}\n";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpectedIgnoreHashValue(new ICompilationUnit[] {cu}, new String[] {expected});
 	}
 
@@ -286,7 +286,7 @@ public class CleanUpTest1d4 extends CleanUpTestCase {
 				+ "    }\n" //
 				+ "}\n";
 
-		assertNotEquals("The class must be changed", expected, given);
+		assertNotEquals(expected, given, "The class must be changed");
 		assertRefactoringResultAsExpectedIgnoreHashValue(new ICompilationUnit[] {cu}, new String[] {expected});
 	}
 }

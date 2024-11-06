@@ -14,11 +14,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -165,8 +165,8 @@ public class IntroduceFactoryTestsBase extends GenericRefactoringTest {
 		int		begin= source.indexOf(SELECTION_START_HERALD) + SELECTION_START_HERALD.length();
 		int		end= source.indexOf(SELECTION_END_HERALD);
 
-		assertFalse("No selection start comment in input source file!", begin < SELECTION_START_HERALD.length());
-		assertFalse("No selection end comment in input source file!", end < 0);
+		assertFalse(begin < SELECTION_START_HERALD.length(), "No selection start comment in input source file!");
+		assertFalse(end < 0, "No selection end comment in input source file!");
 
 		return new SourceRange(begin, end-begin);
 	}
@@ -179,7 +179,7 @@ public class IntroduceFactoryTestsBase extends GenericRefactoringTest {
 
 		RefactoringStatus	activationResult= ref.checkInitialConditions(new NullProgressMonitor());
 
-		assertTrue("activation was supposed to be successful", activationResult.isOK());
+		assertTrue(activationResult.isOK(), "activation was supposed to be successful");
 
 		RefactoringStatus	checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
 
@@ -210,7 +210,7 @@ public class IntroduceFactoryTestsBase extends GenericRefactoringTest {
 
 		RefactoringStatus activationResult= ref.checkInitialConditions(new NullProgressMonitor());
 
-		assertTrue("activation was supposed to be successful", activationResult.isOK());
+		assertTrue(activationResult.isOK(), "activation was supposed to be successful");
 
 		RefactoringStatus checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
 
@@ -278,7 +278,7 @@ public class IntroduceFactoryTestsBase extends GenericRefactoringTest {
 
 		RefactoringStatus	activationResult= ref.checkInitialConditions(new NullProgressMonitor());
 
-		assertTrue("activation was supposed to be successful", activationResult.isOK());
+		assertTrue(activationResult.isOK(), "activation was supposed to be successful");
 
 		if (factoryMethodName != null)
 			ref.setNewMethodName(factoryMethodName);
@@ -287,7 +287,7 @@ public class IntroduceFactoryTestsBase extends GenericRefactoringTest {
 
 		RefactoringStatus	checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
 
-		assertTrue("precondition was supposed to pass but was " + checkInputResult.toString(), checkInputResult.isOK());
+		assertTrue(checkInputResult.isOK(), "precondition was supposed to pass but was " + checkInputResult.toString());
 
 		performChange(ref, false);
 
@@ -317,14 +317,14 @@ public class IntroduceFactoryTestsBase extends GenericRefactoringTest {
 
 		RefactoringStatus activationResult= ref.checkInitialConditions(new NullProgressMonitor());
 
-		assertTrue("activation was supposed to be successful", activationResult.isOK());
+		assertTrue(activationResult.isOK(), "activation was supposed to be successful");
 
 		if (factoryClassName != null)
 			ref.setFactoryClass(factoryClassName);
 
 		RefactoringStatus	checkInputResult= ref.checkFinalConditions(new NullProgressMonitor());
 
-		assertTrue("precondition was supposed to pass but was " + checkInputResult.toString(), checkInputResult.isOK());
+		assertTrue(checkInputResult.isOK(), "precondition was supposed to pass but was " + checkInputResult.toString());
 
 		performChange(ref, false);
 
@@ -499,7 +499,7 @@ public class IntroduceFactoryTestsBase extends GenericRefactoringTest {
 		IntroduceFactoryRefactoring	ref= new IntroduceFactoryRefactoring(cu, selection.getOffset(), selection.getLength());
 		RefactoringStatus	result= performRefactoring(ref);
 
-		assertNotNull("precondition was supposed to fail", result);
-		assertEquals("status", expectedStatus, result.getSeverity());
+		assertNotNull(result, "precondition was supposed to fail");
+		assertEquals(expectedStatus, result.getSeverity(), "status");
 	}
 }

@@ -13,17 +13,17 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.JavaTestPlugin;
@@ -52,7 +52,7 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 import org.eclipse.jdt.internal.ui.util.CoreUtility;
 
 public class JavaModelUtilTest {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	private IJavaProject fJProject1;
@@ -62,7 +62,7 @@ public class JavaModelUtilTest {
 
 	private static final IPath LIB= new Path("testresources/mylib.jar");
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		IWorkspace workspace= JavaTestPlugin.getWorkspace();
 		assertNotNull(workspace);
@@ -78,17 +78,17 @@ public class JavaModelUtilTest {
 		fJProject2= JavaProjectHelper.createJavaProject("TestProject2", "bin");
 
 		IPackageFragmentRoot jdk= JavaProjectHelper.addVariableRTJar(fJProject1, "JRE_LIB_TEST", null, null);
-		assertNotNull("jdk not found", jdk);
+		assertNotNull(jdk, "jdk not found");
 
 		File junitSrcArchive= JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.JUNIT_SRC_381);
-		assertNotNull("junit src not found", junitSrcArchive);
-		assertTrue("junit src not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "junit src not found");
+		assertTrue(junitSrcArchive.exists(), "junit src not found");
 
 		JavaProjectHelper.addSourceContainerWithImport(fJProject1, "src", junitSrcArchive, JavaProjectHelper.JUNIT_SRC_ENCODING);
 
 		File mylibJar= JavaTestPlugin.getDefault().getFileInPlugin(LIB);
-		assertNotNull("lib not found", junitSrcArchive);
-		assertTrue("lib not found", junitSrcArchive.exists());
+		assertNotNull(junitSrcArchive, "lib not found");
+		assertTrue(junitSrcArchive.exists(), "lib not found");
 
 		JavaProjectHelper.addLibraryWithImport(fJProject1, Path.fromOSString(mylibJar.getPath()), null, null);
 
@@ -104,7 +104,7 @@ public class JavaModelUtilTest {
 	}
 
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		JavaProjectHelper.delete(fJProject1);
 		JavaProjectHelper.delete(fJProject2);
@@ -136,9 +136,9 @@ public class JavaModelUtilTest {
     }
 
 	private void assertElementName(String name, IJavaElement elem, int type) {
-		assertNotNull(name, elem);
-		assertEquals(name + "-name", name, elem.getElementName());
-		assertEquals(name + "-type", type, elem.getElementType());
+		assertNotNull(elem, name);
+		assertEquals(name, elem.getElementName(), name + "-name");
+		assertEquals(type, elem.getElementType(), name + "-type");
 	}
 
 	@Test
@@ -224,11 +224,11 @@ public class JavaModelUtilTest {
 
 	private void assertClasspathEntry(String name, IJavaElement elem, IPath path, int type) throws Exception {
 		IPackageFragmentRoot root= JavaModelUtil.getPackageFragmentRoot(elem);
-		assertNotNull(name + "-noroot", root);
+		assertNotNull(root, name + "-noroot");
 		IClasspathEntry entry= root.getRawClasspathEntry();
-		assertNotNull(name + "-nocp", entry);
-		assertEquals(name + "-wrongpath", entry.getPath(), path);
-		assertEquals(name + "-wrongtype", type, entry.getEntryKind());
+		assertNotNull(entry, name + "-nocp");
+		assertEquals(entry.getPath(), path, name + "-wrongpath");
+		assertEquals(type, entry.getEntryKind(), name + "-wrongtype");
 	}
 
 	@Test
@@ -260,20 +260,20 @@ public class JavaModelUtilTest {
 			// create as unresolved
 			String name= Signature.getSimpleName(paramTypeNames[i]);
 			sig[i]= Signature.createTypeSignature(name, false);
-			assertNotNull(methName + "-ts1" + i, sig[i]);
+			assertNotNull(sig[i], methName + "-ts1" + i);
 		}
 		IMethod meth= JavaModelUtil.findMethod(methName, sig, isConstructor, type);
 		assertElementName(methName, meth, IJavaElement.METHOD);
-		assertEquals("methName-nparam1", meth.getParameterTypes().length, paramTypeNames.length);
+		assertEquals(meth.getParameterTypes().length, paramTypeNames.length, "methName-nparam1");
 
 		for (int i= 0; i < paramTypeNames.length; i++) {
 			// create as resolved
 			sig[i]= Signature.createTypeSignature(paramTypeNames[i], true);
-			assertNotNull(methName + "-ts2" + i, sig[i]);
+			assertNotNull(sig[i], methName + "-ts2" + i);
 		}
 		meth= JavaModelUtil.findMethod(methName, sig, isConstructor, type);
 		assertElementName(methName, meth, IJavaElement.METHOD);
-		assertEquals("methName-nparam2", meth.getParameterTypes().length, paramTypeNames.length);
+		assertEquals(meth.getParameterTypes().length, paramTypeNames.length, "methName-nparam2");
 	}
 
 	@Test
@@ -307,22 +307,22 @@ public class JavaModelUtilTest {
 			// create as unresolved
 			String name= Signature.getSimpleName(paramTypeNames[i]);
 			sig[i]= Signature.createTypeSignature(name, false);
-			assertNotNull(methName + "-ts1" + i, sig[i]);
+			assertNotNull(sig[i], methName + "-ts1" + i);
 		}
 		IMethod meth= JavaModelUtil.findMethodInHierarchy(hierarchy, type, methName, sig, isConstructor);
 		assertElementName(methName, meth, IJavaElement.METHOD);
-		assertEquals("methName-nparam1", meth.getParameterTypes().length, paramTypeNames.length);
-		assertEquals("methName-decltype", declaringTypeName, meth.getDeclaringType().getFullyQualifiedName('.'));
+		assertEquals(meth.getParameterTypes().length, paramTypeNames.length, "methName-nparam1");
+		assertEquals(declaringTypeName, meth.getDeclaringType().getFullyQualifiedName('.'), "methName-decltype");
 
 		for (int i= 0; i < paramTypeNames.length; i++) {
 			// create as resolved
 			sig[i]= Signature.createTypeSignature(paramTypeNames[i], true);
-			assertNotNull(methName + "-ts2" + i, sig[i]);
+			assertNotNull(sig[i], methName + "-ts2" + i);
 		}
 		meth= JavaModelUtil.findMethodInHierarchy(hierarchy, type, methName, sig, isConstructor);
 		assertElementName(methName, meth, IJavaElement.METHOD);
-		assertEquals("methName-nparam2", meth.getParameterTypes().length, paramTypeNames.length);
-		assertEquals("methName-decltype", declaringTypeName, meth.getDeclaringType().getFullyQualifiedName('.'));
+		assertEquals(meth.getParameterTypes().length, paramTypeNames.length, "methName-nparam2");
+		assertEquals(declaringTypeName, meth.getDeclaringType().getFullyQualifiedName('.'), "methName-decltype");
 	}
 
 	@Test
@@ -339,16 +339,16 @@ public class JavaModelUtilTest {
 		IType type= fJProject1.findType("junit.samples.money.MoneyTest");
 		assertElementName("MoneyTest", type, IJavaElement.TYPE);
 
-		assertTrue("MoneyTest-nomain", JavaModelUtil.hasMainMethod(type));
+		assertTrue(JavaModelUtil.hasMainMethod(type), "MoneyTest-nomain");
 
 		type= fJProject1.findType("junit.framework.TestResult");
 		assertElementName("TestResult", type, IJavaElement.TYPE);
 
-		assertFalse("TestResult-hasmain", JavaModelUtil.hasMainMethod(type));
+		assertFalse(JavaModelUtil.hasMainMethod(type), "TestResult-hasmain");
 
 		type= fJProject1.findType("junit.samples.VectorTest");
 		assertElementName("VectorTest", type, IJavaElement.TYPE);
 
-		assertTrue("VectorTest-nomain", JavaModelUtil.hasMainMethod(type));
+		assertTrue(JavaModelUtil.hasMainMethod(type), "VectorTest-nomain");
 	}
 }

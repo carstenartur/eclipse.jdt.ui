@@ -13,18 +13,18 @@
  *******************************************************************************/
 package org.eclipse.jdt.text.tests.contentassist;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.lang.reflect.Field;
 import java.util.Hashtable;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.testplugin.TestOptions;
@@ -81,7 +81,14 @@ import org.eclipse.jdt.internal.ui.text.java.JavaCompletionProcessor;
 
 public abstract class AbstractCompletionTest {
 
-	@Rule
+	private String testName;
+
+	@BeforeEach
+	void init(TestInfo testInfo) {
+		this.testName= testInfo.getDisplayName();
+	}
+
+	@RegisterExtension
 	public CompletionTestSetup cts= new CompletionTestSetup();
 
 	protected static String suiteName(Class<?> fqn) {
@@ -102,7 +109,7 @@ public abstract class AbstractCompletionTest {
 	private char fTrigger;
 	private boolean fWaitBeforeCompleting;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		Hashtable<String, String> options= TestOptions.getDefaultOptions();
 		configureCoreOptions(options);
@@ -161,7 +168,7 @@ public abstract class AbstractCompletionTest {
 		return cu;
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		IPreferenceStore store= getJDTUIPrefs();
 		store.setToDefault(PreferenceConstants.CODEGEN_ADD_COMMENTS);
@@ -543,16 +550,13 @@ public abstract class AbstractCompletionTest {
 		return new Region(firstPipe + prefix.length(), secondPipe - firstPipe);
 	}
 
-	@Rule
-	public TestName tn= new TestName();
-
 	protected String getName() {
-		return tn.getMethodName();
+		return testName;
 	}
 
 	private ICompletionProposal findNonNullProposal(String prefix, IRegion selection) {
 		ICompletionProposal proposal= findNamedProposal(prefix, selection);
-		assertNotNull("no proposal starting with \"" + prefix + "\"", proposal);
+		assertNotNull(proposal, "no proposal starting with \"" + prefix + "\"");
 		return proposal;
 	}
 

@@ -14,7 +14,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.refactoring;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 

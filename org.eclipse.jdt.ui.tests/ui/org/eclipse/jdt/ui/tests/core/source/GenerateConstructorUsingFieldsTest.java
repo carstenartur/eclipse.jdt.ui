@@ -13,14 +13,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core.source;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Modifier;
 
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
@@ -58,7 +58,7 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
  * @see org.eclipse.jdt.internal.corext.codemanipulation.AddCustomConstructorOperation
  */
 public class GenerateConstructorUsingFieldsTest extends SourceTestCase {
-	@Rule
+	@RegisterExtension
 	public ProjectTestSetup pts= new ProjectTestSetup();
 
 	public void runOperation(IType type, IField[] fields, IMethod superConstructor, IJavaElement insertBefore, boolean createComments, boolean omitSuper, int visibility) throws CoreException {
@@ -158,7 +158,7 @@ public class GenerateConstructorUsingFieldsTest extends SourceTestCase {
 	/**
 	 * Tests adding two fields with identically named classes from different packages
 	 */
-	@Ignore("see bug 113052 (import issue)")
+	@Disabled("see bug 113052 (import issue)")
 	@Test
 	public void test02() throws Exception {
 

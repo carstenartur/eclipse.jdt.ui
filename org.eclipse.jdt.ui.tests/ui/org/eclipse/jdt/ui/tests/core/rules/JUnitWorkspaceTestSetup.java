@@ -17,7 +17,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.core.rules;
 
-import org.junit.rules.ExternalResource;
+import java.io.IOException;
+
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import org.eclipse.jdt.junit.JUnitCore;
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -33,7 +37,7 @@ import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.JavaCore;
 
 
-public class JUnitWorkspaceTestSetup extends ExternalResource {
+public class JUnitWorkspaceTestSetup implements BeforeEachCallback, AfterEachCallback {
 
 	public static final String WORKSPACE_PATH= "testresources/JUnitWorkspace/";
 
@@ -62,7 +66,7 @@ public class JUnitWorkspaceTestSetup extends ExternalResource {
 	}
 
 	@Override
-	protected void before() throws Throwable {
+	public void beforeEach(ExtensionContext context) throws CoreException, IOException {
 		if (fJUnit4) {
 			fgProject= JavaProjectHelper.createJavaProject(PROJECT_NAME_4, "bin");
 			JavaProjectHelper.addRTJar(fgProject);
@@ -80,7 +84,7 @@ public class JUnitWorkspaceTestSetup extends ExternalResource {
 	}
 
 	@Override
-	protected void after() {
+	public void afterEach(ExtensionContext context) {
 		try {
 			JavaProjectHelper.delete(fgProject);
 		} catch (CoreException e) {
