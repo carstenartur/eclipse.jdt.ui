@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -787,11 +787,6 @@ public final class JavaModelUtil {
 		return JavaCore.compareJavaVersions(version1, version2) < 0;
 	}
 
-
-	public static boolean is50OrHigher(String compliance) {
-		return !isVersionLessThan(compliance, JavaCore.VERSION_1_5);
-	}
-
 	public static boolean is1d7OrHigher(String compliance) {
 		return !isVersionLessThan(compliance, JavaCore.VERSION_1_7);
 	}
@@ -858,26 +853,6 @@ public final class JavaModelUtil {
 
 	public static boolean is23OrHigher(String compliance) {
 		return !isVersionLessThan(compliance, JavaCore.VERSION_23);
-	}
-
-	/**
-	 * Checks if the given project or workspace has source compliance 1.5 or greater.
-	 *
-	 * @param project the project to test or <code>null</code> to test the workspace settings
-	 * @return <code>true</code> if the given project or workspace has source compliance 1.5 or greater.
-	 */
-	public static boolean is50OrHigher(IJavaProject project) {
-		return is50OrHigher(getSourceCompliance(project));
-	}
-
-	/**
-	 * Checks if the given project or workspace has source compliance 1.7 or greater.
-	 *
-	 * @param project the project to test or <code>null</code> to test the workspace settings
-	 * @return <code>true</code> if the given project or workspace has source compliance 1.7 or greater.
-	 */
-	public static boolean is1d7OrHigher(IJavaProject project) {
-		return is1d7OrHigher(getSourceCompliance(project));
 	}
 
 	/**
