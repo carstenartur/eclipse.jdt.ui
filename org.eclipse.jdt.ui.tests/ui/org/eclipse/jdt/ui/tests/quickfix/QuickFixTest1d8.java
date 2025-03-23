@@ -1822,6 +1822,52 @@ public class QuickFixTest1d8 extends QuickFixTest {
 		assertEqualString(preview, str);
 	}
 
+	// remove redundant @NonNull on type
+	@Test
+	public void testRemoveRedundantNonNull2() throws Exception {
+		Hashtable<String, String> options= JavaCore.getOptions();
+		options.put(JavaCore.COMPILER_ANNOTATION_NULL_ANALYSIS, JavaCore.ENABLED);
+		JavaCore.setOptions(options);
+
+		JavaProjectHelper.addLibrary(fJProject1, new Path(Java1d8ProjectTestSetup.getJdtAnnotations20Path()));
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String str1= """
+			package test1;
+			import java.util.List;
+			import org.eclipse.jdt.annotation.NonNull;
+			import org.eclipse.jdt.annotation.NonNullByDefault;
+			@NonNullByDefault
+			public class E {
+				void m(@NonNull List<String> l) {
+					// empty block
+				}
+			}
+			""";
+		ICompilationUnit cu= pack1.createCompilationUnit("E.java", str1, false, null);
+
+		CompilationUnit astRoot= getASTRoot(cu);
+		int offset= str1.indexOf("@NonNull ");
+		AssistContext context= new AssistContext(cu, offset, 0);
+		ArrayList<IJavaCompletionProposal> proposals= collectCorrections(cu, astRoot, 1, context);
+		assertNumberOfProposals(proposals, 4);
+		CUCorrectionProposal proposal= (CUCorrectionProposal)proposals.get(0);
+		String preview= getPreviewContent(proposal);
+
+		String str= """
+			package test1;
+			import java.util.List;
+
+			import org.eclipse.jdt.annotation.NonNullByDefault;
+			@NonNullByDefault
+			public class E {
+				void m(List<String> l) {
+					// empty block
+				}
+			}
+			""";
+		assertEqualString(preview, str);
+	}
+
 	@Test
 	public void testBug514580_avoidRedundantNonNullInChangeMethodSignatureFix() throws Exception {
 		Hashtable<String, String> options= JavaCore.getOptions();
@@ -3168,4 +3214,91 @@ public class QuickFixTest1d8 extends QuickFixTest {
 		assertExpectedExistInProposals(proposals, new String[] {expected1});
 	}
 
+	@Test
+	public void testIssue1967() throws Exception {
+		Hashtable<String, String> options = JavaCore.getOptions();
+		options.put(JavaCore.COMPILER_PB_SUPPRESS_WARNINGS, CompilerOptions.ENABLED);
+		options.put(JavaCore.COMPILER_PB_SUPPRESS_OPTIONAL_ERRORS, JavaCore.ENABLED);
+		options.put(JavaCore.COMPILER_PB_RAW_TYPE_REFERENCE, JavaCore.ENABLED);
+		JavaCore.setOptions(options);
+		IPackageFragment pack2= fSourceFolder.createPackageFragment("test1", false, null);
+
+		String str= """
+				package test1;
+				import java.util.List;
+				import java.util.ArrayList;
+				public class E {
+					public void foo1() {
+						List l = new ArrayList();
+						System.out.println("l is " + l);
+					}
+
+					public void foo2() {
+						List l = new ArrayList();
+						System.out.println("l is " + l);
+					}
+				}
+				""";
+
+		ICompilationUnit cu= pack2.createCompilationUnit("E.java", str, false, null);
+
+		CompilationUnit astRoot= getASTRoot(cu);
+		IProblem[] problems= astRoot.getProblems();
+		assertNumberOfProblems(4, problems);
+		List<IJavaCompletionProposal> proposals= collectCorrectionsNoCheck(cu, problems[0], null);
+		assertCorrectLabels(proposals);
+
+		String expected1= """
+				package test1;
+				import java.util.List;
+				import java.util.ArrayList;
+				public class E {
+					public void foo1() {
+						@SuppressWarnings("rawtypes") List l = new ArrayList();
+						System.out.println("l is " + l);
+					}
+
+					public void foo2() {
+						List l = new ArrayList();
+						System.out.println("l is " + l);
+					}
+				}
+				""";
+
+		String expected2= """
+				package test1;
+				import java.util.List;
+				import java.util.ArrayList;
+				public class E {
+					@SuppressWarnings("rawtypes")
+				    public void foo1() {
+						List l = new ArrayList();
+						System.out.println("l is " + l);
+					}
+
+					public void foo2() {
+						List l = new ArrayList();
+						System.out.println("l is " + l);
+					}
+				}
+				""";
+
+		String expected3= """
+				package test1;
+				import java.util.List;
+				import java.util.ArrayList;
+				public class E {
+					public void foo1() {
+						@SuppressWarnings("rawtypes") List l = new ArrayList();
+						System.out.println("l is " + l);
+					}
+
+					public void foo2() {
+						@SuppressWarnings("rawtypes") List l = new ArrayList();
+						System.out.println("l is " + l);
+					}
+				}
+				""";
+		assertExpectedExistInProposals(proposals, new String[] {expected1, expected2, expected3});
+	}
 }

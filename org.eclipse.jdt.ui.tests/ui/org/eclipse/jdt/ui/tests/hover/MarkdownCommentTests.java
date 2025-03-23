@@ -958,4 +958,69 @@ public class MarkdownCommentTests extends CoreTests {
 		String actualHtmlContent= getHoverHtmlContent(cu, method);
 		assertHtmlContent(expectedContent, actualHtmlContent);
 	}
+
+	@Test
+	public void test2068() throws CoreException {
+		String source= """
+				package p;
+
+				public class X {
+					/// @see <a href="https://www.eclipse.org">eclipse.org</a>
+					/// x
+					void foo() {}
+				}
+				""";
+		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/X.java", source, null);
+		assertNotNull("X.java", cu);
+
+		IType type= cu.getType("X");
+
+		IMethod method= type.getMethods()[0];
+		String actualHtmlContent= getHoverHtmlContent(cu, method);
+		String expectedContent= """
+				<dl><dt>See Also:</dt><dd><a href="https://www.eclipse.org">eclipse.org</a>
+				x</dd></dl>
+				""";
+		assertHtmlContent(expectedContent, actualHtmlContent);
+	}
+
+	@Test
+	public void testArrayReferenceInCode() throws CoreException {
+		String source= """
+				/// In the following indented code block, `[i]` is program text,
+				/// and not a hyper link:
+				///
+				///     int i = 3;
+				///     int[] d = new int[i];
+				///
+				/// Likewise, in the following fenced code block, `[i]` is program text,
+				/// and not a hyper link:
+				///
+				/// ```
+				/// int i = 3;
+				/// int[] d = new int[i];
+				/// ```
+				public class ArrayInCode {
+				}
+				""";
+		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/ArrayInCode.java", source, null);
+		assertNotNull("ArrayInCode.java", cu);
+
+		String expectedContent= """
+				<p>In the following indented code block, <code>[i]</code> is program text,
+				and not a hyper link:</p>
+				<pre><code>int i = 3;
+				int[] d = new int[i];
+				</code></pre>
+				<p>Likewise, in the following fenced code block, <code>[i]</code> is program text,
+				and not a hyper link:</p>
+				<pre><code>int i = 3;
+				int[] d = new int[i];
+				</code></pre>
+				""";
+		IType type= cu.getType("ArrayInCode");
+		String actualHtmlContent= getHoverHtmlContent(cu, type);
+		assertHtmlContent(expectedContent, actualHtmlContent);
+	}
+
 }

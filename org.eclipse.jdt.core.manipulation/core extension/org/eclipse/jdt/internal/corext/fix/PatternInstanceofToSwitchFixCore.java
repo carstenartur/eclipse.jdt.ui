@@ -17,8 +17,10 @@ package org.eclipse.jdt.internal.corext.fix;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
 
@@ -41,19 +43,27 @@ import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
 import org.eclipse.jdt.core.dom.ForStatement;
 import org.eclipse.jdt.core.dom.IBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.IfStatement;
+import org.eclipse.jdt.core.dom.InfixExpression;
+import org.eclipse.jdt.core.dom.InfixExpression.Operator;
 import org.eclipse.jdt.core.dom.Modifier.ModifierKeyword;
 import org.eclipse.jdt.core.dom.Name;
+import org.eclipse.jdt.core.dom.NullLiteral;
 import org.eclipse.jdt.core.dom.PatternInstanceofExpression;
 import org.eclipse.jdt.core.dom.ReturnStatement;
+import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.SwitchCase;
 import org.eclipse.jdt.core.dom.SwitchExpression;
 import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThrowStatement;
 import org.eclipse.jdt.core.dom.TryStatement;
+import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypePattern;
+import org.eclipse.jdt.core.dom.VariableDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
@@ -64,6 +74,7 @@ import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 import org.eclipse.jdt.core.dom.rewrite.TargetSourceRangeComputer;
 
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
+import org.eclipse.jdt.internal.corext.dom.AbortSearchException;
 import org.eclipse.jdt.internal.corext.fix.SwitchExpressionsFixCore.SwitchExpressionsFixOperation;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
@@ -77,10 +88,16 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 		static final class TypeVariable {
 			private final Expression name;
 			private final TypePattern typePattern;
+			private boolean patternNameUsed;
 
 			private TypeVariable(final Expression firstOp, final TypePattern typePattern) {
+				this(firstOp, typePattern, true);
+			}
+
+			private TypeVariable(final Expression firstOp, final TypePattern typePattern, final boolean patternNameUsed) {
 				this.name= firstOp;
 				this.typePattern= typePattern;
+				this.patternNameUsed= patternNameUsed;
 			}
 
 			public boolean isSameVariable(final TypeVariable other) {
@@ -90,9 +107,18 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 			public TypePattern getTypePattern() {
 				return typePattern;
 			}
+
+			public boolean isPatternNameUsed() {
+				return patternNameUsed;
+			}
+
+			public void setPatternNameUsed(boolean value) {
+				patternNameUsed= value;
+			}
 		}
 
 		private List<CompilationUnitRewriteOperation> fResult;
+		private Set<IfStatement> ifsProcessed= new HashSet<>();
 
 		public SwitchStatementsFinder(List<CompilationUnitRewriteOperation> ops) {
 			fResult= ops;
@@ -109,6 +135,9 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 
 			@Override
 			public boolean visit(final IfStatement visited) {
+				if (ifsProcessed.contains(visited)) {
+					return false;
+				}
 				TypeVariable variable= extractVariableAndValues(visited);
 
 				if (variable == null) {
@@ -127,8 +156,13 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 					IfStatement currentNode= ifStatement;
 
 					while (ASTNodes.isSameVariable(switchExpression, variable.name)) {
-						cases.add(new SwitchCaseSection(variable.getTypePattern(),
-								ASTNodes.asList(currentNode.getThenStatement())));
+						if (variable.getTypePattern() == null) {
+							cases.add(new NullSwitchCaseSection(variable.getTypePattern(), variable.isPatternNameUsed(),
+									ASTNodes.asList(currentNode.getThenStatement())));
+						} else {
+							cases.add(new SwitchCaseSection(variable.getTypePattern(), variable.isPatternNameUsed(),
+									ASTNodes.asList(currentNode.getThenStatement())));
+						}
 
 						if (!ASTNodes.fallsThrough(currentNode.getThenStatement())) {
 							isFallingThrough= false;
@@ -164,6 +198,7 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 			private boolean maybeReplaceWithSwitchStatement(final List<IfStatement> ifStatements, final Expression switchExpression,
 					final List<SwitchCaseSection> cases, final Statement remainingStatement) {
 				if (switchExpression != null && cases.size() > 2) {
+					ifsProcessed.addAll(ifStatements);
 					PatternToSwitchExpressionOperation op= getOperation(ifStatements, switchExpression, cases, remainingStatement);
 					if (op != null) {
 						fResult.add(op);
@@ -201,7 +236,7 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 				}
 				// add default as a case section with null type pattern
 				List<SwitchCaseSection> extendedCases= new ArrayList<>(cases);
-				SwitchCaseSection defaultSection= new SwitchCaseSection(null, ASTNodes.asList(remainingStatement));
+				SwitchCaseSection defaultSection= new SwitchCaseSection(null, false, ASTNodes.asList(remainingStatement));
 				extendedCases.add(defaultSection);
 
 				for (SwitchCaseSection switchCaseSection : extendedCases) {
@@ -295,11 +330,46 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 				return null;
 			}
 
-			private TypeVariable extractVariableAndValues(final Statement statement) {
-				if (statement instanceof IfStatement) {
-					return extractVariableAndValues(((IfStatement) statement).getExpression());
+			private class NameUsedVisitor extends ASTVisitor {
+				private final IBinding nameBinding;
+
+				public NameUsedVisitor(final IBinding nameBinding) {
+					this.nameBinding= nameBinding;
 				}
 
+				@Override
+				public boolean visit(SimpleName node) {
+					IBinding nodeBinding= node.resolveBinding();
+					if (nodeBinding != null && nodeBinding.isEqualTo(nameBinding)) {
+						throw new AbortSearchException();
+					}
+					return false;
+				}
+			}
+
+			private TypeVariable extractVariableAndValues(final Statement statement) {
+				if (statement instanceof IfStatement ifStmt) {
+					TypeVariable result= extractVariableAndValues(((IfStatement) statement).getExpression());
+					if (result != null) {
+						CompilationUnit cu= (CompilationUnit) ifStmt.getRoot();
+						if (JavaModelUtil.is22OrHigher(cu.getJavaElement().getJavaProject())) {
+							TypePattern pattern= result.getTypePattern();
+							if (pattern != null) {
+								VariableDeclaration vd= pattern.getPatternVariable2();
+								SimpleName name= vd.getName();
+								IBinding binding= name.resolveBinding();
+								NameUsedVisitor visitor= new NameUsedVisitor(binding);
+								try {
+									ifStmt.getThenStatement().accept(visitor);
+									result.setPatternNameUsed(false);
+								} catch (AbortSearchException e) {
+									result.setPatternNameUsed(true);
+								}
+							}
+						}
+						return result;
+					}
+				}
 				return null;
 			}
 
@@ -310,6 +380,9 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 					return extractVariableAndValuesFromPatternExpression(pattern);
 				}
 
+				if (expression instanceof InfixExpression infix && infix.getOperator() == Operator.EQUALS) {
+					return extractVariableAndValuesFromInfixExpression(infix);
+				}
 				return null;
 			}
 
@@ -321,6 +394,14 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 				return null;
 			}
 
+			private TypeVariable extractVariableAndValuesFromInfixExpression(InfixExpression infix) {
+				if (infix.getLeftOperand() instanceof NullLiteral) {
+					return new TypeVariable(infix.getRightOperand(), null);
+				} else if (infix.getRightOperand() instanceof NullLiteral) {
+					return new TypeVariable(infix.getLeftOperand(), null);
+				}
+				return null;
+			}
 		}
 	}
 
@@ -341,6 +422,7 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 		@Override
 		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();
+			ImportRewrite importRewrite= cuRewrite.getImportRewrite();
 			AST ast= cuRewrite.getRoot().getAST();
 			TextEditGroup group= createTextEditGroup(MultiFixMessages.CodeStyleCleanUp_PatternInstanceOfToSwitch_description, cuRewrite);
 			rewrite.setTargetSourceRangeComputer(new TargetSourceRangeComputer() {
@@ -359,15 +441,21 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 
 			switchStatement.setExpression((Expression) rewrite.createCopyTarget(switchExpression));
 
+			boolean haveNullCase= false;
 			for (SwitchCaseSection aCase : cases) {
-				addCaseWithStatements(rewrite, ast, switchStatement, aCase.typePattern, aCase.statements);
+				if (aCase instanceof NullSwitchCaseSection) {
+					addCaseWithStatements(rewrite, importRewrite, ast, switchStatement, aCase.typePattern, true, false, aCase.isNameUsed, aCase.statements);
+					haveNullCase= true;
+				} else {
+					addCaseWithStatements(rewrite, importRewrite, ast, switchStatement, aCase.typePattern, false, haveNullCase, aCase.isNameUsed, aCase.statements);
+				}
 			}
 
 			if (remainingStatement != null) {
 				remainingStatement.setProperty(UNTOUCH_COMMENT_PROPERTY, Boolean.TRUE);
-				addCaseWithStatements(rewrite, ast, switchStatement, null, ASTNodes.asList(remainingStatement));
+				addCaseWithStatements(rewrite, importRewrite, ast, switchStatement, null, false, haveNullCase, false, ASTNodes.asList(remainingStatement));
 			} else {
-				addCaseWithStatements(rewrite, ast, switchStatement, null, Collections.emptyList());
+				addCaseWithStatements(rewrite, importRewrite, ast, switchStatement, null, false, haveNullCase, false, Collections.emptyList());
 			}
 
 			for (int i= 0; i < ifStatements.size() - 1; i++) {
@@ -377,24 +465,50 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 			ASTNodes.replaceButKeepComment(rewrite, ifStatements.get(ifStatements.size() - 1), newStatement, group);
 		}
 
-		private void addCaseWithStatements(final ASTRewrite rewrite, final AST ast, final SwitchStatement switchStatement,
+		private void addCaseWithStatements(final ASTRewrite rewrite, final ImportRewrite importRewrite,
+				final AST ast, final SwitchStatement switchStatement,
 				final TypePattern caseValueOrNullForDefault,
+				final boolean isNullCase,
+				final boolean haveNullCase,
+				final boolean isNameUsed,
 				final List<Statement> innerStatements) {
 			List<Statement> switchStatements= switchStatement.statements();
-			boolean needBlock= innerStatements.size() > 1 || (innerStatements.size() == 1 && innerStatements.get(0) instanceof ReturnStatement);
+			boolean needBlock= innerStatements.size() == 0 || innerStatements.size() > 1 || (innerStatements.size() == 1
+					&& !(innerStatements.get(0) instanceof ExpressionStatement) && !(innerStatements.get(0) instanceof ThrowStatement));
 
 			// Add the case statement(s)
 			if (caseValueOrNullForDefault != null) {
 				Expression caseValue= caseValueOrNullForDefault;
 				SwitchCase newSwitchCase= ast.newSwitchCase();
 				newSwitchCase.setSwitchLabeledRule(true);
-				newSwitchCase.expressions().add(ASTNodes.createMoveTarget(rewrite, caseValue));
+				if (isNameUsed) {
+					newSwitchCase.expressions().add(ASTNodes.createMoveTarget(rewrite, caseValue));
+				} else {
+					if (caseValueOrNullForDefault.getPatternVariable2() instanceof SingleVariableDeclaration svd
+							&& svd.getType().resolveBinding() != null) {
+						TypePattern newPattern= ast.newTypePattern();
+						SingleVariableDeclaration newDecl= ast.newSingleVariableDeclaration();
+						newDecl.setName(ast.newSimpleName("_")); //$NON-NLS-1$
+						Type oldType= svd.getType();
+						ITypeBinding typeBinding= oldType.resolveBinding();
+						Type newType= importRewrite.addImport(typeBinding, ast);
+						newDecl.setType(newType);
+						newPattern.setPatternVariable((VariableDeclaration)newDecl);
+						newSwitchCase.expressions().add(newPattern);
+					} else {
+						newSwitchCase.expressions().add(ASTNodes.createMoveTarget(rewrite, caseValue));
+					}
+				}
 				switchStatements.add(newSwitchCase);
 			} else {
 				SwitchCase newSwitchCase= ast.newSwitchCase();
 				newSwitchCase.setSwitchLabeledRule(true);
-				newSwitchCase.expressions().add(ast.newNullLiteral());
-				newSwitchCase.expressions().add(ast.newCaseDefaultExpression());
+				if (!haveNullCase) {
+					newSwitchCase.expressions().add(ast.newNullLiteral());
+				}
+				if (!isNullCase && !haveNullCase) {
+					newSwitchCase.expressions().add(ast.newCaseDefaultExpression());
+				}
 				switchStatements.add(newSwitchCase);
 			}
 
@@ -458,6 +572,7 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 		@Override
 		public void rewriteAST(CompilationUnitRewrite cuRewrite, LinkedProposalModelCore linkedModel) throws CoreException {
 			final ASTRewrite rewrite= cuRewrite.getASTRewrite();
+			final ImportRewrite importRewrite= cuRewrite.getImportRewrite();
 			final AST ast= rewrite.getAST();
 
 			TextEditGroup group= createTextEditGroup(MultiFixMessages.CodeStyleCleanUp_PatternInstanceOfToSwitch_description, cuRewrite);
@@ -466,6 +581,7 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 			newSwitchExpression.setExpression(newSwitchExpressionExpression);
 
 			// build switch expression
+			boolean haveNullCase= false;
 			for (SwitchCaseSection switchCaseSection : cases) {
 				List<Statement> oldStatements= switchCaseSection.statements;
 				SwitchCase switchCase= null;
@@ -474,14 +590,30 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 				newSwitchCase.setSwitchLabeledRule(true);
 				switchCase= newSwitchCase;
 				if (switchCaseSection.typePattern == null) {
-					// for the empty pattern, create a null/default case
-					Expression nullExpression= ast.newNullLiteral();
-					Expression defaultExpression= ast.newCaseDefaultExpression();
-					switchCase.expressions().add(nullExpression);
-					switchCase.expressions().add(defaultExpression);
+					if (!haveNullCase) {
+						Expression nullExpression= ast.newNullLiteral();
+						switchCase.expressions().add(nullExpression);
+					}
+					if (!(switchCaseSection instanceof NullSwitchCaseSection) && !haveNullCase) {
+						Expression defaultExpression= ast.newCaseDefaultExpression();
+						switchCase.expressions().add(defaultExpression);
+					}
+					haveNullCase= true;
 				} else {
 					Expression oldExpression= switchCaseSection.typePattern;
 					Expression newExpression= (Expression)rewrite.createCopyTarget(oldExpression);
+					if (!switchCaseSection.isNameUsed && switchCaseSection.typePattern.getPatternVariable2() instanceof SingleVariableDeclaration svd
+							&& svd.getType().resolveBinding() != null) {
+						TypePattern newPattern= ast.newTypePattern();
+						SingleVariableDeclaration newDecl= ast.newSingleVariableDeclaration();
+						newDecl.setName(ast.newSimpleName("_")); //$NON-NLS-1$
+						Type oldType= svd.getType();
+						ITypeBinding typeBinding= oldType.resolveBinding();
+						Type newType= importRewrite.addImport(typeBinding, ast);
+						newDecl.setType(newType);
+						newPattern.setPatternVariable((VariableDeclaration)newDecl);
+						newExpression= newPattern;
+					}
 					switchCase.expressions().add(newExpression);
 				}
 
@@ -566,7 +698,6 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 											newVarFragment.setName(ast.newSimpleName(varName));
 											newVarFragment.setInitializer(newSwitchExpression);
 											VariableDeclarationStatement newVar= ast.newVariableDeclarationStatement(newVarFragment);
-											ImportRewrite importRewrite= cuRewrite.getImportRewrite();
 											newVar.setType(importRewrite.addImport(assignmentBinding.getType(), ast));
 											if (varDeclarationStatement != null && Modifier.isFinal(varDeclarationStatement.getModifiers())) {
 												newVar.modifiers().add(ast.newModifier(ModifierKeyword.FINAL_KEYWORD));
@@ -596,7 +727,11 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 			} else {
 				rewrite.replace(ifStatements.get(0), newExpressionStatement, group);
 			}
-
+			for (int i= 1; i< ifStatements.size(); ++i) {
+				if (ifStatements.get(i).getLocationInParent() != IfStatement.ELSE_STATEMENT_PROPERTY) {
+					rewrite.remove(ifStatements.get(i), group);
+				}
+			}
 		}
 
 	}
@@ -646,13 +781,24 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 	}
 
 	/**
+	 * Represents a null switch case section
+	 */
+	private static class NullSwitchCaseSection extends SwitchCaseSection {
+		private NullSwitchCaseSection(final TypePattern typePattern,
+				final boolean isNameUsed,
+				final List<Statement> statements) {
+			super(typePattern, isNameUsed, statements);
+		}
+	}
+
+	/**
 	 * Represents a switch case section (cases + statements).
 	 * <p>
 	 * It can represent a switch case to build (when converting if else if
 	 * statements), or existing switch cases when representing the structure of a
 	 * whole switch.
 	 */
-	private static final class SwitchCaseSection {
+	private static class SwitchCaseSection {
 		/**
 		 * Must resolve to constant values. Used when representing switch cases to
 		 * build.
@@ -663,15 +809,21 @@ public class PatternInstanceofToSwitchFixCore extends CompilationUnitRewriteOper
 		/** The type pattern to use for the case. */
 		private final TypePattern typePattern;
 
+		/** Whether the type pattern variable is used. */
+		private final boolean isNameUsed;
+
 		/**
 		 * Used for if statements, only constant expressions are used.
 		 *
 		 * @param typePattern The type pattern
+		 * @param isNameUsed Whether or not the instanceof variable name is used in statements
 		 * @param statements The statements
 		 */
 		private SwitchCaseSection(final TypePattern typePattern,
+				final boolean isNameUsed,
 				final List<Statement> statements) {
 			this.typePattern= typePattern;
+			this.isNameUsed= isNameUsed;
 			this.statements= statements;
 		}
 
