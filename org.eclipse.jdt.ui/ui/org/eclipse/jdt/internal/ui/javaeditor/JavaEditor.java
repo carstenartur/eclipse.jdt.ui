@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -229,6 +229,7 @@ import org.eclipse.jdt.internal.ui.javaeditor.selectionactions.StructureSelectHi
 import org.eclipse.jdt.internal.ui.javaeditor.selectionactions.StructureSelectNextAction;
 import org.eclipse.jdt.internal.ui.javaeditor.selectionactions.StructureSelectPreviousAction;
 import org.eclipse.jdt.internal.ui.javaeditor.selectionactions.StructureSelectionAction;
+import org.eclipse.jdt.internal.ui.preferences.FoldingPreferencePage;
 import org.eclipse.jdt.internal.ui.text.DocumentCharacterIterator;
 import org.eclipse.jdt.internal.ui.text.JavaChangeHover;
 import org.eclipse.jdt.internal.ui.text.JavaPairMatcher;
@@ -1998,9 +1999,8 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 	/**
 	 * Sets the breadcrumb input to the given element.
 	 * @param element the element to use as input for the breadcrumb
-	 * @since 3.4
 	 */
-	private void setBreadcrumbInput(ISourceReference element) {
+	protected void setBreadcrumbInput(ISourceReference element) {
 		if (fBreadcrumb == null)
 			return;
 
@@ -2055,6 +2055,7 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 
 		IJavaProject project= EditorUtility.getJavaProject(input);
 		if (project != null) {
+			stores.add(new EclipsePreferencesAdapter(new ProjectScope(project.getProject()), JavaUI.ID_PLUGIN));
 			stores.add(new EclipsePreferencesAdapter(new ProjectScope(project.getProject()), JavaCore.PLUGIN_ID));
 		}
 
@@ -2110,7 +2111,6 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 
 		// Copy qualified name
 		action= getAction(IJavaEditorActionConstants.COPY_QUALIFIED_NAME);
-		action.setDisabledImageDescriptor(JavaPluginImages.DESC_DLCL_COPY_QUALIFIED_NAME);
 		action.setImageDescriptor(JavaPluginImages.DESC_ELCL_COPY_QUALIFIED_NAME);
 		if (menu.find(ITextEditorActionConstants.COPY) != null)
 			menu.insertAfter(ITextEditorActionConstants.COPY, action);
@@ -2119,7 +2119,6 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 
 		// Raw Paste
 		action= getAction(IJavaEditorActionConstants.RAW_PASTE);
-		action.setDisabledImageDescriptor(JavaPluginImages.DESC_DLCL_COPY_QUALIFIED_NAME);
 		action.setImageDescriptor(JavaPluginImages.DESC_ELCL_COPY_QUALIFIED_NAME);
 		if (menu.find(ITextEditorActionConstants.PASTE) != null)
 			menu.insertAfter(ITextEditorActionConstants.PASTE, action);
@@ -3082,7 +3081,7 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 	}
 
 	boolean isFoldingEnabled() {
-		return JavaPlugin.getDefault().getPreferenceStore().getBoolean(PreferenceConstants.EDITOR_FOLDING_ENABLED);
+		return FoldingPreferencePage.getFoldingPreferenceStore(this).getBoolean(PreferenceConstants.EDITOR_FOLDING_ENABLED);
 	}
 
 	/*

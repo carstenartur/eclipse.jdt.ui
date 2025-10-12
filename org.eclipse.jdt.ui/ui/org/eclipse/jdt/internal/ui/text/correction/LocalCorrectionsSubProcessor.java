@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -176,6 +176,8 @@ import org.eclipse.jdt.internal.ui.text.correction.proposals.MissingAnnotationAt
 import org.eclipse.jdt.internal.ui.text.correction.proposals.ModifierChangeCorrectionProposal;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.ModifierChangeCorrectionProposalCore;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.NewCUUsingWizardProposal;
+import org.eclipse.jdt.internal.ui.text.correction.proposals.NewLocalVariableCorrectionProposal;
+import org.eclipse.jdt.internal.ui.text.correction.proposals.NewLocalVariableCorrectionProposalCore;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.NewMethodCorrectionProposal;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.NewMethodCorrectionProposalCore;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.NewProviderMethodDeclaration;
@@ -293,7 +295,7 @@ public class LocalCorrectionsSubProcessor extends LocalCorrectionsBaseSubProcess
 				proposals.add(proposal);
 			}
 		}
-		ModifierCorrectionSubProcessor.addNonAccessibleReferenceProposal(context, problem, proposals, ModifierCorrectionSubProcessor.TO_NON_STATIC, IProposalRelevance.REMOVE_STATIC_MODIFIER);
+		ModifierCorrectionSubProcessor.addNonAccessibleReferenceProposal(context, problem, proposals, ModifierCorrectionSubProcessorCore.TO_NON_STATIC, IProposalRelevance.REMOVE_STATIC_MODIFIER);
 	}
 
 	public static void addUnimplementedMethodsProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
@@ -947,6 +949,10 @@ public class LocalCorrectionsSubProcessor extends LocalCorrectionsBaseSubProcess
 		new LocalCorrectionsSubProcessor().getAssignmentHasNoEffectProposalsBase(context, problem, proposals);
 	}
 
+	public static void getExpressionShouldBeAVariableProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
+		new LocalCorrectionsSubProcessor().getExpressionShouldBeAVariableProposalsBase(context, problem, proposals);
+	}
+
 	public static void addValueForAnnotationProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
 		new LocalCorrectionsSubProcessor().getValueForAnnotationProposals(context, problem, proposals);
 	}
@@ -1151,7 +1157,7 @@ public class LocalCorrectionsSubProcessor extends LocalCorrectionsBaseSubProcess
 	}
 
 	public static void createMissingCaseProposals(IInvocationContext context, ASTNode parent, ArrayList<String> enumConstNames, Collection<ICommandAccess> proposals) {
-		new LocalCorrectionsSubProcessor().createMissingCaseProposalsBase(context, parent, enumConstNames, proposals);
+		new LocalCorrectionsSubProcessor().createMissingCaseProposalsBase(context, parent, null, enumConstNames, proposals);
 	}
 
 	public static void removeDefaultCaseProposal(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
@@ -1271,13 +1277,6 @@ public class LocalCorrectionsSubProcessor extends LocalCorrectionsBaseSubProcess
 			} catch (IllegalArgumentException | CoreException e) {
 				// do nothing
 			}
-		}
-	}
-
-	public static void getConvertLambdaToAnonymousClassCreationsProposals(IInvocationContext context, IProblemLocation problem, Collection<ICommandAccess> proposals) {
-		ASTNode coveringNode= problem.getCoveringNode(context.getASTRoot());
-		if (coveringNode != null) {
-			QuickAssistProcessor.getConvertLambdaToAnonymousClassCreationsProposals(context, coveringNode, proposals);
 		}
 	}
 
@@ -1433,6 +1432,11 @@ public class LocalCorrectionsSubProcessor extends LocalCorrectionsBaseSubProcess
 		return new NewVariableCorrectionProposal(core, image);
 	}
 
+	@Override
+	protected ICommandAccess newLocalVariableCorrectionProposalToT(NewLocalVariableCorrectionProposalCore core, int uid) {
+		Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_LOCAL);
+		return new NewLocalVariableCorrectionProposal(core, image);
+	}
 
 	@Override
 	protected ICommandAccess missingAnnotationAttributesProposalToT(MissingAnnotationAttributesProposalCore core, int uid) {

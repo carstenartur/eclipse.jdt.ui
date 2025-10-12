@@ -18,6 +18,7 @@ import org.junit.platform.suite.api.Suite;
 
 import org.eclipse.jdt.ui.tests.core.source.SourceActionTests;
 
+import org.eclipse.jdt.internal.ui.callhierarchy.FiltersDialogTest;
 import org.eclipse.jdt.internal.ui.compare.JavaIgnoreWhitespaceContributorTest;
 import org.eclipse.jdt.internal.ui.compare.JavaTokenComparatorTest;
 
@@ -37,6 +38,7 @@ CodeFormatterMigrationTest.class,
 HierarchicalASTVisitorTest.class,
 ImportOrganizeTest.class,
 ImportOrganizeTest1d8.class,
+ImportOrganizeTest25.class,
 JavaElementLabelsTest.class,
 JavaElementLabelsTest1d8.class,
 BindingLabelsTest.class,
@@ -61,6 +63,7 @@ ASTProviderTest.class,
 JDTFlagsTest18.class,
 JavaTokenComparatorTest.class,
 JavaIgnoreWhitespaceContributorTest.class,
+FiltersDialogTest.class
 })
 public class CoreTestSuite {
 }

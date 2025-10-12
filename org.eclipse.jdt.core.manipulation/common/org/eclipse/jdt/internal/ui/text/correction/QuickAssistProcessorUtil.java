@@ -15,6 +15,7 @@
 package org.eclipse.jdt.internal.ui.text.correction;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,10 +24,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.eclipse.core.runtime.CoreException;
+
 import org.eclipse.jface.text.link.LinkedPositionGroup;
 
 import org.eclipse.jdt.core.IBuffer;
 import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IField;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
@@ -41,6 +45,8 @@ import org.eclipse.jdt.core.dom.CreationReference;
 import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.ExpressionMethodReference;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.FieldAccess;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IDocElement;
@@ -49,6 +55,7 @@ import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.Javadoc;
 import org.eclipse.jdt.core.dom.LambdaExpression;
+import org.eclipse.jdt.core.dom.MemberRef;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.MethodRef;
@@ -56,9 +63,12 @@ import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Name;
 import org.eclipse.jdt.core.dom.ParameterizedType;
+import org.eclipse.jdt.core.dom.QualifiedName;
 import org.eclipse.jdt.core.dom.ReturnStatement;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
+import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.SuperMethodReference;
 import org.eclipse.jdt.core.dom.TagElement;
@@ -76,6 +86,7 @@ import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 
 import org.eclipse.jdt.internal.core.manipulation.StubUtility;
 import org.eclipse.jdt.internal.core.manipulation.dom.ASTResolving;
+import org.eclipse.jdt.internal.core.manipulation.util.BasicElementLabels;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.dom.AbortSearchException;
 import org.eclipse.jdt.internal.corext.dom.Bindings;
@@ -83,6 +94,11 @@ import org.eclipse.jdt.internal.corext.dom.LinkedNodeFinder;
 import org.eclipse.jdt.internal.corext.dom.ScopeAnalyzer;
 import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
 import org.eclipse.jdt.internal.corext.refactoring.structure.ASTNodeSearchUtil;
+import org.eclipse.jdt.internal.corext.util.Messages;
+
+import org.eclipse.jdt.ui.text.java.IInvocationContext;
+
+import org.eclipse.jdt.internal.ui.text.correction.proposals.NewDefiningMethodProposalCore;
 
 public class QuickAssistProcessorUtil {
 
@@ -743,6 +759,108 @@ public class QuickAssistProcessorUtil {
 		return compilationUnit;
 	}
 
+	public static String getDeprecatedFieldReplacement(ASTNode node) {
+		IBinding binding= null;
+		switch (node) {
+			case QualifiedName q:
+				binding= q.resolveBinding();
+				break;
+			case SimpleName s:
+				if (s.getLocationInParent() == QualifiedName.NAME_PROPERTY) {
+					node= s.getParent();
+					binding= ((QualifiedName)node).resolveBinding();
+				} else {
+					binding= s.resolveBinding();
+				}
+				break;
+			case FieldAccess f:
+//				if (f.getExpression() instanceof MethodInvocation) {
+//					return null;
+//				}
+				binding= f.resolveFieldBinding();
+				break;
+			case SuperFieldAccess sf:
+				binding= sf.resolveFieldBinding();
+				break;
+			default:
+				return null;
+		}
+		if (binding instanceof IVariableBinding varBinding && varBinding.isField()) {
+			IField field= (IField)varBinding.getJavaElement();
+			if (field == null) {
+				return null;
+			}
+			IAnnotationBinding[] annotations= varBinding.getAnnotations();
+			for (IAnnotationBinding annotation : annotations) {
+				if (annotation.getAnnotationType().getQualifiedName().equals("java.lang.Deprecated")) { //$NON-NLS-1$
+					CompilationUnit sourceCu= (CompilationUnit)node.getRoot();
+					CompilationUnit cu= findCUForField(sourceCu, (ICompilationUnit)sourceCu.getJavaElement(), varBinding);
+					if (cu == null) {
+						return null;
+					}
+					try {
+						FieldDeclaration fieldDeclaration= ASTNodeSearchUtil.getFieldDeclarationNode(field, cu);
+						Javadoc javadoc= fieldDeclaration.getJavadoc();
+						if (javadoc == null) {
+							return null;
+						}
+						List<TagElement> tags= javadoc.tags();
+						for (TagElement tag : tags) {
+							if ("@deprecated".equals(tag.getTagName())) { //$NON-NLS-1$
+								List<IDocElement> fragments= tag.fragments();
+								if (fragments.size() < 2) {
+									return null;
+								}
+								if (fragments.get(0) instanceof TextElement textElement) {
+									String text= textElement.getText().toLowerCase().trim();
+									if (text.endsWith("use") || text.endsWith("replace by")) { //$NON-NLS-1$ //$NON-NLS-2$
+										if (fragments.get(1) instanceof TagElement tagElement) {
+											if ("@link".equals(tagElement.getTagName())) { //$NON-NLS-1$
+												List<IDocElement> linkFragments= tagElement.fragments();
+												if (linkFragments.size() == 1) {
+													IDocElement linkFragment= linkFragments.get(0);
+													if (linkFragment instanceof MemberRef methodRef) {
+														IBinding refBinding= methodRef.resolveBinding();
+														if (refBinding instanceof IVariableBinding replaceBinding && replaceBinding.isField()) {
+															return replaceBinding.getDeclaringClass().getQualifiedName() + "." + replaceBinding.getName(); //$NON-NLS-1$
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					} catch (JavaModelException e) {
+						// ignore
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	public static CompilationUnit findCUForField(CompilationUnit compilationUnit, ICompilationUnit cu, IVariableBinding fieldBinding) {
+		ASTNode fieldDecl= compilationUnit.findDeclaringNode(fieldBinding.getVariableDeclaration());
+		if (fieldDecl == null) {
+			// is field defined in another CU?
+			ITypeBinding declaringTypeDecl= fieldBinding.getDeclaringClass().getTypeDeclaration();
+			if (declaringTypeDecl.isFromSource()) {
+				ICompilationUnit targetCU= null;
+				try {
+					targetCU= ASTResolving.findCompilationUnitForBinding(cu, compilationUnit, declaringTypeDecl);
+				} catch (JavaModelException e) { /* can't do better */
+				}
+				if (targetCU != null) {
+					return ASTResolving.createQuickFixAST(targetCU, null);
+				}
+			}
+			return null;
+		}
+		return compilationUnit;
+	}
+
 	public static ASTNode getCopyOfInner(ASTRewrite rewrite, ASTNode statement, boolean toControlStatementBody) {
 		if (statement.getNodeType() == ASTNode.BLOCK) {
 			Block block= (Block) statement;
@@ -763,6 +881,54 @@ public class QuickAssistProcessorUtil {
 		} else {
 			return rewrite.createCopyTarget(statement);
 		}
+	}
+
+	public static boolean getCreateInSuperClassProposals(IInvocationContext context, ASTNode node, Collection<Object> resultingCollections) throws CoreException {
+		if (!(node instanceof SimpleName) || !(node.getParent() instanceof MethodDeclaration)) {
+			return false;
+		}
+		MethodDeclaration decl= (MethodDeclaration) node.getParent();
+		if (decl.getName() != node || decl.resolveBinding() == null || Modifier.isPrivate(decl.getModifiers())) {
+			return false;
+		}
+
+		ICompilationUnit cu= context.getCompilationUnit();
+		CompilationUnit astRoot= context.getASTRoot();
+
+		IMethodBinding binding= decl.resolveBinding();
+		ITypeBinding[] paramTypes= binding.getParameterTypes();
+
+		ITypeBinding[] superTypes= Bindings.getAllSuperTypes(binding.getDeclaringClass());
+		if (resultingCollections == null) {
+			for (ITypeBinding curr : superTypes) {
+				if (curr.isFromSource() && Bindings.findOverriddenMethodInType(curr, binding) == null) {
+					return true;
+				}
+			}
+			return false;
+		}
+		List<SingleVariableDeclaration> params= decl.parameters();
+		String[] paramNames= new String[paramTypes.length];
+		for (int i= 0; i < params.size(); i++) {
+			SingleVariableDeclaration param= params.get(i);
+			paramNames[i]= param.getName().getIdentifier();
+		}
+
+		for (ITypeBinding curr : superTypes) {
+			if (curr.isFromSource()) {
+				IMethodBinding method= Bindings.findOverriddenMethodInType(curr, binding);
+				if (method == null) {
+					ITypeBinding typeDecl= curr.getTypeDeclaration();
+					ICompilationUnit targetCU= ASTResolving.findCompilationUnitForBinding(cu, astRoot, typeDecl);
+					if (targetCU != null) {
+						String label= Messages.format(CorrectionMessages.QuickAssistProcessor_createmethodinsuper_description,
+								new String[] { BasicElementLabels.getJavaElementName(curr.getName()), BasicElementLabels.getJavaElementName(binding.getName()) });
+						resultingCollections.add(new NewDefiningMethodProposalCore(label, targetCU, astRoot, typeDecl, binding, paramNames, IProposalRelevance.CREATE_METHOD_IN_SUPER));
+					}
+				}
+			}
+		}
+		return true;
 	}
 
 }

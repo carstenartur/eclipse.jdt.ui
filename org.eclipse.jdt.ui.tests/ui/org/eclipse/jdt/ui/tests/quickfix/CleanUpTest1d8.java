@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2024 IBM Corporation and others.
+ * Copyright (c) 2020, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -1802,6 +1802,22 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 			    public static Function<Instant, java.sql.Date> useTypeReferenceQualifyingInheritedType() {
 			        return instant -> java.sql.Date.from(instant);
 			    }
+
+				private interface X {
+					void k(Integer i);
+				}
+
+				public static void useInterfaceX() {
+					X x = i -> {
+						return;
+					};
+				}
+
+				public static void useInterfaceX2() {
+					X x = i -> {
+						return; // do nothing
+					};
+				}
 			}
 			""";
 
@@ -1908,6 +1924,21 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 			    public static Function<Instant, java.sql.Date> useTypeReferenceQualifyingInheritedType() {
 			        return java.sql.Date::from;
 			    }
+
+				private interface X {
+					void k(Integer i);
+				}
+
+				public static void useInterfaceX() {
+					X x = i -> {
+			        };
+				}
+
+				public static void useInterfaceX2() {
+					X x = i -> {
+						return; // do nothing
+					};
+				}
 			}
 			""";
 
@@ -6579,6 +6610,240 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 	}
 
 	@Test
+	public void testDeprecatedCleanup3() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/722
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample1= """
+			package test;
+			public class E {
+
+				private int foo1() {
+					return 4;
+				}
+
+				/**
+				 * @deprecated use {@link #foo1()} instead
+				 * @return
+				 */
+				@Deprecated
+				private int foo2() {
+					return foo1();
+				}
+
+				public int foo3() {
+					return foo2();
+				}
+
+			}
+			"""; //
+		ICompilationUnit cu= pack1.createCompilationUnit("E.java", sample1, false, null);
+
+		enable(CleanUpConstants.REPLACE_DEPRECATED_CALLS);
+		enable(CleanUpConstants.REMOVE_UNUSED_CODE_PRIVATE_MEMBERS);
+		enable(CleanUpConstants.REMOVE_UNUSED_CODE_PRIVATE_METHODS);
+
+		String expected= """
+			package test;
+			public class E {
+
+				private int foo1() {
+					return 4;
+				}
+
+				public int foo3() {
+					return foo1();
+				}
+
+			}
+			""";
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu}, new String[] {expected},
+				new HashSet<>(Arrays.asList(FixMessages.InlineDeprecatedMethod_msg)));
+	}
+
+	@Test
+	public void testDeprecatedFieldCleanup1() throws Exception {
+		IPackageFragment pack2= fSourceFolder.createPackageFragment("test2", false, null);
+		String sample2= """
+			package test2;
+
+			public interface K {
+				String field1= "abc";
+				String field2= "def";
+			}
+			""";
+		ICompilationUnit cu2= pack2.createCompilationUnit("K.java", sample2, false, null);
+
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample1= """
+			package test1;
+
+			import test2.K;
+
+			public interface E1 {
+
+				/**
+				 * field to use
+				 *
+				 * @deprecated use {@link K#field2} instead
+				 */
+				@Deprecated	String field= "blah";
+			}
+			"""; //
+		ICompilationUnit cu1= pack1.createCompilationUnit("E1.java", sample1, false, null);
+
+		String sample= """
+			package test1;
+
+			import test1.E1;
+
+			public class E {
+
+				/**
+				 * @deprecated use {@link #localField2} instead
+				 */
+				@Deprecated
+				public String localField1= "abc";
+
+				public String localField2= "def";
+
+				public void foo() {
+					String x = E1.field;
+				}
+
+				public E getThis() {
+					return this;
+				}
+
+				public void foo2() {
+					String y = E1.field;
+				}
+
+				public void foo3() {
+					String z = this.localField1;
+					String z2= localField1;
+					String z3= getThis().localField1;
+				}
+
+			}
+			""";
+		ICompilationUnit cu= pack1.createCompilationUnit("E.java", sample, false, null);
+		enable(CleanUpConstants.REPLACE_DEPRECATED_FIELDS);
+
+		sample= """
+			package test1;
+
+			import test2.K;
+
+			public class E {
+
+				/**
+				 * @deprecated use {@link #localField2} instead
+				 */
+				@Deprecated
+				public String localField1= "abc";
+
+				public String localField2= "def";
+
+				public void foo() {
+					String x = K.field2;
+				}
+
+				public E getThis() {
+					return this;
+				}
+
+				public void foo2() {
+					String y = K.field2;
+				}
+
+				public void foo3() {
+					String z = this.localField2;
+					String z2= localField2;
+					String z3= getThis().localField2;
+				}
+
+			}
+			""";
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu, cu1, cu2}, new String[] {sample1, sample2, expected1},
+				new HashSet<>(Arrays.asList(FixMessages.ReplaceDeprecatedField_msg)));
+	}
+
+	@Test
+	public void testDeprecatedFieldCleanup2() throws Exception {
+		IPackageFragment pack2= fSourceFolder.createPackageFragment("test2", false, null);
+		String sample2= """
+			package test2;
+
+			public interface K {
+				String field1= "abc";
+				String field2= "def";
+			}
+			""";
+		ICompilationUnit cu2= pack2.createCompilationUnit("K.java", sample2, false, null);
+
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample1= """
+			package test1;
+
+			import test2.K;
+
+			public interface E1 {
+
+				/**
+				 * field to use
+				 *
+				 * @deprecated use {@link K#field2} instead
+				 */
+				@Deprecated	String field= "blah";
+			}
+			"""; //
+		ICompilationUnit cu1= pack1.createCompilationUnit("E1.java", sample1, false, null);
+
+		String sample= """
+			package test1;
+
+			import test1.E1;
+
+			public class E {
+
+				private class Z implements E1 {
+				}
+
+				public void foo() {
+					String x = new E1().field;
+				}
+
+			}
+			""";
+		ICompilationUnit cu= pack1.createCompilationUnit("E.java", sample, false, null);
+		enable(CleanUpConstants.REPLACE_DEPRECATED_FIELDS);
+
+		sample= """
+				package test1;
+
+				import test1.E1;
+				import test2.K;
+
+				public class E {
+
+					private class Z implements E1 {
+					}
+
+					public void foo() {
+						String x = K.field2;
+					}
+
+				}
+				""";
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu, cu1, cu2}, new String[] {sample1, sample2, expected1},
+				new HashSet<>(Arrays.asList(FixMessages.ReplaceDeprecatedField_msg)));
+	}
+
+	@Test
 	public void testDoNotDoDeprecatedCleanup1() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/722
 		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
 		String sample= """
@@ -7094,6 +7359,58 @@ public class CleanUpTest1d8 extends CleanUpTestCase {
 						setRunnable(() -> {
 				        	System.out.println("abc"); //$NON-NLS-1$
 				        });
+					}
+				}
+				""";
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { expected }, null);
+
+	}
+
+	@Test
+	public void testRemoveSuppressWarnings() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String original= """
+				package test1;
+
+				public class E {
+					@SuppressWarnings({ "unused" })
+					private int foo(Object x, Object y, boolean b) {
+						if (b || !(x instanceof String)) {
+							if (!(y instanceof Double)) {
+								return 6;
+							}
+							@SuppressWarnings("unchecked")
+							Double d = (Double)y;
+							System.out.println(d.isNaN());
+							return 7;
+						}
+						@SuppressWarnings("unchecked")
+						String s = (String)x;
+						return s.length();
+					}
+				}
+				""";
+		ICompilationUnit cu1= pack1.createCompilationUnit("E.java", original, false, null);
+
+		enable(CleanUpConstants.REMOVE_UNNECESSARY_SUPPRESS_WARNINGS);
+
+		String expected= """
+				package test1;
+
+				public class E {
+					@SuppressWarnings({ "unused" })
+					private int foo(Object x, Object y, boolean b) {
+						if (b || !(x instanceof String)) {
+							if (!(y instanceof Double)) {
+								return 6;
+							}
+							Double d = (Double)y;
+							System.out.println(d.isNaN());
+							return 7;
+						}
+						String s = (String)x;
+						return s.length();
 					}
 				}
 				""";

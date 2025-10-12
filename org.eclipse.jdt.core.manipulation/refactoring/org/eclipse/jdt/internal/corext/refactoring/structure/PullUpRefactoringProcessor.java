@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2006, 2024 IBM Corporation and others.
+ * Copyright (c) 2006, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -115,6 +115,7 @@ import org.eclipse.jdt.core.search.IJavaSearchConstants;
 import org.eclipse.jdt.core.search.MethodReferenceMatch;
 import org.eclipse.jdt.core.search.SearchMatch;
 import org.eclipse.jdt.core.search.SearchPattern;
+import org.eclipse.jdt.core.search.TypeReferenceMatch;
 
 import org.eclipse.jdt.internal.core.manipulation.JavaElementLabelsCore;
 import org.eclipse.jdt.internal.core.manipulation.JavaManipulationPlugin;
@@ -297,6 +298,27 @@ public class PullUpRefactoringProcessor extends HierarchyProcessor {
 						String newArgument= fNewArgumentMap.get(fEnclosingMethod.getJavaElement());
 						final SimpleName ref= ast.newSimpleName(newArgument);
 						fRewrite.replace(node, ref, null);
+					}
+				} else if (node.getLocationInParent() == MethodInvocation.ARGUMENTS_PROPERTY) {
+					// we are calling a method with "this" as parameter, check what type it needs to be
+					MethodInvocation methodInvocation= (MethodInvocation)node.getParent();
+					IMethodBinding methodBinding= methodInvocation.resolveMethodBinding();
+					if (methodBinding != null) {
+						ITypeBinding[] parameterTypes= methodBinding.getParameterTypes();
+						List<Expression> args= methodInvocation.arguments();
+						int index= 0;
+						for (int i= 0; i < args.size(); ++i) {
+							if (args.get(i) == node) {
+								index= i;
+								break;
+							}
+						}
+						ITypeBinding thisRequiredType= parameterTypes[index];
+						if (thisRequiredType.isEqualTo(node.resolveTypeBinding())) {
+							String newArgument= fNewArgumentMap.get(fEnclosingMethod.getJavaElement());
+							final SimpleName ref= ast.newSimpleName(newArgument);
+							fRewrite.replace(node, ref, null);
+						}
 					}
 				}
 				return true;
@@ -1163,7 +1185,7 @@ public class PullUpRefactoringProcessor extends HierarchyProcessor {
 	@Override
 	public RefactoringStatus checkFinalConditions(final IProgressMonitor monitor, final CheckConditionsContext context) throws CoreException, OperationCanceledException {
 		try {
-			SubMonitor subMonitor= SubMonitor.convert(monitor, RefactoringCoreMessages.PullUpRefactoring_checking, 14);
+			SubMonitor subMonitor= SubMonitor.convert(monitor, RefactoringCoreMessages.PullUpRefactoring_checking, 16);
 			clearCaches();
 
 			final RefactoringStatus result= new RefactoringStatus();
@@ -1181,6 +1203,8 @@ public class PullUpRefactoringProcessor extends HierarchyProcessor {
 			result.merge(checkMembersInTypeAndAllSubtypes(subMonitor.newChild(2)));
 			result.merge(checkIfSkippingOverElements(subMonitor.newChild(1)));
 			result.merge(checkIfOverridingSuperClass(subMonitor.newChild(1)));
+			result.merge(checkIfHidingMethod(subMonitor.newChild(1)));
+			result.merge(checkIfTargetIsAnnotation());
 			if (monitor.isCanceled())
 				throw new OperationCanceledException();
 			if (!JdtFlags.isAbstract(getDestinationType()) && getAbstractMethods().length > 0)
@@ -1199,6 +1223,39 @@ public class PullUpRefactoringProcessor extends HierarchyProcessor {
 		} finally {
 			monitor.done();
 		}
+	}
+
+	private RefactoringStatus checkIfTargetIsAnnotation() throws JavaModelException {
+		if (fDestinationType.isAnnotation()) {
+			if (!fCachedDeclaringType.isAnnotation()) {
+				final String msg= Messages.format(RefactoringCoreMessages.PullUpRefactoring_target_is_annotation, new Object[] { fDestinationType.getElementName() });
+				final RefactoringStatusContext context= JavaStatusContext.create(fDestinationType);
+				return RefactoringStatus.createErrorStatus(msg, context);
+			}
+		}
+		return null;
+	}
+
+	private RefactoringStatus checkIfHidingMethod(SubMonitor newChild) throws JavaModelException {
+		SearchResultGroup[] matches= findImplementors(fDestinationType, newChild);
+		for (SearchResultGroup match : matches) {
+			for (SearchMatch result : match.getSearchResults()) {
+				if (result instanceof TypeReferenceMatch typeMatch) {
+					IType type= (IType) typeMatch.getElement();
+					for (IMember member : fMembersToMove) {
+						if (member instanceof IMethod iMethod) {
+							final IMethod methodInType= JavaModelUtil.findMethod(iMethod.getElementName(), iMethod.getParameterTypes(), iMethod.isConstructor(), type);
+							if (methodInType != null && Modifier.isStatic(iMethod.getFlags()) != Modifier.isStatic(methodInType.getFlags())) {
+								final String msg= Messages.format(RefactoringCoreMessages.PullUpRefactoring_will_hide_method, new Object[] { methodInType.getElementName(), type.getElementName() });
+								final RefactoringStatusContext context= JavaStatusContext.create(methodInType);
+								return RefactoringStatus.createErrorStatus(msg, context);
+							}
+						}
+					}
+				}
+			}
+		}
+		return null;
 	}
 
 	private class CheckInvalidOuterFieldAccess extends ASTVisitor {
@@ -1982,6 +2039,19 @@ public class PullUpRefactoringProcessor extends HierarchyProcessor {
 		engine.setOwner(fOwner);
 		engine.setFiltering(true, true);
 		engine.setScope(RefactoringScopeFactory.create(member));
+		engine.searchPattern(monitor);
+		return (SearchResultGroup[]) engine.getResults();
+	}
+
+	private SearchResultGroup[] findImplementors(final IType type, final IProgressMonitor monitor) throws JavaModelException {
+		SearchPattern pattern= SearchPattern.createPattern(type, IJavaSearchConstants.IMPLEMENTORS, SearchUtils.GENERICS_AGNOSTIC_MATCH_RULE);
+		if (pattern == null) {
+			return new SearchResultGroup[0];
+		}
+		final RefactoringSearchEngine2 engine= new RefactoringSearchEngine2(pattern);
+		engine.setOwner(fOwner);
+		engine.setFiltering(true, true);
+		engine.setScope(RefactoringScopeFactory.create(type));
 		engine.searchPattern(monitor);
 		return (SearchResultGroup[]) engine.getResults();
 	}

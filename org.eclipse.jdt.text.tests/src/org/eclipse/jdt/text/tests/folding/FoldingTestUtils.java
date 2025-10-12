@@ -45,6 +45,12 @@ public final class FoldingTestUtils {
 		JavaEditor editor= (JavaEditor) EditorUtility.openInEditor(cu);
 		ProjectionAnnotationModel model= editor.getAdapter(ProjectionAnnotationModel.class);
 
+		List<IRegion> regions= extractRegions(model);
+		editor.close(false);
+		return regions;
+	}
+
+	public static List<IRegion> extractRegions(ProjectionAnnotationModel model) {
 		List<IRegion> regions= new ArrayList<>();
 		Iterator<Annotation> it= model.getAnnotationIterator();
 		while (it.hasNext()) {
@@ -68,14 +74,20 @@ public final class FoldingTestUtils {
 		int endLineBegin= findLineStartIndex(input, endLine);
 		int endLineEnd= findNextLineStart(input, endLineBegin);
 		endLineEnd= getLengthIfNotFound(input, endLineEnd);
+		int expectedRegionOffset= startLineBegin + 1;
+		int expectedRegionLength= endLineEnd + 1;
+		assertContainsRegionWithOffsetAndLength(projectionRanges, startLine, endLine, expectedRegionOffset, expectedRegionLength);
+	}
+
+	static void assertContainsRegionWithOffsetAndLength(List<IRegion> projectionRanges, int startLine, int endLine, int expectedRegionOffset, int expectedRegionLength) {
 		for (IRegion region : projectionRanges) {
-			if (region.getOffset() == startLineBegin + 1 && region.getOffset() + region.getLength() == endLineEnd + 1) {
+			if (region.getOffset() == expectedRegionOffset && region.getOffset() + region.getLength() == expectedRegionLength) {
 				return;
 			}
 		}
 		fail(
-				"missing region from line " + startLine + " (index " + (startLineBegin + 1) + ") " +
-						"to line " + endLine + " (index " + (endLineEnd + 1) + ")" +
+				"missing region from line " + startLine + " (index " + expectedRegionOffset + ") " +
+						"to line " + endLine + " (index " + expectedRegionLength + ")" +
 						", actual regions: " + projectionRanges
 		);
 	}
@@ -87,7 +99,7 @@ public final class FoldingTestUtils {
 		return startLineEnd;
 	}
 
-	private static int findLineStartIndex(String input, int lineNumber) {
+	static int findLineStartIndex(String input, int lineNumber) {
 		int currentInputIndex= 0;
 		for (int i= 0; i < lineNumber; i++) {
 			currentInputIndex= findNextLineStart(input, currentInputIndex);

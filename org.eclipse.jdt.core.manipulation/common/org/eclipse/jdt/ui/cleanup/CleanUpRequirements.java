@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2008, 2019 IBM Corporation and others.
+ * Copyright (c) 2008, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -37,6 +37,7 @@ public final class CleanUpRequirements {
 
 	protected final boolean fRequiresChangedRegions;
 
+	protected final boolean fRequiresSeparateOptions;
 
 	/**
 	 * Create a new instance
@@ -47,16 +48,37 @@ public final class CleanUpRequirements {
 	 * @param compilerOptions map of compiler options or <code>null</code> if no requirements
 	 */
 	public CleanUpRequirements(boolean requiresAST, boolean requiresFreshAST, boolean requiresChangedRegions, Map<String, String> compilerOptions) {
+		this(requiresAST, requiresFreshAST, requiresChangedRegions, false, compilerOptions);
+	}
+
+	/**
+	 * Create a new instance
+	 *
+	 * @param requiresAST <code>true</code> if an AST is required
+	 * @param requiresFreshAST <code>true</code> if a fresh AST is required
+	 * @param requiresChangedRegions <code>true</code> if changed regions are required
+	 * @param requiresSeparateOptions <code>true</code> if clean up has options that should not be shared
+	 * @param compilerOptions map of compiler options or <code>null</code> if no requirements
+	 * @since 1.23
+	 */
+	public CleanUpRequirements(boolean requiresAST, boolean requiresFreshAST, boolean requiresChangedRegions,
+			boolean requiresSeparateOptions, Map<String, String> compilerOptions) {
 		Assert.isLegal(!requiresFreshAST || requiresAST, "Must not request fresh AST if no AST is required"); //$NON-NLS-1$
 		Assert.isLegal(compilerOptions == null || requiresAST, "Must not provide options if no AST is required"); //$NON-NLS-1$
+		Assert.isLegal(!requiresSeparateOptions || requiresFreshAST, "Must not require separate options if fresh AST not required"); //$NON-NLS-1$
 		fRequiresAST= requiresAST;
 		fRequiresFreshAST= requiresFreshAST;
 		fRequiresChangedRegions= requiresChangedRegions;
+		fRequiresSeparateOptions= requiresSeparateOptions;
 
 		fCompilerOptions= compilerOptions;
 		// Make sure that compile warnings are not suppressed since some clean ups work on reported warnings
-		if (fCompilerOptions != null)
-			fCompilerOptions.put(JavaCore.COMPILER_PB_SUPPRESS_WARNINGS, JavaCore.DISABLED);
+		if (fCompilerOptions != null) {
+			// This should not occur when we are performing a unused suppress warnings cleanup so check
+			// for an option which indicates we are doing this.
+			if (!JavaCore.ERROR.equals(fCompilerOptions.get(JavaCore.COMPILER_PB_UNUSED_WARNING_TOKEN)))
+				fCompilerOptions.put(JavaCore.COMPILER_PB_SUPPRESS_WARNINGS, JavaCore.DISABLED);
+		}
 	}
 
 	/**
@@ -80,6 +102,17 @@ public final class CleanUpRequirements {
 	 */
 	public boolean requiresFreshAST() {
 		return fRequiresFreshAST;
+	}
+
+	/**
+	 * Tells whether separate compiler options are required as the options should not be shared with
+	 * other cleanups.
+	 *
+	 * @return <code>true</code> if the cleanup has its own options.
+	 * @since 1.23
+	 */
+	public boolean requiresSeparateOptions() {
+		return fRequiresSeparateOptions;
 	}
 
 	/**

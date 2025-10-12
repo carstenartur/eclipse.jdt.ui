@@ -16,6 +16,8 @@ package org.eclipse.jdt.text.tests.folding;
 import static org.junit.Assume.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.junit.After;
@@ -34,7 +36,12 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import org.eclipse.jface.text.IRegion;
+import org.eclipse.jface.text.Position;
+import org.eclipse.jface.text.source.Annotation;
+import org.eclipse.jface.text.source.projection.ProjectionAnnotation;
+import org.eclipse.jface.text.source.projection.ProjectionAnnotationModel;
 
+import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IPackageFragmentRoot;
@@ -43,6 +50,8 @@ import org.eclipse.jdt.ui.PreferenceConstants;
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 import org.eclipse.jdt.internal.ui.JavaPlugin;
+import org.eclipse.jdt.internal.ui.javaeditor.EditorUtility;
+import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 
 @RunWith(Parameterized.class)
 public class CustomFoldingRegionTest {
@@ -58,7 +67,7 @@ public class CustomFoldingRegionTest {
 	@Parameter
 	public boolean extendedFoldingActive;
 
-	@Parameters(name = "Experimental folding active: {0}")
+	@Parameters(name = "Extended folding active: {0}")
 	public static Object[] extendedFoldingElements() {
 		return new Object[] { true, false };
 	}
@@ -257,13 +266,7 @@ public class CustomFoldingRegionTest {
 				""";
 		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
 		assertEquals(4, projectionRanges.size());
-		if (extendedFoldingActive) {
-			// folding with control structures does not consider top level classes
-			// hence the first region ends with the endregion comment inside the Test class
-			FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 1, 3);
-		}else {
-			FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 1, 13);//outside class
-		}
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 1, 13);//outside class
 		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 4, 11);//outside method
 		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 7, 9);//inside method
 		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 5, 9);//void a()
@@ -304,7 +307,7 @@ public class CustomFoldingRegionTest {
 				}
 				""";
 		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
-		if(extendedFoldingActive) {
+		if (extendedFoldingActive) {
 			assertEquals(5, projectionRanges.size());
 			FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 3, 9);//void a()
 			FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 4, 5);// multiline (comment)
@@ -366,9 +369,12 @@ public class CustomFoldingRegionTest {
 				""";
 		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
 		assertEquals(3, projectionRanges.size());
-		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 4, 8);//class A
+		if (extendedFoldingActive) {
+			FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 4, 8);//class A
+		} else {
+			FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 4, 9);//class A
+		}
 		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 5, 6);//void helloWorld()
-		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 11, 13);//class B
 	}
 
 	@Test
@@ -454,8 +460,8 @@ public class CustomFoldingRegionTest {
 		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
 		assertEquals(3, projectionRanges.size());
 		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 2, 12);//void a()
-		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 4, 6);//void a()
-		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 10, 11);//void a()
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 4, 6);//for
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 10, 11);//while
 	}
 
 	@Test
@@ -472,6 +478,264 @@ public class CustomFoldingRegionTest {
 		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
 		assertEquals(1, projectionRanges.size());
 		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 3, 4);
+	}
+
+	@Test
+	public void testSameStartAndEndMarkers() throws Exception {
+		IPreferenceStore store= JavaPlugin.getDefault().getPreferenceStore();
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_START, "region");
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_END, "region");
+
+		String str= """
+				package org.example.test;
+
+				public class Test {
+					// region first start
+
+					// region second start
+
+				}
+				""";
+		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
+		assertEquals(2, projectionRanges.size());
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 3, 4);//outer
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 5, 6);//inner
+	}
+
+
+	@Test
+	public void testSameStartAndEndMarkersWithElementsInBetween() throws Exception {
+		IPreferenceStore store= JavaPlugin.getDefault().getPreferenceStore();
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_START, "----");
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_END, "----");
+
+		String str= """
+				package org.example.test;
+
+				public class Test {
+					// ---- variables
+
+					private int i = 0;
+					private String s = "Hello World";
+
+					// ---- methods
+
+					void test() {
+						System.out.println("a");
+					}
+
+					// ----
+				}
+				""";
+		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
+		assertEquals(3, projectionRanges.size());
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 3, 7);//variables
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 8, 13);//methods
+		if (extendedFoldingActive) {
+			FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 10, 11);//test()
+		} else {
+			FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 10, 12);//test()
+		}
+	}
+
+	@Test
+	public void testSameStartAndEndMarkersNested() throws Exception {
+		IPreferenceStore store= JavaPlugin.getDefault().getPreferenceStore();
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_START, "----");
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_END, "----");
+
+		String str= """
+				package org.example.test;
+
+				public class Test {
+					// ---- outer ----
+
+					void test() {
+						// ---- inner ----
+
+						System.out.println("text");
+
+						// ---- inner 2 ----
+
+						System.out.println("more text");
+					}
+
+					// ---- outer 2 ----
+
+					void otherMethod() {
+
+					}
+				}
+				""";
+		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
+		assertEquals(6, projectionRanges.size());
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 3, 14);//outer
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 5, 12);//test()
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 6, 9);//inner
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 10, 12);//inner 2
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 15, 19);//outer 2
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 17, 18);//otherMethod()
+	}
+
+	@Test
+	public void testStartMarkerStartsWithEndMarker() throws Exception {
+		IPreferenceStore store= JavaPlugin.getDefault().getPreferenceStore();
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_START, "reg");
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_END, "regend");
+
+		String str= """
+				package org.example.test;
+
+				public class Test {
+					// reg no end marker
+
+					// reg first
+
+					// regend second
+
+				}
+				""";
+		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
+		assertEquals(3, projectionRanges.size());
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 3, 8);//no end marker
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 5, 6);//first
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 7, 8);//second
+	}
+
+	@Test
+	public void testStartMarkerStartsWithEndMarkerWithoutTopLevelType() throws Exception {
+		assumeTrue("Only enabled with extended folding", extendedFoldingActive);
+		IPreferenceStore store= JavaPlugin.getDefault().getPreferenceStore();
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_START, "reg");
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_END, "regend");
+
+		String str= """
+				package org.example.test;
+
+				// reg no end marker
+
+				// reg first
+
+				// regend second
+				""";
+		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
+		assertEquals(2, projectionRanges.size());
+		FoldingTestUtils.assertContainsRegionWithOffsetAndLength(projectionRanges, 2, 7, //no end marker
+		FoldingTestUtils.findLineStartIndex(str, 2) + 1, str.length());
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 4, 5);//first
+	}
+
+	@Test
+	public void testEndMarkerStartsWithStartMarker() throws Exception {
+		IPreferenceStore store= JavaPlugin.getDefault().getPreferenceStore();
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_START, "regstart");
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_END, "reg");
+
+		String str= """
+				package org.example.test;
+
+				public class Test {
+
+					// reg no region
+
+					// regstart first
+
+					// reg first end
+
+					// regstart second
+
+					// regstart third
+
+					// reg end
+				}
+		""";
+		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
+		assertEquals(3, projectionRanges.size());
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 6, 7);//first
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 10, 11);//second
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 12, 13);//second
+	}
+
+	@Test
+	public void testSameStartAndEndMarkerWithNestedFoldingRegionsAfterwards() throws Exception {
+		assumeTrue(extendedFoldingActive);
+		IPreferenceStore store= JavaPlugin.getDefault().getPreferenceStore();
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_START, "reg");
+		store.setValue(PreferenceConstants.EDITOR_FOLDING_CUSTOM_REGION_END, "reg");
+
+		String str= """
+				package org.example.test;
+
+				public class Repro {
+
+					// reg a folding region should start here
+
+					public String test(boolean b) {
+						if (b)
+
+							return "a";
+						return "b";
+					}
+
+				}
+				""";
+		List<IRegion> projectionRanges= getProjectionRangesOfFile(str);
+		assertEquals(3, projectionRanges.size());
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 4, 11);//custom region
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 6, 10);//test
+		FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(projectionRanges, str, 7, 8);//if
+	}
+
+	@Test
+	public void testFoldingUpdateWithMultipleCustomRegionsDoesNotSwitchRegions() throws Exception {
+		String code= """
+				package org.example.test;
+
+				// region outer
+
+				public class Test {
+					// region inner
+					void someMethod() {
+						// content
+					}
+					// endregion
+				}
+
+				// endregion outer
+				""";
+		ICompilationUnit cu= fPackageFragment.createCompilationUnit("Test.java", code, true, null);
+		JavaEditor editor= (JavaEditor) EditorUtility.openInEditor(cu);
+		try {
+			ProjectionAnnotationModel model= editor.getAdapter(ProjectionAnnotationModel.class);
+
+			List<IRegion> initialRegions= FoldingTestUtils.extractRegions(model);
+
+			assertEquals(3, initialRegions.size());
+			FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(initialRegions, code, 2, 12);//outer
+			FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(initialRegions, code, 5, 9);//inner
+			FoldingTestUtils.assertContainsRegionUsingStartAndEndLine(initialRegions, code, 6, 7);//someMethod
+
+			List<Position> positions= new ArrayList<>();
+			Iterator<Annotation> it= model.getAnnotationIterator();
+			while (it.hasNext()) {
+				Annotation a= it.next();
+				if (a instanceof ProjectionAnnotation) {
+					Position p= model.getPosition(a);
+					positions.add(p);
+				}
+			}
+			assertEquals(initialRegions.size(), positions.size());
+
+			String additionalText= "more ";
+			editor.getViewer().getDocument().replace(code.indexOf("content"), 0, additionalText);
+
+			for(int i= 0; i < positions.size(); i++) {
+				assertEquals(initialRegions.get(i).getOffset(), positions.get(i).getOffset());
+				assertEquals(initialRegions.get(i).getLength() + additionalText.length(), positions.get(i).getLength());
+			}
+		} finally {
+			editor.close(false);
+		}
 	}
 
 	private List<IRegion> getProjectionRangesOfFile(String str) throws Exception {

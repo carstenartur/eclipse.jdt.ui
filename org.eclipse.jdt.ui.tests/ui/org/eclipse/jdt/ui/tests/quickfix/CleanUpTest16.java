@@ -342,6 +342,37 @@ public class CleanUpTest16 extends CleanUpTestCase {
 	}
 
 	@Test
+	public void testPatternMatchingForInstanceof3() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/780
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= """
+			package test1;
+
+			public class E {
+				public boolean bar(Object something) {
+					return something instanceof Boolean ? ((Boolean) something).booleanValue() : false;
+				}
+			}
+			"""; //
+		ICompilationUnit cu= pack.createCompilationUnit("E.java", sample, false, null);
+
+		enable(CleanUpConstants.USE_PATTERN_MATCHING_FOR_INSTANCEOF);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_LOCAL_VARIABLES);
+
+		String expected= """
+			package test1;
+
+			public class E {
+				public boolean bar(Object something) {
+					return something instanceof final Boolean b ? b.booleanValue() : false;
+				}
+			}
+			"""; //
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
+				new HashSet<>(Arrays.asList(MultiFixMessages.PatternMatchingForInstanceofCleanup_description)));
+	}
+
+	@Test
 	public void testOneIfWithPatternInstanceof() throws Exception { // https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/1200
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test1", false, null);
 		String sample= """
@@ -631,6 +662,33 @@ public class CleanUpTest16 extends CleanUpTestCase {
 					String s = (String)o;
 					return !(o instanceof String) ? 0 : ((String)o).length();
 				}
+				public int foo8(Object x, Object y, boolean b) {
+					if (b || !(x instanceof String) || ((String)x).length() > 3) {
+						if (y instanceof Double) {
+							Double d = (Double)y;
+							System.out.println(d.isNaN());
+						}
+						return 7;
+					}
+					String s = (String)x;
+					return s.length();
+				}
+				public int foo9(Object x, Object y, boolean b) {
+					if (b || !(x instanceof String) || ((String)x).length() > 3) {
+						if (!(y instanceof Double)) {
+							return 6;
+						}
+						Double d = (Double)y;
+						System.out.println(d.isNaN());
+						return 7;
+					}
+					String s = (String)x;
+					return s.length();
+				}
+				public String foo10(Object s) {
+					String string = s instanceof String ? (String) s : "";
+					return string;
+				}
 			}
 			""";
 		ICompilationUnit cu= pack.createCompilationUnit("E.java", given, false, null);
@@ -687,7 +745,7 @@ public class CleanUpTest16 extends CleanUpTestCase {
 							i = (Integer) p;
 							i = 7;
 						}
-						return o instanceof String s2 ? s2.length() : i;
+						return o instanceof String s ? s.length() : i;
 					}
 					public int foo5(Object o, Object p) {
 						if (o instanceof String s && p instanceof Integer i) {
@@ -698,19 +756,42 @@ public class CleanUpTest16 extends CleanUpTestCase {
 							i = (Integer) p;
 							i = 7;
 						}
-						return !(o instanceof String s2) ? i : s2.length();
+						return !(o instanceof String s) ? i : s.length();
 					}
 					public int foo6(Object o) {
 						if (o instanceof String s && s.length() > 3) {
 							return s.length - 3();
 						}
-						return !(o instanceof String s2) ? 0 : s2.length();
+						return !(o instanceof String s) ? 0 : s.length();
 					}
 					public int foo7(Object o) {
 						if (!(o instanceof String s) || s.length() > 3) {
 							return -1;
 						}
 						return !(o instanceof String s2) ? 0 : s2.length();
+					}
+					public int foo8(Object x, Object y, boolean b) {
+						if (b || !(x instanceof String s) || s.length() > 3) {
+							if (y instanceof Double d) {
+								System.out.println(d.isNaN());
+							}
+							return 7;
+						}
+						return s.length();
+					}
+					public int foo9(Object x, Object y, boolean b) {
+						if (b || !(x instanceof String s) || s.length() > 3) {
+							if (!(y instanceof Double d)) {
+								return 6;
+							}
+							System.out.println(d.isNaN());
+							return 7;
+						}
+						return s.length();
+					}
+					public String foo10(Object s) {
+						String string = s instanceof String s2 ? s2 : "";
+						return string;
 					}
 				}
 				""";

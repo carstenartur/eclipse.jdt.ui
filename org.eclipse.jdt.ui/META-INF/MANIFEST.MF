@@ -3,7 +3,7 @@ Automatic-Module-Name: org.eclipse.jdt.ui
 Bundle-ManifestVersion: 2
 Bundle-Name: %pluginName
 Bundle-SymbolicName: org.eclipse.jdt.ui; singleton:=true
-Bundle-Version: 3.35.0.qualifier
+Bundle-Version: 3.35.200.qualifier
 Bundle-Activator: org.eclipse.jdt.internal.ui.JavaPlugin
 Bundle-ActivationPolicy: lazy
 Bundle-Vendor: %providerName
@@ -97,7 +97,7 @@ Require-Bundle:
  org.eclipse.core.filesystem;bundle-version="[1.2.0,2.0.0)",
  org.eclipse.core.resources;bundle-version="[3.14.0,4.0.0)",
  org.eclipse.core.variables;bundle-version="[3.2.200,4.0.0)",
- org.eclipse.jdt.core;bundle-version="[3.40.0,4.0.0)",
+ org.eclipse.jdt.core;bundle-version="[3.43.0,4.0.0)",
  org.eclipse.search;bundle-version="[3.10.0,4.0.0)",
  org.eclipse.debug.core;bundle-version="[3.22.0,4.0.0)",
  org.eclipse.debug.ui;bundle-version="[3.11.0,4.0.0)",
@@ -108,7 +108,7 @@ Require-Bundle:
  org.eclipse.jface.text;bundle-version="[3.20.0,4.0.0)",
  org.eclipse.ui;bundle-version="[3.117.0,4.0.0)",
  org.eclipse.ui.console;bundle-version="[3.4.0,4.0.0)",
- org.eclipse.ui.workbench;bundle-version="[3.131.0,4.0.0)",
+ org.eclipse.ui.workbench;bundle-version="[3.136.0,4.0.0)",
  org.eclipse.ui.workbench.texteditor;bundle-version="[3.10.0,4.0.0)",
  org.eclipse.ui.ide;bundle-version="[3.15.0,4.0.0)",
  org.eclipse.ui.views;bundle-version="[3.3.100,4.0.0)",
@@ -122,3 +122,4 @@ Require-Bundle:
  org.eclipse.jdt.core.manipulation;bundle-version="[1.22.0,2.0.0)",
  org.eclipse.equinox.bidi;bundle-version="[0.10.0,2.0.0)"
 Bundle-RequiredExecutionEnvironment: JavaSE-21
+Require-Capability: eclipse.swt;filter:="(image.format=svg)"

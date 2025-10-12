@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -773,6 +773,7 @@ public final class PreferencesMessages extends NLS {
 	public static String FoldingConfigurationBlock_combo_caption;
 	public static String FoldingConfigurationBlock_info_no_preferences;
 	public static String FoldingConfigurationBlock_error_not_exist;
+	public static String FoldingConfigurationBlock_error_project_prefs_not_supported;
 	public static String FoldingConfigurationBlock_warning_providerNotFound_resetToDefault;
 	public static String PropertiesFileEditorPreferencePage_key;
 	public static String PropertiesFileEditorPreferencePage_value;
@@ -818,7 +819,13 @@ public final class PreferencesMessages extends NLS {
 	public static String NameConventionConfigurationBlock_use_override_annotation_label;
 	public static String NullAnnotationsConfigurationDialog_error_message;
 	public static String NullAnnotationsConfigurationDialog_error_title;
+	public static String NullAnnotationsConfigurationDialog_incompatibleAnnotations_dialogMessage;
+	public static String NullAnnotationsConfigurationDialog_incompatibleAnnotations_dialogTitle;
 	public static String NullAnnotationsConfigurationDialog_restore_defaults;
+	public static String NullAnnotationsConfigurationDialog_targetBoth;
+	public static String NullAnnotationsConfigurationDialog_targetDeclarations;
+	public static String NullAnnotationsConfigurationDialog_targetTypeuse;
+	public static String NullAnnotationsConfigurationDialog_targetUnspecified;
 	public static String NullAnnotationsConfigurationDialog_title;
 	public static String NullAnnotationsConfigurationDialog_use_default_annotations_for_null;
 	public static String ProblemSeveritiesConfigurationBlock_pb_unhandled_surpresswarning_tokens;
@@ -919,4 +926,7 @@ public final class PreferencesMessages extends NLS {
 	public static String JavaLaunchingConfigurationBlock_applet_name_fully_qualified_label;
 	public static String JavaLaunchingConfigurationBlock_junit_name_fully_qualified_label;
 	public static String JavaLaunchingConfigurationBlock_name_description;
+
+	public static String MiscellaneousConfigurationBlock_open_type_name;
+	public static String MiscellaneousConfigurationBlock_default_wildcard_between_camel_case_parts_label;
 }

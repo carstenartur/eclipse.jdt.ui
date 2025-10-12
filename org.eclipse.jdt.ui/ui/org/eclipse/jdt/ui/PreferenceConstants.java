@@ -3403,6 +3403,16 @@ public class PreferenceConstants {
 	public static final String CODEASSIST_CATEGORY_ORDER= "content_assist_category_order"; //$NON-NLS-1$
 
 	/**
+	 * A named preference that controls whether project specific settings are enabled for folding.
+	 * <p>
+	 * Value is of type <code>Boolean</code>.
+	 * </p>
+	 *
+	 * @since 3.35
+	 */
+	public static final String EDITOR_FOLDING_PROJECT_SPECIFIC_SETTINGS_ENABLED= "editor_folding_project_settings_enabled"; //$NON-NLS-1$
+
+	/**
 	 * A named preference that controls whether folding is enabled in the Java editor.
 	 * <p>
 	 * Value is of type <code>Boolean</code>.
@@ -4443,7 +4453,7 @@ public class PreferenceConstants {
 		store.setDefault(EDITOR_JAVA_CODEMINING_DEFAULT_FILTER_FOR_PARAMETER_NAMES, true);
 		store.setDefault(EDITOR_JAVA_CODEMINING_SHOW_PARAMETER_NAME_SINGLE_ARG, true);
 
-		store.setDefault(EDITOR_NEW_FOLDING_ENABLED, false);
+		store.setDefault(EDITOR_NEW_FOLDING_ENABLED, true);
 
 		// Javadoc hover & view
 		JavaElementLinks.initDefaultPreferences(store);

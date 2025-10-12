@@ -19,6 +19,9 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -58,15 +61,25 @@ public class JavadocHoverTests extends CoreTests {
 
 	private IJavaProject fJProject1;
 
+	private List<ICompilationUnit> workingCopies;
+
 	@Before
 	public void setUp() throws Exception {
 		fJProject1= pts.getProject();
 		JavaProjectHelper.addSourceContainer(fJProject1, "src");
+		assertNotNull(JavaProjectHelper.addRTJar_16(fJProject1, false));
+		workingCopies = new ArrayList<>();
 	}
 
 	@After
 	public void tearDown() throws Exception {
-		JavaProjectHelper.clear(fJProject1, pts.getDefaultClasspath());
+		try {
+			for (ICompilationUnit workingCopy : workingCopies) {
+				workingCopy.discardWorkingCopy();
+			}
+		} finally {
+			JavaProjectHelper.clear(fJProject1, pts.getDefaultClasspath());
+		}
 	}
 
 	protected ICompilationUnit getWorkingCopy(String path, String source, WorkingCopyOwner owner) throws JavaModelException {
@@ -77,6 +90,7 @@ public class JavadocHoverTests extends CoreTests {
 			workingCopy.becomeWorkingCopy(null/*no progress monitor*/);
 		workingCopy.getBuffer().setContents(source);
 		workingCopy.makeConsistent(null/*no progress monitor*/);
+		workingCopies.add(workingCopy);
 		return workingCopy;
 	}
 
@@ -321,9 +335,36 @@ public class JavadocHoverTests extends CoreTests {
 			int index= actualHtmlContent.indexOf("<pre><code>");
 			assertNotEquals(-1, index);
 			String actualSnippet= actualHtmlContent.substring(index, index + expectedCodeSequence.length());
-			assertEquals("sequence doesn't match", actualSnippet, expectedCodeSequence);
+			assertEquals("sequence doesn't match", expectedCodeSequence, actualSnippet);
 		}
 	}
+	@Test
+	public void testRecordComponentAccessor() throws Exception {
+		// https://github.com/eclipse-jdt/eclipse.jdt.ui/issues/931
+		String source=
+				"""
+			package p;
+			public class X {}
+			/**
+			 * A foo bar.
+			 * @param foo The foo.
+			 * @param bar The bar.
+			 */
+			record FooBar(String foo, String bar) {}
+			""";
+		ICompilationUnit cu= getWorkingCopy("/TestSetupProject/src/p/X.java", source, null);
+		assertNotNull("TestClass.java", cu);
 
+		IType type= cu.getType("FooBar");
+		for (IJavaElement member : type.getChildren()) {
+			IJavaElement[] elements= { member };
+			ISourceRange range= ((ISourceReference) member).getNameRange();
+			JavadocBrowserInformationControlInput hoverInfo= JavadocHover.getHoverInfo(elements, cu, new Region(range.getOffset(), range.getLength()), null);
+			String actualHtmlContent= hoverInfo.getHtml();
+
+			int index= actualHtmlContent.indexOf(member.getElementName().equals("foo") ? "The foo." : "The bar.");
+			assertNotEquals("Expected HTML not found, instead found : " + actualHtmlContent,  -1, index);
+		}
+	}
 }
 

@@ -1605,9 +1605,13 @@ public final class RefactoringCoreMessages extends NLS {
 
 	public static String PullUpRefactoring_not_this_type;
 
+	public static String PullUpRefactoring_will_hide_method;
+
 	public static String PullUpRefactoring_Pull_Up;
 
 	public static String PullUpRefactoring_Type_declared_in_class;
+
+	public static String PullUpRefactoring_target_is_annotation;
 
 	public static String PullUpRefactoring_type_not_accessible;
 
@@ -1652,6 +1656,8 @@ public final class RefactoringCoreMessages extends NLS {
 	public static String PushDownRefactoring_pushed_members_pattern;
 
 	public static String PushDownRefactoring_referenced;
+
+	public static String PushDownRefactoring_referenced_field;
 
 	public static String PushDownRefactoring_type_not_accessible;
 

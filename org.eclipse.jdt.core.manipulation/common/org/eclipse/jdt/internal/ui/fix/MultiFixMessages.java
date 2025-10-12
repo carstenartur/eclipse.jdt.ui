@@ -159,6 +159,7 @@ public class MultiFixMessages extends NLS {
 	public static String RedundantModifiersCleanup_description;
 	public static String SubstringCleanUp_description;
 	public static String InlineDeprecatedMethodCleanUp_description;
+	public static String ReplaceDeprecatedFieldsCleanUp_description;
 	public static String JoinCleanup_description;
 	public static String ArraysFillCleanUp_description;
 	public static String EvaluateNullableCleanUp_description;
@@ -186,6 +187,7 @@ public class MultiFixMessages extends NLS {
 	public static String RedundantSemicolonsCleanup_description;
 	public static String RedundantComparatorCleanUp_description;
 	public static String UnnecessaryArrayCreationCleanup_description;
+	public static String UnusedSuppressWarningsCleanup_description;
 	public static String ArrayWithCurlyCleanup_description;
 	public static String ReturnExpressionCleanUp_description;
 	public static String UselessReturnCleanUp_description;

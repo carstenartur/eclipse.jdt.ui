@@ -22,6 +22,8 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Shell;
 
 import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.ICoreRunnable;
+import org.eclipse.core.runtime.jobs.Job;
 
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IMarkerDelta;
@@ -39,8 +41,8 @@ import org.eclipse.jface.text.reconciler.MonoReconciler;
 
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IFileEditorInput;
-import org.eclipse.ui.IPartListener;
-import org.eclipse.ui.IWorkbenchPart;
+import org.eclipse.ui.IPartListener2;
+import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.IWorkbenchPartSite;
 import org.eclipse.ui.IWorkbenchWindow;
 
@@ -67,50 +69,22 @@ public class JavaReconciler extends MonoReconciler {
 	/**
 	 * Internal part listener for activating the reconciler.
 	 */
-	private class PartListener implements IPartListener {
-
-		/*
-		 * @see org.eclipse.ui.IPartListener#partActivated(org.eclipse.ui.IWorkbenchPart)
-		 */
+	private class PartListener implements IPartListener2 {
 		@Override
-		public void partActivated(IWorkbenchPart part) {
-			if (part == fTextEditor) {
+		public void partVisible(IWorkbenchPartReference partRef) {
+			if (partRef.getPart(false) == fTextEditor) {
 				if (hasJavaModelChanged())
 					JavaReconciler.this.forceReconciling();
 				setEditorActive(true);
 			}
 		}
 
-		/*
-		 * @see org.eclipse.ui.IPartListener#partBroughtToTop(org.eclipse.ui.IWorkbenchPart)
-		 */
 		@Override
-		public void partBroughtToTop(IWorkbenchPart part) {
-		}
-
-		/*
-		 * @see org.eclipse.ui.IPartListener#partClosed(org.eclipse.ui.IWorkbenchPart)
-		 */
-		@Override
-		public void partClosed(IWorkbenchPart part) {
-		}
-
-		/*
-		 * @see org.eclipse.ui.IPartListener#partDeactivated(org.eclipse.ui.IWorkbenchPart)
-		 */
-		@Override
-		public void partDeactivated(IWorkbenchPart part) {
-			if (part == fTextEditor) {
+		public void partHidden(IWorkbenchPartReference partRef) {
+			if (partRef.getPart(false)  == fTextEditor) {
 				setJavaModelChanged(false);
 				setEditorActive(false);
 			}
-		}
-
-		/*
-		 * @see org.eclipse.ui.IPartListener#partOpened(org.eclipse.ui.IWorkbenchPart)
-		 */
-		@Override
-		public void partOpened(IWorkbenchPart part) {
 		}
 	}
 
@@ -139,10 +113,11 @@ public class JavaReconciler extends MonoReconciler {
 		}
 
 		/*
-		 * @see org.eclipse.swt.events.ShellListener#shellDeactivated(org.eclipse.swt.events.ShellEvent)
+		 * @see org.eclipse.swt.events.ShellListener#shellIconified(org.eclipse.swt.events.ShellEvent)
 		 */
 		@Override
-		public void shellDeactivated(ShellEvent e) {
+		public void shellIconified(ShellEvent e) {
+			// If we iconify the shell, we can't see the content anymore.
 			if (!fControl.isDisposed() && fControl.getShell() == e.getSource()) {
 				setJavaModelChanged(false);
 				setEditorActive(false);
@@ -248,7 +223,7 @@ public class JavaReconciler extends MonoReconciler {
 	/** The reconciler's editor */
 	private ITextEditor fTextEditor;
 	/** The part listener */
-	private IPartListener fPartListener;
+	private IPartListener2 fPartListener;
 	/** The shell listener */
 	private ShellListener fActivationListener;
 	/**
@@ -281,7 +256,9 @@ public class JavaReconciler extends MonoReconciler {
 	 */
 	private IPropertyChangeListener fPropertyChangeListener;
 
-	private boolean fIninitalProcessDone= false;
+	private boolean fIninitalProcessDone;
+
+	private boolean fDeferForceReconcile;
 
 	/**
 	 * The element that this reconciler reconciles.
@@ -382,7 +359,7 @@ public class JavaReconciler extends MonoReconciler {
 	 */
 	@Override
 	protected void forceReconciling() {
-		if (!fIninitalProcessDone)
+		if (!isInitialProcessDone())
 			return;
 
 		super.forceReconciling();
@@ -420,8 +397,43 @@ public class JavaReconciler extends MonoReconciler {
 		synchronized (fMutex) {
 			super.initialProcess();
 		}
-		fIninitalProcessDone= true;
+		if (initialProcessDone()) {
+			Job.createSystem("Reconciler init", (ICoreRunnable) monitor -> forceReconciling()).schedule();  //$NON-NLS-1$
+		}
 	}
+
+	/**
+	 * This is called by {@link #initialProcess()} to indicate that it is has finished and returns
+	 * true if a call to {@link #forceReconciling()} is necessary because it was previously ignored.
+	 *
+	 * @return whether there has been a call to {@link #forceReconciling()} that was ignored because
+	 *         {@link #fIninitalProcessDone} was false.
+	 */
+	private synchronized boolean initialProcessDone() {
+		fIninitalProcessDone= true;
+		if (fDeferForceReconcile) {
+			fDeferForceReconcile= false;
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * This is called by {@link #forceReconciling()} to determine whether
+	 * {@link #initialProcessDone()} has completed. It sets {@link #fDeferForceReconcile} to true if
+	 * {@link #fIninitalProcessDone} is false so that {@link #initialProcessDone()} will return
+	 * true and will subsequently call {@link #forceReconciling()} again.
+	 *
+	 * @return whether {@link #initialProcessDone()} has completed.
+	 */
+	private synchronized boolean isInitialProcessDone() {
+		if (!fIninitalProcessDone) {
+			fDeferForceReconcile= true;
+			return false;
+		}
+		return true;
+	}
+
 
 	/**
 	 * Tells whether the Java Model has changed or not.

@@ -154,6 +154,7 @@ import org.eclipse.jdt.internal.ui.text.correction.proposals.FixCorrectionPropos
 import org.eclipse.jdt.internal.ui.text.correction.proposals.LinkedCorrectionProposalCore;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.MissingAnnotationAttributesProposalCore;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.ModifierChangeCorrectionProposalCore;
+import org.eclipse.jdt.internal.ui.text.correction.proposals.NewLocalVariableCorrectionProposalCore;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.NewMethodCorrectionProposalCore;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.NewVariableCorrectionProposalCore;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.RefactoringCorrectionProposalCore;
@@ -188,6 +189,7 @@ public abstract class LocalCorrectionsBaseSubProcessor<T> {
 
 	private static final int CREATE_VARIABLE_REFERENCE= 0;
 
+	public static final int EXPRESSION_SHOULD_BE_VARIABLE= 0x223;
 	public static final int UNUSED_CODE= 0x300;
 	public static final int RENAME_CODE= 0x301;
 	public static final int REMOVE_REDUNDANT_SUPERINTERFACE= 0x302;
@@ -1022,6 +1024,16 @@ public abstract class LocalCorrectionsBaseSubProcessor<T> {
 
 	}
 
+	public void getExpressionShouldBeAVariableProposalsBase(IInvocationContext context, IProblemLocation problem, Collection<T> proposals) {
+		CompilationUnit root= context.getASTRoot();
+		ASTNode selectedNode= problem.getCoveringNode(root);
+		String label= CorrectionMessages.LocalCorrectionsSubProcessor_createLocalVariable_description;
+		NewLocalVariableCorrectionProposalCore proposal= new NewLocalVariableCorrectionProposalCore(label, context.getCompilationUnit(), selectedNode, IProposalRelevance.CREATE_LOCAL);
+		if (proposal.hasProposal()) {
+			proposals.add(newLocalVariableCorrectionProposalToT(proposal, EXPRESSION_SHOULD_BE_VARIABLE));
+		}
+	}
+
 	private ASTRewriteCorrectionProposalCore createNoSideEffectProposal(IInvocationContext context, SimpleName nodeToQualify, IVariableBinding fieldBinding, String label, int relevance) {
 		AST ast= nodeToQualify.getAST();
 
@@ -1196,7 +1208,7 @@ public abstract class LocalCorrectionsBaseSubProcessor<T> {
 			if (missingEnumCases.size() == 0 && hasDefault)
 				return;
 
-			createMissingCaseProposalsBase(context, parent, missingEnumCases, proposals);
+			createMissingCaseProposalsBase(context, parent, problem, missingEnumCases, proposals);
 		}
 	}
 
@@ -1237,7 +1249,7 @@ public abstract class LocalCorrectionsBaseSubProcessor<T> {
 	}
 
 	@SuppressWarnings("deprecation")
-	public void createMissingCaseProposalsBase(IInvocationContext context, ASTNode parent, ArrayList<String> enumConstNames, Collection<T> proposals) {
+	public void createMissingCaseProposalsBase(IInvocationContext context, ASTNode parent, IProblemLocation problem, ArrayList<String> enumConstNames, Collection<T> proposals) {
 		List<Statement> statements;
 		Expression expression;
 		if (parent instanceof SwitchStatement) {
@@ -1293,6 +1305,13 @@ public abstract class LocalCorrectionsBaseSubProcessor<T> {
 				}
 				listRewrite.insertAt(newSwitchCase, defaultIndex, null);
 				defaultIndex++;
+				if (problem != null && problem.getProblemId() == IProblem.SwitchExpressionMissingEnumConstantCaseDespiteDefault) {
+					newSwitchCase.setSwitchLabeledRule(true);
+					ThrowStatement newThrowStatement= getThrowForUnsupportedCase(expression, ast, astRewrite);
+					listRewrite.insertAt(newThrowStatement, defaultIndex, null);
+					proposal.addLinkedPosition(astRewrite.track(newThrowStatement), true, enumConstName);
+					defaultIndex++;
+				}
 				if (!hasDefault) {
 					if (ASTHelper.isSwitchExpressionNodeSupportedInAST(ast)) {
 						if (statements.size() > 0) {
@@ -1979,6 +1998,7 @@ public abstract class LocalCorrectionsBaseSubProcessor<T> {
 	protected abstract T replaceCorrectionProposalToT(ReplaceCorrectionProposalCore core, int uid);
 	protected abstract T cuCorrectionProposalToT(CUCorrectionProposalCore core, int uid);
 	protected abstract T newVariableCorrectionProposalToT(NewVariableCorrectionProposalCore core, int uid);
+	protected abstract T newLocalVariableCorrectionProposalToT(NewLocalVariableCorrectionProposalCore core, int uid);
 	protected abstract T missingAnnotationAttributesProposalToT(MissingAnnotationAttributesProposalCore core, int uid);
 	protected abstract T newMethodCorrectionProposalToT(NewMethodCorrectionProposalCore core, int uid);
 	protected abstract T modifierChangeCorrectionProposalToT(ModifierChangeCorrectionProposalCore core, int uid);

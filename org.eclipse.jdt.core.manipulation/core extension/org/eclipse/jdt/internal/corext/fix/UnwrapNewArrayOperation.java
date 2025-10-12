@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2024 Red Hat Inc. and others.
+ * Copyright (c) 2019, 2025 Red Hat Inc. and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -20,9 +20,11 @@ import org.eclipse.core.runtime.CoreException;
 
 import org.eclipse.text.edits.TextEditGroup;
 
+import org.eclipse.jdt.core.IBuffer;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ArrayCreation;
+import org.eclipse.jdt.core.dom.ArrayType;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
@@ -35,8 +37,9 @@ import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.fix.CompilationUnitRewriteOperationsFixCore.CompilationUnitRewriteOperation;
 import org.eclipse.jdt.internal.corext.refactoring.nls.NLSElement;
 import org.eclipse.jdt.internal.corext.refactoring.nls.NLSLine;
-import org.eclipse.jdt.internal.corext.refactoring.nls.NLSUtil;
+import org.eclipse.jdt.internal.corext.refactoring.nls.NLSScanner;
 import org.eclipse.jdt.internal.corext.refactoring.structure.CompilationUnitRewrite;
+import org.eclipse.jdt.internal.corext.refactoring.structure.ImportRemover;
 
 /**
  * Unwrap a new array with initializer used as input for varargs and replace with initializer elements.
@@ -55,23 +58,36 @@ public class UnwrapNewArrayOperation extends CompilationUnitRewriteOperation {
 		ASTRewrite rewrite= cuRewrite.getASTRewrite();
 		List<Expression> expressionsInArray= node != null && node.getInitializer() != null && node.getInitializer().expressions() != null ?
 				node.getInitializer().expressions() : Collections.EMPTY_LIST;
-		boolean isTagged[]= new boolean[expressionsInArray.size()];
+		ArrayType arrayType= node != null ? node.getType() : null;
 		ICompilationUnit cu= cuRewrite.getCu();
+		CompilationUnit root= cuRewrite.getRoot();
+		ImportRemover remover= cuRewrite.getImportRemover();
 
 		boolean tagged= false;
-		for (int i= 0; i < expressionsInArray.size(); ++i) {
-			Expression operand= expressionsInArray.get(i);
-			NLSLine nlsLine= NLSUtil.scanCurrentLine(cu, operand.getStartPosition());
-			if (nlsLine != null) {
-				for (NLSElement element : nlsLine.getElements()) {
-					if (element.getPosition().getOffset() == operand.getStartPosition()) {
-						if (element.hasTag()) {
-							tagged= true;
-							isTagged[i]= true;
+		try {
+			NLSLine[] nlsLines= NLSScanner.scan(cu);
+			int startLine= root.getLineNumber(call.getStartPosition());
+			int endLine= root.getLineNumber(call.getStartPosition() + call.getLength());
+			for (int lineNo= startLine; lineNo <= endLine; ++lineNo) {
+				for (NLSLine nlsLine : nlsLines) {
+					if (nlsLine.getLineNumber() == lineNo - 1) {
+						for (NLSElement element : nlsLine.getElements()) {
+							if (element.hasTag()) {
+								tagged= true;
+								break;
+							}
 						}
 					}
+					if (tagged) {
+						break;
+					}
+				}
+				if (tagged) {
+					break;
 				}
 			}
+		} catch (Exception e) {
+			// do nothing
 		}
 
 		TextEditGroup group= createTextEditGroup(FixMessages.UnusedCodeFix_RemoveUnnecessaryArrayCreation_description, cuRewrite);
@@ -111,12 +127,19 @@ public class UnwrapNewArrayOperation extends CompilationUnitRewriteOperation {
 			int arrayStart= node.getStartPosition();
 			List<Expression> expressionList= node.getInitializer().expressions();
 			int arrayExpressionStart= expressionList.get(0).getStartPosition();
+			IBuffer cuBuffer= cu.getBuffer();
+			String arrayStartString= cuBuffer.getText(arrayStart, arrayExpressionStart - arrayStart);
+			int index= arrayStartString.indexOf('{') + 1;
+			while (index < arrayStartString.length() && (arrayStartString.charAt(index) == ' ' || arrayStartString.charAt(index) == '\t')) {
+				++index;
+			}
+			arrayExpressionStart= arrayStart + index;
 			Expression lastExpression= expressionList.get(expressionList.size() - 1);
 			int arrayExpressionEnd= lastExpression.getStartPosition() + lastExpression.getLength();
 			int arrayInitializerEnd= node.getInitializer().getStartPosition() + node.getInitializer().getLength();
-			buf.append(cu.getBuffer().getText(nodeStart, arrayStart - nodeStart));
-			buf.append(cu.getBuffer().getText(arrayExpressionStart, arrayExpressionEnd - arrayExpressionStart));
-			buf.append(cu.getBuffer().getText(arrayInitializerEnd, nodeEnd - arrayInitializerEnd));
+			buf.append(cuBuffer.getText(nodeStart, arrayStart - nodeStart));
+			buf.append(cuBuffer.getText(arrayExpressionStart, arrayExpressionEnd - arrayExpressionStart));
+			buf.append(cuBuffer.getText(arrayInitializerEnd, nodeEnd - arrayInitializerEnd));
 
 			ASTNode replacementNode= null;
 			if (call instanceof ClassInstanceCreation) {
@@ -130,6 +153,9 @@ public class UnwrapNewArrayOperation extends CompilationUnitRewriteOperation {
 			}
 
 			rewrite.replace(call, replacementNode, group);
+		}
+		if (arrayType != null) {
+			remover.registerRemovedNode(arrayType);
 		}
 	}
 }

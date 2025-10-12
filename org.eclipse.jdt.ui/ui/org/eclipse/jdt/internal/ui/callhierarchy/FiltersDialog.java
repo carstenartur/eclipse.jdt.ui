@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2011 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -14,9 +14,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.ui.callhierarchy;
 
+import java.util.Arrays;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -36,6 +39,14 @@ import org.eclipse.jdt.internal.ui.IJavaHelpContextIds;
 import org.eclipse.jdt.internal.ui.dialogs.StatusInfo;
 
 class FiltersDialog extends StatusDialog {
+	private static final String DOT= "\\."; //$NON-NLS-1$
+	private static final String GLOB_CHARACTERS= "*?"; //$NON-NLS-1$
+	private static final String VALID_JAVA_NAME_REST= "A-Za-z0-9_"; //$NON-NLS-1$
+	private static final String VALID_JAVA_NAME_BEGINNING= "A-Za-z_"; //$NON-NLS-1$
+
+	static final String METHOD_NAME_GLOB_PATTERN= "^([" + VALID_JAVA_NAME_BEGINNING + GLOB_CHARACTERS + "][" + VALID_JAVA_NAME_REST + GLOB_CHARACTERS + "]*)(" + DOT + "([" + VALID_JAVA_NAME_BEGINNING //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$//$NON-NLS-4$
+			+ GLOB_CHARACTERS + "][" + VALID_JAVA_NAME_REST + GLOB_CHARACTERS + "]*))*$";//$NON-NLS-1$ //$NON-NLS-2$
+
     private Label fNamesHelpText;
     private Button fFilterOnNames;
     private Text fNames;
@@ -91,7 +102,7 @@ class FiltersDialog extends StatusDialog {
         fMaxCallDepth.addModifyListener(e -> validateInput());
 
         GridData gridData = new GridData();
-        gridData.widthHint = convertWidthInCharsToPixels(10);
+        gridData.widthHint = convertWidthInCharsToPixels(12);
         fMaxCallDepth.setLayoutData(gridData);
     }
 
@@ -99,12 +110,14 @@ class FiltersDialog extends StatusDialog {
         fFilterOnNames = createCheckbox(parent,
                 CallHierarchyMessages.FiltersDialog_filterOnNames, true);
 
+        fFilterOnNames.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> validateInput()));
+
         fNames= new Text(parent, SWT.SINGLE | SWT.BORDER);
         fNames.setFont(parent.getFont());
         fNames.addModifyListener(e -> validateInput());
 
         GridData gridData = new GridData(GridData.HORIZONTAL_ALIGN_FILL | GridData.GRAB_HORIZONTAL);
-        gridData.widthHint = convertWidthInCharsToPixels(60);
+        gridData.widthHint = convertWidthInCharsToPixels(80);
         fNames.setLayoutData(gridData);
 
         fNamesHelpText= new Label(parent, SWT.LEFT);
@@ -130,6 +143,8 @@ class FiltersDialog extends StatusDialog {
 
 		GridData gridData= new GridData();
 		gridData.horizontalIndent= 0;
+		gridData.horizontalSpan= 1;
+		gridData.grabExcessHorizontalSpace= true;
 		fShowAll.setLayoutData(gridData);
 		fHideTest.setLayoutData(gridData);
 		fShowTest.setLayoutData(gridData);
@@ -205,7 +220,7 @@ class FiltersDialog extends StatusDialog {
 		fFilterOnNames.setSelection(CallHierarchy.getDefault().isFilterEnabled());
 
 		setSelection();
-		
+
 		updateEnabledState();
 	}
 
@@ -243,11 +258,40 @@ class FiltersDialog extends StatusDialog {
         }
     }
 
+	private boolean isFilterNamesValid() {
+		if (!fFilterOnNames.getSelection()) {
+			return true;
+		}
+		String namesGlob= fNames.getText().trim();
+
+		if (namesGlob.isEmpty()) {
+			return true;
+		}
+
+		// Split into several patterns separated by commas
+		String[] allPatterns= namesGlob.split(","); //$NON-NLS-1$
+
+		return Arrays.stream(allPatterns).map(String::trim).allMatch(this::isValidMethodNameGlob);
+	}
+
+	private boolean isValidMethodNameGlob(String input) {
+		return input != null && input.matches(METHOD_NAME_GLOB_PATTERN);
+	}
+
+
     private void validateInput() {
         StatusInfo status= new StatusInfo();
+		String errorMessage= ""; //$NON-NLS-1$
+		if (!isFilterNamesValid()) {
+			errorMessage+= CallHierarchyMessages.FiltersDialog_messageFilterNamesInvalid;
+		}
         if (!isMaxCallDepthValid()) {
-            status.setError(CallHierarchyMessages.FiltersDialog_messageMaxCallDepthInvalid);
+			errorMessage+= CallHierarchyMessages.FiltersDialog_messageMaxCallDepthInvalid;
         }
+
+		if (!errorMessage.isEmpty()) {
+			status.setError(errorMessage);
+		}
         updateStatus(status);
     }
 }

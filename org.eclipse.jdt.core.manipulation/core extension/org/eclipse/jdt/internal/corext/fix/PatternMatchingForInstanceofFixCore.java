@@ -114,9 +114,6 @@ public class PatternMatchingForInstanceofFixCore extends CompilationUnitRewriteO
 				boolean isPositiveCaseToAnalyze= true;
 				ASTNode currentNode= visited;
 
-				if (visited.getLocationInParent() == ConditionalExpression.EXPRESSION_PROPERTY) {
-
-				}
 				while (currentNode.getParent() != null
 						&& (!(currentNode.getParent() instanceof IfStatement)
 								|| currentNode.getLocationInParent() != IfStatement.EXPRESSION_PROPERTY)
@@ -173,9 +170,7 @@ public class PatternMatchingForInstanceofFixCore extends CompilationUnitRewriteO
 						fResult.add(collector.build());
 						return false;
 					}
-				} else {
-					IfStatement ifStatement= (IfStatement) currentNode.getParent();
-
+				} else if (currentNode.getParent() instanceof IfStatement ifStatement) {
 					ResultCollector collector= new ResultCollector(visited);
 					if (isPositiveCaseToAnalyze) {
 						collector.collect(ifStatement.getThenStatement());
@@ -220,7 +215,7 @@ public class PatternMatchingForInstanceofFixCore extends CompilationUnitRewriteO
 
 					if (collector.hasResult()) {
 						fResult.add(collector.build());
-						return false;
+						return true;
 					}
 				}
 				return true;
@@ -272,16 +267,16 @@ public class PatternMatchingForInstanceofFixCore extends CompilationUnitRewriteO
 							if (methodDecl != null) {
 								CompilationUnit cu= (CompilationUnit) name.getRoot();
 								IJavaProject project= cu.getJavaElement().getJavaProject();
-								replacementName= proposeLocalName(baseName, cu, project, methodDecl, excludedNames.toArray(new String[0]));
+								replacementName= proposeLocalName(baseName, cu, project, castExp, excludedNames.toArray(new String[0]));
 							}
 						}
 						this.expressionsToReplace.add(expressionToReplace);
 					}
 				}
 
-				private String proposeLocalName(String baseName, CompilationUnit root, IJavaProject javaProject, MethodDeclaration methodDecl, String[] usedNames) {
+				private String proposeLocalName(String baseName, CompilationUnit root, IJavaProject javaProject, ASTNode node, String[] usedNames) {
 					// don't propose names that are already in use:
-					Collection<String> variableNames= new ScopeAnalyzer(root).getUsedVariableNames(methodDecl.getStartPosition(), methodDecl.getLength());
+					Collection<String> variableNames= new ScopeAnalyzer(root).getUsedVariableNames(node.getStartPosition(), node.getLength());
 					String[] names= new String[variableNames.size() + usedNames.length];
 					variableNames.toArray(names);
 					System.arraycopy(usedNames, 0, names, variableNames.size(), usedNames.length);
@@ -457,6 +452,7 @@ public class PatternMatchingForInstanceofFixCore extends CompilationUnitRewriteO
 			this.expressionToMove= expressionToMove;
 		}
 
+		@SuppressWarnings("deprecation")
 		@Override
 		public void rewriteAST(final CompilationUnitRewrite cuRewrite, final LinkedProposalModelCore linkedModel) throws CoreException {
 			ASTRewrite rewrite= cuRewrite.getASTRewrite();

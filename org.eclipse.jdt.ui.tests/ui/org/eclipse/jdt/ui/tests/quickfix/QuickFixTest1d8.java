@@ -3301,4 +3301,215 @@ public class QuickFixTest1d8 extends QuickFixTest {
 				""";
 		assertExpectedExistInProposals(proposals, new String[] {expected1, expected2, expected3});
 	}
+
+	@Test
+	public void testIssue2200_1() throws Exception {
+		IPackageFragment pack2= fSourceFolder.createPackageFragment("test1", false, null);
+
+		String str1= """
+			package test1;
+
+			public class E {
+
+				public void foo(Integer x, String string) {
+					((long)x.intValue());
+				}
+			}
+			""";
+		ICompilationUnit cu= pack2.createCompilationUnit("E.java", str1, false, null);
+
+		CompilationUnit astRoot= getASTRoot(cu);
+		ArrayList<IJavaCompletionProposal> proposals= collectCorrections(cu, astRoot, 2, null);
+		assertCorrectLabels(proposals);
+		assertNumberOfProposals(proposals, 1);
+
+		String expected1= """
+			package test1;
+
+			public class E {
+
+				public void foo(Integer x, String string) {
+					long l = (long)x.intValue();
+				}
+			}
+			""";
+
+		assertExpectedExistInProposals(proposals, new String[] {expected1});
+	}
+
+	@Test
+	public void testIssue2200_2() throws Exception {
+		IPackageFragment pack2= fSourceFolder.createPackageFragment("test1", false, null);
+
+		String str1= """
+			package test1;
+
+			public class E {
+
+				public void foo(Object x, String string) {
+					((String)x);
+				}
+			}
+			""";
+		ICompilationUnit cu= pack2.createCompilationUnit("E.java", str1, false, null);
+
+		CompilationUnit astRoot= getASTRoot(cu);
+		ArrayList<IJavaCompletionProposal> proposals= collectCorrections(cu, astRoot, 2, null);
+		assertCorrectLabels(proposals);
+		assertNumberOfProposals(proposals, 1);
+
+		String expected1= """
+			package test1;
+
+			public class E {
+
+				public void foo(Object x, String string) {
+					String string2 = (String)x;
+				}
+			}
+			""";
+
+		assertExpectedExistInProposals(proposals, new String[] {expected1});
+	}
+
+	@Test
+	public void testIssue2242_fixDeprecatedField1() throws Exception {
+		Hashtable<String, String> options = JavaCore.getOptions();
+		options.put(JavaCore.COMPILER_PB_DEPRECATION, CompilerOptions.WARNING);
+		JavaCore.setOptions(options);
+		IPackageFragment pack2= fSourceFolder.createPackageFragment("test2", false, null);
+
+		String str2= """
+			package test2;
+
+			public interface K {
+				String field1= "abc";
+				String field2= "def";
+			}
+			""";
+		pack2.createCompilationUnit("K.java", str2, false, null);
+
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String str1= """
+			package test1;
+
+			import test2.K;
+
+			public interface B {
+
+				/**
+				 * field to use
+				 *
+				 * @deprecated use {@link K#field2} instead
+				 */
+				@Deprecated	String field= "blah";
+			}
+			""";
+		pack1.createCompilationUnit("B.java", str1, false, null);
+
+		String str= """
+			package test1;
+
+			class E {
+			    public void foo() {
+			        String x = B.field;
+			        System.out.println(x);
+			    }
+			}
+			""";
+		ICompilationUnit cu= pack1.createCompilationUnit("E.java", str, false, null);
+
+		CompilationUnit astRoot= getASTRoot(cu);
+		ArrayList<IJavaCompletionProposal> proposals= collectCorrections(cu, astRoot, 1, null);
+		assertCorrectLabels(proposals);
+
+		String expected1= """
+				package test1;
+
+				import test2.K;
+
+				class E {
+				    public void foo() {
+				        String x = K.field2;
+				        System.out.println(x);
+				    }
+				}
+				""";
+
+		assertExpectedExistInProposals(proposals, new String[] {expected1});
+	}
+
+	@Test
+	public void testIssue2242_fixDeprecatedField2() throws Exception {
+		Hashtable<String, String> options = JavaCore.getOptions();
+		options.put(JavaCore.COMPILER_PB_DEPRECATION, CompilerOptions.WARNING);
+		JavaCore.setOptions(options);
+		IPackageFragment pack2= fSourceFolder.createPackageFragment("test2", false, null);
+
+		String str2= """
+			package test2;
+
+			public interface K {
+				String field1= "abc";
+				String field2= "def";
+			}
+			""";
+		pack2.createCompilationUnit("K.java", str2, false, null);
+
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String str1= """
+			package test1;
+
+			import test2.K;
+
+			public interface B {
+
+				/**
+				 * field to use
+				 *
+				 * @deprecated use {@link K#field2} instead
+				 */
+				@Deprecated	String field= "blah";
+			}
+			""";
+		pack1.createCompilationUnit("B.java", str1, false, null);
+
+		String str= """
+			package test1;
+
+			class E {
+				private class Z implements B {
+				}
+
+				public void foo() {
+					String x = new Z().field;
+					System.out.println(x);
+				}
+			}
+			""";
+		ICompilationUnit cu= pack1.createCompilationUnit("E.java", str, false, null);
+
+		CompilationUnit astRoot= getASTRoot(cu);
+		ArrayList<IJavaCompletionProposal> proposals= collectCorrections(cu, astRoot, 2, null);
+		assertCorrectLabels(proposals);
+
+		String expected1= """
+				package test1;
+
+				import test2.K;
+
+				class E {
+					private class Z implements B {
+					}
+
+					public void foo() {
+						String x = K.field2;
+						System.out.println(x);
+					}
+				}
+				""";
+
+		assertExpectedExistInProposals(proposals, new String[] {expected1});
+	}
+
 }

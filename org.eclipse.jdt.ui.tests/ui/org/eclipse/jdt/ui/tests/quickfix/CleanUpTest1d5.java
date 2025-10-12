@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2024 IBM Corporation and others.
+ * Copyright (c) 2019, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -3913,6 +3913,111 @@ public class CleanUpTest1d5 extends CleanUpTestCase {
 	}
 
 	@Test
+	public void testUnnecessaryArrayIssue2202() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= """
+			package test1;
+
+			import java.util.Arrays;
+			import java.util.List;
+
+			public class A {
+
+				public void foo1(String x, List<Object> y) {
+					// do nothing
+				}
+
+				public void foo() {
+					String a = "abc";
+					Integer b = 0;
+					Double c = 1.4;
+					foo1("abc", Arrays.asList(new Object[] {a, //$NON-NLS-1$
+							b, c}));
+				}
+
+			}
+			""";
+		ICompilationUnit cu1= pack1.createCompilationUnit("A.java", sample, false, null);
+
+		enable(CleanUpConstants.REMOVE_UNNECESSARY_ARRAY_CREATION);
+
+		sample= """
+			package test1;
+
+			import java.util.Arrays;
+			import java.util.List;
+
+			public class A {
+
+				public void foo1(String x, List<Object> y) {
+					// do nothing
+				}
+
+				public void foo() {
+					String a = "abc";
+					Integer b = 0;
+					Double c = 1.4;
+					foo1("abc", Arrays.asList(a, //$NON-NLS-1$
+			        				b, c));
+				}
+
+			}
+			""";
+		String expected= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { expected },
+				new HashSet<>(Arrays.asList(FixMessages.UnusedCodeFix_RemoveUnnecessaryArrayCreation_description)));
+	}
+
+	@Test
+	public void testUnnecessaryArrayIssue2222() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= """
+			package test1;
+
+			import java.util.ArrayList;
+			import java.util.List;
+
+			public class A {
+				public void foo1(ArrayList<String> x) {
+					B.blah(new List<String>[] { x });
+				}
+			}
+			""";
+		ICompilationUnit cu1= pack1.createCompilationUnit("A.java", sample, false, null);
+
+		String sample2= """
+			package test1;
+
+			import java.util.List;
+
+			public class B {
+				static public void blah(List ... y) {
+				}
+			}
+			""";
+		ICompilationUnit cu2= pack1.createCompilationUnit("B.java", sample2, false, null);
+
+		enable(CleanUpConstants.REMOVE_UNNECESSARY_ARRAY_CREATION);
+
+		sample= """
+			package test1;
+
+			import java.util.ArrayList;
+
+			public class A {
+				public void foo1(ArrayList<String> x) {
+					B.blah(x);
+				}
+			}
+			""";
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1, cu2 }, new String[] { expected1, sample2 },
+				new HashSet<>(Arrays.asList(FixMessages.UnusedCodeFix_RemoveUnnecessaryArrayCreation_description)));
+	}
+
+	@Test
 	public void testKeepArrayWithSingleArrayElement() throws Exception {
 		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
 		String sample= """
@@ -4558,4 +4663,96 @@ public class CleanUpTest1d5 extends CleanUpTestCase {
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { expected1 }, null);
     }
 
+	@Test
+	public void testUnnecessaryArrayIssue2513_MethodConflict() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= """
+			package test1;
+
+			public class A {
+			    public static void doNotChangeMethodDispatch() {
+			        bar("d", new Object[] {"e"});
+			    }
+
+			    public static void bar(Object... elements) {
+			    }
+
+			    public static void bar(Object element, Object ...elements) {
+			    }
+			}
+			""";
+		ICompilationUnit cu1= pack1.createCompilationUnit("A.java", sample, false, null);
+
+		enable(CleanUpConstants.REMOVE_UNNECESSARY_ARRAY_CREATION);
+
+		assertRefactoringHasNoChange(new ICompilationUnit[] { cu1 });
+	}
+
+	@Test
+	public void testUnnecessaryArrayIssue2515_NLS() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= """
+			package test1;
+
+			public class TestNLSUnnecessaryArray {
+				private void func(String a, Object ...list) {
+				}
+				public void foo() {
+					func("a", new Object[] {this, this}); //$NON-NLS-1$
+				}
+			}
+			""";
+		ICompilationUnit cu1= pack1.createCompilationUnit("A.java", sample, false, null);
+
+		enable(CleanUpConstants.REMOVE_UNNECESSARY_ARRAY_CREATION);
+
+		String expected= """
+			package test1;
+
+			public class TestNLSUnnecessaryArray {
+				private void func(String a, Object ...list) {
+				}
+				public void foo() {
+					func("a", this, this); //$NON-NLS-1$
+				}
+			}
+			""";
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { expected }, null);
+	}
+
+	@Test
+	public void testUnnecessaryArrayIssue2521_NLS() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= """
+			package test1;
+
+			public class TestNLSUnnecessaryArray {
+				private void func(String a, Object ...list) {
+				}
+				public void foo() {
+					func("a", new Object[] { //$NON-NLS-1$
+							this, this});
+				}
+			}
+			""";
+		ICompilationUnit cu1= pack1.createCompilationUnit("A.java", sample, false, null);
+
+		enable(CleanUpConstants.REMOVE_UNNECESSARY_ARRAY_CREATION);
+
+		String expected= """
+			package test1;
+
+			public class TestNLSUnnecessaryArray {
+				private void func(String a, Object ...list) {
+				}
+				public void foo() {
+					func("a", //$NON-NLS-1$
+			        				this, this);
+				}
+			}
+			""";
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { expected }, null);
+	}
 }

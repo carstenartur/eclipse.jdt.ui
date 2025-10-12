@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -115,6 +116,7 @@ import org.eclipse.jdt.core.dom.SimpleType;
 import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.StructuralPropertyDescriptor;
+import org.eclipse.jdt.core.dom.SuperFieldAccess;
 import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.eclipse.jdt.core.dom.SwitchCase;
 import org.eclipse.jdt.core.dom.SwitchExpression;
@@ -138,9 +140,9 @@ import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 
 import org.eclipse.jdt.internal.core.manipulation.StubUtility;
 import org.eclipse.jdt.internal.core.manipulation.dom.ASTResolving;
-import org.eclipse.jdt.internal.core.manipulation.util.BasicElementLabels;
 import org.eclipse.jdt.internal.core.manipulation.util.Strings;
 import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRewriteContext;
+import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility2Core;
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
 import org.eclipse.jdt.internal.corext.dom.AbortSearchException;
@@ -170,6 +172,7 @@ import org.eclipse.jdt.internal.corext.fix.LambdaExpressionsFixCore;
 import org.eclipse.jdt.internal.corext.fix.LinkedProposalModelCore;
 import org.eclipse.jdt.internal.corext.fix.PatternInstanceofToSwitchFixCore;
 import org.eclipse.jdt.internal.corext.fix.RemoveVarOrInferredLambdaParameterTypesFixCore;
+import org.eclipse.jdt.internal.corext.fix.ReplaceDeprecatedFieldFixCore;
 import org.eclipse.jdt.internal.corext.fix.SplitTryResourceFixCore;
 import org.eclipse.jdt.internal.corext.fix.SplitVariableFixCore;
 import org.eclipse.jdt.internal.corext.fix.StringConcatToTextBlockFixCore;
@@ -227,6 +230,7 @@ import org.eclipse.jdt.internal.ui.text.correction.proposals.GenerateForLoopAssi
 import org.eclipse.jdt.internal.ui.text.correction.proposals.LinkedCorrectionProposal;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.LinkedNamesAssistProposal;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.NewDefiningMethodProposal;
+import org.eclipse.jdt.internal.ui.text.correction.proposals.NewDefiningMethodProposalCore;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.NewInterfaceImplementationProposal;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.RefactoringCorrectionProposal;
 import org.eclipse.jdt.internal.ui.text.correction.proposals.RefactoringCorrectionProposalCore;
@@ -347,6 +351,7 @@ public class QuickAssistProcessor implements IQuickAssistProcessor {
 					|| getSplitSwitchLabelProposal(context, coveringNode, null)
 					|| getSplitTryResourceProposal(context, coveringNode, null)
 					|| getConvertPatternInstanceofIfStmtToSwitchProposals(context, coveringNode, null)
+					|| getDeprecatedFieldProposal(context, coveringNode, null, null)
 					|| getDeprecatedProposal(context, coveringNode, null, null);
 		}
 		return false;
@@ -374,6 +379,7 @@ public class QuickAssistProcessor implements IQuickAssistProcessor {
 			getSplitSwitchLabelProposal(context, coveringNode, resultingCollections);
 			getAddMethodDeclaration(context, coveringNode, resultingCollections);
 			getDeprecatedProposal(context, coveringNode, locations, resultingCollections);
+			getDeprecatedFieldProposal(context, coveringNode, locations, resultingCollections);
 
 			if (noErrorsAtLocation) {
 				boolean problemsAtLocation= locations.length != 0;
@@ -725,6 +731,38 @@ public class QuickAssistProcessor implements IQuickAssistProcessor {
 			}
 		}
 		return true;
+	}
+
+	private static boolean getDeprecatedFieldProposal(IInvocationContext context, ASTNode node, IProblemLocation[] locations, Collection<ICommandAccess> proposals) {
+		// don't add if already added as quick fix
+		if (containsMatchingProblem(locations, IProblem.UsingDeprecatedField))
+			return false;
+
+		if (node != null && !(node instanceof QualifiedName)
+				&& !(node instanceof FieldAccess)
+				&& !(node instanceof SuperFieldAccess)) {
+			ASTNode originalNode= node;
+			node= ASTNodes.getFirstAncestorOrNull(node, QualifiedName.class,
+					FieldAccess.class, SuperFieldAccess.class);
+			if (node == null && originalNode instanceof SimpleName) {
+				node= originalNode;
+			}
+		}
+		if (node != null) {
+			String replacement= QuickAssistProcessorUtil.getDeprecatedFieldReplacement(node);
+			if (replacement != null) {
+				if (proposals != null) {
+					IProposableFix fix= ReplaceDeprecatedFieldFixCore.create(FixMessages.ReplaceDeprecatedField_msg,
+							replacement, (CompilationUnit)node.getRoot(), node);
+					if (fix != null) {
+						Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
+						proposals.add(new FixCorrectionProposal(fix, null, IProposalRelevance.REPLACE_DEPRECATED_FIELD, image, context));
+					}
+				}
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static boolean getConvertAnonymousToNestedProposal(IInvocationContext context, final ASTNode node, Collection<ICommandAccess> proposals) throws CoreException {
@@ -2581,12 +2619,7 @@ public class QuickAssistProcessor implements IQuickAssistProcessor {
 		return true;
 	}
 
-
 	public static boolean getCreateInSuperClassProposals(IInvocationContext context, ASTNode node, Collection<ICommandAccess> resultingCollections) throws CoreException {
-		return getCreateInSuperClassProposals(context, node, resultingCollections, true);
-	}
-
-	public static boolean getCreateInSuperClassProposals(IInvocationContext context, ASTNode node, Collection<ICommandAccess> resultingCollections, boolean addOverride) throws CoreException {
 		if (!(node instanceof SimpleName) || !(node.getParent() instanceof MethodDeclaration)) {
 			return false;
 		}
@@ -2594,44 +2627,23 @@ public class QuickAssistProcessor implements IQuickAssistProcessor {
 		if (decl.getName() != node || decl.resolveBinding() == null || Modifier.isPrivate(decl.getModifiers())) {
 			return false;
 		}
+		boolean addOverride = StubUtility2Core.findAnnotation("java.lang.Override", decl.modifiers()) == null; //$NON-NLS-1$
+		return getCreateInSuperClassProposals(context, node, resultingCollections, addOverride);
+	}
 
-		ICompilationUnit cu= context.getCompilationUnit();
-		CompilationUnit astRoot= context.getASTRoot();
-
-		IMethodBinding binding= decl.resolveBinding();
-		ITypeBinding[] paramTypes= binding.getParameterTypes();
-
-		ITypeBinding[] superTypes= Bindings.getAllSuperTypes(binding.getDeclaringClass());
-		if (resultingCollections == null) {
-			for (ITypeBinding curr : superTypes) {
-				if (curr.isFromSource() && Bindings.findOverriddenMethodInType(curr, binding) == null) {
-					return true;
-				}
-			}
-			return false;
-		}
-		List<SingleVariableDeclaration> params= decl.parameters();
-		String[] paramNames= new String[paramTypes.length];
-		for (int i= 0; i < params.size(); i++) {
-			SingleVariableDeclaration param= params.get(i);
-			paramNames[i]= param.getName().getIdentifier();
-		}
-
-		for (ITypeBinding curr : superTypes) {
-			if (curr.isFromSource()) {
-				IMethodBinding method= Bindings.findOverriddenMethodInType(curr, binding);
-				if (method == null) {
-					ITypeBinding typeDecl= curr.getTypeDeclaration();
-					ICompilationUnit targetCU= ASTResolving.findCompilationUnitForBinding(cu, astRoot, typeDecl);
-					if (targetCU != null) {
-						String label= Messages.format(CorrectionMessages.QuickAssistProcessor_createmethodinsuper_description,
-								new String[] { BasicElementLabels.getJavaElementName(curr.getName()), BasicElementLabels.getJavaElementName(binding.getName()) });
-						resultingCollections.add(new NewDefiningMethodProposal(label, targetCU, astRoot, typeDecl, binding, paramNames, addOverride, IProposalRelevance.CREATE_METHOD_IN_SUPER));
-					}
-				}
+	public static boolean getCreateInSuperClassProposals(IInvocationContext context, ASTNode node, Collection<ICommandAccess> resultingCollections, boolean addOverride) throws CoreException {
+		Collection<Object> newResults = new LinkedList<>();
+		boolean result = QuickAssistProcessorUtil.getCreateInSuperClassProposals(context, node, newResults);
+		for (Object res : newResults) {
+			if (res instanceof NewDefiningMethodProposalCore proposal) {
+				resultingCollections.add(new NewDefiningMethodProposal(
+						proposal.getName(), proposal.getCompilationUnit(),
+						proposal.getInvocationNode(), proposal.getSenderBinding(),
+						proposal.getMethodBinding(), proposal.getParameterNames(),
+						addOverride, proposal.getRelevance()));
 			}
 		}
-		return true;
+		return result;
 	}
 
 	private static boolean getConvertEnhancedForLoopProposal(IInvocationContext context, ASTNode node, Collection<ICommandAccess> resultingCollections) {

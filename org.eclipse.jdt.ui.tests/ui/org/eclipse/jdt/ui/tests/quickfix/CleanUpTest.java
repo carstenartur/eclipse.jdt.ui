@@ -4110,6 +4110,42 @@ public class CleanUpTest extends CleanUpTestCase {
 	}
 
 	@Test
+	public void testCodeStyleIssue2494() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= """
+			package test1;
+			public class E1 {
+				public void foo(int a) {
+					if (a == 3) // is 3
+						System.out.println("3");
+					else // value is 2
+						System.out.println("2");
+				}
+			}
+			""";
+		ICompilationUnit cu1= pack1.createCompilationUnit("E1.java", sample, false, null);
+
+		enable(CleanUpConstants.CONTROL_STATEMENTS_USE_BLOCKS);
+		enable(CleanUpConstants.CONTROL_STATEMENTS_USE_BLOCKS_ALWAYS);
+
+		sample= """
+			package test1;
+			public class E1 {
+				public void foo(int a) {
+					if (a == 3) { // is 3
+			        	System.out.println("3");
+			        } else { // value is 2
+			        	System.out.println("2");
+			        }
+				}
+			}
+			""";
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { expected1 }, null);
+	}
+
+	@Test
 	public void testCodeStyle_StaticAccessThroughInstance_Bug307407() throws Exception {
 		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
 		String sample= """
@@ -17080,6 +17116,18 @@ public class CleanUpTest extends CleanUpTestCase {
 			            return;
 			        }
 			    }
+
+				private interface I1 {
+					void run(int i);
+				}
+
+				public void doNotRemoveCommentLambdaReturn() {
+					I1 i1= i -> {
+						return; // do nothing
+					};
+					i1.run(3);
+				}
+
 			}
 			""";
 		ICompilationUnit cu1= pack1.createCompilationUnit("E1.java", sample, false, null);
@@ -22620,6 +22668,47 @@ public class CleanUpTest extends CleanUpTestCase {
 	}
 
 	@Test
+	public void testSingleUsedFieldWithVolatile() throws Exception {
+		// Given
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test1", false, null);
+		String given= """
+			package test1;
+
+			public class E {
+				private volatile boolean myField = true;
+
+				public void foo() {
+					myField = false;
+					if (myField)
+					    System.out.println("myField is true");
+				}
+			}
+			""";
+
+		String expected= """
+			package test1;
+
+			public class E {
+				public void foo() {
+					boolean myField = false;
+					if (myField)
+					    System.out.println("myField is true");
+				}
+			}
+			""";
+
+		// When
+		ICompilationUnit cu= pack.createCompilationUnit("E.java", given, false, null);
+		enable(CleanUpConstants.SINGLE_USED_FIELD);
+
+		// Then
+		assertNotEquals("The class must be changed", expected, given);
+		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu }, new String[] { expected },
+				new HashSet<>(Arrays.asList(MultiFixMessages.SingleUsedFieldCleanUp_description_new_local_var_declaration,
+						MultiFixMessages.SingleUsedFieldCleanUp_description_old_field_declaration, MultiFixMessages.SingleUsedFieldCleanUp_description_uses_of_the_var)));
+	}
+
+	@Test
 	public void testSingleUsedFieldWithComplexUse() throws Exception {
 		// Given
 		IPackageFragment pack= fSourceFolder.createPackageFragment("test1", false, null);
@@ -27972,6 +28061,74 @@ public class CleanUpTest extends CleanUpTestCase {
 	}
 
 	@Test
+	public void testAddFinalIssue2164() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= """
+			package test;
+			public class E {
+				private int x = 1;
+
+				public void foo() {
+				    if (true) {
+				       x = 4;
+				}
+			}
+			""";
+		ICompilationUnit cu1= pack1.createCompilationUnit("E.java", sample, false, null);
+
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_PRIVATE_FIELDS);
+
+		assertRefactoringHasNoChangeEventWithError(new ICompilationUnit[] {cu1});
+	}
+
+	@Test
+	public void testAddFinalIssue2492() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
+		String sample= """
+			package test;
+			public class E<R> {
+				interface K {
+					void run();
+				}
+				private R key;
+
+				private K k = () -> {
+					System.out.println(key);
+				};
+
+				public FinalIssue(R key) {
+					this.key= key;
+				}
+			}
+			""";
+		ICompilationUnit cu1= pack1.createCompilationUnit("E.java", sample, false, null);
+
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL);
+		enable(CleanUpConstants.VARIABLE_DECLARATIONS_USE_FINAL_PRIVATE_FIELDS);
+
+		String expected= """
+				package test;
+				public class E<R> {
+					interface K {
+						void run();
+					}
+					private R key;
+
+					private final K k = () -> {
+						System.out.println(key);
+					};
+
+					public FinalIssue(R key) {
+						this.key= key;
+					}
+				}
+				""";
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu1}, new String[] {expected}, null);
+	}
+
+	@Test
 	public void testAddFinalBug129807() throws Exception {
 		IPackageFragment pack1= fSourceFolder.createPackageFragment("test", false, null);
 		String sample= """
@@ -29160,6 +29317,7 @@ public class CleanUpTest extends CleanUpTestCase {
 			package test1;
 
 			import java.util.Comparator;
+			import java.util.Random;
 
 			public class E implements Comparator<Double> {
 			    public boolean doNotRefactorValidCases() {
@@ -29218,6 +29376,19 @@ public class CleanUpTest extends CleanUpTestCase {
 			    public int compare(Double o1, Double o2) {
 			        return Double.compare(o1, o2) + 100;
 			    }
+
+			    public void doNotRefactorIssue2221() {
+				    if (getVal().intValue() == 1)
+					    System.out.println("1");
+					if (getVal().intValue() == 2)
+						System.out.println("2");
+					if (getVal().intValue() == -1)
+						System.out.println("-1");
+				}
+
+				private Integer getVal() {
+					return new Random().nextInt();
+				}
 			}
 			""";
 		ICompilationUnit cu= pack.createCompilationUnit("E.java", sample, false, null);
@@ -30703,5 +30874,35 @@ public class CleanUpTest extends CleanUpTestCase {
 			}""";
 
 		assertRefactoringResultAsExpected(new ICompilationUnit[] { cu1 }, new String[] { expected }, null);
+	}
+
+	@Test
+	public void testUnusedCodeIssue2320() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		String sample= """
+			package test1;
+			import foo.Bar;
+			public class E1 {
+			    public void foo() {
+				    Bar x = new Bar();
+			    }
+			}
+			""";
+		ICompilationUnit cu1= pack1.createCompilationUnit("E1.java", sample, false, null);
+
+		enable(CleanUpConstants.REMOVE_UNUSED_CODE_IMPORTS);
+
+		sample= """
+			package test1;
+			import foo.Bar;
+			public class E1 {
+			    public void foo() {
+				    Bar x = new Bar();
+			    }
+			}
+			""";
+		String expected1= sample;
+
+		assertRefactoringResultAsExpected(new ICompilationUnit[] {cu1}, new String[] {expected1}, null);
 	}
 }

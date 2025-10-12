@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -29,6 +29,7 @@
 package org.eclipse.jdt.internal.corext.refactoring.code;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -49,6 +50,7 @@ import org.eclipse.ltk.core.refactoring.RefactoringStatusEntry;
 import org.eclipse.jdt.core.IBuffer;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.core.NamingConventions;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
@@ -58,6 +60,7 @@ import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.BodyDeclaration;
 import org.eclipse.jdt.core.dom.CastExpression;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.ConditionalExpression;
 import org.eclipse.jdt.core.dom.DoStatement;
 import org.eclipse.jdt.core.dom.EnhancedForStatement;
 import org.eclipse.jdt.core.dom.Expression;
@@ -69,9 +72,12 @@ import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.IfStatement;
+import org.eclipse.jdt.core.dom.InstanceofExpression;
 import org.eclipse.jdt.core.dom.LabeledStatement;
+import org.eclipse.jdt.core.dom.LambdaExpression;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.MethodReference;
 import org.eclipse.jdt.core.dom.Modifier;
 import org.eclipse.jdt.core.dom.Modifier.ModifierKeyword;
 import org.eclipse.jdt.core.dom.Name;
@@ -97,11 +103,13 @@ import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 
 import org.eclipse.jdt.internal.core.manipulation.JavaManipulationPlugin;
 import org.eclipse.jdt.internal.core.manipulation.StubUtility;
+import org.eclipse.jdt.internal.core.manipulation.dom.ASTResolving;
 import org.eclipse.jdt.internal.core.manipulation.dom.NecessaryParenthesesChecker;
 import org.eclipse.jdt.internal.corext.CorextCore;
 import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRewriteContext;
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
+import org.eclipse.jdt.internal.corext.dom.AbortSearchException;
 import org.eclipse.jdt.internal.corext.dom.CodeScopeBuilder;
 import org.eclipse.jdt.internal.corext.dom.HierarchicalASTVisitor;
 import org.eclipse.jdt.internal.corext.dom.LocalVariableIndex;
@@ -374,9 +382,9 @@ public class CallInliner {
 					RefactoringStatusCodes.INLINE_METHOD_EXECUTION_FLOW, severity);
 				return;
 			}
-			if (isAssignment(parent) || isSingleDeclaration(parent)) {
-				// we support inlining expression in assigment and initializers as
-				// long as the execution flow isn't interrupted.
+			if (isAssignment(parent) || isSingleDeclaration(parent) || isLambda(parent)) {
+				// we support inlining expression in assignment and initializers as
+				// long as the execution flow isn't interrupted.  we also aupport lambda bodies.
 				return;
 			} else {
 				boolean isFieldDeclaration= ASTNodes.getParent(fInvocation, FieldDeclaration.class) != null;
@@ -446,6 +454,13 @@ public class CallInliner {
 		return false;
 	}
 
+	private static boolean isLambda(ASTNode node) {
+		int type= node.getNodeType();
+		if (type == ASTNode.LAMBDA_EXPRESSION)
+			return true;
+		return false;
+	}
+
 	private static boolean isMultiDeclarationFragment(ASTNode node) {
 		int nodeType= node.getNodeType();
 		if (nodeType == ASTNode.VARIABLE_DECLARATION_FRAGMENT) {
@@ -509,6 +524,14 @@ public class CallInliner {
 		return fRewrite.rewriteAST(fBuffer.getDocument(), fCUnit.getOptions(true));
 	}
 
+
+	private class InstanceofChecker extends ASTVisitor {
+		@Override
+		public boolean visit(InstanceofExpression node) {
+			throw new AbortSearchException();
+		}
+	}
+
 	private void computeRealArguments() {
 		List<Expression> arguments= Invocations.getArguments(fInvocation);
 		Set<Expression> canNotInline= crossCheckArguments(arguments);
@@ -524,7 +547,36 @@ public class CallInliner {
 			} else {
 				String name= fInvocationScope.createName(parameter.getName(), true);
 				realArguments[i]= ast.newSimpleName(name);
-				VariableDeclarationStatement local= createLocalDeclaration(parameter.getTypeBinding(), name, (Expression) fRewrite.createCopyTarget(expression));
+				boolean needInstanceofCheck= false;
+				if (expression instanceof CastExpression) {
+					ASTNode ancestor= ASTNodes.getFirstAncestorOrNull(fInvocation, ConditionalExpression.class, Statement.class);
+					while (ancestor instanceof ConditionalExpression condExp) {
+						InstanceofChecker checker= new InstanceofChecker();
+						Expression posExp= condExp.getExpression();
+						try {
+							posExp.accept(checker);
+						} catch (AbortSearchException e) {
+							needInstanceofCheck= true;
+							break;
+						}
+					}
+				}
+				Expression newExp= null;
+				if (needInstanceofCheck) {
+					CastExpression castExp= (CastExpression)expression;
+					Type t= castExp.getType();
+					InstanceofExpression instExp= ast.newInstanceofExpression();
+					instExp.setRightOperand((Type) fRewrite.createCopyTarget(t));
+					instExp.setLeftOperand((Expression)fRewrite.createCopyTarget(castExp.getExpression()));
+					ConditionalExpression condExp= ast.newConditionalExpression();
+					condExp.setExpression(instExp);
+					condExp.setThenExpression((Expression)fRewrite.createCopyTarget(expression));
+					condExp.setElseExpression(ast.newNullLiteral());
+					newExp= condExp;
+				} else {
+					newExp= (Expression)fRewrite.createCopyTarget(expression);
+				}
+				VariableDeclarationStatement local= createLocalDeclaration(parameter.getTypeBinding(), name, newExp);
 				if (parameter.isFinal()) {
 					local.modifiers().add(fInvocation.getAST().newModifier(ModifierKeyword.FINAL_KEYWORD));
 				}
@@ -656,8 +708,114 @@ public class CallInliner {
 			if (fNeedsStatement) {
 				fRewrite.replace(fTargetNode, fTargetNode.getAST().newEmptyStatement(), textEditGroup);
 			} else {
-				fRewrite.remove(fTargetNode, textEditGroup);
+				if (fTargetNode.getLocationInParent() == LambdaExpression.BODY_PROPERTY) {
+					ASTNode newNode= fRewrite.createStringPlaceholder("{}", ASTNode.BLOCK); //$NON-NLS-1$
+					fRewrite.replace(fTargetNode, newNode, textEditGroup);
+				} else if (fTargetNode instanceof MethodReference methodRef) {
+					IMethodBinding binding= methodRef.resolveMethodBinding();
+					if (binding != null) {
+						StringBuilder builder= new StringBuilder("("); //$NON-NLS-1$
+						String[] parmNames= binding.getParameterNames();
+						String separator= ""; //$NON-NLS-1$
+						for (String parmName : parmNames) {
+							builder.append(separator + parmName);
+							separator= ", "; //$NON-NLS-1$
+						}
+						builder.append(") -> {}"); //$NON-NLS-1$
+						ASTNode newNode= fRewrite.createStringPlaceholder(builder.toString(), ASTNode.LAMBDA_EXPRESSION);
+						fRewrite.replace(fTargetNode, newNode, textEditGroup);
+					}
+				} else {
+					fRewrite.remove(fTargetNode, textEditGroup);
+				}
 			}
+		} else if (fTargetNode instanceof MethodReference methodRef) {
+			IMethodBinding binding= methodRef.resolveMethodBinding();
+			ITypeBinding typeBinding= methodRef.resolveTypeBinding();
+			if (binding == null || typeBinding == null) {
+				status.addError(RefactoringCoreMessages.CallInliner_unexpected_model_exception,
+						JavaStatusContext.create(fCUnit, fInvocation));
+				return;
+			}
+			IMethodBinding[] functionClassMethods= typeBinding.getDeclaredMethods();
+
+			StringBuilder builder= new StringBuilder("("); //$NON-NLS-1$
+			String[] parmNames= binding.getParameterNames();
+			String separator= ""; //$NON-NLS-1$
+			for (String parmName : parmNames) {
+				builder.append(separator + parmName);
+				separator= ", "; //$NON-NLS-1$
+			}
+			builder.append(") -> {"); //$NON-NLS-1$
+			String allblocks= ""; //$NON-NLS-1$
+			for (int i= 0; i < blocks.length; ++i) {
+				allblocks += blocks[i];
+			}
+			String[] lines= allblocks.split("\n"); //$NON-NLS-1$
+			separator= lines.length == 1 ? "" : "\n\t"; //$NON-NLS-1$ //$NON-NLS-2$
+			for (int i= 0; i < lines.length - 1; ++i) {
+				builder.append(separator);
+				builder.append(lines[i]);
+				separator= "\n\t"; //$NON-NLS-1$
+			}
+			builder.append(separator);
+			String[] statements= lines[lines.length - 1].split(";"); //$NON-NLS-1$
+			for (int i= 0; i < statements.length - 1; ++i) {
+				builder.append(statements[i]);
+				builder.append("; "); //$NON-NLS-1$
+			}
+			if (binding.getReturnType() != null && (!binding.getReturnType().isPrimitive() || !binding.getReturnType().getName().equals("void"))) { //$NON-NLS-1$
+				ITypeBinding functionMethodType= functionClassMethods[0].getReturnType();
+				if (functionMethodType != null && (!functionMethodType.isPrimitive() || !functionMethodType.getName().equals("void"))) { //$NON-NLS-1$
+					builder.append("return "); //$NON-NLS-1$
+				} else {
+					// we have a method that returns something but the functional interface is
+					// void so we will copy over the contents in case they modify something external
+					// and instead of a return statement, we will make an unused assignment at the end
+					builder.append("@SuppressWarnings(\"unused\") "); //$NON-NLS-1$
+					builder.append(binding.getReturnType().getName() + " "); //$NON-NLS-1$
+					Statement body= ASTNodes.getFirstAncestorOrNull(methodRef, Statement.class);
+					if (body != null) {
+						List<String> excludedNames= Arrays.asList(ASTResolving.getUsedVariableNames(body));
+						final List<String> sourceNames= new ArrayList<>();
+						ASTVisitor visitor= new ASTVisitor() {
+							@Override
+							public boolean visit(SimpleName node) {
+								sourceNames.add(node.getFullyQualifiedName());
+								return false;
+							}
+						};
+						fSourceProvider.getDeclaration().accept(visitor);
+						sourceNames.addAll(excludedNames);
+						String[] varNames= StubUtility.getVariableNameSuggestions(NamingConventions.VK_LOCAL, fImportRewrite.getCompilationUnit().getJavaProject(), functionMethodType, null, sourceNames);
+						builder.append(varNames[0] + " = "); //$NON-NLS-1$
+					}
+				}
+			}
+			builder.append(statements[statements.length - 1]);
+			builder.append(";"); //$NON-NLS-1$
+			separator= lines.length == 1 ? "" : "\n"; //$NON-NLS-1$ //$NON-NLS-2$
+			builder.append(separator + "}"); //$NON-NLS-1$
+			ASTNode newNode= fRewrite.createStringPlaceholder(builder.toString(), ASTNode.LAMBDA_EXPRESSION);
+			fRewrite.replace(fTargetNode, newNode, textEditGroup);
+		} else if (fTargetNode != null && fTargetNode.getLocationInParent() == LambdaExpression.BODY_PROPERTY) {
+			String allblocks= ""; //$NON-NLS-1$
+			for (int i= 0; i < blocks.length; ++i) {
+				allblocks += blocks[i];
+			}
+			StringBuilder builder= new StringBuilder();
+			builder.append("{"); //$NON-NLS-1$
+			String[] lines= allblocks.split("\n"); //$NON-NLS-1$
+			String separator= lines.length == 1 ? "" : "\n\t"; //$NON-NLS-1$ //$NON-NLS-2$
+			for (int i= 0; i < lines.length; ++i) {
+				builder.append(separator);
+				builder.append(lines[i]);
+				separator= "\n\t"; //$NON-NLS-1$
+			}
+			separator= lines.length == 1 ? "" : "\n"; //$NON-NLS-1$ //$NON-NLS-2$
+			builder.append(separator + "}"); //$NON-NLS-1$
+			ASTNode newNode= fRewrite.createStringPlaceholder(builder.toString(), ASTNode.BLOCK);
+			fRewrite.replace(fTargetNode, newNode, textEditGroup);
 		} else {
 			ASTNode node= null;
 			boolean needsMethodInvocation= true;
