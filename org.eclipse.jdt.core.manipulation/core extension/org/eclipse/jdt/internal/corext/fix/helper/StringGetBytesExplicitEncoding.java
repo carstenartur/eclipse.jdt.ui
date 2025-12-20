@@ -67,11 +67,11 @@ public class StringGetBytesExplicitEncoding extends AbstractExplicitEncoding<Met
 					return false;
 				}
 				StringLiteral argstring3= (StringLiteral) arguments.get(0);
-				if (!encodings.contains(argstring3.getLiteralValue().toUpperCase())) {
+				if (!encodings.contains(argstring3.getLiteralValue().toUpperCase(java.util.Locale.ROOT))) {
 					return false;
 				}
 				Nodedata nd= new Nodedata();
-				nd.encoding= encodingmap.get(argstring3.getLiteralValue().toUpperCase());
+				nd.encoding= encodingmap.get(argstring3.getLiteralValue().toUpperCase(java.util.Locale.ROOT));
 				nd.replace= true;
 				nd.visited= argstring3;
 				holder.put(visited, nd);

@@ -72,20 +72,20 @@ public class PrintStreamExplicitEncoding extends AbstractExplicitEncoding<ClassI
 					return false;
 				}
 				StringLiteral argstring3= (StringLiteral) arguments.get(1);
-				if (!encodings.contains(argstring3.getLiteralValue())) {
+				if (!encodings.contains(argstring3.getLiteralValue().toUpperCase(java.util.Locale.ROOT))) {
 					return false;
 				}
-				holder.put(argstring3, encodingmap.get(argstring3.getLiteralValue()));
+				holder.put(argstring3, encodingmap.get(argstring3.getLiteralValue().toUpperCase(java.util.Locale.ROOT)));
 				break;
 			case 3:
 				if (!(arguments.get(2) instanceof StringLiteral)) {
 					return false;
 				}
 				StringLiteral argstring4= (StringLiteral) arguments.get(2);
-				if (!encodings.contains(argstring4.getLiteralValue())) {
+				if (!encodings.contains(argstring4.getLiteralValue().toUpperCase(java.util.Locale.ROOT))) {
 					return false;
 				}
-				holder.put(argstring4, encodingmap.get(argstring4.getLiteralValue()));
+				holder.put(argstring4, encodingmap.get(argstring4.getLiteralValue().toUpperCase(java.util.Locale.ROOT)));
 				break;
 			default:
 				return false;
