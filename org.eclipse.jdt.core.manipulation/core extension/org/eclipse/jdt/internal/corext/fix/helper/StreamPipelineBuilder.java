@@ -74,13 +74,19 @@ public final class StreamPipelineBuilder {
 			throw new IllegalArgumentException("Enhanced for statement must have an expression"); //$NON-NLS-1$
 		}
 
-		ITypeBinding typeBinding= collExpr.resolveTypeBinding();
-		if (typeBinding == null) {
+		ITypeBinding collectionTypeBinding= collExpr.resolveTypeBinding();
+		if (collectionTypeBinding == null) {
 			throw new IllegalArgumentException("Cannot resolve type binding for expression"); //$NON-NLS-1$
 		}
 
+		// Extract the element type from the enhanced for statement parameter
+		ITypeBinding elementTypeBinding= forStmt.getParameter().getType().resolveBinding();
+		if (elementTypeBinding == null) {
+			throw new IllegalArgumentException("Cannot resolve element type binding"); //$NON-NLS-1$
+		}
+
 		// Only construct the object after all validation passes
-		return new StreamPipelineBuilder(forStmt, collExpr, typeBinding);
+		return new StreamPipelineBuilder(forStmt, collExpr, elementTypeBinding);
 	}
 
 	/**
