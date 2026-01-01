@@ -95,7 +95,26 @@ public class TestSessionLabelProvider extends LabelProvider implements IStyledLa
 				parentName= testCaseElement.getTestClassName();
 			}
 		}
-		return Messages.format(JUnitMessages.TestSessionLabelProvider_testMethodName_className, new Object[] { label, BasicElementLabels.getJavaElementName(parentName) });
+		
+		// Add parameterized test information if available
+		StringBuilder result= new StringBuilder();
+		result.append(Messages.format(JUnitMessages.TestSessionLabelProvider_testMethodName_className, new Object[] { label, BasicElementLabels.getJavaElementName(parentName) }));
+		
+		if (testCaseElement.isParameterizedTest()) {
+			String sourceType= testCaseElement.getParameterSourceType();
+			if (sourceType != null) {
+				result.append(" [@").append(sourceType);
+				if ("EnumSource".equals(sourceType) && testCaseElement.getParameterEnumType() != null) {
+					String enumType= testCaseElement.getParameterEnumType();
+					int lastDot= enumType.lastIndexOf('.');
+					String shortName= lastDot >= 0 ? enumType.substring(lastDot + 1) : enumType;
+					result.append("(").append(shortName).append(")");
+				}
+				result.append("]");
+			}
+		}
+		
+		return result.toString();
 	}
 
 	private StyledString addElapsedTime(StyledString styledString, double time) {
