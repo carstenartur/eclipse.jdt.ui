@@ -3076,8 +3076,23 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		}
 
 		// For now, we only support NormalAnnotation (with members) or MarkerAnnotation/SingleMemberAnnotation
-		// Check if user clicked on the @EnumSource annotation specifically
-		if (covering != enumSourceAnnotation && covering.getParent() != enumSourceAnnotation) {
+		// Check if user clicked on or near the @EnumSource annotation
+		// Use broader check to handle different cursor positions
+		boolean isOnAnnotation= false;
+		ASTNode currentNode= covering;
+		while (currentNode != null && !isOnAnnotation) {
+			if (currentNode == enumSourceAnnotation) {
+				isOnAnnotation= true;
+				break;
+			}
+			// Check if we're within the annotation's source range
+			if (currentNode == methodDecl) {
+				break; // Don't go beyond the method
+			}
+			currentNode= currentNode.getParent();
+		}
+		
+		if (!isOnAnnotation) {
 			return false;
 		}
 
@@ -3089,16 +3104,18 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		AST ast= enumSourceAnnotation.getAST();
 		ASTRewrite rewrite= ASTRewrite.create(ast);
 
-		// Proposal: Add a comment suggesting the feature is available
-		// This is a placeholder implementation demonstrating where the full logic would go
+		// NOTE: This is a placeholder implementation demonstrating the feature's architecture
 		// A complete implementation would:
 		// 1. Extract the enum class from @EnumSource value attribute
 		// 2. Get all enum constants from that class
-		// 3. Create proposals to add/modify the 'names' attribute
-		// 4. Create proposals to toggle mode parameter (INCLUDE/EXCLUDE)
+		// 3. Create actual AST modifications to add/modify the 'names' attribute
+		// 4. Support toggling the 'mode' parameter between INCLUDE and EXCLUDE
+		//
+		// For now, we provide a placeholder proposal to indicate the feature is available
+		// TODO: Implement actual enum extraction and AST manipulation
 
-		// Add placeholder proposal
-		String label= CorrectionMessages.AdvancedQuickAssistProcessor_addEnumSourceNamesFilter_description;
+		// Add placeholder proposal with explanatory text
+		String label= CorrectionMessages.AdvancedQuickAssistProcessor_addEnumSourceNamesFilter_description + " (placeholder - implementation pending)";
 		Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
 		ASTRewriteCorrectionProposal proposal= new ASTRewriteCorrectionProposal(label, context.getCompilationUnit(), rewrite, IProposalRelevance.ADD_ENUM_SOURCE_NAMES_FILTER, image);
 		resultingCollections.add(proposal);
