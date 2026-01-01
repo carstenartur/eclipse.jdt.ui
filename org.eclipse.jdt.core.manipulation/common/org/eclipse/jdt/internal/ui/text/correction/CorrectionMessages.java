@@ -407,7 +407,6 @@ public final class CorrectionMessages extends NLS {
 	public static String AdvancedQuickAssistProcessor_joinWithOr_description;
 	public static String AdvancedQuickAssistProcessor_splitOrCondition_description;
 	public static String AdvancedQuickAssistProcessor_exchangeOperands_description;
-	// TODO: These constants are for future implementation of enum filtering modes
 	public static String AdvancedQuickAssistProcessor_addEnumSourceNamesFilter_description;
 	public static String AdvancedQuickAssistProcessor_addEnumSourceNamesFilterExclude_description;
 	public static String AdvancedQuickAssistProcessor_toggleEnumSourceMode_description;
