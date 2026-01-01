@@ -174,6 +174,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 					|| getGettersSettersForTypeProposals(coveringNode, null)
 					|| getHashCodeEqualsForTypeProposals(coveringNode, null)
 					|| getToStringForTypeProposals(coveringNode, null)
+					|| getEnumSourceFilterProposals(context, coveringNode, null)
 					|| ExternalNullAnnotationQuickAssistProcessor.canAssist(context);
 		}
 		return false;
@@ -220,6 +221,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 				getGettersSettersForTypeProposals(coveringNode, resultingCollections);
 				getHashCodeEqualsForTypeProposals(coveringNode, resultingCollections);
 				getToStringForTypeProposals(coveringNode, resultingCollections);
+				getEnumSourceFilterProposals(context, coveringNode, resultingCollections);
 
 				ExternalNullAnnotationQuickAssistProcessor.getAnnotateProposals(context, resultingCollections);
 			}
@@ -3027,6 +3029,64 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			}
 		}
 		return switchCaseStatements;
+	}
+
+	/**
+	 * Add Quick Assist proposals for filtering JUnit 5 @EnumSource parameterized tests.
+	 * This allows users to add or modify the 'names' attribute on @EnumSource annotations
+	 * to selectively include or exclude enum values from parameterized tests.
+	 * 
+	 * @param context the invocation context
+	 * @param covering the covering AST node
+	 * @param resultingCollections the collection to add proposals to (null for checking only)
+	 * @return true if proposals can be/were added
+	 */
+	private static boolean getEnumSourceFilterProposals(IInvocationContext context, ASTNode covering, Collection<ICommandAccess> resultingCollections) {
+		// Navigate to find if we're on a method declaration with @ParameterizedTest
+		MethodDeclaration methodDecl= ASTResolving.findParentMethodDeclaration(covering);
+		if (methodDecl == null) {
+			return false;
+		}
+
+		// Check if method has @ParameterizedTest annotation
+		List<?> modifiers= methodDecl.modifiers();
+		boolean hasParameterizedTest= false;
+		org.eclipse.jdt.core.dom.Annotation enumSourceAnnotation= null;
+
+		for (Object modifier : modifiers) {
+			if (modifier instanceof org.eclipse.jdt.core.dom.Annotation) {
+				org.eclipse.jdt.core.dom.Annotation annotation= (org.eclipse.jdt.core.dom.Annotation) modifier;
+				String annotationName= annotation.getTypeName().getFullyQualifiedName();
+				
+				if ("ParameterizedTest".equals(annotationName) || 
+					"org.junit.jupiter.params.ParameterizedTest".equals(annotationName)) {
+					hasParameterizedTest= true;
+				}
+				
+				if ("EnumSource".equals(annotationName) || 
+					"org.junit.jupiter.params.provider.EnumSource".equals(annotationName)) {
+					enumSourceAnnotation= annotation;
+				}
+			}
+		}
+
+		// We need both @ParameterizedTest and @EnumSource
+		if (!hasParameterizedTest || enumSourceAnnotation == null) {
+			return false;
+		}
+
+		// Check if we can add proposals
+		if (resultingCollections == null) {
+			return true;
+		}
+
+		// TODO: Add actual proposals for:
+		// 1. Adding 'names' attribute with enum constant names
+		// 2. Toggling between INCLUDE and EXCLUDE modes
+		// This is a placeholder for the initial implementation
+		// The full implementation will be added with enum value extraction and AST manipulation
+
+		return false;
 	}
 
 }
