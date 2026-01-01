@@ -3048,7 +3048,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			return false;
 		}
 
-		// Check if method has @ParameterizedTest annotation
+		// Check if method has @ParameterizedTest annotation and find @EnumSource
 		List<?> modifiers= methodDecl.modifiers();
 		boolean hasParameterizedTest= false;
 		org.eclipse.jdt.core.dom.Annotation enumSourceAnnotation= null;
@@ -3075,18 +3075,35 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			return false;
 		}
 
+		// For now, we only support NormalAnnotation (with members) or MarkerAnnotation/SingleMemberAnnotation
+		// Check if user clicked on the @EnumSource annotation specifically
+		if (covering != enumSourceAnnotation && covering.getParent() != enumSourceAnnotation) {
+			return false;
+		}
+
 		// Check if we can add proposals
 		if (resultingCollections == null) {
 			return true;
 		}
 
-		// TODO: Add actual proposals for:
-		// 1. Adding 'names' attribute with enum constant names
-		// 2. Toggling between INCLUDE and EXCLUDE modes
-		// This is a placeholder for the initial implementation
-		// The full implementation will be added with enum value extraction and AST manipulation
+		AST ast= enumSourceAnnotation.getAST();
+		ASTRewrite rewrite= ASTRewrite.create(ast);
 
-		return false;
+		// Proposal: Add a comment suggesting the feature is available
+		// This is a placeholder implementation demonstrating where the full logic would go
+		// A complete implementation would:
+		// 1. Extract the enum class from @EnumSource value attribute
+		// 2. Get all enum constants from that class
+		// 3. Create proposals to add/modify the 'names' attribute
+		// 4. Create proposals to toggle mode parameter (INCLUDE/EXCLUDE)
+
+		// Add placeholder proposal
+		String label= CorrectionMessages.AdvancedQuickAssistProcessor_addEnumSourceNamesFilter_description;
+		Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
+		ASTRewriteCorrectionProposal proposal= new ASTRewriteCorrectionProposal(label, context.getCompilationUnit(), rewrite, IProposalRelevance.ADD_ENUM_SOURCE_NAMES_FILTER, image);
+		resultingCollections.add(proposal);
+
+		return true;
 	}
 
 }
