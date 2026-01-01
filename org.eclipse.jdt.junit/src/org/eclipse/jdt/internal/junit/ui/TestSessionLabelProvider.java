@@ -84,6 +84,11 @@ public class TestSessionLabelProvider extends LabelProvider implements IStyledLa
 	}
 
 	private String getTextForFlatLayout(TestCaseElement testCaseElement, String label) {
+		// Populate metadata on demand if not already populated
+		if (!testCaseElement.isParameterizedTest() && testCaseElement.getParameterSourceType() == null) {
+			ParameterizedTestMetadataExtractor.populateMetadata(testCaseElement);
+		}
+		
 		String parentName;
 		String parentDisplayName= testCaseElement.getParent().getDisplayName();
 		if (parentDisplayName != null) {
