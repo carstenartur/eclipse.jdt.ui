@@ -13,6 +13,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
+import java.util.ArrayList;
 import java.util.Hashtable;
 
 import org.junit.After;
@@ -34,6 +35,8 @@ import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
 
 import org.eclipse.jdt.ui.PreferenceConstants;
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
+import org.eclipse.jdt.ui.text.java.IJavaCompletionProposal;
+import org.eclipse.jdt.ui.text.java.correction.CUCorrectionProposal;
 
 import org.eclipse.jdt.internal.ui.JavaPlugin;
 
@@ -69,12 +72,7 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 	}
 
 	@Test
-	public void testEnumSourceDetection() throws Exception {
-		// This is a basic test to verify the detection logic works
-		// A full implementation would include:
-		// - Test adding 'names' attribute to @EnumSource
-		// - Test toggling between INCLUDE and EXCLUDE modes
-		// - Test with different enum values
+	public void testAddNamesFilterInclude() throws Exception {
 		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
 		
 		String enumContent= """
@@ -102,8 +100,131 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 			""";
 		ICompilationUnit cu= pack1.createCompilationUnit("TestClass.java", testContent, false, null);
 
-		// Test would normally assert that Quick Assist is available at the @EnumSource annotation
-		// For now, this test just verifies the code compiles and sets up correctly
-		assertNotNull(cu);
+		int offset= testContent.indexOf("@EnumSource");
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(cu, offset);
+
+		assertNumberOfProposals(proposals, 2);
+		assertCorrectLabels(proposals);
+
+		String expected= """
+			package test1;
+			
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+			
+			class TestClass {
+				@ParameterizedTest
+				@EnumSource(value = TestEnum.class, names = {"VALUE1", "VALUE2", "VALUE3"})
+				void testWithEnum(TestEnum value) {
+					// test implementation
+				}
+			}
+			""";
+
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testAddNamesFilterExclude() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		
+		String enumContent= """
+			package test1;
+			
+			public enum TestEnum {
+				VALUE1, VALUE2, VALUE3
+			}
+			""";
+		pack1.createCompilationUnit("TestEnum.java", enumContent, false, null);
+		
+		String testContent= """
+			package test1;
+			
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+			
+			class TestClass {
+				@ParameterizedTest
+				@EnumSource(TestEnum.class)
+				void testWithEnum(TestEnum value) {
+					// test implementation
+				}
+			}
+			""";
+		ICompilationUnit cu= pack1.createCompilationUnit("TestClass.java", testContent, false, null);
+
+		int offset= testContent.indexOf("@EnumSource");
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(cu, offset);
+
+		assertNumberOfProposals(proposals, 2);
+
+		String expected= """
+			package test1;
+			
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+			
+			class TestClass {
+				@ParameterizedTest
+				@EnumSource(value = TestEnum.class, mode = org.junit.jupiter.params.provider.EnumSource.Mode.EXCLUDE, names = {"VALUE1", "VALUE2", "VALUE3"})
+				void testWithEnum(TestEnum value) {
+					// test implementation
+				}
+			}
+			""";
+
+		assertExpectedExistInProposals(proposals, new String[] { expected });
+	}
+
+	@Test
+	public void testToggleMode() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+		
+		String enumContent= """
+			package test1;
+			
+			public enum TestEnum {
+				VALUE1, VALUE2
+			}
+			""";
+		pack1.createCompilationUnit("TestEnum.java", enumContent, false, null);
+		
+		String testContent= """
+			package test1;
+			
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+			
+			class TestClass {
+				@ParameterizedTest
+				@EnumSource(value = TestEnum.class, names = {"VALUE1"})
+				void testWithEnum(TestEnum value) {
+					// test implementation
+				}
+			}
+			""";
+		ICompilationUnit cu= pack1.createCompilationUnit("TestClass.java", testContent, false, null);
+
+		int offset= testContent.indexOf("@EnumSource");
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(cu, offset);
+
+		assertNumberOfProposals(proposals, 1);
+
+		String expected= """
+			package test1;
+			
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+			
+			class TestClass {
+				@ParameterizedTest
+				@EnumSource(value = TestEnum.class, names = {"VALUE1"}, mode = org.junit.jupiter.params.provider.EnumSource.Mode.EXCLUDE)
+				void testWithEnum(TestEnum value) {
+					// test implementation
+				}
+			}
+			""";
+
+		assertExpectedExistInProposals(proposals, new String[] { expected });
 	}
 }
