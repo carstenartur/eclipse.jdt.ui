@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025 IBM Corporation and others.
+ * Copyright (c) 2025 Carsten Hammer.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -9,7 +9,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
- *     IBM Corporation - initial API and implementation
+ *     Carsten Hammer - initial API and implementation
  *******************************************************************************/
 package org.eclipse.jdt.internal.junit.ui;
 
@@ -33,14 +33,14 @@ import org.eclipse.jdt.internal.junit.model.TestCaseElement;
 
 /**
  * Utility class to extract and populate parameterized test metadata from source code.
- * 
+ *
  * @since 3.15
  */
 public class ParameterizedTestMetadataExtractor {
 
 	/**
 	 * Populates the parameterized test metadata for a TestCaseElement by examining its source code.
-	 * 
+	 *
 	 * @param testCase the test case element to populate
 	 */
 	public static void populateMetadata(TestCaseElement testCase) {
@@ -51,7 +51,7 @@ public class ParameterizedTestMetadataExtractor {
 		try {
 			String className= testCase.getTestClassName();
 			String methodName= testCase.getTestMethodName();
-			
+
 			if (className == null || methodName == null) {
 				return;
 			}
@@ -82,7 +82,7 @@ public class ParameterizedTestMetadataExtractor {
 		return null;
 	}
 
-	private static void extractMetadata(IMethod method, TestCaseElement testCase) throws JavaModelException {
+	private static void extractMetadata(IMethod method, TestCaseElement testCase) {
 		ICompilationUnit cu= method.getCompilationUnit();
 		if (cu == null) {
 			return;
@@ -118,21 +118,21 @@ public class ParameterizedTestMetadataExtractor {
 				org.eclipse.jdt.core.dom.Annotation annotation= (org.eclipse.jdt.core.dom.Annotation) modifier;
 				String annotationName= annotation.getTypeName().getFullyQualifiedName();
 
-				if ("ParameterizedTest".equals(annotationName) || 
-					"org.junit.jupiter.params.ParameterizedTest".equals(annotationName)) {
+				if ("ParameterizedTest".equals(annotationName) || //$NON-NLS-1$
+					"org.junit.jupiter.params.ParameterizedTest".equals(annotationName)) { //$NON-NLS-1$
 					hasParameterizedTest= true;
 				}
 
 				// Check for various source annotations
-				if (annotationName.endsWith("EnumSource")) {
-					sourceType= "EnumSource";
+				if (annotationName.endsWith("EnumSource")) { //$NON-NLS-1$
+					sourceType= "EnumSource"; //$NON-NLS-1$
 					enumType= extractEnumType(annotation);
-				} else if (annotationName.endsWith("ValueSource")) {
-					sourceType= "ValueSource";
-				} else if (annotationName.endsWith("MethodSource")) {
-					sourceType= "MethodSource";
-				} else if (annotationName.endsWith("CsvSource")) {
-					sourceType= "CsvSource";
+				} else if (annotationName.endsWith("ValueSource")) { //$NON-NLS-1$
+					sourceType= "ValueSource"; //$NON-NLS-1$
+				} else if (annotationName.endsWith("MethodSource")) { //$NON-NLS-1$
+					sourceType= "MethodSource"; //$NON-NLS-1$
+				} else if (annotationName.endsWith("CsvSource")) { //$NON-NLS-1$
+					sourceType= "CsvSource"; //$NON-NLS-1$
 				}
 			}
 		}
@@ -157,7 +157,7 @@ public class ParameterizedTestMetadataExtractor {
 			for (Object obj : values) {
 				if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 					org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-					if ("value".equals(pair.getName().getIdentifier())) {
+					if ("value".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
 						valueExpr= pair.getValue();
 						break;
 					}

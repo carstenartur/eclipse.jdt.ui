@@ -90,7 +90,6 @@ import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThrowStatement;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
-import org.eclipse.jdt.core.dom.TypeLiteral;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
@@ -3036,7 +3035,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 	 * Add Quick Assist proposals for filtering JUnit 5 @EnumSource parameterized tests.
 	 * This allows users to add or modify the 'names' attribute on @EnumSource annotations
 	 * to selectively include or exclude enum values from parameterized tests.
-	 * 
+	 *
 	 * @param context the invocation context
 	 * @param covering the covering AST node
 	 * @param resultingCollections the collection to add proposals to (null for checking only)
@@ -3058,14 +3057,14 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			if (modifier instanceof org.eclipse.jdt.core.dom.Annotation) {
 				org.eclipse.jdt.core.dom.Annotation annotation= (org.eclipse.jdt.core.dom.Annotation) modifier;
 				String annotationName= annotation.getTypeName().getFullyQualifiedName();
-				
-				if ("ParameterizedTest".equals(annotationName) || 
-					"org.junit.jupiter.params.ParameterizedTest".equals(annotationName)) {
+
+				if ("ParameterizedTest".equals(annotationName) || //$NON-NLS-1$
+					"org.junit.jupiter.params.ParameterizedTest".equals(annotationName)) { //$NON-NLS-1$
 					hasParameterizedTest= true;
 				}
-				
-				if ("EnumSource".equals(annotationName) || 
-					"org.junit.jupiter.params.provider.EnumSource".equals(annotationName)) {
+
+				if ("EnumSource".equals(annotationName) || //$NON-NLS-1$
+					"org.junit.jupiter.params.provider.EnumSource".equals(annotationName)) { //$NON-NLS-1$
 					enumSourceAnnotation= annotation;
 				}
 			}
@@ -3090,7 +3089,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			}
 			currentNode= currentNode.getParent();
 		}
-		
+
 		if (!isOnAnnotation) {
 			return false;
 		}
@@ -3120,7 +3119,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 	/**
 	 * Extract the enum type from an @EnumSource annotation.
-	 * 
+	 *
 	 * @param annotation the @EnumSource annotation
 	 * @return the enum type binding, or null if not found
 	 */
@@ -3137,7 +3136,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			for (Object obj : values) {
 				if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 					org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-					if ("value".equals(pair.getName().getIdentifier())) {
+					if ("value".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
 						return getTypeFromExpression(pair.getValue());
 					}
 				}
@@ -3152,7 +3151,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 	/**
 	 * Extract type binding from a TypeLiteral expression (e.g., EnumClass.class).
-	 * 
+	 *
 	 * @param expr the expression
 	 * @return the type binding, or null if not a type literal
 	 */
@@ -3167,7 +3166,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 	/**
 	 * Get all enum constant names from an enum type.
-	 * 
+	 *
 	 * @param enumType the enum type binding
 	 * @return list of enum constant names
 	 */
@@ -3186,7 +3185,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 	/**
 	 * Create proposals for adding/modifying the names filter on @EnumSource.
-	 * 
+	 *
 	 * @param context the invocation context
 	 * @param annotation the @EnumSource annotation
 	 * @param enumConstants list of enum constant names
@@ -3195,7 +3194,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 	private static void createEnumSourceFilterProposals(IInvocationContext context, org.eclipse.jdt.core.dom.Annotation annotation, List<String> enumConstants, Collection<ICommandAccess> resultingCollections) {
 		// Check if annotation already has a names filter
 		boolean hasNamesFilter= hasNamesAttribute(annotation);
-		
+
 		if (!hasNamesFilter) {
 			// Offer proposal to add names filter with all enum constants (user can then edit)
 			createAddNamesFilterProposal(context, annotation, enumConstants, resultingCollections, false);
@@ -3209,7 +3208,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 	/**
 	 * Check if annotation has a names attribute.
-	 * 
+	 *
 	 * @param annotation the annotation
 	 * @return true if names attribute exists
 	 */
@@ -3220,7 +3219,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			for (Object obj : values) {
 				if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 					org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-					if ("names".equals(pair.getName().getIdentifier())) {
+					if ("names".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
 						return true;
 					}
 				}
@@ -3231,7 +3230,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 	/**
 	 * Create a proposal to add names filter to @EnumSource annotation.
-	 * 
+	 *
 	 * @param context the invocation context
 	 * @param annotation the @EnumSource annotation
 	 * @param enumConstants list of enum constant names
@@ -3255,7 +3254,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			for (Object obj : values) {
 				if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 					org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-					if ("value".equals(pair.getName().getIdentifier())) {
+					if ("value".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
 						valueExpr= pair.getValue();
 						break;
 					}
@@ -3265,7 +3264,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 		if (valueExpr != null) {
 			org.eclipse.jdt.core.dom.MemberValuePair valuePair= ast.newMemberValuePair();
-			valuePair.setName(ast.newSimpleName("value"));
+			valuePair.setName(ast.newSimpleName("value")); //$NON-NLS-1$
 			valuePair.setValue((Expression) rewrite.createCopyTarget(valueExpr));
 			newAnnotation.values().add(valuePair);
 		}
@@ -3273,10 +3272,10 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		// Add mode parameter if EXCLUDE mode
 		if (excludeMode) {
 			org.eclipse.jdt.core.dom.MemberValuePair modePair= ast.newMemberValuePair();
-			modePair.setName(ast.newSimpleName("mode"));
+			modePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
 			QualifiedName modeName= ast.newQualifiedName(
-				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"),
-				ast.newSimpleName("EXCLUDE")
+				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+				ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
 			);
 			modePair.setValue(modeName);
 			newAnnotation.values().add(modePair);
@@ -3284,7 +3283,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 		// Add names parameter with all enum constants
 		org.eclipse.jdt.core.dom.MemberValuePair namesPair= ast.newMemberValuePair();
-		namesPair.setName(ast.newSimpleName("names"));
+		namesPair.setName(ast.newSimpleName("names")); //$NON-NLS-1$
 		org.eclipse.jdt.core.dom.ArrayInitializer arrayInit= ast.newArrayInitializer();
 		for (String constant : enumConstants) {
 			StringLiteral literal= ast.newStringLiteral();
@@ -3297,7 +3296,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		// Replace old annotation with new one
 		rewrite.replace(annotation, newAnnotation, null);
 
-		String label= excludeMode ? 
+		String label= excludeMode ?
 			CorrectionMessages.AdvancedQuickAssistProcessor_addEnumSourceNamesFilterExclude_description :
 			CorrectionMessages.AdvancedQuickAssistProcessor_addEnumSourceNamesFilter_description;
 		Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
@@ -3307,7 +3306,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 	/**
 	 * Create a proposal to toggle mode between INCLUDE and EXCLUDE.
-	 * 
+	 *
 	 * @param context the invocation context
 	 * @param annotation the @EnumSource annotation
 	 * @param resultingCollections collection to add proposals to
@@ -3330,13 +3329,13 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		for (Object obj : values) {
 			if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 				org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-				if ("mode".equals(pair.getName().getIdentifier())) {
+				if ("mode".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
 					hasMode= true;
 					modePair= pair;
 					Expression modeValue= pair.getValue();
 					if (modeValue instanceof QualifiedName) {
 						QualifiedName qn= (QualifiedName) modeValue;
-						isExcludeMode= "EXCLUDE".equals(qn.getName().getIdentifier());
+						isExcludeMode= "EXCLUDE".equals(qn.getName().getIdentifier()); //$NON-NLS-1$
 					}
 					break;
 				}
@@ -3347,20 +3346,20 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		if (hasMode && modePair != null) {
 			// Toggle existing mode
 			QualifiedName newMode= ast.newQualifiedName(
-				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"),
-				ast.newSimpleName(isExcludeMode ? "INCLUDE" : "EXCLUDE")
+				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+				ast.newSimpleName(isExcludeMode ? "INCLUDE" : "EXCLUDE") //$NON-NLS-1$ //$NON-NLS-2$
 			);
 			rewrite.replace(modePair.getValue(), newMode, null);
 		} else {
 			// Add mode parameter as EXCLUDE
 			org.eclipse.jdt.core.dom.MemberValuePair newModePair= ast.newMemberValuePair();
-			newModePair.setName(ast.newSimpleName("mode"));
+			newModePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
 			QualifiedName modeName= ast.newQualifiedName(
-				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"),
-				ast.newSimpleName("EXCLUDE")
+				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+				ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
 			);
 			newModePair.setValue(modeName);
-			
+
 			ListRewrite listRewrite= rewrite.getListRewrite(normalAnnotation, org.eclipse.jdt.core.dom.NormalAnnotation.VALUES_PROPERTY);
 			listRewrite.insertLast(newModePair, null);
 		}

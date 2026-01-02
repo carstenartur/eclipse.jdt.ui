@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025 IBM Corporation and others.
+ * Copyright (c) 2025 Carsten Hammer.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -9,7 +9,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
- *     IBM Corporation - initial API and implementation
+ *     Carsten Hammer - initial API and implementation
  *******************************************************************************/
 package org.eclipse.jdt.internal.junit.ui;
 
@@ -17,6 +17,8 @@ import java.util.List;
 
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.viewers.IStructuredSelection;
+
+import org.eclipse.ui.IEditorPart;
 
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
@@ -27,22 +29,17 @@ import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.ITypeBinding;
-import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 
-import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 import org.eclipse.jdt.internal.junit.model.TestCaseElement;
 
 import org.eclipse.jdt.ui.JavaUI;
 
-import org.eclipse.ui.IEditorPart;
-
 /**
  * Action to exclude a specific parameterized test case by modifying the @EnumSource annotation
  * to add the test parameter value to the names exclusion list.
- * 
+ *
  * @since 3.15
  */
 public class ExcludeParameterizedTestAction extends Action {
@@ -67,9 +64,9 @@ public class ExcludeParameterizedTestAction extends Action {
 		}
 
 		TestCaseElement testCase= (TestCaseElement) element;
-		
+
 		// Check if this is a parameterized test with @EnumSource
-		if (!testCase.isParameterizedTest() || !"EnumSource".equals(testCase.getParameterSourceType())) {
+		if (!testCase.isParameterizedTest() || !"EnumSource".equals(testCase.getParameterSourceType())) { //$NON-NLS-1$
 			return;
 		}
 
@@ -92,7 +89,7 @@ public class ExcludeParameterizedTestAction extends Action {
 		// Find the test method
 		String className= testCase.getTestClassName();
 		String methodName= testCase.getTestMethodName();
-		
+
 		IJavaProject javaProject= testCase.getTestRunSession().getLaunchedProject();
 		if (javaProject == null) {
 			return;
@@ -189,8 +186,8 @@ public class ExcludeParameterizedTestAction extends Action {
 				org.eclipse.jdt.core.dom.Annotation annotation= (org.eclipse.jdt.core.dom.Annotation) modifier;
 				String annotationName= annotation.getTypeName().getFullyQualifiedName();
 
-				if ("EnumSource".equals(annotationName) || 
-					"org.junit.jupiter.params.provider.EnumSource".equals(annotationName)) {
+				if ("EnumSource".equals(annotationName) || //$NON-NLS-1$
+					"org.junit.jupiter.params.provider.EnumSource".equals(annotationName)) { //$NON-NLS-1$
 					// Modify this annotation to add the exclusion
 					modifyAnnotationToExclude(annotation, paramValue, rewrite);
 					return true;
@@ -216,7 +213,7 @@ public class ExcludeParameterizedTestAction extends Action {
 			for (Object obj : values) {
 				if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 					org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-					if ("value".equals(pair.getName().getIdentifier())) {
+					if ("value".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
 						valueExpr= pair.getValue();
 						break;
 					}
@@ -226,24 +223,24 @@ public class ExcludeParameterizedTestAction extends Action {
 
 		if (valueExpr != null) {
 			org.eclipse.jdt.core.dom.MemberValuePair valuePair= ast.newMemberValuePair();
-			valuePair.setName(ast.newSimpleName("value"));
+			valuePair.setName(ast.newSimpleName("value")); //$NON-NLS-1$
 			valuePair.setValue((org.eclipse.jdt.core.dom.Expression) rewrite.createCopyTarget(valueExpr));
 			newAnnotation.values().add(valuePair);
 		}
 
 		// Add mode parameter with EXCLUDE mode
 		org.eclipse.jdt.core.dom.MemberValuePair modePair= ast.newMemberValuePair();
-		modePair.setName(ast.newSimpleName("mode"));
+		modePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
 		org.eclipse.jdt.core.dom.QualifiedName modeName= ast.newQualifiedName(
-			ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"),
-			ast.newSimpleName("EXCLUDE")
+			ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+			ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
 		);
 		modePair.setValue(modeName);
 		newAnnotation.values().add(modePair);
 
 		// Add names parameter with the single excluded value
 		org.eclipse.jdt.core.dom.MemberValuePair namesPair= ast.newMemberValuePair();
-		namesPair.setName(ast.newSimpleName("names"));
+		namesPair.setName(ast.newSimpleName("names")); //$NON-NLS-1$
 		org.eclipse.jdt.core.dom.ArrayInitializer arrayInit= ast.newArrayInitializer();
 		org.eclipse.jdt.core.dom.StringLiteral literal= ast.newStringLiteral();
 		literal.setLiteralValue(paramValue);
@@ -267,8 +264,8 @@ public class ExcludeParameterizedTestAction extends Action {
 			if (element instanceof TestCaseElement) {
 				TestCaseElement testCase= (TestCaseElement) element;
 				// Enable only for parameterized tests with @EnumSource that have failed
-				enabled= testCase.isParameterizedTest() 
-						&& "EnumSource".equals(testCase.getParameterSourceType())
+				enabled= testCase.isParameterizedTest()
+						&& "EnumSource".equals(testCase.getParameterSourceType()) //$NON-NLS-1$
 						&& testCase.getStatus().isErrorOrFailure();
 			}
 		}
