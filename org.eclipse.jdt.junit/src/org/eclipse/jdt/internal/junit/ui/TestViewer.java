@@ -199,6 +199,8 @@ public class TestViewer {
 	private final FailuresOnlyFilter fFailuresOnlyFilter= new FailuresOnlyFilter();
 	private final IgnoredOnlyFilter fIgnoredOnlyFilter= new IgnoredOnlyFilter();
 
+	private final ExcludeParameterizedTestAction fExcludeParameterizedTestAction;
+
 	private final TestRunnerViewPart fTestRunnerPart;
 	private final Clipboard fClipboard;
 
@@ -229,6 +231,8 @@ public class TestViewer {
 	public TestViewer(Composite parent, Clipboard clipboard, TestRunnerViewPart runner) {
 		fTestRunnerPart= runner;
 		fClipboard= clipboard;
+		
+		fExcludeParameterizedTestAction= new ExcludeParameterizedTestAction(runner);
 
 		fLayoutMode= TestRunnerViewPart.LAYOUT_HIERARCHICAL;
 
@@ -296,6 +300,13 @@ public class TestViewer {
 				manager.add(getOpenTestAction(testCaseElement));
 				manager.add(new Separator());
 				addRerunActions(manager, testCaseElement);
+				
+				// Add exclude action for parameterized tests
+				fExcludeParameterizedTestAction.updateEnablement();
+				if (fExcludeParameterizedTestAction.isEnabled()) {
+					manager.add(new Separator());
+					manager.add(fExcludeParameterizedTestAction);
+				}
 			}
 			if (fLayoutMode == TestRunnerViewPart.LAYOUT_HIERARCHICAL) {
 				manager.add(new Separator());
