@@ -62,8 +62,11 @@ public class JUnitQuickAssistTest extends QuickFixTest {
 		fSourceFolder = JavaProjectHelper.addSourceContainer(fJProject, "src");
 
 		JavaProjectHelper.addRTJar(fJProject);
-		IClasspathEntry cpe= JavaCore.newContainerEntry(JUnitCore.JUNIT5_CONTAINER_PATH);
-		JavaProjectHelper.addToClasspath(fJProject, cpe);
+		// Add both JUnit 4 and JUnit 5 to classpath
+		IClasspathEntry junit4Entry = JavaCore.newContainerEntry(JUnitCore.JUNIT4_CONTAINER_PATH);
+		JavaProjectHelper.addToClasspath(fJProject, junit4Entry);
+		IClasspathEntry junit5Entry = JavaCore.newContainerEntry(JUnitCore.JUNIT5_CONTAINER_PATH);
+		JavaProjectHelper.addToClasspath(fJProject, junit5Entry);
 		JavaProjectHelper.set18CompilerOptions(fJProject);
 	}
 
