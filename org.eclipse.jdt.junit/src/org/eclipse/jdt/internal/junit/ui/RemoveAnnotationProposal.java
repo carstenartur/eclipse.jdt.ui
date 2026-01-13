@@ -18,6 +18,9 @@ import java.util.List;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 
+import org.eclipse.core.runtime.CoreException;
+
+import org.eclipse.text.edits.MultiTextEdit;
 import org.eclipse.text.edits.TextEdit;
 
 import org.eclipse.jface.text.BadLocationException;
@@ -33,8 +36,10 @@ import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
+import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 
+import org.eclipse.jdt.ui.CodeStyleConfiguration;
 import org.eclipse.jdt.ui.ISharedImages;
 import org.eclipse.jdt.ui.JavaUI;
 import org.eclipse.jdt.ui.text.java.IInvocationContext;
@@ -86,11 +91,25 @@ public class RemoveAnnotationProposal implements IJavaCompletionProposal {
 				}
 			}
 
-			// Apply changes
-			TextEdit rewriteEdit = rewrite.rewriteAST(document, cu.getOptions(true));
-			rewriteEdit.apply(document);
+			// Remove unused import
+			ImportRewrite importRewrite = CodeStyleConfiguration.createImportRewrite(astRoot, true);
+			importRewrite.removeImport(fAnnotationQualifiedName);
 
-		} catch (BadLocationException e) {
+			// Combine both edits using MultiTextEdit to avoid conflicts
+			MultiTextEdit multiEdit = new MultiTextEdit();
+			
+			TextEdit importEdit = importRewrite.rewriteImports(null);
+			if (importEdit.hasChildren() || importEdit.getLength() != 0) {
+				multiEdit.addChild(importEdit);
+			}
+			
+			TextEdit rewriteEdit = rewrite.rewriteAST(document, cu.getOptions(true));
+			multiEdit.addChild(rewriteEdit);
+
+			// Apply the combined edit
+			multiEdit.apply(document);
+
+		} catch (CoreException | BadLocationException e) {
 			JUnitPlugin.log(e);
 		}
 	}
