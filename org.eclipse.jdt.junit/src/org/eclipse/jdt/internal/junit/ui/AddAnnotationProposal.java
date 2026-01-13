@@ -18,6 +18,7 @@ import org.eclipse.swt.graphics.Point;
 
 import org.eclipse.core.runtime.CoreException;
 
+import org.eclipse.text.edits.MultiTextEdit;
 import org.eclipse.text.edits.TextEdit;
 
 import org.eclipse.jface.text.BadLocationException;
@@ -72,12 +73,19 @@ public class AddAnnotationProposal implements IJavaCompletionProposal {
 			ImportRewrite importRewrite = CodeStyleConfiguration.createImportRewrite(astRoot, true);
 			importRewrite.addImport(fAnnotationQualifiedName);
 
-			// Apply changes - imports first, then AST rewrite
+			// Combine both edits using MultiTextEdit to avoid conflicts
+			MultiTextEdit multiEdit = new MultiTextEdit();
+			
 			TextEdit importEdit = importRewrite.rewriteImports(null);
+			if (importEdit.hasChildren() || importEdit.getLength() != 0) {
+				multiEdit.addChild(importEdit);
+			}
+			
 			TextEdit rewriteEdit = rewrite.rewriteAST(document, cu.getOptions(true));
+			multiEdit.addChild(rewriteEdit);
 
-			importEdit.apply(document);
-			rewriteEdit.apply(document);
+			// Apply the combined edit
+			multiEdit.apply(document);
 
 		} catch (CoreException | BadLocationException e) {
 			JUnitPlugin.log(e);
