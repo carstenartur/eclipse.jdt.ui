@@ -104,10 +104,14 @@ public class RemoveAnnotationProposal implements IJavaCompletionProposal {
 			}
 			
 			TextEdit rewriteEdit = rewrite.rewriteAST(document, cu.getOptions(true));
-			multiEdit.addChild(rewriteEdit);
+			if (rewriteEdit.hasChildren() || rewriteEdit.getLength() != 0) {
+				multiEdit.addChild(rewriteEdit);
+			}
 
 			// Apply the combined edit
-			multiEdit.apply(document);
+			if (multiEdit.hasChildren()) {
+				multiEdit.apply(document);
+			}
 
 		} catch (CoreException | BadLocationException e) {
 			JUnitPlugin.log(e);
