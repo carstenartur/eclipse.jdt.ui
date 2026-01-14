@@ -124,7 +124,7 @@ public class MyTest {
 }
 """;
 
-		assertEqualString(cu.getSource(), expected);
+		assertEqualString(document.get(), expected);
 	}
 
 	@Test
@@ -177,7 +177,7 @@ public class MyTest {
 }
 """;
 
-		assertEqualString(cu.getSource(), expected);
+		assertEqualString(document.get(), expected);
 	}
 
 	@Test
@@ -230,7 +230,7 @@ public class MyTest {
 			}
 			""";
 
-		assertEqualString(cu.getSource(), expected);
+		assertEqualString(document.get(), expected);
 	}
 
 	@Test
@@ -284,7 +284,7 @@ public class MyTest {
 			}
 			""";
 
-		assertEqualString(cu.getSource(), expected);
+		assertEqualString(document.get(), expected);
 	}
 
 	@Test
@@ -369,7 +369,7 @@ public class MyTest {
 			}
 			""";
 
-		assertEqualString(cu.getSource(), expected);
+		assertEqualString(document.get(), expected);
 	}
 
 	@Test
@@ -423,7 +423,7 @@ public class MyTest {
 			}
 			""";
 
-		assertEqualString(cu.getSource(), expected);
+		assertEqualString(document.get(), expected);
 	}
 
 	/**
