@@ -68,6 +68,9 @@ public class JUnitQuickAssistTest extends QuickFixTest {
 		IClasspathEntry junit5Entry = JavaCore.newContainerEntry(JUnitCore.JUNIT5_CONTAINER_PATH);
 		JavaProjectHelper.addToClasspath(fJProject, junit5Entry);
 		JavaProjectHelper.set18CompilerOptions(fJProject);
+		
+		// Wait for autobuild to complete to ensure bindings are available
+		JavaProjectHelper.performDummySearch(fJProject);
 	}
 
 	@After
