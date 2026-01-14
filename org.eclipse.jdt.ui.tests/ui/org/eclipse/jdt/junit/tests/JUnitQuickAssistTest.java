@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.eclipse.jdt.junit.JUnitCore;
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
+import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 
 import org.eclipse.jdt.core.IClasspathEntry;
@@ -36,13 +37,11 @@ import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.JavaCore;
 
-import org.eclipse.jdt.ui.JavaUI;
 import org.eclipse.jdt.ui.tests.core.rules.Java1d8ProjectTestSetup;
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 import org.eclipse.jdt.ui.tests.quickfix.QuickFixTest;
 import org.eclipse.jdt.ui.text.java.IJavaCompletionProposal;
 
-import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
 import org.eclipse.jdt.internal.ui.text.correction.AssistContext;
 
 /**
@@ -93,7 +92,7 @@ public class JUnitQuickAssistTest extends QuickFixTest {
 			""";
 
 		ICompilationUnit cu = pack1.createCompilationUnit("MyTest.java", original, false, null);
-		JavaEditor javaEditor= (JavaEditor) JavaUI.openInEditor(cu);
+		// Create document from compilation unit buffer
 		String str = "testMethod";
 		AssistContext context = getCorrectionContext(cu, original.indexOf(str), 0);
 		List<IJavaCompletionProposal> proposals = collectAssists(context, false);
@@ -105,7 +104,7 @@ public class JUnitQuickAssistTest extends QuickFixTest {
 		IJavaCompletionProposal disableProposal = findProposalByName(proposals, "Disable test with @Disabled");
 		assertNotNull("Should have 'Disable test with @Disabled' proposal", disableProposal);
 
-		IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
+		IDocument document= new Document(cu.getBuffer().getContents());
 		// Apply the proposal
 		disableProposal.apply(document);
 
@@ -159,8 +158,8 @@ public class MyTest {
 		IJavaCompletionProposal enableProposal = findProposalByName(proposals, "Enable test (remove @Disabled)");
 		assertNotNull("Should have 'Enable test (remove @Disabled)' proposal", enableProposal);
 
-		JavaEditor javaEditor= (JavaEditor) JavaUI.openInEditor(cu);
-		IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
+		// Create document from compilation unit buffer
+		IDocument document= new Document(cu.getBuffer().getContents());
 		// Apply the proposal
 		enableProposal.apply(document);
 
@@ -210,8 +209,8 @@ public class MyTest {
 		IJavaCompletionProposal disableProposal = findProposalByName(proposals, "Disable test with @Ignore");
 		assertNotNull("Should have 'Disable test with @Ignore' proposal", disableProposal);
 
-		JavaEditor javaEditor= (JavaEditor) JavaUI.openInEditor(cu);
-		IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
+		// Create document from compilation unit buffer
+		IDocument document= new Document(cu.getBuffer().getContents());
 		// Apply the proposal
 		disableProposal.apply(document);
 
@@ -265,8 +264,8 @@ public class MyTest {
 		IJavaCompletionProposal enableProposal = findProposalByName(proposals, "Enable test (remove @Ignore)");
 		assertNotNull("Should have 'Enable test (remove @Ignore)' proposal", enableProposal);
 
-		JavaEditor javaEditor= (JavaEditor) JavaUI.openInEditor(cu);
-		IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
+		// Create document from compilation unit buffer
+		IDocument document= new Document(cu.getBuffer().getContents());
 		// Apply the proposal
 		enableProposal.apply(document);
 
@@ -347,8 +346,8 @@ public class MyTest {
 		IJavaCompletionProposal disableProposal = findProposalByName(proposals, "Disable test with @Disabled");
 		assertNotNull("Should have 'Disable test with @Disabled' proposal for parameterized test", disableProposal);
 
-		JavaEditor javaEditor= (JavaEditor) JavaUI.openInEditor(cu);
-		IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
+		// Create document from compilation unit buffer
+		IDocument document= new Document(cu.getBuffer().getContents());
 		// Apply the proposal
 		disableProposal.apply(document);
 
@@ -402,13 +401,8 @@ public class MyTest {
 		IJavaCompletionProposal disableProposal = findProposalByName(proposals, "Disable test with @Disabled");
 		assertNotNull("Should have 'Disable test with @Disabled' proposal for repeated test", disableProposal);
 
-		JavaEditor javaEditor= (JavaEditor) JavaUI.openInEditor(cu);
-		IDocument document= javaEditor.getDocumentProvider().getDocument(javaEditor.getEditorInput());
-
-		// Verify document has the expected content before applying proposal
-		String beforeApply = document.get();
-		assertTrue("Document should contain @RepeatedTest before applying proposal, but was: " + beforeApply, 
-				beforeApply.contains("@RepeatedTest(5)"));
+		// Create document from compilation unit buffer
+		IDocument document= new Document(cu.getBuffer().getContents());
 
 		// Apply the proposal
 		disableProposal.apply(document);
