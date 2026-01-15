@@ -109,10 +109,7 @@ public class ExcludeParameterizedTestAction extends Action {
 
 		// Open the editor
 		try {
-			IEditorPart editor= JavaUI.openInEditor(method);
-			if (editor == null) {
-				return;
-			}
+			JavaUI.openInEditor(method);
 		} catch (Exception e) {
 			// Unable to open editor
 			return;

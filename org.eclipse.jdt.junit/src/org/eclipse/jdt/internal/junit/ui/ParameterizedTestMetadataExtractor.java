@@ -118,21 +118,21 @@ public class ParameterizedTestMetadataExtractor {
 				org.eclipse.jdt.core.dom.Annotation annotation= (org.eclipse.jdt.core.dom.Annotation) modifier;
 				String annotationName= annotation.getTypeName().getFullyQualifiedName();
 
-				if ("ParameterizedTest".equals(annotationName) || 
-					"org.junit.jupiter.params.ParameterizedTest".equals(annotationName)) {
+				if ("ParameterizedTest".equals(annotationName) ||  //$NON-NLS-1$
+					"org.junit.jupiter.params.ParameterizedTest".equals(annotationName)) { //$NON-NLS-1$
 					hasParameterizedTest= true;
 				}
 
 				// Check for various source annotations
-				if (annotationName.endsWith("EnumSource")) {
-					sourceType= "EnumSource";
+				if (annotationName.endsWith("EnumSource")) { //$NON-NLS-1$
+					sourceType= "EnumSource"; //$NON-NLS-1$
 					enumType= extractEnumType(annotation);
-				} else if (annotationName.endsWith("ValueSource")) {
-					sourceType= "ValueSource";
-				} else if (annotationName.endsWith("MethodSource")) {
-					sourceType= "MethodSource";
-				} else if (annotationName.endsWith("CsvSource")) {
-					sourceType= "CsvSource";
+				} else if (annotationName.endsWith("ValueSource")) { //$NON-NLS-1$
+					sourceType= "ValueSource"; //$NON-NLS-1$
+				} else if (annotationName.endsWith("MethodSource")) { //$NON-NLS-1$
+					sourceType= "MethodSource"; //$NON-NLS-1$
+				} else if (annotationName.endsWith("CsvSource")) { //$NON-NLS-1$
+					sourceType= "CsvSource"; //$NON-NLS-1$
 				}
 			}
 		}
@@ -157,7 +157,7 @@ public class ParameterizedTestMetadataExtractor {
 			for (Object obj : values) {
 				if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 					org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-					if ("value".equals(pair.getName().getIdentifier())) {
+					if ("value".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
 						valueExpr= pair.getValue();
 						break;
 					}
