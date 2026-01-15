@@ -90,7 +90,6 @@ import org.eclipse.jdt.core.dom.SwitchStatement;
 import org.eclipse.jdt.core.dom.ThrowStatement;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
-import org.eclipse.jdt.core.dom.TypeLiteral;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
 import org.eclipse.jdt.core.dom.WhileStatement;
@@ -3059,13 +3058,13 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 				org.eclipse.jdt.core.dom.Annotation annotation= (org.eclipse.jdt.core.dom.Annotation) modifier;
 				String annotationName= annotation.getTypeName().getFullyQualifiedName();
 				
-				if ("ParameterizedTest".equals(annotationName) || 
-					"org.junit.jupiter.params.ParameterizedTest".equals(annotationName)) {
+				if ("ParameterizedTest".equals(annotationName) ||  //$NON-NLS-1$
+					"org.junit.jupiter.params.ParameterizedTest".equals(annotationName)) { //$NON-NLS-1$
 					hasParameterizedTest= true;
 				}
 				
-				if ("EnumSource".equals(annotationName) || 
-					"org.junit.jupiter.params.provider.EnumSource".equals(annotationName)) {
+				if ("EnumSource".equals(annotationName) ||  //$NON-NLS-1$
+					"org.junit.jupiter.params.provider.EnumSource".equals(annotationName)) { //$NON-NLS-1$
 					enumSourceAnnotation= annotation;
 				}
 			}
