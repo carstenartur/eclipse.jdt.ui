@@ -108,14 +108,14 @@ public class TestSessionLabelProvider extends LabelProvider implements IStyledLa
 		if (testCaseElement.isParameterizedTest()) {
 			String sourceType= testCaseElement.getParameterSourceType();
 			if (sourceType != null) {
-				result.append(" [@").append(sourceType);
-				if ("EnumSource".equals(sourceType) && testCaseElement.getParameterEnumType() != null) {
+				result.append(" [@").append(sourceType); //$NON-NLS-1$
+				if ("EnumSource".equals(sourceType) && testCaseElement.getParameterEnumType() != null) { //$NON-NLS-1$
 					String enumType= testCaseElement.getParameterEnumType();
-					int lastDot= enumType.lastIndexOf('.');
+					int lastDot= enumType.lastIndexOf('.'); //$NON-NLS-1$
 					String shortName= lastDot >= 0 ? enumType.substring(lastDot + 1) : enumType;
-					result.append("(").append(shortName).append(")");
+					result.append("(").append(shortName).append(")"); //$NON-NLS-1$ //$NON-NLS-2$
 				}
-				result.append("]");
+				result.append("]"); //$NON-NLS-1$
 			}
 		}
 		
