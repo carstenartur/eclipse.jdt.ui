@@ -3136,7 +3136,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			for (Object obj : values) {
 				if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 					org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-					if ("value".equals(pair.getName().getIdentifier())) {
+					if ("value".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
 						return getTypeFromExpression(pair.getValue());
 					}
 				}
@@ -3219,7 +3219,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			for (Object obj : values) {
 				if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 					org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-					if ("names".equals(pair.getName().getIdentifier())) {
+					if ("names".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
 						return true;
 					}
 				}
@@ -3254,7 +3254,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			for (Object obj : values) {
 				if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 					org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-					if ("value".equals(pair.getName().getIdentifier())) {
+					if ("value".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
 						valueExpr= pair.getValue();
 						break;
 					}
@@ -3264,7 +3264,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 		if (valueExpr != null) {
 			org.eclipse.jdt.core.dom.MemberValuePair valuePair= ast.newMemberValuePair();
-			valuePair.setName(ast.newSimpleName("value"));
+			valuePair.setName(ast.newSimpleName("value")); //$NON-NLS-1$
 			valuePair.setValue((Expression) rewrite.createCopyTarget(valueExpr));
 			newAnnotation.values().add(valuePair);
 		}
@@ -3272,10 +3272,10 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		// Add mode parameter if EXCLUDE mode
 		if (excludeMode) {
 			org.eclipse.jdt.core.dom.MemberValuePair modePair= ast.newMemberValuePair();
-			modePair.setName(ast.newSimpleName("mode"));
+			modePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
 			QualifiedName modeName= ast.newQualifiedName(
-				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"),
-				ast.newSimpleName("EXCLUDE")
+				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+				ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
 			);
 			modePair.setValue(modeName);
 			newAnnotation.values().add(modePair);
@@ -3283,7 +3283,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 		// Add names parameter with all enum constants
 		org.eclipse.jdt.core.dom.MemberValuePair namesPair= ast.newMemberValuePair();
-		namesPair.setName(ast.newSimpleName("names"));
+		namesPair.setName(ast.newSimpleName("names")); //$NON-NLS-1$
 		org.eclipse.jdt.core.dom.ArrayInitializer arrayInit= ast.newArrayInitializer();
 		for (String constant : enumConstants) {
 			StringLiteral literal= ast.newStringLiteral();
@@ -3329,13 +3329,13 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		for (Object obj : values) {
 			if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 				org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-				if ("mode".equals(pair.getName().getIdentifier())) {
+				if ("mode".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
 					hasMode= true;
 					modePair= pair;
 					Expression modeValue= pair.getValue();
 					if (modeValue instanceof QualifiedName) {
 						QualifiedName qn= (QualifiedName) modeValue;
-						isExcludeMode= "EXCLUDE".equals(qn.getName().getIdentifier());
+						isExcludeMode= "EXCLUDE".equals(qn.getName().getIdentifier()); //$NON-NLS-1$
 					}
 					break;
 				}
@@ -3346,17 +3346,17 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		if (hasMode && modePair != null) {
 			// Toggle existing mode
 			QualifiedName newMode= ast.newQualifiedName(
-				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"),
-				ast.newSimpleName(isExcludeMode ? "INCLUDE" : "EXCLUDE")
+				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+				ast.newSimpleName(isExcludeMode ? "INCLUDE" : "EXCLUDE") //$NON-NLS-1$ //$NON-NLS-2$
 			);
 			rewrite.replace(modePair.getValue(), newMode, null);
 		} else {
 			// Add mode parameter as EXCLUDE
 			org.eclipse.jdt.core.dom.MemberValuePair newModePair= ast.newMemberValuePair();
-			newModePair.setName(ast.newSimpleName("mode"));
+			newModePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
 			QualifiedName modeName= ast.newQualifiedName(
-				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"),
-				ast.newSimpleName("EXCLUDE")
+				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+				ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
 			);
 			newModePair.setValue(modeName);
 			
