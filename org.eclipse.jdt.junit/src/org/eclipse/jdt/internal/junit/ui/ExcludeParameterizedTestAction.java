@@ -34,8 +34,6 @@ import org.eclipse.jdt.internal.junit.model.TestCaseElement;
 
 import org.eclipse.jdt.ui.JavaUI;
 
-import org.eclipse.ui.IEditorPart;
-
 /**
  * Action to exclude a specific parameterized test case by modifying the @EnumSource annotation
  * to add the test parameter value to the names exclusion list.
@@ -53,7 +51,11 @@ public class ExcludeParameterizedTestAction extends Action {
 
 	@Override
 	public void run() {
-		IStructuredSelection selection= (IStructuredSelection) fTestRunnerPart.getSelectionProvider().getSelection();
+		TestViewer testViewer= fTestRunnerPart.getTestViewer();
+		if (testViewer == null) {
+			return;
+		}
+		IStructuredSelection selection= (IStructuredSelection) testViewer.getActiveViewer().getSelection();
 		if (selection == null || selection.isEmpty()) {
 			return;
 		}
@@ -106,8 +108,13 @@ public class ExcludeParameterizedTestAction extends Action {
 		}
 
 		// Open the editor
-		IEditorPart editor= JavaUI.openInEditor(method);
-		if (editor == null) {
+		try {
+			IEditorPart editor= JavaUI.openInEditor(method);
+			if (editor == null) {
+				return;
+			}
+		} catch (Exception e) {
+			// Unable to open editor
 			return;
 		}
 
@@ -256,7 +263,12 @@ public class ExcludeParameterizedTestAction extends Action {
 	 * Updates the enabled state based on the current selection.
 	 */
 	public void updateEnablement() {
-		IStructuredSelection selection= (IStructuredSelection) fTestRunnerPart.getSelectionProvider().getSelection();
+		TestViewer testViewer= fTestRunnerPart.getTestViewer();
+		if (testViewer == null) {
+			setEnabled(false);
+			return;
+		}
+		IStructuredSelection selection= (IStructuredSelection) testViewer.getActiveViewer().getSelection();
 		boolean enabled= false;
 
 		if (selection != null && !selection.isEmpty()) {
