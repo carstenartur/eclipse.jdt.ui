@@ -39,6 +39,7 @@ import org.eclipse.jdt.ui.text.java.IJavaCompletionProposal;
 import org.eclipse.jdt.ui.text.java.correction.CUCorrectionProposal;
 
 import org.eclipse.jdt.internal.ui.JavaPlugin;
+import org.eclipse.jdt.internal.ui.text.correction.AssistContext;
 
 /**
  * Tests for Quick Assist proposals to filter JUnit 5 @EnumSource parameterized tests.
@@ -101,7 +102,8 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 		ICompilationUnit cu= pack1.createCompilationUnit("TestClass.java", testContent, false, null);
 
 		int offset= testContent.indexOf("@EnumSource");
-		ArrayList<IJavaCompletionProposal> proposals= collectAssists(cu, offset);
+		AssistContext context= getCorrectionContext(cu, offset, 0);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(context, false);
 
 		assertNumberOfProposals(proposals, 2);
 		assertCorrectLabels(proposals);
@@ -154,7 +156,8 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 		ICompilationUnit cu= pack1.createCompilationUnit("TestClass.java", testContent, false, null);
 
 		int offset= testContent.indexOf("@EnumSource");
-		ArrayList<IJavaCompletionProposal> proposals= collectAssists(cu, offset);
+		AssistContext context= getCorrectionContext(cu, offset, 0);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(context, false);
 
 		assertNumberOfProposals(proposals, 2);
 
@@ -206,7 +209,8 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 		ICompilationUnit cu= pack1.createCompilationUnit("TestClass.java", testContent, false, null);
 
 		int offset= testContent.indexOf("@EnumSource");
-		ArrayList<IJavaCompletionProposal> proposals= collectAssists(cu, offset);
+		AssistContext context= getCorrectionContext(cu, offset, 0);
+		ArrayList<IJavaCompletionProposal> proposals= collectAssists(context, false);
 
 		assertNumberOfProposals(proposals, 1);
 
