@@ -725,6 +725,16 @@ public class EnumSourceValidator {
 	 * This method checks all @EnumSource annotations (except the one being modified)
 	 * to see if any of them still use mode=Mode.EXCLUDE or mode=Mode.INCLUDE.
 	 * 
+	 * <p><b>Note on Method Matching:</b> This method uses parameter count matching 
+	 * as a heuristic for method identification. This is acceptable for JUnit test 
+	 * methods because:
+	 * <ul>
+	 * <li>Test methods are typically not overloaded (JUnit best practices)</li>
+	 * <li>The IMethod parameter comes from the test runner which already identifies 
+	 * the exact method</li>
+	 * <li>The AST traversal is just to find the AST node for that specific IMethod</li>
+	 * </ul>
+	 * 
 	 * @param astRoot the compilation unit AST root
 	 * @param excludeMethod the method being modified (to exclude from the search)
 	 * @return true if Mode is still referenced somewhere else in the file
@@ -738,6 +748,8 @@ public class EnumSourceValidator {
 		} catch (JavaModelException e) {
 			JUnitPlugin.log(e);
 			// Fall back to name-only comparison if parameter types unavailable
+			// This may skip additional methods with the same name, but it's safer
+			// than incorrectly removing the import
 			return isUsedByNameOnly(astRoot, excludeMethodName);
 		}
 
@@ -797,8 +809,10 @@ public class EnumSourceValidator {
 			if ("Mode".equals(qualifierName)) { //$NON-NLS-1$
 				return true;
 			}
-			// Also check for EnumSource.Mode.EXCLUDE pattern
-			if (qualifierName.endsWith(".Mode")) { //$NON-NLS-1$
+			// Also check for fully qualified EnumSource.Mode.EXCLUDE pattern
+			// Only match if it ends with our specific Mode class
+			if (qualifierName.equals("EnumSource.Mode") || //$NON-NLS-1$
+				qualifierName.endsWith(".EnumSource.Mode")) { //$NON-NLS-1$
 				return true;
 			}
 		} else if (expr instanceof org.eclipse.jdt.core.dom.FieldAccess) {
@@ -820,12 +834,14 @@ public class EnumSourceValidator {
 			// Check if the resolved binding is from Mode enum
 			org.eclipse.jdt.core.dom.SimpleName sn = (org.eclipse.jdt.core.dom.SimpleName) expr;
 			ITypeBinding typeBinding = sn.resolveTypeBinding();
+			// Handle null binding (can occur with compilation errors or incomplete resolution)
 			if (typeBinding != null) {
 				String qualifiedName = typeBinding.getQualifiedName();
 				if (ENUM_SOURCE_MODE_CLASS.equals(qualifiedName)) {
 					return true;
 				}
 			}
+			// If type binding is null, we can't determine - assume it's not Mode to be safe
 		}
 		return false;
 	}
