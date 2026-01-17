@@ -150,44 +150,6 @@ public class ExcludeParameterizedTestAction extends Action {
 		return null;
 	}
 
-	private void modifyEnumSourceAnnotation(IMethod method, String paramValue) throws JavaModelException {
-		ICompilationUnit cu= method.getCompilationUnit();
-		if (cu == null) {
-			return;
-		}
-
-		// Parse the compilation unit
-		ASTParser parser= ASTParser.newParser(AST.getJLSLatest());
-		parser.setSource(cu);
-		parser.setResolveBindings(true);
-		CompilationUnit astRoot= (CompilationUnit) parser.createAST(null);
-
-		// Find the method declaration and modify @EnumSource
-		ASTRewrite rewrite= ASTRewrite.create(astRoot.getAST());
-		final boolean[] modified= new boolean[] { false };
-
-		astRoot.accept(new ASTVisitor() {
-			@Override
-			public boolean visit(MethodDeclaration node) {
-				if (node.getName().getIdentifier().equals(method.getElementName())) {
-					modified[0]= modifyEnumSourceInMethod(node, paramValue, rewrite);
-				}
-				return false;
-			}
-		});
-
-		// Apply the changes if modification was successful
-		if (modified[0]) {
-			try {
-				org.eclipse.text.edits.TextEdit edits= rewrite.rewriteAST();
-				cu.applyTextEdit(edits, null);
-				cu.save(null, true);
-			} catch (Exception e) {
-				JUnitPlugin.log(e);
-			}
-		}
-	}
-
 	/**
 	 * Disable a test by adding @Disabled (JUnit 5) or @Ignore (JUnit 4) annotation.
 	 */
