@@ -161,21 +161,20 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 		assertNumberOfProposals(proposals, 2);
 
 		String expected= """
-package test1;
-
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.jupiter.params.provider.EnumSource.Mode;
-
-class TestClass {
-	@ParameterizedTest
-	@EnumSource(value = TestEnum.class, mode = Mode.EXCLUDE, names = {"VALUE1",
-            "VALUE2", "VALUE3"})
-	void testWithEnum(TestEnum value) {
-		// test implementation
-	}
-}
-""";
+			package test1;
+			
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+			import org.junit.jupiter.params.provider.EnumSource.Mode;
+			
+			class TestClass {
+				@ParameterizedTest
+				@EnumSource(value = TestEnum.class, mode = Mode.EXCLUDE, names = {})
+				void testWithEnum(TestEnum value) {
+					// test implementation
+				}
+			}
+			""";
 
 		assertProposalPreviewEquals(expected, "Add 'names' filter with EXCLUDE mode to @EnumSource", proposals);
 	}
