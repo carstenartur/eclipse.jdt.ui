@@ -74,22 +74,22 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 	@Test
 	public void testAddNamesFilterInclude() throws Exception {
 		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
-		
+
 		String enumContent= """
 			package test1;
-			
+
 			public enum TestEnum {
 				VALUE1, VALUE2, VALUE3
 			}
 			""";
 		pack1.createCompilationUnit("TestEnum.java", enumContent, false, null);
-		
+
 		String testContent= """
 			package test1;
-			
+
 			import org.junit.jupiter.params.ParameterizedTest;
 			import org.junit.jupiter.params.provider.EnumSource;
-			
+
 			class TestClass {
 				@ParameterizedTest
 				@EnumSource(TestEnum.class)
@@ -109,10 +109,10 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 
 		String expected= """
 			package test1;
-			
+
 			import org.junit.jupiter.params.ParameterizedTest;
 			import org.junit.jupiter.params.provider.EnumSource;
-			
+
 			class TestClass {
 				@ParameterizedTest
 				@EnumSource(value = TestEnum.class, names = {"VALUE1", "VALUE2", "VALUE3"})
@@ -128,22 +128,22 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 	@Test
 	public void testAddNamesFilterExclude() throws Exception {
 		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
-		
+
 		String enumContent= """
 			package test1;
-			
+
 			public enum TestEnum {
 				VALUE1, VALUE2, VALUE3
 			}
 			""";
 		pack1.createCompilationUnit("TestEnum.java", enumContent, false, null);
-		
+
 		String testContent= """
 			package test1;
-			
+
 			import org.junit.jupiter.params.ParameterizedTest;
 			import org.junit.jupiter.params.provider.EnumSource;
-			
+
 			class TestClass {
 				@ParameterizedTest
 				@EnumSource(TestEnum.class)
@@ -161,20 +161,21 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 		assertNumberOfProposals(proposals, 2);
 
 		String expected= """
-			package test1;
-			
-			import org.junit.jupiter.params.ParameterizedTest;
-			import org.junit.jupiter.params.provider.EnumSource;
-			import org.junit.jupiter.params.provider.EnumSource.Mode;
-			
-			class TestClass {
-				@ParameterizedTest
-				@EnumSource(value = TestEnum.class, mode = Mode.EXCLUDE, names = {"VALUE1", "VALUE2", "VALUE3"})
-				void testWithEnum(TestEnum value) {
-					// test implementation
-				}
-			}
-			""";
+package test1;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.EnumSource.Mode;
+
+class TestClass {
+	@ParameterizedTest
+	@EnumSource(value = TestEnum.class, mode = Mode.EXCLUDE, names = {"VALUE1",
+            "VALUE2", "VALUE3"})
+	void testWithEnum(TestEnum value) {
+		// test implementation
+	}
+}
+""";
 
 		assertProposalPreviewEquals(expected, "Add 'names' filter with EXCLUDE mode to @EnumSource", proposals);
 	}
@@ -182,22 +183,22 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 	@Test
 	public void testToggleMode() throws Exception {
 		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
-		
+
 		String enumContent= """
 			package test1;
-			
+
 			public enum TestEnum {
 				VALUE1, VALUE2
 			}
 			""";
 		pack1.createCompilationUnit("TestEnum.java", enumContent, false, null);
-		
+
 		String testContent= """
 			package test1;
-			
+
 			import org.junit.jupiter.params.ParameterizedTest;
 			import org.junit.jupiter.params.provider.EnumSource;
-			
+
 			class TestClass {
 				@ParameterizedTest
 				@EnumSource(value = TestEnum.class, names = {"VALUE1"})
@@ -216,11 +217,11 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 
 		String expected= """
 			package test1;
-			
+
 			import org.junit.jupiter.params.ParameterizedTest;
 			import org.junit.jupiter.params.provider.EnumSource;
 			import org.junit.jupiter.params.provider.EnumSource.Mode;
-			
+
 			class TestClass {
 				@ParameterizedTest
 				@EnumSource(value = TestEnum.class, names = {"VALUE1"}, mode = Mode.EXCLUDE)
