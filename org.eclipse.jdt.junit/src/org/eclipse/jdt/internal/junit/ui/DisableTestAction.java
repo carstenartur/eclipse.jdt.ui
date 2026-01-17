@@ -60,10 +60,6 @@ public class DisableTestAction extends Action {
 		fTestElement = testElement;
 		fIsCurrentlyDisabled = false;
 		
-		// Check if test result is IGNORED (covers @Disabled, @Ignore, assumption failures)
-		Result result = testElement.getTestResult(false);
-		boolean isIgnored = result == Result.IGNORED;
-		
 		// Enable for TestSuiteElement (parameterized test method)
 		if (testElement instanceof TestSuiteElement) {
 			TestSuiteElement testSuite = (TestSuiteElement) testElement;
@@ -75,10 +71,7 @@ public class DisableTestAction extends Action {
 				if (testName != null && isParameterizedTestMethod(testName)) {
 					// Check if method is already disabled
 					checkDisabledStatus(testSuite);
-					// If test is ignored, mark as disabled so label shows "Enable This Test"
-					if (isIgnored) {
-						fIsCurrentlyDisabled = true;
-					}
+					updateDisabledStatusForIgnoredTest(testElement);
 					updateLabel();
 					setEnabled(true);
 					return;
@@ -99,10 +92,7 @@ public class DisableTestAction extends Action {
 			if (!testCase.isParameterizedTest()) {
 				// Check if method is already disabled
 				checkDisabledStatus(testCase);
-				// If test is ignored, mark as disabled so label shows "Enable This Test"
-				if (isIgnored) {
-					fIsCurrentlyDisabled = true;
-				}
+				updateDisabledStatusForIgnoredTest(testElement);
 				updateLabel();
 				setEnabled(true);
 				return;
@@ -110,6 +100,19 @@ public class DisableTestAction extends Action {
 		}
 		
 		setEnabled(false);
+	}
+	
+	/**
+	 * Update disabled status if test is ignored.
+	 * If test is ignored, mark as disabled so label shows "Enable This Test".
+	 * 
+	 * @param testElement the test element to check
+	 */
+	private void updateDisabledStatusForIgnoredTest(TestElement testElement) {
+		Result result = testElement.getTestResult(false);
+		if (result == Result.IGNORED) {
+			fIsCurrentlyDisabled = true;
+		}
 	}
 
 	/**
