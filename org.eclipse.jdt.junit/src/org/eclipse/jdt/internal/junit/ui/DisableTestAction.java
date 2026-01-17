@@ -71,24 +71,7 @@ public class DisableTestAction extends Action {
 				// Check if this is actually a test method by looking up source code
 				// This works even when the test has been run with @Disabled and has no children
 				if (isTestMethodInSource(testSuite)) {
-					// Check if method is already disabled in source code
-					checkDisabledStatus(testSuite);
-					// Also check if test result is IGNORED (both checks can set fIsCurrentlyDisabled to true)
-					updateDisabledStatusForIgnoredTest(testElement);
-					updateLabel();
-					setEnabled(true);
-					return;
-				}
-			}
-			
-			// If test has children, check if they are test cases (old behavior for compatibility)
-			if (testSuite.getChildren().length > 0 && testSuite.getChildren()[0] instanceof TestCaseElement) {
-				if (testName != null && isParameterizedTestMethod(testName)) {
-					// Check if method is already disabled in source code
-					checkDisabledStatus(testSuite);
-					// Also check if test result is IGNORED (both checks can set fIsCurrentlyDisabled to true)
-					updateDisabledStatusForIgnoredTest(testElement);
-					updateLabel();
+					updateDisabledStatusAndLabel(testElement);
 					setEnabled(true);
 					return;
 				}
@@ -106,17 +89,27 @@ public class DisableTestAction extends Action {
 			
 			// Only enable if this is NOT a parameterized test
 			if (!testCase.isParameterizedTest()) {
-				// Check if method is already disabled in source code
-				checkDisabledStatus(testCase);
-				// Also check if test result is IGNORED (both checks can set fIsCurrentlyDisabled to true)
-				updateDisabledStatusForIgnoredTest(testElement);
-				updateLabel();
+				updateDisabledStatusAndLabel(testElement);
 				setEnabled(true);
 				return;
 			}
 		}
 		
 		setEnabled(false);
+	}
+	
+	/**
+	 * Update the disabled status by checking both source code and test result,
+	 * then update the action label accordingly.
+	 * 
+	 * @param testElement the test element to check
+	 */
+	private void updateDisabledStatusAndLabel(TestElement testElement) {
+		// Check if method is already disabled in source code
+		checkDisabledStatus(testElement);
+		// Also check if test result is IGNORED (both checks can set fIsCurrentlyDisabled to true)
+		updateDisabledStatusForIgnoredTest(testElement);
+		updateLabel();
 	}
 	
 	/**
