@@ -25,6 +25,7 @@ import org.eclipse.jface.text.contentassist.IContextInformation;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IType;
+import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 
 import org.eclipse.jdt.ui.ISharedImages;
@@ -61,7 +62,7 @@ public class RemoveInvalidEnumNamesProposal implements IJavaCompletionProposal {
 				return;
 			}
 
-			IMethod method = primaryType.getMethod(fMethodDecl.getName().getIdentifier(), new String[0]);
+			IMethod method = findTestMethod(primaryType, fMethodDecl.getName().getIdentifier());
 			if (method == null) {
 				return;
 			}
@@ -71,6 +72,16 @@ public class RemoveInvalidEnumNamesProposal implements IJavaCompletionProposal {
 		} catch (Exception e) {
 			JUnitPlugin.log(e);
 		}
+	}
+	
+	private IMethod findTestMethod(IType type, String methodName) throws JavaModelException {
+		IMethod[] methods = type.getMethods();
+		for (IMethod method : methods) {
+			if (method.getElementName().equals(methodName)) {
+				return method;
+			}
+		}
+		return null;
 	}
 
 	@Override
