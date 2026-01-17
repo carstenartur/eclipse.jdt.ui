@@ -286,7 +286,6 @@ public class ExcludeParameterizedTestAction extends Action {
 				multiEdit.addChild(rewriteEdit);
 
 				// Apply the combined edit
-				cu.getBuffer().setContents(cu.getBuffer().getContents());
 				cu.applyTextEdit(multiEdit, null);
 				cu.save(null, true);
 
