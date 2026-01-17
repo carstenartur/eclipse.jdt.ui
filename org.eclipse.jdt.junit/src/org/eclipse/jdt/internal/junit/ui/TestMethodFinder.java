@@ -27,6 +27,8 @@ import org.eclipse.jdt.internal.junit.model.TestSuiteElement;
  */
 public class TestMethodFinder {
 
+	private static final char PARAM_START = '(';
+
 	/**
 	 * Find the IMethod for a TestSuiteElement representing a parameterized test.
 	 * Extracts method name from test name pattern "methodName(ParameterType)" and
@@ -37,7 +39,7 @@ public class TestMethodFinder {
 	 */
 	public static IMethod findMethodForParameterizedTest(TestSuiteElement testSuiteElement) {
 		String testName = testSuiteElement.getTestName();
-		int index = testName.indexOf('(');
+		int index = testName.indexOf(PARAM_START);
 		if (index < 0) {
 			return null; // Not a parameterized test method signature
 		}
