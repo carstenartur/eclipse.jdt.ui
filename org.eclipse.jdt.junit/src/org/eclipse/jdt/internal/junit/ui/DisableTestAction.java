@@ -63,11 +63,26 @@ public class DisableTestAction extends Action {
 		// Enable for TestSuiteElement (parameterized test method)
 		if (testElement instanceof TestSuiteElement) {
 			TestSuiteElement testSuite = (TestSuiteElement) testElement;
-			// Check if this is a parameterized test method (has test case children and test name contains method signature)
+			String testName = testSuite.getTestName();
+			
+			// Parameterized test methods have names like "testWithEnum(TestEnum)"
+			// Check for valid method signature pattern
+			if (testName != null && isParameterizedTestMethod(testName)) {
+				// Check if this is actually a test method by looking up source code
+				// This works even when the test has been run with @Disabled and has no children
+				if (isTestMethodInSource(testSuite)) {
+					// Check if method is already disabled in source code
+					checkDisabledStatus(testSuite);
+					// Also check if test result is IGNORED (both checks can set fIsCurrentlyDisabled to true)
+					updateDisabledStatusForIgnoredTest(testElement);
+					updateLabel();
+					setEnabled(true);
+					return;
+				}
+			}
+			
+			// If test has children, check if they are test cases (old behavior for compatibility)
 			if (testSuite.getChildren().length > 0 && testSuite.getChildren()[0] instanceof TestCaseElement) {
-				String testName = testSuite.getTestName();
-				// Parameterized test methods have names like "testWithEnum(TestEnum)" 
-				// Check for valid method signature pattern
 				if (testName != null && isParameterizedTestMethod(testName)) {
 					// Check if method is already disabled in source code
 					checkDisabledStatus(testSuite);
@@ -132,6 +147,41 @@ public class DisableTestAction extends Action {
 		int openParen = testName.indexOf('(');
 		int closeParen = testName.lastIndexOf(')');
 		return openParen > 0 && closeParen > openParen && closeParen == testName.length() - 1;
+	}
+	
+	/**
+	 * Check if the test suite represents an actual test method in source code.
+	 * This is used to verify that a TestSuiteElement with a method signature pattern
+	 * corresponds to an actual test method, even when the suite has no children
+	 * (e.g., when a disabled parameterized test has been run).
+	 * 
+	 * @param testSuite the test suite element to check
+	 * @return true if a test method exists in source code
+	 */
+	private boolean isTestMethodInSource(TestSuiteElement testSuite) {
+		try {
+			String className = testSuite.getSuiteTypeName();
+			String testName = testSuite.getTestName();
+			
+			// Extract method name from test name (e.g., "testWithEnum(TestEnum)" -> "testWithEnum")
+			int index = testName.indexOf('(');
+			String methodName = index > 0 ? testName.substring(0, index) : testName;
+			
+			IJavaProject javaProject = testSuite.getTestRunSession().getLaunchedProject();
+			if (javaProject == null) {
+				return false;
+			}
+			
+			IType type = javaProject.findType(className);
+			if (type == null) {
+				return false;
+			}
+			
+			IMethod method = findTestMethod(type, methodName);
+			return method != null;
+		} catch (Exception e) {
+			return false;
+		}
 	}
 	
 	/**
