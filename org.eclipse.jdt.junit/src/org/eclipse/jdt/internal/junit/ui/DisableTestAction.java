@@ -44,11 +44,9 @@ import org.eclipse.jdt.ui.JavaUI;
 public class DisableTestAction extends Action {
 
 	private TestElement fTestElement;
-	private final TestRunnerViewPart fTestRunnerPart;
 
 	public DisableTestAction(TestRunnerViewPart testRunnerPart) {
 		super(JUnitMessages.DisableTestAction_label);
-		fTestRunnerPart = testRunnerPart;
 	}
 
 	/**

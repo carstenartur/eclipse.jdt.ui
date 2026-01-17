@@ -37,11 +37,9 @@ import org.eclipse.jdt.ui.JavaUI;
 public class ExcludeParameterValueAction extends Action {
 
 	private TestCaseElement fTestCaseElement;
-	private final TestRunnerViewPart fTestRunnerPart;
 
 	public ExcludeParameterValueAction(TestRunnerViewPart testRunnerPart) {
 		super(JUnitMessages.ExcludeParameterValueAction_label);
-		fTestRunnerPart = testRunnerPart;
 	}
 
 	/**
