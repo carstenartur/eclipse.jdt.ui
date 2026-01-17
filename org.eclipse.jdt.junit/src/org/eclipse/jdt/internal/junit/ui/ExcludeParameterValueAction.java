@@ -14,6 +14,8 @@
 package org.eclipse.jdt.internal.junit.ui;
 
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.swt.widgets.Shell;
 
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IMethod;
@@ -37,9 +39,11 @@ import org.eclipse.jdt.ui.JavaUI;
 public class ExcludeParameterValueAction extends Action {
 
 	private TestCaseElement fTestCaseElement;
+	private TestRunnerViewPart fTestRunnerPart;
 
 	public ExcludeParameterValueAction(TestRunnerViewPart testRunnerPart) {
 		super(JUnitMessages.ExcludeParameterValueAction_label);
+		fTestRunnerPart = testRunnerPart;
 	}
 
 	/**
@@ -104,6 +108,36 @@ public class ExcludeParameterValueAction extends Action {
 			IMethod method = findTestMethod(type, methodName);
 			if (method == null) {
 				return;
+			}
+
+			// Check how many values would remain after exclusion
+			try {
+				int remainingValues = EnumSourceValidator.calculateRemainingValues(method, paramValue);
+				if (remainingValues >= 0 && remainingValues <= 1) {
+					// Show warning dialog
+					Shell shell = fTestRunnerPart.getViewSite().getShell();
+					String message;
+					if (remainingValues == 0) {
+						message = "After excluding '" + paramValue + "', no values will remain. " //$NON-NLS-1$ //$NON-NLS-2$
+								+ "Consider disabling the entire test instead."; //$NON-NLS-1$
+					} else {
+						message = "After excluding '" + paramValue + "', only 1 value will remain. " //$NON-NLS-1$ //$NON-NLS-2$
+								+ "Consider disabling the entire test instead."; //$NON-NLS-1$
+					}
+					
+					boolean proceed = MessageDialog.openQuestion(
+						shell,
+						"Only one or no values will remain", //$NON-NLS-1$
+						message + "\n\nDo you want to continue?" //$NON-NLS-1$
+					);
+					
+					if (!proceed) {
+						return; // User cancelled
+					}
+				}
+			} catch (Exception e) {
+				// If we can't determine the count, log but continue
+				JUnitPlugin.log(e);
 			}
 
 			// Modify the @EnumSource annotation

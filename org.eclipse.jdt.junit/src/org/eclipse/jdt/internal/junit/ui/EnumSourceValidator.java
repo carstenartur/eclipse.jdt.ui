@@ -201,6 +201,211 @@ public class EnumSourceValidator {
 	}
 
 	/**
+	 * Get all enum values from the enum type referenced in @EnumSource annotation.
+	 * 
+	 * @param method the test method with @EnumSource annotation
+	 * @return List of all enum constant names, or empty list if not found
+	 * @throws JavaModelException if there's an error accessing the Java model
+	 */
+	public static List<String> getAllEnumValues(IMethod method) throws JavaModelException {
+		ICompilationUnit cu = method.getCompilationUnit();
+		if (cu == null) {
+			return new ArrayList<>();
+		}
+
+		// Parse the compilation unit
+		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
+		parser.setSource(cu);
+		parser.setResolveBindings(true);
+		CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
+
+		final IType[] enumType = new IType[1];
+
+		astRoot.accept(new ASTVisitor() {
+			@Override
+			public boolean visit(MethodDeclaration node) {
+				if (node.getName().getIdentifier().equals(method.getElementName())) {
+					IMethodBinding methodBinding = node.resolveBinding();
+					if (methodBinding != null) {
+						IAnnotationBinding[] annotations = methodBinding.getAnnotations();
+						for (IAnnotationBinding annotationBinding : annotations) {
+							ITypeBinding annotationType = annotationBinding.getAnnotationType();
+							if (annotationType != null && ENUM_SOURCE_ANNOTATION.equals(annotationType.getQualifiedName())) {
+								enumType[0] = extractEnumType(annotationBinding, node);
+								break;
+							}
+						}
+					}
+				}
+				return false;
+			}
+		});
+
+		if (enumType[0] != null) {
+			Set<String> constants = getEnumConstants(enumType[0]);
+			return new ArrayList<>(constants);
+		}
+
+		return new ArrayList<>();
+	}
+
+	/**
+	 * Get the names currently in the @EnumSource names attribute, and the mode.
+	 * 
+	 * @param method the test method with @EnumSource annotation
+	 * @return EnumSourceNamesData containing the names list and mode, or null if not found
+	 * @throws JavaModelException if there's an error accessing the Java model
+	 */
+	public static EnumSourceNamesData getEnumSourceNamesData(IMethod method) throws JavaModelException {
+		ICompilationUnit cu = method.getCompilationUnit();
+		if (cu == null) {
+			return null;
+		}
+
+		// Parse the compilation unit
+		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
+		parser.setSource(cu);
+		parser.setResolveBindings(true);
+		CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
+
+		final EnumSourceNamesData[] result = new EnumSourceNamesData[1];
+
+		astRoot.accept(new ASTVisitor() {
+			@Override
+			public boolean visit(MethodDeclaration node) {
+				if (node.getName().getIdentifier().equals(method.getElementName())) {
+					List<?> modifiers = node.modifiers();
+					for (Object modifier : modifiers) {
+						if (modifier instanceof Annotation) {
+							Annotation annotation = (Annotation) modifier;
+							String annotationName = annotation.getTypeName().getFullyQualifiedName();
+
+							if ("EnumSource".equals(annotationName) || ENUM_SOURCE_ANNOTATION.equals(annotationName)) { //$NON-NLS-1$
+								result[0] = extractNamesAndMode(annotation);
+								break;
+							}
+						}
+					}
+				}
+				return false;
+			}
+		});
+
+		return result[0];
+	}
+
+	/**
+	 * Extract names and mode from @EnumSource annotation.
+	 */
+	private static EnumSourceNamesData extractNamesAndMode(Annotation annotation) {
+		List<String> names = new ArrayList<>();
+		boolean isExcludeMode = false;
+
+		if (annotation instanceof org.eclipse.jdt.core.dom.NormalAnnotation) {
+			org.eclipse.jdt.core.dom.NormalAnnotation normalAnnotation = (org.eclipse.jdt.core.dom.NormalAnnotation) annotation;
+			List<?> values = normalAnnotation.values();
+			for (Object obj : values) {
+				if (obj instanceof MemberValuePair) {
+					MemberValuePair pair = (MemberValuePair) obj;
+					String name = pair.getName().getIdentifier();
+					if ("mode".equals(name)) { //$NON-NLS-1$
+						// Check if it's EXCLUDE mode
+						Expression modeValue = pair.getValue();
+						if (modeValue instanceof org.eclipse.jdt.core.dom.QualifiedName) {
+							org.eclipse.jdt.core.dom.QualifiedName qn = (org.eclipse.jdt.core.dom.QualifiedName) modeValue;
+							isExcludeMode = "EXCLUDE".equals(qn.getName().getIdentifier()); //$NON-NLS-1$
+						}
+					} else if ("names".equals(name)) { //$NON-NLS-1$
+						// Extract existing names
+						Expression namesValue = pair.getValue();
+						if (namesValue instanceof ArrayInitializer) {
+							ArrayInitializer array = (ArrayInitializer) namesValue;
+							List<?> expressions = array.expressions();
+							for (Object expr : expressions) {
+								if (expr instanceof StringLiteral) {
+									StringLiteral literal = (StringLiteral) expr;
+									names.add(literal.getLiteralValue());
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return new EnumSourceNamesData(names, isExcludeMode);
+	}
+
+	/**
+	 * Calculate how many enum values would remain after excluding the specified value.
+	 * 
+	 * @param method the test method with @EnumSource annotation
+	 * @param valueToExclude the enum value about to be excluded
+	 * @return the number of values that would remain after exclusion, or -1 if cannot determine
+	 * @throws JavaModelException if there's an error accessing the Java model
+	 */
+	public static int calculateRemainingValues(IMethod method, String valueToExclude) throws JavaModelException {
+		List<String> allValues = getAllEnumValues(method);
+		if (allValues.isEmpty()) {
+			return -1; // Cannot determine
+		}
+
+		EnumSourceNamesData namesData = getEnumSourceNamesData(method);
+		if (namesData == null) {
+			// No names filter yet, so excluding one will leave allValues.size() - 1
+			return allValues.size() - 1;
+		}
+
+		List<String> existingNames = namesData.getNames();
+		boolean isExcludeMode = namesData.isExcludeMode();
+
+		if (isExcludeMode) {
+			// Already in EXCLUDE mode: adding another exclusion
+			// Count values that are not excluded
+			Set<String> excluded = new HashSet<>(existingNames);
+			excluded.add(valueToExclude); // Add the new exclusion
+			int remaining = 0;
+			for (String value : allValues) {
+				if (!excluded.contains(value)) {
+					remaining++;
+				}
+			}
+			return remaining;
+		} else {
+			// In INCLUDE mode: removing a value from the include list
+			Set<String> included = new HashSet<>(existingNames);
+			included.remove(valueToExclude);
+			
+			// If removing the last value, it switches to EXCLUDE mode with just this value
+			if (included.isEmpty()) {
+				return allValues.size() - 1;
+			}
+			return included.size();
+		}
+	}
+
+	/**
+	 * Data class to hold @EnumSource names and mode information.
+	 */
+	public static class EnumSourceNamesData {
+		private final List<String> names;
+		private final boolean isExcludeMode;
+
+		public EnumSourceNamesData(List<String> names, boolean isExcludeMode) {
+			this.names = names;
+			this.isExcludeMode = isExcludeMode;
+		}
+
+		public List<String> getNames() {
+			return names;
+		}
+
+		public boolean isExcludeMode() {
+			return isExcludeMode;
+		}
+	}
+
+	/**
 	 * Removes invalid enum names from @EnumSource annotation.
 	 * This method modifies the source code to remove enum values from the names array
 	 * that don't exist in the referenced enum class.
