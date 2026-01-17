@@ -96,7 +96,7 @@ public class RemoveInvalidEnumNamesProposal implements IJavaCompletionProposal {
 
 	@Override
 	public Image getImage() {
-		return JavaUI.getSharedImages().getImage(ISharedImages.IMG_CORRECTION_CHANGE);
+		return JavaUI.getSharedImages().getImage(ISharedImages.IMG_OBJS_ANNOTATION);
 	}
 
 	@Override

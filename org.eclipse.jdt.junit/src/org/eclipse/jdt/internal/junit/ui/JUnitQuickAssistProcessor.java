@@ -18,6 +18,9 @@ import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
 
+import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IMethod;
+import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
@@ -95,13 +98,13 @@ public class JUnitQuickAssistProcessor implements IQuickAssistProcessor {
 		// Check if method has @EnumSource with invalid enum names
 		if (hasAnnotation(methodDecl, "org.junit.jupiter.params.provider.EnumSource")) { //$NON-NLS-1$
 			try {
-				ICompilationUnit cu = fContext.getCompilationUnit();
+				ICompilationUnit cu = context.getCompilationUnit();
 				if (cu != null) {
 					IType primaryType = cu.findPrimaryType();
 					if (primaryType != null) {
 						IMethod method = findTestMethod(primaryType, methodDecl.getName().getIdentifier());
 						if (method != null && EnumSourceValidator.hasInvalidEnumNames(method)) {
-							proposals.add(new RemoveInvalidEnumNamesProposal(fContext, methodDecl));
+							proposals.add(new RemoveInvalidEnumNamesProposal(context, methodDecl));
 						}
 					}
 				}
