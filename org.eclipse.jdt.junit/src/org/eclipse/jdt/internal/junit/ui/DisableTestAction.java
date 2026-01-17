@@ -62,16 +62,26 @@ public class DisableTestAction extends Action {
 		// Enable for TestSuiteElement (parameterized test method)
 		if (testElement instanceof TestSuiteElement) {
 			TestSuiteElement testSuite = (TestSuiteElement) testElement;
-			// Check if this is a parameterized test (has test case children)
+			// Check if this is a parameterized test method (has test case children and test name contains parentheses)
 			if (testSuite.getChildren().length > 0 && testSuite.getChildren()[0] instanceof TestCaseElement) {
-				setEnabled(true);
-				return;
+				String testName = testSuite.getTestName();
+				// Parameterized test methods have names like "testWithEnum(TestEnum)"
+				if (testName != null && testName.contains("(") && testName.contains(")")) {
+					setEnabled(true);
+					return;
+				}
 			}
 		}
 		
 		// Enable for TestCaseElement (normal test) that is NOT a parameterized test child
 		if (testElement instanceof TestCaseElement) {
 			TestCaseElement testCase = (TestCaseElement) testElement;
+			
+			// Ensure metadata is populated
+			if (!testCase.isParameterizedTest() && testCase.getParameterSourceType() == null) {
+				ParameterizedTestMetadataExtractor.populateMetadata(testCase);
+			}
+			
 			// Only enable if this is NOT a parameterized test
 			if (!testCase.isParameterizedTest()) {
 				setEnabled(true);

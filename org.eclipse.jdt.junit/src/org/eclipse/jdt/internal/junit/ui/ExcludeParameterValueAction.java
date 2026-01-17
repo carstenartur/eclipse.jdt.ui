@@ -60,6 +60,11 @@ public class ExcludeParameterValueAction extends Action {
 
 		TestCaseElement testCase = (TestCaseElement) testElement;
 		
+		// Ensure metadata is populated
+		if (!testCase.isParameterizedTest() && testCase.getParameterSourceType() == null) {
+			ParameterizedTestMetadataExtractor.populateMetadata(testCase);
+		}
+		
 		// Only enable for parameterized tests with @EnumSource
 		if (testCase.isParameterizedTest() && "EnumSource".equals(testCase.getParameterSourceType())) { //$NON-NLS-1$
 			fTestCaseElement = testCase;
