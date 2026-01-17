@@ -57,29 +57,14 @@ public class EnumSourceValidator {
 	 */
 	public static List<String> findInvalidEnumNames(IMethod method) throws JavaModelException {
 		List<String> invalidNames = new ArrayList<>();
-		ICompilationUnit cu = method.getCompilationUnit();
-		if (cu == null) {
+		MethodDeclaration methodDecl = findMethodDeclaration(method);
+		if (methodDecl == null) {
 			return invalidNames;
 		}
 
-		// Parse the compilation unit
-		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
-		parser.setSource(cu);
-		parser.setResolveBindings(true);
-		CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
-
 		final List<String> namesInAnnotation = new ArrayList<>();
 		final IType[] enumType = new IType[1];
-
-		astRoot.accept(new ASTVisitor() {
-			@Override
-			public boolean visit(MethodDeclaration node) {
-				if (node.getName().getIdentifier().equals(method.getElementName())) {
-					extractEnumSourceData(node, namesInAnnotation, enumType);
-				}
-				return false;
-			}
-		});
+		extractEnumSourceData(methodDecl, namesInAnnotation, enumType);
 
 		// If we found names and enum type, validate them
 		if (!namesInAnnotation.isEmpty() && enumType[0] != null) {
@@ -201,6 +186,245 @@ public class EnumSourceValidator {
 	}
 
 	/**
+	 * Parse a compilation unit and create an AST.
+	 * 
+	 * @param cu the compilation unit to parse
+	 * @return the parsed CompilationUnit AST node
+	 */
+	private static CompilationUnit parseCompilationUnit(ICompilationUnit cu) {
+		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
+		parser.setSource(cu);
+		parser.setResolveBindings(true);
+		return (CompilationUnit) parser.createAST(null);
+	}
+
+	/**
+	 * Find the MethodDeclaration AST node for an IMethod.
+	 * 
+	 * @param method the IMethod to find
+	 * @return the MethodDeclaration node, or null if not found
+	 * @throws JavaModelException if there's an error accessing the Java model
+	 */
+	private static MethodDeclaration findMethodDeclaration(IMethod method) throws JavaModelException {
+		ICompilationUnit cu = method.getCompilationUnit();
+		if (cu == null) {
+			return null;
+		}
+
+		CompilationUnit astRoot = parseCompilationUnit(cu);
+		final MethodDeclaration[] result = new MethodDeclaration[1];
+
+		astRoot.accept(new ASTVisitor() {
+			@Override
+			public boolean visit(MethodDeclaration node) {
+				if (node.getName().getIdentifier().equals(method.getElementName())) {
+					result[0] = node;
+					return false;
+				}
+				return true;
+			}
+		});
+
+		return result[0];
+	}
+
+	/**
+	 * Find the @EnumSource annotation on a method declaration.
+	 * 
+	 * @param methodDecl the method declaration to search
+	 * @return the @EnumSource Annotation node, or null if not found
+	 */
+	private static Annotation findEnumSourceAnnotation(MethodDeclaration methodDecl) {
+		List<?> modifiers = methodDecl.modifiers();
+		for (Object modifier : modifiers) {
+			if (modifier instanceof Annotation) {
+				Annotation annotation = (Annotation) modifier;
+				String annotationName = annotation.getTypeName().getFullyQualifiedName();
+				if ("EnumSource".equals(annotationName) || ENUM_SOURCE_ANNOTATION.equals(annotationName)) { //$NON-NLS-1$
+					return annotation;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Find the enum type referenced in the @EnumSource annotation.
+	 * 
+	 * @param methodDecl the method declaration with @EnumSource annotation
+	 * @return the IType for the enum, or null if not found
+	 */
+	private static IType findEnumTypeInAnnotation(MethodDeclaration methodDecl) {
+		IMethodBinding methodBinding = methodDecl.resolveBinding();
+		if (methodBinding == null) {
+			return null;
+		}
+
+		IAnnotationBinding[] annotations = methodBinding.getAnnotations();
+		for (IAnnotationBinding annotationBinding : annotations) {
+			ITypeBinding annotationType = annotationBinding.getAnnotationType();
+			if (annotationType != null && ENUM_SOURCE_ANNOTATION.equals(annotationType.getQualifiedName())) {
+				return extractEnumType(annotationBinding, methodDecl);
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Get all enum values from the enum type referenced in @EnumSource annotation.
+	 * 
+	 * @param method the test method with @EnumSource annotation
+	 * @return List of all enum constant names, or empty list if not found
+	 * @throws JavaModelException if there's an error accessing the Java model
+	 */
+	public static List<String> getAllEnumValues(IMethod method) throws JavaModelException {
+		MethodDeclaration methodDecl = findMethodDeclaration(method);
+		if (methodDecl == null) {
+			return new ArrayList<>();
+		}
+
+		IType enumType = findEnumTypeInAnnotation(methodDecl);
+		if (enumType != null) {
+			Set<String> constants = getEnumConstants(enumType);
+			return new ArrayList<>(constants);
+		}
+
+		return new ArrayList<>();
+	}
+
+	/**
+	 * Get the names currently in the @EnumSource names attribute, and the mode.
+	 * 
+	 * @param method the test method with @EnumSource annotation
+	 * @return EnumSourceNamesData containing the names list and mode, or null if not found
+	 * @throws JavaModelException if there's an error accessing the Java model
+	 */
+	public static EnumSourceNamesData getEnumSourceNamesData(IMethod method) throws JavaModelException {
+		MethodDeclaration methodDecl = findMethodDeclaration(method);
+		if (methodDecl == null) {
+			return null;
+		}
+
+		Annotation enumSourceAnnotation = findEnumSourceAnnotation(methodDecl);
+		if (enumSourceAnnotation != null) {
+			return extractNamesAndMode(enumSourceAnnotation);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Extract names and mode from @EnumSource annotation.
+	 */
+	private static EnumSourceNamesData extractNamesAndMode(Annotation annotation) {
+		List<String> names = new ArrayList<>();
+		boolean isExcludeMode = false;
+
+		if (annotation instanceof org.eclipse.jdt.core.dom.NormalAnnotation) {
+			org.eclipse.jdt.core.dom.NormalAnnotation normalAnnotation = (org.eclipse.jdt.core.dom.NormalAnnotation) annotation;
+			List<?> values = normalAnnotation.values();
+			for (Object obj : values) {
+				if (obj instanceof MemberValuePair) {
+					MemberValuePair pair = (MemberValuePair) obj;
+					String name = pair.getName().getIdentifier();
+					if ("mode".equals(name)) { //$NON-NLS-1$
+						// Check if it's EXCLUDE mode
+						Expression modeValue = pair.getValue();
+						if (modeValue instanceof org.eclipse.jdt.core.dom.QualifiedName) {
+							org.eclipse.jdt.core.dom.QualifiedName qn = (org.eclipse.jdt.core.dom.QualifiedName) modeValue;
+							isExcludeMode = "EXCLUDE".equals(qn.getName().getIdentifier()); //$NON-NLS-1$
+						}
+					} else if ("names".equals(name)) { //$NON-NLS-1$
+						// Extract existing names
+						Expression namesValue = pair.getValue();
+						if (namesValue instanceof ArrayInitializer) {
+							ArrayInitializer array = (ArrayInitializer) namesValue;
+							List<?> expressions = array.expressions();
+							for (Object expr : expressions) {
+								if (expr instanceof StringLiteral) {
+									StringLiteral literal = (StringLiteral) expr;
+									names.add(literal.getLiteralValue());
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return new EnumSourceNamesData(names, isExcludeMode);
+	}
+
+	/**
+	 * Calculate how many enum values would remain after excluding the specified value.
+	 * 
+	 * @param method the test method with @EnumSource annotation
+	 * @param valueToExclude the enum value about to be excluded
+	 * @return the number of values that would remain after exclusion, or -1 if cannot determine
+	 * @throws JavaModelException if there's an error accessing the Java model
+	 */
+	public static int calculateRemainingValues(IMethod method, String valueToExclude) throws JavaModelException {
+		List<String> allValues = getAllEnumValues(method);
+		if (allValues.isEmpty()) {
+			return -1; // Cannot determine
+		}
+
+		EnumSourceNamesData namesData = getEnumSourceNamesData(method);
+		if (namesData == null) {
+			// No names filter yet, so excluding one will leave allValues.size() - 1
+			return allValues.size() - 1;
+		}
+
+		List<String> existingNames = namesData.getNames();
+		boolean isExcludeMode = namesData.isExcludeMode();
+
+		if (isExcludeMode) {
+			// Already in EXCLUDE mode: adding another exclusion
+			// Count values that are not excluded
+			Set<String> excluded = new HashSet<>(existingNames);
+			excluded.add(valueToExclude); // Add the new exclusion
+			int remaining = 0;
+			for (String value : allValues) {
+				if (!excluded.contains(value)) {
+					remaining++;
+				}
+			}
+			return remaining;
+		} else {
+			// In INCLUDE mode: removing a value from the include list
+			Set<String> included = new HashSet<>(existingNames);
+			included.remove(valueToExclude);
+			
+			// If removing the last value, it switches to EXCLUDE mode with just this value
+			if (included.isEmpty()) {
+				return allValues.size() - 1;
+			}
+			return included.size();
+		}
+	}
+
+	/**
+	 * Data class to hold @EnumSource names and mode information.
+	 */
+	public static class EnumSourceNamesData {
+		private final List<String> names;
+		private final boolean isExcludeMode;
+
+		public EnumSourceNamesData(List<String> names, boolean isExcludeMode) {
+			this.names = names;
+			this.isExcludeMode = isExcludeMode;
+		}
+
+		public List<String> getNames() {
+			return names;
+		}
+
+		public boolean isExcludeMode() {
+			return isExcludeMode;
+		}
+	}
+
+	/**
 	 * Removes invalid enum names from @EnumSource annotation.
 	 * This method modifies the source code to remove enum values from the names array
 	 * that don't exist in the referenced enum class.
@@ -219,12 +443,7 @@ public class EnumSourceValidator {
 			return;
 		}
 
-		// Parse the compilation unit
-		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
-		parser.setSource(cu);
-		parser.setResolveBindings(true);
-		CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
-
+		CompilationUnit astRoot = parseCompilationUnit(cu);
 		org.eclipse.jdt.core.dom.rewrite.ASTRewrite rewrite = org.eclipse.jdt.core.dom.rewrite.ASTRewrite.create(astRoot.getAST());
 		final boolean[] modified = new boolean[] { false };
 
