@@ -48,6 +48,14 @@ import org.eclipse.text.edits.TextEdit;
  * Provides common functionality for adding, removing, and modifying test annotations
  * to avoid code duplication across Quick Assist and context menu actions.
  * 
+ * <p><b>Note on Method Matching:</b> This utility matches methods by name only when
+ * traversing the AST. This is acceptable for JUnit test methods because:
+ * <ul>
+ * <li>Test methods are typically not overloaded (JUnit best practices)</li>
+ * <li>The IMethod parameter comes from the test runner which already identifies the exact method</li>
+ * <li>The AST traversal is just to find the AST node for that specific IMethod</li>
+ * </ul>
+ * 
  * @since 3.15
  */
 public class TestAnnotationModifier {
