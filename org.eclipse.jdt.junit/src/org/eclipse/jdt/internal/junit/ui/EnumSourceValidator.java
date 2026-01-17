@@ -37,7 +37,6 @@ import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MemberValuePair;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.StringLiteral;
-
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 
 import org.eclipse.jdt.ui.CodeStyleConfiguration;
@@ -45,7 +44,7 @@ import org.eclipse.jdt.ui.CodeStyleConfiguration;
 /**
  * Validates @EnumSource annotations to ensure that excluded/included enum values
  * actually exist in the referenced enum class.
- * 
+ *
  * @since 3.15
  */
 public class EnumSourceValidator {
@@ -59,7 +58,7 @@ public class EnumSourceValidator {
 
 	/**
 	 * Validates that all values in @EnumSource names array exist in the enum.
-	 * 
+	 *
 	 * @param method the test method with @EnumSource annotation
 	 * @return List of invalid names that don't exist in the enum
 	 * @throws JavaModelException if there's an error accessing the Java model
@@ -90,7 +89,7 @@ public class EnumSourceValidator {
 
 	/**
 	 * Checks if the given method has any invalid enum names in its @EnumSource annotation.
-	 * 
+	 *
 	 * @param method the test method to check
 	 * @return true if there are invalid enum names
 	 * @throws JavaModelException if there's an error accessing the Java model
@@ -196,7 +195,7 @@ public class EnumSourceValidator {
 
 	/**
 	 * Parse a compilation unit and create an AST.
-	 * 
+	 *
 	 * @param cu the compilation unit to parse
 	 * @return the parsed CompilationUnit AST node
 	 */
@@ -209,7 +208,7 @@ public class EnumSourceValidator {
 
 	/**
 	 * Find the MethodDeclaration AST node for an IMethod.
-	 * 
+	 *
 	 * @param method the IMethod to find
 	 * @return the MethodDeclaration node, or null if not found
 	 * @throws JavaModelException if there's an error accessing the Java model
@@ -239,7 +238,7 @@ public class EnumSourceValidator {
 
 	/**
 	 * Find the @EnumSource annotation on a method declaration.
-	 * 
+	 *
 	 * @param methodDecl the method declaration to search
 	 * @return the @EnumSource Annotation node, or null if not found
 	 */
@@ -259,7 +258,7 @@ public class EnumSourceValidator {
 
 	/**
 	 * Find the enum type referenced in the @EnumSource annotation.
-	 * 
+	 *
 	 * @param methodDecl the method declaration with @EnumSource annotation
 	 * @return the IType for the enum, or null if not found
 	 */
@@ -281,7 +280,7 @@ public class EnumSourceValidator {
 
 	/**
 	 * Get all enum values from the enum type referenced in @EnumSource annotation.
-	 * 
+	 *
 	 * @param method the test method with @EnumSource annotation
 	 * @return List of all enum constant names, or empty list if not found
 	 * @throws JavaModelException if there's an error accessing the Java model
@@ -303,7 +302,7 @@ public class EnumSourceValidator {
 
 	/**
 	 * Get the names currently in the @EnumSource names attribute, and the mode.
-	 * 
+	 *
 	 * @param method the test method with @EnumSource annotation
 	 * @return EnumSourceNamesData containing the names list and mode, or null if not found
 	 * @throws JavaModelException if there's an error accessing the Java model
@@ -366,7 +365,7 @@ public class EnumSourceValidator {
 
 	/**
 	 * Calculate how many enum values would remain after excluding the specified value.
-	 * 
+	 *
 	 * @param method the test method with @EnumSource annotation
 	 * @param valueToExclude the enum value about to be excluded
 	 * @return the number of values that would remain after exclusion, or -1 if cannot determine
@@ -403,7 +402,7 @@ public class EnumSourceValidator {
 			// In INCLUDE mode: removing a value from the include list
 			Set<String> included = new HashSet<>(existingNames);
 			included.remove(valueToExclude);
-			
+
 			// If removing the last value, it switches to EXCLUDE mode with just this value
 			if (included.isEmpty()) {
 				return allValues.size() - 1;
@@ -437,7 +436,7 @@ public class EnumSourceValidator {
 	 * Removes invalid enum names from @EnumSource annotation.
 	 * This method modifies the source code to remove enum values from the names array
 	 * that don't exist in the referenced enum class.
-	 * 
+	 *
 	 * @param method the test method with @EnumSource annotation
 	 * @throws JavaModelException if there's an error accessing the Java model
 	 */
@@ -505,7 +504,7 @@ public class EnumSourceValidator {
 
 		org.eclipse.jdt.core.dom.NormalAnnotation normalAnnotation = (org.eclipse.jdt.core.dom.NormalAnnotation) annotation;
 		List<?> values = normalAnnotation.values();
-		
+
 		for (Object obj : values) {
 			if (obj instanceof MemberValuePair) {
 				MemberValuePair pair = (MemberValuePair) obj;
@@ -514,7 +513,7 @@ public class EnumSourceValidator {
 					if (value instanceof ArrayInitializer) {
 						ArrayInitializer arrayInit = (ArrayInitializer) value;
 						List<?> expressions = arrayInit.expressions();
-						
+
 						// Find and remove invalid names
 						List<Expression> toRemove = new ArrayList<>();
 						for (Object expr : expressions) {
@@ -525,7 +524,7 @@ public class EnumSourceValidator {
 								}
 							}
 						}
-						
+
 						if (!toRemove.isEmpty()) {
 							org.eclipse.jdt.core.dom.rewrite.ListRewrite listRewrite = rewrite.getListRewrite(arrayInit, ArrayInitializer.EXPRESSIONS_PROPERTY);
 							for (Expression expr : toRemove) {
@@ -537,13 +536,13 @@ public class EnumSourceValidator {
 				}
 			}
 		}
-		
+
 		return false;
 	}
 
 	/**
 	 * Gets the list of excluded enum names from @EnumSource annotation.
-	 * 
+	 *
 	 * @param method the test method with @EnumSource annotation
 	 * @return List of excluded enum names, or empty list if not in EXCLUDE mode
 	 * @throws JavaModelException if there's an error accessing the Java model
@@ -558,7 +557,7 @@ public class EnumSourceValidator {
 
 	/**
 	 * Updates the excluded names in @EnumSource annotation.
-	 * 
+	 *
 	 * @param method the test method with @EnumSource annotation
 	 * @param names the new list of names to exclude
 	 * @throws JavaModelException if there's an error accessing the Java model
@@ -631,7 +630,7 @@ public class EnumSourceValidator {
 	 * Removes the mode and names attributes from @EnumSource annotation,
 	 * restoring it to include all enum values. Also removes the Mode import
 	 * if it's no longer used elsewhere in the file.
-	 * 
+	 *
 	 * @param method the test method with @EnumSource annotation
 	 * @throws JavaModelException if there's an error accessing the Java model
 	 */
@@ -659,27 +658,27 @@ public class EnumSourceValidator {
 			try {
 				// Check if Mode is still used elsewhere in the file
 				boolean isModeUsedElsewhere = isModeTypeUsed(astRoot, method);
-				
+
 				// Combine AST rewrite with import removal if needed
 				org.eclipse.text.edits.MultiTextEdit multiEdit = new org.eclipse.text.edits.MultiTextEdit();
-				
+
 				// Add import removal if Mode is not used elsewhere
 				if (!isModeUsedElsewhere) {
 					ImportRewrite importRewrite = CodeStyleConfiguration.createImportRewrite(astRoot, true);
 					importRewrite.removeImport(ENUM_SOURCE_MODE_CLASS);
-					
+
 					org.eclipse.text.edits.TextEdit importEdit = importRewrite.rewriteImports(null);
 					if (importEdit.hasChildren() || importEdit.getLength() != 0) {
 						multiEdit.addChild(importEdit);
 					}
 				}
-				
+
 				// Add AST rewrite
 				org.eclipse.text.edits.TextEdit rewriteEdit = rewrite.rewriteAST();
 				if (rewriteEdit.hasChildren() || rewriteEdit.getLength() != 0) {
 					multiEdit.addChild(rewriteEdit);
 				}
-				
+
 				// Apply the combined edit
 				if (multiEdit.hasChildren()) {
 					cu.applyTextEdit(multiEdit, null);
@@ -724,17 +723,17 @@ public class EnumSourceValidator {
 	 * Check if the Mode type is still used elsewhere in the compilation unit.
 	 * This method checks all @EnumSource annotations (except the one being modified)
 	 * to see if any of them still use mode=Mode.EXCLUDE or mode=Mode.INCLUDE.
-	 * 
-	 * <p><b>Note on Method Matching:</b> This method uses parameter count matching 
-	 * as a heuristic for method identification. This is acceptable for JUnit test 
+	 *
+	 * <p><b>Note on Method Matching:</b> This method uses parameter count matching
+	 * as a heuristic for method identification. This is acceptable for JUnit test
 	 * methods because:
 	 * <ul>
 	 * <li>Test methods are typically not overloaded (JUnit best practices)</li>
-	 * <li>The IMethod parameter comes from the test runner which already identifies 
+	 * <li>The IMethod parameter comes from the test runner which already identifies
 	 * the exact method</li>
 	 * <li>The AST traversal is just to find the AST node for that specific IMethod</li>
 	 * </ul>
-	 * 
+	 *
 	 * @param astRoot the compilation unit AST root
 	 * @param excludeMethod the method being modified (to exclude from the search)
 	 * @return true if Mode is still referenced somewhere else in the file
@@ -743,19 +742,11 @@ public class EnumSourceValidator {
 		final boolean[] isUsed = new boolean[] { false };
 		final String excludeMethodName = excludeMethod.getElementName();
 		final String[] excludeMethodParamTypes;
-		try {
-			excludeMethodParamTypes = excludeMethod.getParameterTypes();
-		} catch (JavaModelException e) {
-			JUnitPlugin.log(e);
-			// Fall back to name-only comparison if parameter types unavailable
-			// This may skip additional methods with the same name, but it's safer
-			// than incorrectly removing the import
-			return isUsedByNameOnly(astRoot, excludeMethodName);
-		}
+		excludeMethodParamTypes = excludeMethod.getParameterTypes();
 
 		astRoot.accept(new ASTVisitor() {
 			private MethodDeclaration currentMethod = null;
-			
+
 			@Override
 			public boolean visit(MethodDeclaration node) {
 				currentMethod = node;
@@ -768,7 +759,7 @@ public class EnumSourceValidator {
 				}
 				return true;
 			}
-			
+
 			@Override
 			public void endVisit(MethodDeclaration node) {
 				if (currentMethod == node) {
@@ -880,7 +871,7 @@ public class EnumSourceValidator {
 
 	/**
 	 * Checks if method has @EnumSource with excluded values.
-	 * 
+	 *
 	 * @param method the test method to check
 	 * @return true if the method has @EnumSource with mode=EXCLUDE and non-empty names
 	 * @throws JavaModelException if there's an error accessing the Java model
