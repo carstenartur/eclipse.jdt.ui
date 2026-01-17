@@ -732,6 +732,109 @@ public class EnumSourceValidator {
 	private static boolean isModeTypeUsed(CompilationUnit astRoot, IMethod excludeMethod) {
 		final boolean[] isUsed = new boolean[] { false };
 		final String excludeMethodName = excludeMethod.getElementName();
+		final String[] excludeMethodParamTypes;
+		try {
+			excludeMethodParamTypes = excludeMethod.getParameterTypes();
+		} catch (JavaModelException e) {
+			JUnitPlugin.log(e);
+			// Fall back to name-only comparison if parameter types unavailable
+			return isUsedByNameOnly(astRoot, excludeMethodName);
+		}
+
+		astRoot.accept(new ASTVisitor() {
+			private MethodDeclaration currentMethod = null;
+			
+			@Override
+			public boolean visit(MethodDeclaration node) {
+				currentMethod = node;
+				// Skip the method we're modifying by comparing name and parameter count
+				if (node.getName().getIdentifier().equals(excludeMethodName)) {
+					// Check parameter count as additional verification
+					if (node.parameters().size() == excludeMethodParamTypes.length) {
+						return false; // Skip this method
+					}
+				}
+				return true;
+			}
+			
+			@Override
+			public void endVisit(MethodDeclaration node) {
+				if (currentMethod == node) {
+					currentMethod = null;
+				}
+			}
+
+			@Override
+			public boolean visit(MemberValuePair node) {
+				// Only process if we're not in the excluded method
+				if (currentMethod != null) {
+					// Check if this is a mode attribute
+					if (ATTR_MODE.equals(node.getName().getIdentifier())) {
+						Expression value = node.getValue();
+						// Check various expression types that could reference Mode
+						if (isModeExpression(value)) {
+							isUsed[0] = true;
+						}
+					}
+				}
+				return true;
+			}
+		});
+
+		return isUsed[0];
+	}
+
+	/**
+	 * Check if an expression references the Mode type.
+	 * Handles QualifiedName (Mode.EXCLUDE), FieldAccess (EnumSource.Mode.EXCLUDE),
+	 * and SimpleName (EXCLUDE with static import).
+	 */
+	private static boolean isModeExpression(Expression expr) {
+		if (expr instanceof org.eclipse.jdt.core.dom.QualifiedName) {
+			// Check for Mode.EXCLUDE or Mode.INCLUDE
+			org.eclipse.jdt.core.dom.QualifiedName qn = (org.eclipse.jdt.core.dom.QualifiedName) expr;
+			String qualifierName = qn.getQualifier().toString();
+			if ("Mode".equals(qualifierName)) { //$NON-NLS-1$
+				return true;
+			}
+			// Also check for EnumSource.Mode.EXCLUDE pattern
+			if (qualifierName.endsWith(".Mode")) { //$NON-NLS-1$
+				return true;
+			}
+		} else if (expr instanceof org.eclipse.jdt.core.dom.FieldAccess) {
+			// Check for obj.Mode.EXCLUDE pattern
+			org.eclipse.jdt.core.dom.FieldAccess fa = (org.eclipse.jdt.core.dom.FieldAccess) expr;
+			Expression expression = fa.getExpression();
+			if (expression instanceof org.eclipse.jdt.core.dom.QualifiedName) {
+				org.eclipse.jdt.core.dom.QualifiedName qn = (org.eclipse.jdt.core.dom.QualifiedName) expression;
+				if ("Mode".equals(qn.getName().getIdentifier())) { //$NON-NLS-1$
+					return true;
+				}
+			} else if (expression instanceof org.eclipse.jdt.core.dom.SimpleName) {
+				if ("Mode".equals(((org.eclipse.jdt.core.dom.SimpleName) expression).getIdentifier())) { //$NON-NLS-1$
+					return true;
+				}
+			}
+		} else if (expr instanceof org.eclipse.jdt.core.dom.SimpleName) {
+			// Could be static import like: mode = EXCLUDE
+			// Check if the resolved binding is from Mode enum
+			org.eclipse.jdt.core.dom.SimpleName sn = (org.eclipse.jdt.core.dom.SimpleName) expr;
+			ITypeBinding typeBinding = sn.resolveTypeBinding();
+			if (typeBinding != null) {
+				String qualifiedName = typeBinding.getQualifiedName();
+				if (ENUM_SOURCE_MODE_CLASS.equals(qualifiedName)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Fallback method to check Mode usage by method name only.
+	 */
+	private static boolean isUsedByNameOnly(CompilationUnit astRoot, String excludeMethodName) {
+		final boolean[] isUsed = new boolean[] { false };
 
 		astRoot.accept(new ASTVisitor() {
 			@Override
@@ -748,14 +851,8 @@ public class EnumSourceValidator {
 				// Check if this is a mode attribute
 				if (ATTR_MODE.equals(node.getName().getIdentifier())) {
 					Expression value = node.getValue();
-					// Check if the value references Mode (as QualifiedName like Mode.EXCLUDE)
-					if (value instanceof org.eclipse.jdt.core.dom.QualifiedName) {
-						org.eclipse.jdt.core.dom.QualifiedName qn = (org.eclipse.jdt.core.dom.QualifiedName) value;
-						String qualifierName = qn.getQualifier().toString();
-						// Check if it's using Mode.EXCLUDE or Mode.INCLUDE
-						if ("Mode".equals(qualifierName)) { //$NON-NLS-1$
-							isUsed[0] = true;
-						}
+					if (isModeExpression(value)) {
+						isUsed[0] = true;
 					}
 				}
 				return true;
