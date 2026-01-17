@@ -249,6 +249,10 @@ public final class JUnitMessages extends NLS {
 	public static String JUnitQuickAssistProcessor_remove_annotation_description;
 
 	public static String JUnitQuickAssistProcessor_remove_annotation_info;
+	
+	public static String JUnitQuickAssistProcessor_remove_invalid_enum_names_description;
+	
+	public static String JUnitQuickAssistProcessor_remove_invalid_enum_names_info;
 
 	public static String JUnitViewEditorLauncher_dialog_title;
 

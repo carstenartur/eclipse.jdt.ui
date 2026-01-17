@@ -91,6 +91,17 @@ public class JUnitQuickAssistProcessor implements IQuickAssistProcessor {
 				proposals.add(new AddAnnotationProposal(context, methodDecl, JUNIT4_IGNORE_ANNOTATION, "Ignore")); //$NON-NLS-1$
 			}
 		}
+		
+		// Check if method has @EnumSource with invalid enum names
+		if (hasAnnotation(methodDecl, "org.junit.jupiter.params.provider.EnumSource")) { //$NON-NLS-1$
+			try {
+				if (context.getCompilationUnit() != null && EnumSourceValidator.hasInvalidEnumNames(context.getCompilationUnit().findPrimaryType().getMethod(methodDecl.getName().getIdentifier(), new String[0]))) {
+					proposals.add(new RemoveInvalidEnumNamesProposal(context, methodDecl));
+				}
+			} catch (Exception e) {
+				// Ignore - validation check failed
+			}
+		}
 
 		if (proposals.isEmpty()) {
 			return null;
