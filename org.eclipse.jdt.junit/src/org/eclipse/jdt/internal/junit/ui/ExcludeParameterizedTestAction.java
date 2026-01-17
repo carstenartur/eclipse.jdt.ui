@@ -13,6 +13,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.junit.ui;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.jface.action.Action;
@@ -215,7 +216,7 @@ public class ExcludeParameterizedTestAction extends Action {
 		org.eclipse.jdt.core.dom.Expression valueExpr= null;
 		org.eclipse.jdt.core.dom.MemberValuePair existingModePair= null;
 		org.eclipse.jdt.core.dom.MemberValuePair existingNamesPair= null;
-		List<String> existingNames= new java.util.ArrayList<>();
+		List<String> existingNames= new ArrayList<>();
 		boolean isExcludeMode= false;
 		
 		if (annotation instanceof org.eclipse.jdt.core.dom.NormalAnnotation) {
@@ -269,7 +270,7 @@ public class ExcludeParameterizedTestAction extends Action {
 		}
 		
 		// Determine the new names list based on existing mode
-		List<String> newNames= new java.util.ArrayList<>();
+		List<String> newNames= new ArrayList<>();
 		
 		if (existingNamesPair == null) {
 			// No existing names attribute: Add mode=EXCLUDE and names={paramValue}

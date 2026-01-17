@@ -3289,7 +3289,8 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 		// Add names parameter
 		// For INCLUDE mode: pre-populate with all enum constants (user removes what they don't want)
-		// For EXCLUDE mode: start with empty array (user adds what they want to exclude)
+		// For EXCLUDE mode: start with empty array to prevent runtime errors (user adds what they want to exclude)
+		// Note: If EXCLUDE mode pre-populated all values, the test would have no arguments left and fail at runtime
 		org.eclipse.jdt.core.dom.MemberValuePair namesPair= ast.newMemberValuePair();
 		namesPair.setName(ast.newSimpleName("names")); //$NON-NLS-1$
 		org.eclipse.jdt.core.dom.ArrayInitializer arrayInit= ast.newArrayInitializer();
