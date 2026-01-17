@@ -123,21 +123,47 @@ public class ExcludeParameterValueAction extends Action {
 
 	/**
 	 * Extract the parameter value from a parameterized test display name.
-	 * E.g., "testWithEnum[VALUE2]" -> "VALUE2"
-	 * E.g., "testWithEnum[VALUE2, otherParam]" -> "VALUE2" (first parameter only for enum)
+	 * JUnit 5 display names for parameterized tests can have different formats:
+	 * - "testWithEnum[VALUE2]" -> "VALUE2" (enum name directly in brackets)
+	 * - "[2] VALUE2" -> "VALUE2" (index in brackets followed by enum name)
+	 * - "testWithEnum[2] VALUE2" -> "VALUE2" (method name, index in brackets, then enum name)
+	 * - "1 ==> VALUE2" -> "VALUE2" (index followed by arrow and enum name)
 	 */
 	private String extractParameterValue(String displayName) {
+		// Try to find enum name after the brackets (format: "testWithEnum[2] VALUE2" or "[2] VALUE2")
+		int closeBracket = displayName.indexOf(']');
+		if (closeBracket >= 0 && closeBracket < displayName.length() - 1) {
+			String afterBracket = displayName.substring(closeBracket + 1).trim();
+			if (!afterBracket.isEmpty()) {
+				// Handle formats like "[2] VALUE2" or "testWithEnum[2] VALUE2"
+				// Split by comma, space, or arrow to get the first token
+				String[] tokens = afterBracket.split("[,\\s]");
+				for (String token : tokens) {
+					token = token.trim();
+					// Skip empty tokens and arrow symbols
+					if (!token.isEmpty() && !"==>".equals(token) && !token.equals("==")) {
+						return token;
+					}
+				}
+			}
+		}
+		
+		// Fallback: try to get content inside brackets (format: "testWithEnum[VALUE2]")
 		int start = displayName.indexOf('[');
 		int end = displayName.indexOf(']');
 		if (start >= 0 && end > start) {
-			String params = displayName.substring(start + 1, end);
-			// Handle multiple parameters by taking the first one (enum value)
-			int commaIndex = params.indexOf(',');
-			if (commaIndex > 0) {
-				return params.substring(0, commaIndex).trim();
+			String inBracket = displayName.substring(start + 1, end).trim();
+			// Check if it's a number (index) or actual enum name
+			if (!inBracket.matches("\\d+")) {
+				// Handle multiple parameters by taking the first one (enum value)
+				int commaIndex = inBracket.indexOf(',');
+				if (commaIndex > 0) {
+					return inBracket.substring(0, commaIndex).trim();
+				}
+				return inBracket;
 			}
-			return params.trim();
 		}
+		
 		return null;
 	}
 

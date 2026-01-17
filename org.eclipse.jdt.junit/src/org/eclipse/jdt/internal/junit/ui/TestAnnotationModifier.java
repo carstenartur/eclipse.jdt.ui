@@ -201,19 +201,23 @@ public class TestAnnotationModifier {
 
 		ASTRewrite rewrite = ASTRewrite.create(astRoot.getAST());
 		final boolean[] modified = new boolean[] { false };
+		final boolean[] needsModeImport = new boolean[] { false };
 
 		astRoot.accept(new ASTVisitor() {
 			@Override
 			public boolean visit(MethodDeclaration node) {
 				if (node.getName().getIdentifier().equals(method.getElementName())) {
-					modified[0] = modifyEnumSourceInMethod(node, enumValue, rewrite);
+					needsModeImport[0] = modifyEnumSourceInMethod(node, enumValue, rewrite);
+					modified[0] = needsModeImport[0];
 				}
 				return false;
 			}
 		});
 
 		if (modified[0]) {
-			applyChanges(cu, astRoot, rewrite, null);
+			// Add Mode import when we add mode=EXCLUDE
+			String importToAdd = needsModeImport[0] ? "org.junit.jupiter.params.provider.EnumSource.Mode" : null; //$NON-NLS-1$
+			applyChanges(cu, astRoot, rewrite, importToAdd);
 		}
 	}
 
@@ -426,8 +430,9 @@ public class TestAnnotationModifier {
 		if (isExcludeMode) {
 			MemberValuePair modePair = ast.newMemberValuePair();
 			modePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
+			// Use simple qualified name: Mode.EXCLUDE (import will be added)
 			QualifiedName modeName = ast.newQualifiedName(
-				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+				ast.newSimpleName("Mode"), //$NON-NLS-1$
 				ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
 			);
 			modePair.setValue(modeName);
