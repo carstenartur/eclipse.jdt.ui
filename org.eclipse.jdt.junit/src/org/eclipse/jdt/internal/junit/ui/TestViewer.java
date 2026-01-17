@@ -199,7 +199,8 @@ public class TestViewer {
 	private final FailuresOnlyFilter fFailuresOnlyFilter= new FailuresOnlyFilter();
 	private final IgnoredOnlyFilter fIgnoredOnlyFilter= new IgnoredOnlyFilter();
 
-	private final ExcludeParameterizedTestAction fExcludeParameterizedTestAction;
+	private final DisableTestAction fDisableTestAction;
+	private final ExcludeParameterValueAction fExcludeParameterValueAction;
 
 	private final TestRunnerViewPart fTestRunnerPart;
 	private final Clipboard fClipboard;
@@ -232,7 +233,8 @@ public class TestViewer {
 		fTestRunnerPart= runner;
 		fClipboard= clipboard;
 		
-		fExcludeParameterizedTestAction= new ExcludeParameterizedTestAction(runner);
+		fDisableTestAction= new DisableTestAction(runner);
+		fExcludeParameterValueAction= new ExcludeParameterValueAction(runner);
 
 		fLayoutMode= TestRunnerViewPart.LAYOUT_HIERARCHICAL;
 
@@ -295,17 +297,31 @@ public class TestViewer {
 				if (!fTestRunnerPart.lastLaunchIsKeptAlive()) {
 					addRerunActions(manager, testSuiteElement);
 				}
+				
+				// Add "Disable This Test" for parameterized test suites
+				fDisableTestAction.update(testSuiteElement);
+				if (fDisableTestAction.isEnabled()) {
+					manager.add(new Separator());
+					manager.add(fDisableTestAction);
+				}
 			} else {
 				TestCaseElement testCaseElement= (TestCaseElement) testElement;
 				manager.add(getOpenTestAction(testCaseElement));
 				manager.add(new Separator());
 				addRerunActions(manager, testCaseElement);
 				
-				// Add exclude action for parameterized tests
-				fExcludeParameterizedTestAction.updateEnablement();
-				if (fExcludeParameterizedTestAction.isEnabled()) {
+				// Check if this test case is from a parameterized test with @EnumSource
+				fExcludeParameterValueAction.update(testCaseElement);
+				if (fExcludeParameterValueAction.isEnabled()) {
 					manager.add(new Separator());
-					manager.add(fExcludeParameterizedTestAction);
+					manager.add(fExcludeParameterValueAction);
+				}
+				
+				// For normal tests, offer to disable
+				fDisableTestAction.update(testCaseElement);
+				if (fDisableTestAction.isEnabled()) {
+					manager.add(new Separator());
+					manager.add(fDisableTestAction);
 				}
 			}
 			if (fLayoutMode == TestRunnerViewPart.LAYOUT_HIERARCHICAL) {
