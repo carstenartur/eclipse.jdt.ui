@@ -3276,7 +3276,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			org.eclipse.jdt.core.dom.MemberValuePair modePair= ast.newMemberValuePair();
 			modePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
 			// Use importRewrite to add import and get simple name reference
-			String enumSourceMode= importRewrite.addImport("org.junit.jupiter.params.provider.EnumSource$Mode", importRewriteContext); //$NON-NLS-1$
+			String enumSourceMode= importRewrite.addImport("org.junit.jupiter.params.provider.EnumSource.Mode", importRewriteContext); //$NON-NLS-1$
 			QualifiedName modeName= ast.newQualifiedName(
 				ast.newName(enumSourceMode),
 				ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
@@ -3350,7 +3350,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		}
 
 		// Use importRewrite to add import and get simple name reference
-		String enumSourceMode= importRewrite.addImport("org.junit.jupiter.params.provider.EnumSource$Mode", importRewriteContext); //$NON-NLS-1$
+		String enumSourceMode= importRewrite.addImport("org.junit.jupiter.params.provider.EnumSource.Mode", importRewriteContext); //$NON-NLS-1$
 
 		// Toggle mode or add mode parameter
 		if (hasMode && modePair != null) {
