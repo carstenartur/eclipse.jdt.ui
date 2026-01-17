@@ -1,0 +1,182 @@
+/*******************************************************************************
+ * Copyright (c) 2025 Carsten Hammer and others.
+ *
+ * This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Carsten Hammer using github copilot - initial API and implementation
+ *******************************************************************************/
+package org.eclipse.jdt.internal.junit.ui;
+
+import org.eclipse.jface.action.Action;
+
+import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.IMethod;
+import org.eclipse.jdt.core.IType;
+import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
+
+import org.eclipse.jdt.internal.junit.JUnitCorePlugin;
+import org.eclipse.jdt.internal.junit.model.TestCaseElement;
+import org.eclipse.jdt.internal.junit.model.TestElement;
+import org.eclipse.jdt.internal.junit.model.TestSuiteElement;
+
+import org.eclipse.jdt.ui.JavaUI;
+
+/**
+ * Action to disable a test by adding @Disabled (JUnit 5) or @Ignore (JUnit 4) annotation.
+ * Works on:
+ * - TestSuiteElement for parameterized tests (disables entire test method)
+ * - TestCaseElement for normal (non-parameterized) tests
+ * 
+ * @since 3.15
+ */
+public class DisableTestAction extends Action {
+
+	private TestElement fTestElement;
+	private final TestRunnerViewPart fTestRunnerPart;
+
+	public DisableTestAction(TestRunnerViewPart testRunnerPart) {
+		super(JUnitMessages.DisableTestAction_label);
+		fTestRunnerPart = testRunnerPart;
+	}
+
+	/**
+	 * Update the action based on the current test element selection.
+	 * 
+	 * @param testElement the selected test element
+	 */
+	public void update(TestElement testElement) {
+		fTestElement = testElement;
+		
+		// Enable for TestSuiteElement (parameterized test method)
+		if (testElement instanceof TestSuiteElement) {
+			TestSuiteElement testSuite = (TestSuiteElement) testElement;
+			// Check if this is a parameterized test (has test case children)
+			if (testSuite.getChildren().length > 0 && testSuite.getChildren()[0] instanceof TestCaseElement) {
+				setEnabled(true);
+				return;
+			}
+		}
+		
+		// Enable for TestCaseElement (normal test) that is NOT a parameterized test child
+		if (testElement instanceof TestCaseElement) {
+			TestCaseElement testCase = (TestCaseElement) testElement;
+			// Only enable if this is NOT a parameterized test
+			if (!testCase.isParameterizedTest()) {
+				setEnabled(true);
+				return;
+			}
+		}
+		
+		setEnabled(false);
+	}
+
+	@Override
+	public void run() {
+		if (fTestElement == null) {
+			return;
+		}
+
+		try {
+			String className;
+			String methodName;
+			
+			if (fTestElement instanceof TestSuiteElement) {
+				TestSuiteElement testSuite = (TestSuiteElement) fTestElement;
+				className = testSuite.getSuiteTypeName();
+				String testName = testSuite.getTestName();
+				int index = testName.indexOf('(');
+				methodName = index > 0 ? testName.substring(0, index) : testName;
+			} else if (fTestElement instanceof TestCaseElement) {
+				TestCaseElement testCase = (TestCaseElement) fTestElement;
+				className = testCase.getTestClassName();
+				methodName = testCase.getTestMethodName();
+			} else {
+				return;
+			}
+
+			IJavaProject javaProject = fTestElement.getTestRunSession().getLaunchedProject();
+			if (javaProject == null) {
+				return;
+			}
+
+			IType type = javaProject.findType(className);
+			if (type == null) {
+				return;
+			}
+
+			IMethod method = findTestMethod(type, methodName);
+			if (method == null) {
+				return;
+			}
+
+			ICompilationUnit cu = method.getCompilationUnit();
+			if (cu == null) {
+				return;
+			}
+
+			// Determine JUnit version
+			boolean isJUnit5 = isJUnit5Test(method);
+
+			// Add the appropriate annotation
+			TestAnnotationModifier.addDisabledAnnotation(method, isJUnit5);
+
+			// Open the editor
+			try {
+				JavaUI.openInEditor(method);
+			} catch (Exception e) {
+				// Unable to open editor
+				JUnitPlugin.log(e);
+			}
+		} catch (Exception e) {
+			JUnitPlugin.log(e);
+		}
+	}
+
+	private IMethod findTestMethod(IType type, String methodName) throws JavaModelException {
+		IMethod[] methods = type.getMethods();
+		for (IMethod method : methods) {
+			if (method.getElementName().equals(methodName)) {
+				return method;
+			}
+		}
+		return null;
+	}
+
+	private boolean isJUnit5Test(IMethod method) throws JavaModelException {
+		ICompilationUnit cu = method.getCompilationUnit();
+		if (cu == null) {
+			return false;
+		}
+
+		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
+		parser.setSource(cu);
+		parser.setResolveBindings(true);
+		CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
+
+		final boolean[] isJUnit5 = new boolean[] { false };
+		astRoot.accept(new ASTVisitor() {
+			@Override
+			public boolean visit(MethodDeclaration node) {
+				if (node.getName().getIdentifier().equals(method.getElementName())) {
+					isJUnit5[0] = TestAnnotationModifier.isJUnit5TestMethod(node) || 
+								 !TestAnnotationModifier.hasAnnotation(node, JUnitCorePlugin.JUNIT4_ANNOTATION_NAME);
+				}
+				return false;
+			}
+		});
+
+		return isJUnit5[0];
+	}
+}
