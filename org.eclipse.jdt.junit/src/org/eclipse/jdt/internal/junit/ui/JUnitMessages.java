@@ -53,6 +53,7 @@ public final class JUnitMessages extends NLS {
 	public static String EnableStackFilterAction_action_label;
 	public static String EnableStackFilterAction_action_tooltip;
 	public static String ExcludeParameterizedTestAction_label;
+	public static String ExcludeParameterizedTestAction_disableTest_label;
 	public static String ExpandAllAction_text;
 	public static String ExpandAllAction_tooltip;
 	public static String CollapseAllAction_text;

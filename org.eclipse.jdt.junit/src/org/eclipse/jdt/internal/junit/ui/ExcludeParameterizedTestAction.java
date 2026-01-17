@@ -28,20 +28,36 @@ import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.IAnnotationBinding;
+import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
+import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
+import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 
+import org.eclipse.jdt.internal.junit.JUnitCorePlugin;
 import org.eclipse.jdt.internal.junit.model.TestCaseElement;
 
+import org.eclipse.jdt.ui.CodeStyleConfiguration;
 import org.eclipse.jdt.ui.JavaUI;
 
 /**
  * Action to exclude a specific parameterized test case by modifying the @EnumSource annotation
- * to add the test parameter value to the names exclusion list.
+ * to add the test parameter value to the names exclusion list, or to disable a normal test
+ * by adding @Disabled (JUnit 5) or @Ignore (JUnit 4) annotation.
  * 
  * @since 3.15
  */
 public class ExcludeParameterizedTestAction extends Action {
+
+	private static final String JUNIT4_IGNORE_ANNOTATION = "org.junit.Ignore"; //$NON-NLS-1$
+	private static final String JUNIT5_DISABLED_ANNOTATION = "org.junit.jupiter.api.Disabled"; //$NON-NLS-1$
+	private static final String JUNIT5_TEST_ANNOTATION = "org.junit.jupiter.api.Test"; //$NON-NLS-1$
+	private static final String JUNIT5_PARAMETERIZED_TEST_ANNOTATION = "org.junit.jupiter.params.ParameterizedTest"; //$NON-NLS-1$
+	private static final String JUNIT5_REPEATED_TEST_ANNOTATION = "org.junit.jupiter.api.RepeatedTest"; //$NON-NLS-1$
+	private static final String JUNIT5_TEST_FACTORY_ANNOTATION = "org.junit.jupiter.api.TestFactory"; //$NON-NLS-1$
+	private static final String JUNIT5_TEST_TEMPLATE_ANNOTATION = "org.junit.jupiter.api.TestTemplate"; //$NON-NLS-1$
 
 	private final TestRunnerViewPart fTestRunnerPart;
 
@@ -68,16 +84,17 @@ public class ExcludeParameterizedTestAction extends Action {
 
 		TestCaseElement testCase= (TestCaseElement) element;
 		
-		// Check if this is a parameterized test with @EnumSource
-		if (!testCase.isParameterizedTest() || !"EnumSource".equals(testCase.getParameterSourceType())) { //$NON-NLS-1$
-			return;
-		}
-
 		try {
-			excludeTestParameter(testCase);
+			// Check if this is a parameterized test with @EnumSource
+			if (testCase.isParameterizedTest() && "EnumSource".equals(testCase.getParameterSourceType())) { //$NON-NLS-1$
+				excludeTestParameter(testCase);
+			} else {
+				// For normal tests, add @Disabled or @Ignore annotation
+				disableTest(testCase);
+			}
 		} catch (Exception e) {
 			// Log error
-			e.printStackTrace();
+			JUnitPlugin.log(e);
 		}
 	}
 
@@ -180,14 +197,173 @@ public class ExcludeParameterizedTestAction extends Action {
 		// Apply the changes if modification was successful
 		if (modified[0]) {
 			try {
-				org.eclipse.jdt.core.dom.rewrite.ITrackedNodePosition trackedPosition= rewrite.track(astRoot);
 				org.eclipse.text.edits.TextEdit edits= rewrite.rewriteAST();
 				cu.applyTextEdit(edits, null);
 				cu.save(null, true);
 			} catch (Exception e) {
-				e.printStackTrace();
+				JUnitPlugin.log(e);
 			}
 		}
+	}
+
+	/**
+	 * Disable a test by adding @Disabled (JUnit 5) or @Ignore (JUnit 4) annotation.
+	 */
+	private void disableTest(TestCaseElement testCase) throws JavaModelException {
+		String className= testCase.getTestClassName();
+		String methodName= testCase.getTestMethodName();
+		
+		IJavaProject javaProject= testCase.getTestRunSession().getLaunchedProject();
+		if (javaProject == null) {
+			return;
+		}
+
+		IType type= javaProject.findType(className);
+		if (type == null) {
+			return;
+		}
+
+		IMethod method= findTestMethod(type, methodName);
+		if (method == null) {
+			return;
+		}
+
+		ICompilationUnit cu= method.getCompilationUnit();
+		if (cu == null) {
+			return;
+		}
+
+		// Parse the compilation unit
+		ASTParser parser= ASTParser.newParser(AST.getJLSLatest());
+		parser.setSource(cu);
+		parser.setResolveBindings(true);
+		CompilationUnit astRoot= (CompilationUnit) parser.createAST(null);
+
+		// Find the method declaration and add annotation
+		ASTRewrite rewrite= ASTRewrite.create(astRoot.getAST());
+		final boolean[] modified= new boolean[] { false };
+		final String[] annotationToAdd= new String[1];
+		final String[] annotationSimpleName= new String[1];
+
+		astRoot.accept(new ASTVisitor() {
+			@Override
+			public boolean visit(MethodDeclaration node) {
+				if (node.getName().getIdentifier().equals(method.getElementName())) {
+					// Determine which annotation to add based on JUnit version
+					if (isJUnit5TestMethod(node)) {
+						annotationToAdd[0]= JUNIT5_DISABLED_ANNOTATION;
+						annotationSimpleName[0]= "Disabled"; //$NON-NLS-1$
+					} else if (hasAnnotation(node, JUnitCorePlugin.JUNIT4_ANNOTATION_NAME)) {
+						annotationToAdd[0]= JUNIT4_IGNORE_ANNOTATION;
+						annotationSimpleName[0]= "Ignore"; //$NON-NLS-1$
+					}
+					
+					if (annotationToAdd[0] != null) {
+						addDisableAnnotation(node, annotationToAdd[0], annotationSimpleName[0], rewrite, astRoot);
+						modified[0]= true;
+					}
+				}
+				return false;
+			}
+		});
+
+		// Apply the changes if modification was successful
+		if (modified[0]) {
+			try {
+				// Add import
+				ImportRewrite importRewrite= CodeStyleConfiguration.createImportRewrite(astRoot, true);
+				importRewrite.addImport(annotationToAdd[0]);
+
+				// Combine both edits using MultiTextEdit to avoid conflicts
+				org.eclipse.text.edits.MultiTextEdit multiEdit= new org.eclipse.text.edits.MultiTextEdit();
+				
+				org.eclipse.text.edits.TextEdit importEdit= importRewrite.rewriteImports(null);
+				if (importEdit.hasChildren() || importEdit.getLength() != 0) {
+					multiEdit.addChild(importEdit);
+				}
+				
+				org.eclipse.text.edits.TextEdit rewriteEdit= rewrite.rewriteAST();
+				multiEdit.addChild(rewriteEdit);
+
+				// Apply the combined edit
+				cu.applyTextEdit(multiEdit, null);
+				cu.save(null, true);
+
+				// Open the editor
+				JavaUI.openInEditor(method);
+			} catch (Exception e) {
+				JUnitPlugin.log(e);
+			}
+		}
+	}
+
+	/**
+	 * Add @Disabled or @Ignore annotation to the method.
+	 */
+	private void addDisableAnnotation(MethodDeclaration methodDecl, String annotationQualifiedName, 
+			String annotationSimpleName, ASTRewrite rewrite, CompilationUnit astRoot) {
+		AST ast= astRoot.getAST();
+		
+		// Add the annotation
+		org.eclipse.jdt.core.dom.MarkerAnnotation annotation= ast.newMarkerAnnotation();
+		annotation.setTypeName(ast.newName(annotationSimpleName));
+
+		ListRewrite listRewrite= rewrite.getListRewrite(methodDecl, MethodDeclaration.MODIFIERS2_PROPERTY);
+		listRewrite.insertFirst(annotation, null);
+	}
+
+	/**
+	 * Check if method has JUnit 5 test annotations.
+	 */
+	private boolean isJUnit5TestMethod(MethodDeclaration methodDecl) {
+		IMethodBinding binding= methodDecl.resolveBinding();
+		if (binding == null) {
+			return false;
+		}
+
+		IAnnotationBinding[] annotations= binding.getAnnotations();
+		for (IAnnotationBinding annotation : annotations) {
+			ITypeBinding annotationType= annotation.getAnnotationType();
+			if (annotationType != null) {
+				String qualifiedName= annotationType.getQualifiedName();
+				if (isJUnit5TestAnnotation(qualifiedName)) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check if qualified name is a JUnit 5 test annotation.
+	 */
+	private boolean isJUnit5TestAnnotation(String qualifiedName) {
+		return JUNIT5_TEST_ANNOTATION.equals(qualifiedName) ||
+			   JUNIT5_PARAMETERIZED_TEST_ANNOTATION.equals(qualifiedName) ||
+			   JUNIT5_REPEATED_TEST_ANNOTATION.equals(qualifiedName) ||
+			   JUNIT5_TEST_FACTORY_ANNOTATION.equals(qualifiedName) ||
+			   JUNIT5_TEST_TEMPLATE_ANNOTATION.equals(qualifiedName);
+	}
+
+	/**
+	 * Check if method has specific annotation.
+	 */
+	private boolean hasAnnotation(MethodDeclaration methodDecl, String annotationQualifiedName) {
+		IMethodBinding binding= methodDecl.resolveBinding();
+		if (binding == null) {
+			return false;
+		}
+
+		IAnnotationBinding[] annotations= binding.getAnnotations();
+		for (IAnnotationBinding annotation : annotations) {
+			ITypeBinding annotationType= annotation.getAnnotationType();
+			if (annotationType != null && annotationQualifiedName.equals(annotationType.getQualifiedName())) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private boolean modifyEnumSourceInMethod(MethodDeclaration methodDecl, String paramValue, ASTRewrite rewrite) {
@@ -326,6 +502,9 @@ public class ExcludeParameterizedTestAction extends Action {
 
 	/**
 	 * Updates the enabled state based on the current selection.
+	 * Enables the action for:
+	 * - Parameterized tests with @EnumSource that have failed
+	 * - Normal tests that have failed
 	 */
 	public void updateEnablement() {
 		TestViewer testViewer= fTestRunnerPart.getTestViewer();
@@ -335,18 +514,29 @@ public class ExcludeParameterizedTestAction extends Action {
 		}
 		IStructuredSelection selection= (IStructuredSelection) testViewer.getActiveViewer().getSelection();
 		boolean enabled= false;
+		String label= JUnitMessages.ExcludeParameterizedTestAction_label;
 
 		if (selection != null && !selection.isEmpty()) {
 			Object element= selection.getFirstElement();
 			if (element instanceof TestCaseElement) {
 				TestCaseElement testCase= (TestCaseElement) element;
-				// Enable only for parameterized tests with @EnumSource that have failed
-				enabled= testCase.isParameterizedTest() 
+				
+				// Enable for parameterized tests with @EnumSource that have failed
+				if (testCase.isParameterizedTest() 
 						&& "EnumSource".equals(testCase.getParameterSourceType()) //$NON-NLS-1$
-						&& testCase.getStatus().isErrorOrFailure();
+						&& testCase.getStatus().isErrorOrFailure()) {
+					enabled= true;
+					label= JUnitMessages.ExcludeParameterizedTestAction_label;
+				} 
+				// Enable for any failed test (normal tests)
+				else if (testCase.getStatus().isErrorOrFailure()) {
+					enabled= true;
+					label= JUnitMessages.ExcludeParameterizedTestAction_disableTest_label;
+				}
 			}
 		}
 
 		setEnabled(enabled);
+		setText(label);
 	}
 }
