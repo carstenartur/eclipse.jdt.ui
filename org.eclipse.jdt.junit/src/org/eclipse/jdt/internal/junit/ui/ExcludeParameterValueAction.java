@@ -27,11 +27,11 @@ import org.eclipse.jdt.ui.JavaUI;
 
 /**
  * Action to exclude a specific parameter value from a parameterized test
- * by modifying the @EnumSource annotation to add the test parameter value 
+ * by modifying the @EnumSource annotation to add the test parameter value
  * to the names exclusion list.
- * 
+ *
  * Only works on TestCaseElement that is a child of a parameterized test with @EnumSource.
- * 
+ *
  * @since 3.15
  */
 public class ExcludeParameterValueAction extends Action {
@@ -44,12 +44,12 @@ public class ExcludeParameterValueAction extends Action {
 
 	/**
 	 * Update the action based on the current test case element selection.
-	 * 
+	 *
 	 * @param testElement the selected test element
 	 */
 	public void update(TestElement testElement) {
 		fTestCaseElement = null;
-		
+
 		// Only enable for TestCaseElement
 		if (!(testElement instanceof TestCaseElement)) {
 			setEnabled(false);
@@ -57,19 +57,19 @@ public class ExcludeParameterValueAction extends Action {
 		}
 
 		TestCaseElement testCase = (TestCaseElement) testElement;
-		
+
 		// Ensure metadata is populated
 		if (!testCase.isParameterizedTest() && testCase.getParameterSourceType() == null) {
 			ParameterizedTestMetadataExtractor.populateMetadata(testCase);
 		}
-		
+
 		// Only enable for parameterized tests with @EnumSource
 		if (testCase.isParameterizedTest() && "EnumSource".equals(testCase.getParameterSourceType())) { //$NON-NLS-1$
 			fTestCaseElement = testCase;
 			setEnabled(true);
 			return;
 		}
-		
+
 		setEnabled(false);
 	}
 
@@ -90,7 +90,7 @@ public class ExcludeParameterValueAction extends Action {
 			// Find the test method
 			String className = fTestCaseElement.getTestClassName();
 			String methodName = fTestCaseElement.getTestMethodName();
-			
+
 			IJavaProject javaProject = fTestCaseElement.getTestRunSession().getLaunchedProject();
 			if (javaProject == null) {
 				return;
@@ -146,24 +146,24 @@ public class ExcludeParameterValueAction extends Action {
 			if (!afterBracket.isEmpty()) {
 				// Handle formats like "[2] VALUE2" or "testWithEnum[2] VALUE2"
 				// Split by comma, space, or arrow to get the first token
-				String[] tokens = afterBracket.split("[,\\s]");
+				String[] tokens = afterBracket.split("[,\\s]"); //$NON-NLS-1$
 				for (String token : tokens) {
 					token = token.trim();
 					// Skip empty tokens and arrow symbols
-					if (!token.isEmpty() && !"==>".equals(token) && !token.equals("==")) {
+					if (!token.isEmpty() && !"==>".equals(token) && !token.equals("==")) { //$NON-NLS-1$ //$NON-NLS-2$
 						return token;
 					}
 				}
 			}
 		}
-		
+
 		// Fallback: try to get content inside brackets (format: "testWithEnum[VALUE2]")
 		int start = displayName.indexOf('[');
 		int end = displayName.indexOf(']');
 		if (start >= 0 && end > start) {
 			String inBracket = displayName.substring(start + 1, end).trim();
 			// Check if it's a number (index) or actual enum name
-			if (!inBracket.matches("\\d+")) {
+			if (!inBracket.matches("\\d+")) { //$NON-NLS-1$
 				// Handle multiple parameters by taking the first one (enum value)
 				int commaIndex = inBracket.indexOf(',');
 				if (commaIndex > 0) {
@@ -172,7 +172,7 @@ public class ExcludeParameterValueAction extends Action {
 				return inBracket;
 			}
 		}
-		
+
 		return null;
 	}
 

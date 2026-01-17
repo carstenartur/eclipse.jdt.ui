@@ -16,6 +16,9 @@ package org.eclipse.jdt.internal.junit.ui;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.text.edits.MultiTextEdit;
+import org.eclipse.text.edits.TextEdit;
+
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.JavaModelException;
@@ -36,18 +39,13 @@ import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 
-import org.eclipse.jdt.internal.junit.JUnitCorePlugin;
-
 import org.eclipse.jdt.ui.CodeStyleConfiguration;
-
-import org.eclipse.text.edits.MultiTextEdit;
-import org.eclipse.text.edits.TextEdit;
 
 /**
  * Utility class for modifying JUnit test annotations.
  * Provides common functionality for adding, removing, and modifying test annotations
  * to avoid code duplication across Quick Assist and context menu actions.
- * 
+ *
  * <p><b>Note on Method Matching:</b> This utility matches methods by name only when
  * traversing the AST. This is acceptable for JUnit test methods because:
  * <ul>
@@ -55,7 +53,7 @@ import org.eclipse.text.edits.TextEdit;
  * <li>The IMethod parameter comes from the test runner which already identifies the exact method</li>
  * <li>The AST traversal is just to find the AST node for that specific IMethod</li>
  * </ul>
- * 
+ *
  * @since 3.15
  */
 public class TestAnnotationModifier {
@@ -70,7 +68,7 @@ public class TestAnnotationModifier {
 
 	/**
 	 * Add @Disabled (JUnit 5) or @Ignore (JUnit 4) annotation to a method.
-	 * 
+	 *
 	 * @param method the method to add the annotation to
 	 * @param isJUnit5 whether to use JUnit 5 (@Disabled) or JUnit 4 (@Ignore)
 	 * @throws JavaModelException if there's an error accessing the Java model
@@ -78,7 +76,7 @@ public class TestAnnotationModifier {
 	public static void addDisabledAnnotation(IMethod method, boolean isJUnit5) throws JavaModelException {
 		String annotationQualifiedName = isJUnit5 ? JUNIT5_DISABLED_ANNOTATION : JUNIT4_IGNORE_ANNOTATION;
 		String annotationSimpleName = isJUnit5 ? "Disabled" : "Ignore"; //$NON-NLS-1$ //$NON-NLS-2$
-		
+
 		ICompilationUnit cu = method.getCompilationUnit();
 		if (cu == null) {
 			return;
@@ -117,7 +115,7 @@ public class TestAnnotationModifier {
 
 	/**
 	 * Remove @Disabled or @Ignore annotation from a method.
-	 * 
+	 *
 	 * @param method the method to remove the annotation from
 	 * @throws JavaModelException if there's an error accessing the Java model
 	 */
@@ -149,7 +147,7 @@ public class TestAnnotationModifier {
 							ITypeBinding annotationType = annotationBinding.getAnnotationType();
 							if (annotationType != null) {
 								String qualifiedName = annotationType.getQualifiedName();
-								if (JUNIT5_DISABLED_ANNOTATION.equals(qualifiedName) || 
+								if (JUNIT5_DISABLED_ANNOTATION.equals(qualifiedName) ||
 									JUNIT4_IGNORE_ANNOTATION.equals(qualifiedName)) {
 									// Find and remove the annotation
 									List<?> modifiers = node.modifiers();
@@ -182,7 +180,7 @@ public class TestAnnotationModifier {
 
 	/**
 	 * Modify @EnumSource annotation to exclude a specific value.
-	 * 
+	 *
 	 * @param method the method with the @EnumSource annotation
 	 * @param enumValue the enum value to exclude
 	 * @throws JavaModelException if there's an error accessing the Java model
@@ -223,7 +221,7 @@ public class TestAnnotationModifier {
 
 	/**
 	 * Check if a method has @Disabled or @Ignore annotation.
-	 * 
+	 *
 	 * @param method the method to check
 	 * @return true if the method has @Disabled or @Ignore annotation
 	 * @throws JavaModelException if there's an error accessing the Java model
@@ -253,7 +251,7 @@ public class TestAnnotationModifier {
 							ITypeBinding annotationType = annotationBinding.getAnnotationType();
 							if (annotationType != null) {
 								String qualifiedName = annotationType.getQualifiedName();
-								if (JUNIT5_DISABLED_ANNOTATION.equals(qualifiedName) || 
+								if (JUNIT5_DISABLED_ANNOTATION.equals(qualifiedName) ||
 									JUNIT4_IGNORE_ANNOTATION.equals(qualifiedName)) {
 									result[0] = true;
 									break;
@@ -341,14 +339,14 @@ public class TestAnnotationModifier {
 
 	private static void modifyAnnotationToExclude(Annotation annotation, String paramValue, ASTRewrite rewrite) {
 		AST ast = annotation.getAST();
-		
+
 		// Check if annotation already has names and mode attributes
 		Expression valueExpr = null;
 		MemberValuePair existingModePair = null;
 		MemberValuePair existingNamesPair = null;
 		List<String> existingNames = new ArrayList<>();
 		boolean isExcludeMode = false;
-		
+
 		if (annotation instanceof org.eclipse.jdt.core.dom.NormalAnnotation) {
 			org.eclipse.jdt.core.dom.NormalAnnotation normalAnnotation = (org.eclipse.jdt.core.dom.NormalAnnotation) annotation;
 			List<?> values = normalAnnotation.values();
@@ -386,11 +384,11 @@ public class TestAnnotationModifier {
 		} else if (annotation instanceof org.eclipse.jdt.core.dom.SingleMemberAnnotation) {
 			valueExpr = ((org.eclipse.jdt.core.dom.SingleMemberAnnotation) annotation).getValue();
 		}
-		
+
 		// Create new NormalAnnotation
 		org.eclipse.jdt.core.dom.NormalAnnotation newAnnotation = ast.newNormalAnnotation();
 		newAnnotation.setTypeName(ast.newName(annotation.getTypeName().getFullyQualifiedName()));
-		
+
 		// Copy value attribute
 		if (valueExpr != null) {
 			MemberValuePair valuePair = ast.newMemberValuePair();
@@ -398,10 +396,10 @@ public class TestAnnotationModifier {
 			valuePair.setValue((Expression) rewrite.createCopyTarget(valueExpr));
 			newAnnotation.values().add(valuePair);
 		}
-		
+
 		// Determine the new names list based on existing mode
 		List<String> newNames = new ArrayList<>();
-		
+
 		if (existingNamesPair == null) {
 			// No existing names attribute: Add mode=EXCLUDE and names={paramValue}
 			newNames.add(paramValue);
@@ -425,7 +423,7 @@ public class TestAnnotationModifier {
 				isExcludeMode = true;
 			}
 		}
-		
+
 		// Add mode parameter if EXCLUDE mode
 		if (isExcludeMode) {
 			MemberValuePair modePair = ast.newMemberValuePair();
@@ -438,7 +436,7 @@ public class TestAnnotationModifier {
 			modePair.setValue(modeName);
 			newAnnotation.values().add(modePair);
 		}
-		
+
 		// Add names parameter with the new list
 		MemberValuePair namesPair = ast.newMemberValuePair();
 		namesPair.setName(ast.newSimpleName("names")); //$NON-NLS-1$
@@ -450,7 +448,7 @@ public class TestAnnotationModifier {
 		}
 		namesPair.setValue(arrayInit);
 		newAnnotation.values().add(namesPair);
-		
+
 		// Replace old annotation with new one
 		rewrite.replace(annotation, newAnnotation, null);
 	}
@@ -458,18 +456,18 @@ public class TestAnnotationModifier {
 	private static void applyChanges(ICompilationUnit cu, CompilationUnit astRoot, ASTRewrite rewrite, String annotationToImport) throws JavaModelException {
 		try {
 			MultiTextEdit multiEdit = new MultiTextEdit();
-			
+
 			// Add import if needed
 			if (annotationToImport != null) {
 				ImportRewrite importRewrite = CodeStyleConfiguration.createImportRewrite(astRoot, true);
 				importRewrite.addImport(annotationToImport);
-				
+
 				TextEdit importEdit = importRewrite.rewriteImports(null);
 				if (importEdit.hasChildren() || importEdit.getLength() != 0) {
 					multiEdit.addChild(importEdit);
 				}
 			}
-			
+
 			TextEdit rewriteEdit = rewrite.rewriteAST();
 			multiEdit.addChild(rewriteEdit);
 
@@ -484,18 +482,18 @@ public class TestAnnotationModifier {
 	private static void applyChangesWithImportRemoval(ICompilationUnit cu, CompilationUnit astRoot, ASTRewrite rewrite, String annotationToRemove) throws JavaModelException {
 		try {
 			MultiTextEdit multiEdit = new MultiTextEdit();
-			
+
 			// Remove import if needed
 			if (annotationToRemove != null) {
 				ImportRewrite importRewrite = CodeStyleConfiguration.createImportRewrite(astRoot, true);
 				importRewrite.removeImport(annotationToRemove);
-				
+
 				TextEdit importEdit = importRewrite.rewriteImports(null);
 				if (importEdit.hasChildren() || importEdit.getLength() != 0) {
 					multiEdit.addChild(importEdit);
 				}
 			}
-			
+
 			TextEdit rewriteEdit = rewrite.rewriteAST();
 			if (rewriteEdit.hasChildren() || rewriteEdit.getLength() != 0) {
 				multiEdit.addChild(rewriteEdit);

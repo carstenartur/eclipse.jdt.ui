@@ -15,7 +15,6 @@ package org.eclipse.jdt.junit.tests;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.After;
@@ -35,10 +34,10 @@ import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 
+import org.eclipse.jdt.internal.junit.ui.TestAnnotationModifier;
+
 import org.eclipse.jdt.ui.tests.core.rules.Java1d8ProjectTestSetup;
 import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
-
-import org.eclipse.jdt.internal.junit.ui.TestAnnotationModifier;
 
 /**
  * Tests for JUnit context menu actions (ExcludeParameterValueAction and DisableTestAction).
@@ -71,24 +70,24 @@ public class JUnitContextMenuTest {
 	public void testExcludeEnumValue_AddsImportForMode() throws Exception {
 		// Test that excludeEnumValue adds proper import for Mode
 		IPackageFragment pack1 = fSourceFolder.createPackageFragment("test1", false, null);
-		
+
 		// Create enum
 		String enumCode = """
 			package test1;
-			
+
 			public enum TestEnum {
 				VALUE1, VALUE2, VALUE3
 			}
 			""";
 		pack1.createCompilationUnit("TestEnum.java", enumCode, false, null);
-		
+
 		// Create test with @EnumSource
 		String testCode = """
 			package test1;
-			
+
 			import org.junit.jupiter.params.ParameterizedTest;
 			import org.junit.jupiter.params.provider.EnumSource;
-			
+
 			public class MyTest {
 			    @ParameterizedTest
 			    @EnumSource(TestEnum.class)
@@ -97,14 +96,14 @@ public class JUnitContextMenuTest {
 			    }
 			}
 			""";
-		
+
 		ICompilationUnit cu = pack1.createCompilationUnit("MyTest.java", testCode, false, null);
 		IType type = cu.getType("MyTest");
 		IMethod method = type.getMethod("testWithEnum", new String[] { "QTestEnum;" });
-		
+
 		// Apply exclusion
 		TestAnnotationModifier.excludeEnumValue(method, "VALUE2");
-		
+
 		// Check the result
 		String result = cu.getSource();
 		assertTrue("Should contain Mode import", result.contains("import org.junit.jupiter.params.provider.EnumSource.Mode;"));
@@ -119,9 +118,9 @@ public class JUnitContextMenuTest {
 		IPackageFragment pack1 = fSourceFolder.createPackageFragment("test1", false, null);
 		String original = """
 			package test1;
-			
+
 			import org.junit.jupiter.api.Test;
-			
+
 			public class MyTest {
 			    @Test
 			    public void testMethod() {
@@ -129,25 +128,25 @@ public class JUnitContextMenuTest {
 			    }
 			}
 			""";
-		
+
 		ICompilationUnit cu = pack1.createCompilationUnit("MyTest.java", original, false, null);
 		IType type = cu.getType("MyTest");
 		IMethod method = type.getMethod("testMethod", new String[0]);
-		
+
 		// Initially not disabled
 		assertFalse("Initially should not be disabled", TestAnnotationModifier.isDisabled(method));
-		
+
 		// Add @Disabled annotation
 		TestAnnotationModifier.addDisabledAnnotation(method, true);
-		
+
 		// Should now be disabled
 		assertTrue("Should be disabled after adding annotation", TestAnnotationModifier.isDisabled(method));
 		String afterAdd = cu.getSource();
 		assertTrue("Should contain @Disabled", afterAdd.contains("@Disabled"));
-		
+
 		// Remove @Disabled annotation
 		TestAnnotationModifier.removeDisabledAnnotation(method);
-		
+
 		// Should not be disabled anymore
 		assertFalse("Should not be disabled after removing annotation", TestAnnotationModifier.isDisabled(method));
 		String afterRemove = cu.getSource();
@@ -160,9 +159,9 @@ public class JUnitContextMenuTest {
 		IPackageFragment pack1 = fSourceFolder.createPackageFragment("test1", false, null);
 		String original = """
 			package test1;
-			
+
 			import org.junit.jupiter.api.Test;
-			
+
 			public class MyTest {
 			    @Test
 			    public void testMethod() {
@@ -170,17 +169,17 @@ public class JUnitContextMenuTest {
 			    }
 			}
 			""";
-		
+
 		ICompilationUnit cu = pack1.createCompilationUnit("MyTest.java", original, false, null);
 		IType type = cu.getType("MyTest");
 		IMethod method = type.getMethod("testMethod", new String[0]);
-		
+
 		// Add @Disabled annotation twice (simulate clicking the action twice)
 		TestAnnotationModifier.addDisabledAnnotation(method, true);
 		String afterFirstAdd = cu.getSource();
 		int firstCount = countOccurrences(afterFirstAdd, "@Disabled");
 		assertEquals("Should have exactly one @Disabled after first add", 1, firstCount);
-		
+
 		// Try to add again - but with proper toggle behavior, this would be prevented
 		// by checking isDisabled() first, so we're testing that the check works
 		assertTrue("Should be disabled", TestAnnotationModifier.isDisabled(method));
@@ -190,24 +189,24 @@ public class JUnitContextMenuTest {
 	public void testExcludeEnumValue_MultipleExclusions() throws Exception {
 		// Test adding multiple exclusions
 		IPackageFragment pack1 = fSourceFolder.createPackageFragment("test1", false, null);
-		
+
 		// Create enum
 		String enumCode = """
 			package test1;
-			
+
 			public enum TestEnum {
 				VALUE1, VALUE2, VALUE3
 			}
 			""";
 		pack1.createCompilationUnit("TestEnum.java", enumCode, false, null);
-		
+
 		// Create test with @EnumSource
 		String testCode = """
 			package test1;
-			
+
 			import org.junit.jupiter.params.ParameterizedTest;
 			import org.junit.jupiter.params.provider.EnumSource;
-			
+
 			public class MyTest {
 			    @ParameterizedTest
 			    @EnumSource(TestEnum.class)
@@ -216,16 +215,16 @@ public class JUnitContextMenuTest {
 			    }
 			}
 			""";
-		
+
 		ICompilationUnit cu = pack1.createCompilationUnit("MyTest.java", testCode, false, null);
 		IType type = cu.getType("MyTest");
 		IMethod method = type.getMethod("testWithEnum", new String[] { "QTestEnum;" });
-		
+
 		// Apply first exclusion
 		TestAnnotationModifier.excludeEnumValue(method, "VALUE2");
 		String afterFirst = cu.getSource();
 		assertTrue("Should have VALUE2", afterFirst.contains("\"VALUE2\""));
-		
+
 		// Apply second exclusion
 		TestAnnotationModifier.excludeEnumValue(method, "VALUE3");
 		String afterSecond = cu.getSource();
@@ -237,16 +236,16 @@ public class JUnitContextMenuTest {
 	public void testDisableTestAction_JUnit4Support() throws Exception {
 		// Test that JUnit 4 @Ignore is handled correctly
 		IPackageFragment pack1 = fSourceFolder.createPackageFragment("test1", false, null);
-		
+
 		// Add JUnit 4 to classpath
 		IClasspathEntry cpe4 = JavaCore.newContainerEntry(JUnitCore.JUNIT4_CONTAINER_PATH);
 		JavaProjectHelper.addToClasspath(fJProject, cpe4);
-		
+
 		String original = """
 			package test1;
-			
+
 			import org.junit.Test;
-			
+
 			public class MyTest {
 			    @Test
 			    public void testMethod() {
@@ -254,21 +253,21 @@ public class JUnitContextMenuTest {
 			    }
 			}
 			""";
-		
+
 		ICompilationUnit cu = pack1.createCompilationUnit("MyTest.java", original, false, null);
 		IType type = cu.getType("MyTest");
 		IMethod method = type.getMethod("testMethod", new String[0]);
-		
+
 		// Add @Ignore annotation (JUnit 4)
 		TestAnnotationModifier.addDisabledAnnotation(method, false);
-		
+
 		String afterAdd = cu.getSource();
 		assertTrue("Should contain @Ignore", afterAdd.contains("@Ignore"));
 		assertTrue("Should be disabled", TestAnnotationModifier.isDisabled(method));
-		
+
 		// Remove @Ignore annotation
 		TestAnnotationModifier.removeDisabledAnnotation(method);
-		
+
 		String afterRemove = cu.getSource();
 		assertFalse("Should not contain @Ignore", afterRemove.contains("@Ignore"));
 		assertFalse("Should not be disabled", TestAnnotationModifier.isDisabled(method));
