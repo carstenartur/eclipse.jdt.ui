@@ -400,42 +400,13 @@ public class TestViewer {
 	}
 
 	private void addReincludeExcludedValuesSubmenu(IMenuManager manager, TestSuiteElement testSuiteElement) {
-		// Check if this is a parameterized test with excluded enum values
-		String testName = testSuiteElement.getTestName();
-		int index = testName.indexOf('(');
-		if (index <= 0) {
-			return; // Not a parameterized test method signature
-		}
-
-		String methodName = testName.substring(0, index);
-		String className = testSuiteElement.getSuiteTypeName();
-
-		if (className == null || className.isEmpty()) {
-			return;
-		}
-
-		IJavaProject javaProject = testSuiteElement.getTestRunSession().getLaunchedProject();
-		if (javaProject == null) {
+		IMethod method = TestMethodFinder.findMethodForParameterizedTest(testSuiteElement);
+		if (method == null) {
 			return;
 		}
 
 		try {
-			IType type = javaProject.findType(className);
-			if (type == null) {
-				return;
-			}
-
-			// Find the method
-			IMethod method = null;
-			IMethod[] methods = type.getMethods();
-			for (IMethod m : methods) {
-				if (m.getElementName().equals(methodName)) {
-					method = m;
-					break;
-				}
-			}
-
-			if (method != null && EnumSourceValidator.hasExcludedValues(method)) {
+			if (EnumSourceValidator.hasExcludedValues(method)) {
 				List<String> excludedNames = EnumSourceValidator.getExcludedNames(method);
 
 				if (!excludedNames.isEmpty()) {

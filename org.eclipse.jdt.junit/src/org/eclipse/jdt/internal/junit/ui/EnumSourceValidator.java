@@ -47,6 +47,10 @@ import org.eclipse.jdt.core.dom.StringLiteral;
 public class EnumSourceValidator {
 
 	private static final String ENUM_SOURCE_ANNOTATION = "org.junit.jupiter.params.provider.EnumSource"; //$NON-NLS-1$
+	private static final String ATTR_MODE = "mode"; //$NON-NLS-1$
+	private static final String ATTR_NAMES = "names"; //$NON-NLS-1$
+	private static final String ATTR_VALUE = "value"; //$NON-NLS-1$
+	private static final String MODE_EXCLUDE = "EXCLUDE"; //$NON-NLS-1$
 
 	/**
 	 * Validates that all values in @EnumSource names array exist in the enum.
@@ -122,7 +126,7 @@ public class EnumSourceValidator {
 	private static IType extractEnumType(IAnnotationBinding annotationBinding, MethodDeclaration methodDecl) {
 		IMemberValuePairBinding[] memberValuePairs = annotationBinding.getAllMemberValuePairs();
 		for (IMemberValuePairBinding pair : memberValuePairs) {
-			if ("value".equals(pair.getName())) { //$NON-NLS-1$
+			if (ATTR_VALUE.equals(pair.getName())) {
 				Object value = pair.getValue();
 				if (value instanceof ITypeBinding) {
 					ITypeBinding typeBinding = (ITypeBinding) value;
@@ -150,7 +154,7 @@ public class EnumSourceValidator {
 	private static void extractNamesArray(IAnnotationBinding annotationBinding, MethodDeclaration methodDecl, List<String> namesOut) {
 		IMemberValuePairBinding[] memberValuePairs = annotationBinding.getAllMemberValuePairs();
 		for (IMemberValuePairBinding pair : memberValuePairs) {
-			if ("names".equals(pair.getName())) { //$NON-NLS-1$
+			if (ATTR_NAMES.equals(pair.getName())) {
 				Object value = pair.getValue();
 				if (value instanceof Object[]) {
 					Object[] values = (Object[]) value;
@@ -327,14 +331,14 @@ public class EnumSourceValidator {
 				if (obj instanceof MemberValuePair) {
 					MemberValuePair pair = (MemberValuePair) obj;
 					String name = pair.getName().getIdentifier();
-					if ("mode".equals(name)) { //$NON-NLS-1$
+					if (ATTR_MODE.equals(name)) {
 						// Check if it's EXCLUDE mode
 						Expression modeValue = pair.getValue();
 						if (modeValue instanceof org.eclipse.jdt.core.dom.QualifiedName) {
 							org.eclipse.jdt.core.dom.QualifiedName qn = (org.eclipse.jdt.core.dom.QualifiedName) modeValue;
-							isExcludeMode = "EXCLUDE".equals(qn.getName().getIdentifier()); //$NON-NLS-1$
+							isExcludeMode = MODE_EXCLUDE.equals(qn.getName().getIdentifier());
 						}
-					} else if ("names".equals(name)) { //$NON-NLS-1$
+					} else if (ATTR_NAMES.equals(name)) {
 						// Extract existing names
 						Expression namesValue = pair.getValue();
 						if (namesValue instanceof ArrayInitializer) {
@@ -500,7 +504,7 @@ public class EnumSourceValidator {
 		for (Object obj : values) {
 			if (obj instanceof MemberValuePair) {
 				MemberValuePair pair = (MemberValuePair) obj;
-				if ("names".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
+				if (ATTR_NAMES.equals(pair.getName().getIdentifier())) {
 					Expression value = pair.getValue();
 					if (value instanceof ArrayInitializer) {
 						ArrayInitializer arrayInit = (ArrayInitializer) value;
@@ -601,7 +605,7 @@ public class EnumSourceValidator {
 		for (Object obj : values) {
 			if (obj instanceof MemberValuePair) {
 				MemberValuePair pair = (MemberValuePair) obj;
-				if ("names".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
+				if (ATTR_NAMES.equals(pair.getName().getIdentifier())) {
 					// Create new array with updated names
 					ArrayInitializer newArray = ast.newArrayInitializer();
 					for (String name : newNames) {
@@ -675,7 +679,7 @@ public class EnumSourceValidator {
 			if (obj instanceof MemberValuePair) {
 				MemberValuePair pair = (MemberValuePair) obj;
 				String name = pair.getName().getIdentifier();
-				if ("mode".equals(name) || "names".equals(name)) { //$NON-NLS-1$ //$NON-NLS-2$
+				if (ATTR_MODE.equals(name) || ATTR_NAMES.equals(name)) {
 					listRewrite.remove((MemberValuePair) obj, null);
 					modified = true;
 				}
