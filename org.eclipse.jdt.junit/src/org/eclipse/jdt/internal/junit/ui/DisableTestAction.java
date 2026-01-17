@@ -44,6 +44,7 @@ import org.eclipse.jdt.ui.JavaUI;
 public class DisableTestAction extends Action {
 
 	private TestElement fTestElement;
+	private boolean fIsCurrentlyDisabled = false;
 
 	public DisableTestAction(TestRunnerViewPart testRunnerPart) {
 		super(JUnitMessages.DisableTestAction_label);
@@ -56,6 +57,7 @@ public class DisableTestAction extends Action {
 	 */
 	public void update(TestElement testElement) {
 		fTestElement = testElement;
+		fIsCurrentlyDisabled = false;
 		
 		// Enable for TestSuiteElement (parameterized test method)
 		if (testElement instanceof TestSuiteElement) {
@@ -66,6 +68,9 @@ public class DisableTestAction extends Action {
 				// Parameterized test methods have names like "testWithEnum(TestEnum)" 
 				// Check for valid method signature pattern
 				if (testName != null && isParameterizedTestMethod(testName)) {
+					// Check if method is already disabled
+					checkDisabledStatus(testSuite);
+					updateLabel();
 					setEnabled(true);
 					return;
 				}
@@ -83,6 +88,9 @@ public class DisableTestAction extends Action {
 			
 			// Only enable if this is NOT a parameterized test
 			if (!testCase.isParameterizedTest()) {
+				// Check if method is already disabled
+				checkDisabledStatus(testCase);
+				updateLabel();
 				setEnabled(true);
 				return;
 			}
@@ -104,6 +112,61 @@ public class DisableTestAction extends Action {
 		int openParen = testName.indexOf('(');
 		int closeParen = testName.lastIndexOf(')');
 		return openParen > 0 && closeParen > openParen && closeParen == testName.length() - 1;
+	}
+	
+	/**
+	 * Check if the test method is already disabled.
+	 * 
+	 * @param testElement the test element to check
+	 */
+	private void checkDisabledStatus(TestElement testElement) {
+		try {
+			String className;
+			String methodName;
+			
+			if (testElement instanceof TestSuiteElement) {
+				TestSuiteElement testSuite = (TestSuiteElement) testElement;
+				className = testSuite.getSuiteTypeName();
+				String testName = testSuite.getTestName();
+				int index = testName.indexOf('(');
+				methodName = index > 0 ? testName.substring(0, index) : testName;
+			} else if (testElement instanceof TestCaseElement) {
+				TestCaseElement testCase = (TestCaseElement) testElement;
+				className = testCase.getTestClassName();
+				methodName = testCase.getTestMethodName();
+			} else {
+				return;
+			}
+
+			IJavaProject javaProject = testElement.getTestRunSession().getLaunchedProject();
+			if (javaProject == null) {
+				return;
+			}
+
+			IType type = javaProject.findType(className);
+			if (type == null) {
+				return;
+			}
+
+			IMethod method = findTestMethod(type, methodName);
+			if (method != null) {
+				fIsCurrentlyDisabled = TestAnnotationModifier.isDisabled(method);
+			}
+		} catch (Exception e) {
+			// Unable to check disabled status, assume not disabled
+			fIsCurrentlyDisabled = false;
+		}
+	}
+	
+	/**
+	 * Update the action label based on current disabled status.
+	 */
+	private void updateLabel() {
+		if (fIsCurrentlyDisabled) {
+			setText(JUnitMessages.DisableTestAction_enable_label);
+		} else {
+			setText(JUnitMessages.DisableTestAction_label);
+		}
 	}
 
 	@Override
@@ -150,11 +213,15 @@ public class DisableTestAction extends Action {
 				return;
 			}
 
-			// Determine JUnit version
-			boolean isJUnit5 = isJUnit5Test(method);
-
-			// Add the appropriate annotation
-			TestAnnotationModifier.addDisabledAnnotation(method, isJUnit5);
+			// Toggle: remove if already disabled, add if not disabled
+			if (fIsCurrentlyDisabled) {
+				// Remove @Disabled or @Ignore annotation
+				TestAnnotationModifier.removeDisabledAnnotation(method);
+			} else {
+				// Determine JUnit version and add appropriate annotation
+				boolean isJUnit5 = isJUnit5Test(method);
+				TestAnnotationModifier.addDisabledAnnotation(method, isJUnit5);
+			}
 
 			// Open the editor
 			try {
