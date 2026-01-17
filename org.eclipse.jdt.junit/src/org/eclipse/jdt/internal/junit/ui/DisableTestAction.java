@@ -30,6 +30,7 @@ import org.eclipse.jdt.internal.junit.JUnitCorePlugin;
 import org.eclipse.jdt.internal.junit.model.TestCaseElement;
 import org.eclipse.jdt.internal.junit.model.TestElement;
 import org.eclipse.jdt.internal.junit.model.TestSuiteElement;
+import org.eclipse.jdt.junit.model.ITestElement.Result;
 
 import org.eclipse.jdt.ui.JavaUI;
 
@@ -59,6 +60,10 @@ public class DisableTestAction extends Action {
 		fTestElement = testElement;
 		fIsCurrentlyDisabled = false;
 		
+		// Check if test result is IGNORED (covers @Disabled, @Ignore, assumption failures)
+		Result result = testElement.getTestResult(false);
+		boolean isIgnored = result == Result.IGNORED;
+		
 		// Enable for TestSuiteElement (parameterized test method)
 		if (testElement instanceof TestSuiteElement) {
 			TestSuiteElement testSuite = (TestSuiteElement) testElement;
@@ -70,6 +75,10 @@ public class DisableTestAction extends Action {
 				if (testName != null && isParameterizedTestMethod(testName)) {
 					// Check if method is already disabled
 					checkDisabledStatus(testSuite);
+					// If test is ignored, mark as disabled so label shows "Enable This Test"
+					if (isIgnored) {
+						fIsCurrentlyDisabled = true;
+					}
 					updateLabel();
 					setEnabled(true);
 					return;
@@ -90,6 +99,10 @@ public class DisableTestAction extends Action {
 			if (!testCase.isParameterizedTest()) {
 				// Check if method is already disabled
 				checkDisabledStatus(testCase);
+				// If test is ignored, mark as disabled so label shows "Enable This Test"
+				if (isIgnored) {
+					fIsCurrentlyDisabled = true;
+				}
 				updateLabel();
 				setEnabled(true);
 				return;
