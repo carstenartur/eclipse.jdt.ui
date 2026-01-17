@@ -3299,6 +3299,9 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 		// Replace old annotation with new one
 		rewrite.replace(annotation, newAnnotation, null);
+		
+		// Use tight source range computer to prevent unwanted line wrapping
+		rewrite.setTargetSourceRangeComputer(new TightSourceRangeComputer());
 
 		String label= excludeMode ? 
 			CorrectionMessages.AdvancedQuickAssistProcessor_addEnumSourceNamesFilterExclude_description :
