@@ -165,10 +165,11 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 			
 			import org.junit.jupiter.params.ParameterizedTest;
 			import org.junit.jupiter.params.provider.EnumSource;
+			import org.junit.jupiter.params.provider.EnumSource.Mode;
 			
 			class TestClass {
 				@ParameterizedTest
-				@EnumSource(value = TestEnum.class, mode = org.junit.jupiter.params.provider.EnumSource.Mode.EXCLUDE, names = {"VALUE1", "VALUE2", "VALUE3"})
+				@EnumSource(value = TestEnum.class, mode = Mode.EXCLUDE, names = {"VALUE1", "VALUE2", "VALUE3"})
 				void testWithEnum(TestEnum value) {
 					// test implementation
 				}
@@ -218,10 +219,11 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 			
 			import org.junit.jupiter.params.ParameterizedTest;
 			import org.junit.jupiter.params.provider.EnumSource;
+			import org.junit.jupiter.params.provider.EnumSource.Mode;
 			
 			class TestClass {
 				@ParameterizedTest
-				@EnumSource(value = TestEnum.class, names = {"VALUE1"}, mode = org.junit.jupiter.params.provider.EnumSource.Mode.EXCLUDE)
+				@EnumSource(value = TestEnum.class, names = {"VALUE1"}, mode = Mode.EXCLUDE)
 				void testWithEnum(TestEnum value) {
 					// test implementation
 				}

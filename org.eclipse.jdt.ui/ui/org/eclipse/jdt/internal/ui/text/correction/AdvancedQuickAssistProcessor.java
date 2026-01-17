@@ -3240,6 +3240,8 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 	private static void createAddNamesFilterProposal(IInvocationContext context, org.eclipse.jdt.core.dom.Annotation annotation, List<String> enumConstants, Collection<ICommandAccess> resultingCollections, boolean excludeMode) {
 		AST ast= annotation.getAST();
 		ASTRewrite rewrite= ASTRewrite.create(ast);
+		ImportRewrite importRewrite= StubUtility.createImportRewrite(context.getASTRoot(), true);
+		ImportRewriteContext importRewriteContext= new ContextSensitiveImportRewriteContext(ASTResolving.findParentBodyDeclaration(annotation), importRewrite);
 
 		// Create new NormalAnnotation with value, names, and optionally mode parameters
 		org.eclipse.jdt.core.dom.NormalAnnotation newAnnotation= ast.newNormalAnnotation();
@@ -3273,8 +3275,10 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		if (excludeMode) {
 			org.eclipse.jdt.core.dom.MemberValuePair modePair= ast.newMemberValuePair();
 			modePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
+			// Use importRewrite to add import and get simple name reference
+			String enumSourceMode= importRewrite.addImport("org.junit.jupiter.params.provider.EnumSource$Mode", importRewriteContext); //$NON-NLS-1$
 			QualifiedName modeName= ast.newQualifiedName(
-				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+				ast.newName(enumSourceMode),
 				ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
 			);
 			modePair.setValue(modeName);
@@ -3300,7 +3304,8 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			CorrectionMessages.AdvancedQuickAssistProcessor_addEnumSourceNamesFilterExclude_description :
 			CorrectionMessages.AdvancedQuickAssistProcessor_addEnumSourceNamesFilter_description;
 		Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
-		ASTRewriteCorrectionProposal proposal= new ASTRewriteCorrectionProposal(label, context.getCompilationUnit(), rewrite, IProposalRelevance.ADD_ENUM_SOURCE_NAMES_FILTER, image);
+		ASTRewriteCorrectionProposalCore proposal= new ASTRewriteCorrectionProposalCore(label, context.getCompilationUnit(), rewrite, IProposalRelevance.ADD_ENUM_SOURCE_NAMES_FILTER, image);
+		proposal.setImportRewrite(importRewrite);
 		resultingCollections.add(proposal);
 	}
 
@@ -3318,6 +3323,8 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 		AST ast= annotation.getAST();
 		ASTRewrite rewrite= ASTRewrite.create(ast);
+		ImportRewrite importRewrite= StubUtility.createImportRewrite(context.getASTRoot(), true);
+		ImportRewriteContext importRewriteContext= new ContextSensitiveImportRewriteContext(ASTResolving.findParentBodyDeclaration(annotation), importRewrite);
 		org.eclipse.jdt.core.dom.NormalAnnotation normalAnnotation= (org.eclipse.jdt.core.dom.NormalAnnotation) annotation;
 
 		// Find current mode
@@ -3342,11 +3349,14 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			}
 		}
 
+		// Use importRewrite to add import and get simple name reference
+		String enumSourceMode= importRewrite.addImport("org.junit.jupiter.params.provider.EnumSource$Mode", importRewriteContext); //$NON-NLS-1$
+
 		// Toggle mode or add mode parameter
 		if (hasMode && modePair != null) {
 			// Toggle existing mode
 			QualifiedName newMode= ast.newQualifiedName(
-				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+				ast.newName(enumSourceMode),
 				ast.newSimpleName(isExcludeMode ? "INCLUDE" : "EXCLUDE") //$NON-NLS-1$ //$NON-NLS-2$
 			);
 			rewrite.replace(modePair.getValue(), newMode, null);
@@ -3355,7 +3365,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			org.eclipse.jdt.core.dom.MemberValuePair newModePair= ast.newMemberValuePair();
 			newModePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
 			QualifiedName modeName= ast.newQualifiedName(
-				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+				ast.newName(enumSourceMode),
 				ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
 			);
 			newModePair.setValue(modeName);
@@ -3366,7 +3376,8 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 		String label= CorrectionMessages.AdvancedQuickAssistProcessor_toggleEnumSourceMode_description;
 		Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
-		ASTRewriteCorrectionProposal proposal= new ASTRewriteCorrectionProposal(label, context.getCompilationUnit(), rewrite, IProposalRelevance.TOGGLE_ENUM_SOURCE_MODE, image);
+		ASTRewriteCorrectionProposalCore proposal= new ASTRewriteCorrectionProposalCore(label, context.getCompilationUnit(), rewrite, IProposalRelevance.TOGGLE_ENUM_SOURCE_MODE, image);
+		proposal.setImportRewrite(importRewrite);
 		resultingCollections.add(proposal);
 	}
 
