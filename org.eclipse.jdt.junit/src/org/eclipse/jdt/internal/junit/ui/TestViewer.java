@@ -310,7 +310,7 @@ public class TestViewer {
 				manager.add(new Separator());
 				addRerunActions(manager, testCaseElement);
 				
-				// Check if this is a child of a parameterized test with @EnumSource
+				// Check if this test case is from a parameterized test with @EnumSource
 				fExcludeParameterValueAction.update(testCaseElement);
 				if (fExcludeParameterValueAction.isEnabled()) {
 					manager.add(new Separator());

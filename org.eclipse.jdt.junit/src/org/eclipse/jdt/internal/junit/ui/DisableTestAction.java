@@ -60,11 +60,12 @@ public class DisableTestAction extends Action {
 		// Enable for TestSuiteElement (parameterized test method)
 		if (testElement instanceof TestSuiteElement) {
 			TestSuiteElement testSuite = (TestSuiteElement) testElement;
-			// Check if this is a parameterized test method (has test case children and test name contains parentheses)
+			// Check if this is a parameterized test method (has test case children and test name contains method signature)
 			if (testSuite.getChildren().length > 0 && testSuite.getChildren()[0] instanceof TestCaseElement) {
 				String testName = testSuite.getTestName();
-				// Parameterized test methods have names like "testWithEnum(TestEnum)"
-				if (testName != null && testName.contains("(") && testName.contains(")")) {
+				// Parameterized test methods have names like "testWithEnum(TestEnum)" 
+				// Check for valid method signature pattern
+				if (testName != null && isParameterizedTestMethod(testName)) {
 					setEnabled(true);
 					return;
 				}
@@ -88,6 +89,21 @@ public class DisableTestAction extends Action {
 		}
 		
 		setEnabled(false);
+	}
+
+	/**
+	 * Check if a test name represents a parameterized test method.
+	 * Parameterized test methods have method signatures like "testWithEnum(TestEnum)".
+	 * 
+	 * @param testName the test name to check
+	 * @return true if it matches a parameterized test method pattern
+	 */
+	private boolean isParameterizedTestMethod(String testName) {
+		// Match pattern: methodName(paramType) or methodName(paramType1, paramType2, ...)
+		// Must have balanced parentheses with content
+		int openParen = testName.indexOf('(');
+		int closeParen = testName.lastIndexOf(')');
+		return openParen > 0 && closeParen > openParen && closeParen == testName.length() - 1;
 	}
 
 	@Override
