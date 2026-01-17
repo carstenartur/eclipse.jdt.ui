@@ -30,6 +30,7 @@ import org.eclipse.jdt.internal.junit.JUnitCorePlugin;
 import org.eclipse.jdt.internal.junit.model.TestCaseElement;
 import org.eclipse.jdt.internal.junit.model.TestElement;
 import org.eclipse.jdt.internal.junit.model.TestSuiteElement;
+import org.eclipse.jdt.junit.model.ITestElement.Result;
 
 import org.eclipse.jdt.ui.JavaUI;
 
@@ -68,8 +69,10 @@ public class DisableTestAction extends Action {
 				// Parameterized test methods have names like "testWithEnum(TestEnum)" 
 				// Check for valid method signature pattern
 				if (testName != null && isParameterizedTestMethod(testName)) {
-					// Check if method is already disabled
+					// Check if method is already disabled in source code
 					checkDisabledStatus(testSuite);
+					// Also check if test result is IGNORED (both checks can set fIsCurrentlyDisabled to true)
+					updateDisabledStatusForIgnoredTest(testElement);
 					updateLabel();
 					setEnabled(true);
 					return;
@@ -88,8 +91,10 @@ public class DisableTestAction extends Action {
 			
 			// Only enable if this is NOT a parameterized test
 			if (!testCase.isParameterizedTest()) {
-				// Check if method is already disabled
+				// Check if method is already disabled in source code
 				checkDisabledStatus(testCase);
+				// Also check if test result is IGNORED (both checks can set fIsCurrentlyDisabled to true)
+				updateDisabledStatusForIgnoredTest(testElement);
 				updateLabel();
 				setEnabled(true);
 				return;
@@ -97,6 +102,21 @@ public class DisableTestAction extends Action {
 		}
 		
 		setEnabled(false);
+	}
+	
+	/**
+	 * Update disabled status if test is ignored.
+	 * If test is ignored, mark as disabled so label shows "Enable This Test".
+	 * This method only sets the flag to true when needed - it does not reset it to false
+	 * because fIsCurrentlyDisabled is initialized to false at the start of update().
+	 * 
+	 * @param testElement the test element to check
+	 */
+	private void updateDisabledStatusForIgnoredTest(TestElement testElement) {
+		Result result = testElement.getTestResult(false);
+		if (result == Result.IGNORED) {
+			fIsCurrentlyDisabled = true;
+		}
 	}
 
 	/**
