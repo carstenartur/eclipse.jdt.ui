@@ -122,12 +122,19 @@ public class ExcludeParameterizedTestAction extends Action {
 	/**
 	 * Extract the parameter value from a parameterized test display name.
 	 * E.g., "testWithEnum[VALUE2]" -> "VALUE2"
+	 * E.g., "testWithEnum[VALUE2, otherParam]" -> "VALUE2" (first parameter only for enum)
 	 */
 	private String extractParameterValue(String displayName) {
 		int start= displayName.indexOf('[');
 		int end= displayName.indexOf(']');
 		if (start >= 0 && end > start) {
-			return displayName.substring(start + 1, end);
+			String params= displayName.substring(start + 1, end);
+			// Handle multiple parameters by taking the first one (enum value)
+			int commaIndex= params.indexOf(',');
+			if (commaIndex > 0) {
+				return params.substring(0, commaIndex).trim();
+			}
+			return params.trim();
 		}
 		return null;
 	}
@@ -203,55 +210,115 @@ public class ExcludeParameterizedTestAction extends Action {
 
 	private void modifyAnnotationToExclude(org.eclipse.jdt.core.dom.Annotation annotation, String paramValue, ASTRewrite rewrite) {
 		AST ast= annotation.getAST();
-
-		// Create new NormalAnnotation with value, mode=EXCLUDE, and names parameter
-		org.eclipse.jdt.core.dom.NormalAnnotation newAnnotation= ast.newNormalAnnotation();
-		newAnnotation.setTypeName(ast.newName(annotation.getTypeName().getFullyQualifiedName()));
-
-		// Copy existing value attribute
+		
+		// Check if annotation already has names and mode attributes
 		org.eclipse.jdt.core.dom.Expression valueExpr= null;
-		if (annotation instanceof org.eclipse.jdt.core.dom.SingleMemberAnnotation) {
-			valueExpr= ((org.eclipse.jdt.core.dom.SingleMemberAnnotation) annotation).getValue();
-		} else if (annotation instanceof org.eclipse.jdt.core.dom.NormalAnnotation) {
-			List<?> values= ((org.eclipse.jdt.core.dom.NormalAnnotation) annotation).values();
+		org.eclipse.jdt.core.dom.MemberValuePair existingModePair= null;
+		org.eclipse.jdt.core.dom.MemberValuePair existingNamesPair= null;
+		List<String> existingNames= new java.util.ArrayList<>();
+		boolean isExcludeMode= false;
+		
+		if (annotation instanceof org.eclipse.jdt.core.dom.NormalAnnotation) {
+			org.eclipse.jdt.core.dom.NormalAnnotation normalAnnotation= (org.eclipse.jdt.core.dom.NormalAnnotation) annotation;
+			List<?> values= normalAnnotation.values();
 			for (Object obj : values) {
 				if (obj instanceof org.eclipse.jdt.core.dom.MemberValuePair) {
 					org.eclipse.jdt.core.dom.MemberValuePair pair= (org.eclipse.jdt.core.dom.MemberValuePair) obj;
-					if ("value".equals(pair.getName().getIdentifier())) { //$NON-NLS-1$
+					String name= pair.getName().getIdentifier();
+					if ("value".equals(name)) { //$NON-NLS-1$
 						valueExpr= pair.getValue();
-						break;
+					} else if ("mode".equals(name)) { //$NON-NLS-1$
+						existingModePair= pair;
+						// Check if it's EXCLUDE mode
+						org.eclipse.jdt.core.dom.Expression modeValue= pair.getValue();
+						if (modeValue instanceof org.eclipse.jdt.core.dom.QualifiedName) {
+							org.eclipse.jdt.core.dom.QualifiedName qn= (org.eclipse.jdt.core.dom.QualifiedName) modeValue;
+							isExcludeMode= "EXCLUDE".equals(qn.getName().getIdentifier()); //$NON-NLS-1$
+						}
+					} else if ("names".equals(name)) { //$NON-NLS-1$
+						existingNamesPair= pair;
+						// Extract existing names
+						org.eclipse.jdt.core.dom.Expression namesValue= pair.getValue();
+						if (namesValue instanceof org.eclipse.jdt.core.dom.ArrayInitializer) {
+							org.eclipse.jdt.core.dom.ArrayInitializer array= (org.eclipse.jdt.core.dom.ArrayInitializer) namesValue;
+							List<?> expressions= array.expressions();
+							for (Object expr : expressions) {
+								if (expr instanceof org.eclipse.jdt.core.dom.StringLiteral) {
+									org.eclipse.jdt.core.dom.StringLiteral literal= (org.eclipse.jdt.core.dom.StringLiteral) expr;
+									existingNames.add(literal.getLiteralValue());
+								}
+							}
+						}
 					}
 				}
 			}
+		} else if (annotation instanceof org.eclipse.jdt.core.dom.SingleMemberAnnotation) {
+			valueExpr= ((org.eclipse.jdt.core.dom.SingleMemberAnnotation) annotation).getValue();
 		}
-
+		
+		// Create new NormalAnnotation
+		org.eclipse.jdt.core.dom.NormalAnnotation newAnnotation= ast.newNormalAnnotation();
+		newAnnotation.setTypeName(ast.newName(annotation.getTypeName().getFullyQualifiedName()));
+		
+		// Copy value attribute
 		if (valueExpr != null) {
 			org.eclipse.jdt.core.dom.MemberValuePair valuePair= ast.newMemberValuePair();
 			valuePair.setName(ast.newSimpleName("value")); //$NON-NLS-1$
 			valuePair.setValue((org.eclipse.jdt.core.dom.Expression) rewrite.createCopyTarget(valueExpr));
 			newAnnotation.values().add(valuePair);
 		}
-
-		// Add mode parameter with EXCLUDE mode
-		org.eclipse.jdt.core.dom.MemberValuePair modePair= ast.newMemberValuePair();
-		modePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
-		org.eclipse.jdt.core.dom.QualifiedName modeName= ast.newQualifiedName(
-			ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
-			ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
-		);
-		modePair.setValue(modeName);
-		newAnnotation.values().add(modePair);
-
-		// Add names parameter with the single excluded value
+		
+		// Determine the new names list based on existing mode
+		List<String> newNames= new java.util.ArrayList<>();
+		
+		if (existingNamesPair == null) {
+			// No existing names attribute: Add mode=EXCLUDE and names={paramValue}
+			newNames.add(paramValue);
+			isExcludeMode= true;
+		} else if (isExcludeMode) {
+			// Existing EXCLUDE mode: Add paramValue to the list if not already present
+			newNames.addAll(existingNames);
+			if (!newNames.contains(paramValue)) {
+				newNames.add(paramValue);
+			}
+		} else {
+			// Existing INCLUDE mode: Remove paramValue from the list
+			for (String name : existingNames) {
+				if (!name.equals(paramValue)) {
+					newNames.add(name);
+				}
+			}
+			// If we removed the last value, switch to EXCLUDE mode with just this value
+			if (newNames.isEmpty()) {
+				newNames.add(paramValue);
+				isExcludeMode= true;
+			}
+		}
+		
+		// Add mode parameter if EXCLUDE mode
+		if (isExcludeMode) {
+			org.eclipse.jdt.core.dom.MemberValuePair modePair= ast.newMemberValuePair();
+			modePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
+			org.eclipse.jdt.core.dom.QualifiedName modeName= ast.newQualifiedName(
+				ast.newName("org.junit.jupiter.params.provider.EnumSource.Mode"), //$NON-NLS-1$
+				ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
+			);
+			modePair.setValue(modeName);
+			newAnnotation.values().add(modePair);
+		}
+		
+		// Add names parameter with the new list
 		org.eclipse.jdt.core.dom.MemberValuePair namesPair= ast.newMemberValuePair();
 		namesPair.setName(ast.newSimpleName("names")); //$NON-NLS-1$
 		org.eclipse.jdt.core.dom.ArrayInitializer arrayInit= ast.newArrayInitializer();
-		org.eclipse.jdt.core.dom.StringLiteral literal= ast.newStringLiteral();
-		literal.setLiteralValue(paramValue);
-		arrayInit.expressions().add(literal);
+		for (String name : newNames) {
+			org.eclipse.jdt.core.dom.StringLiteral literal= ast.newStringLiteral();
+			literal.setLiteralValue(name);
+			arrayInit.expressions().add(literal);
+		}
 		namesPair.setValue(arrayInit);
 		newAnnotation.values().add(namesPair);
-
+		
 		// Replace old annotation with new one
 		rewrite.replace(annotation, newAnnotation, null);
 	}
