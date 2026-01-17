@@ -69,6 +69,7 @@ import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchManager;
 
 import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IType;
 
 import org.eclipse.jdt.internal.junit.launcher.ITestFinder;
@@ -304,6 +305,9 @@ public class TestViewer {
 					manager.add(new Separator());
 					manager.add(fDisableTestAction);
 				}
+				
+				// Add "Re-include Excluded Values" submenu for parameterized tests with @EnumSource
+				addReincludeExcludedValuesSubmenu(manager, testSuiteElement);
 			} else {
 				TestCaseElement testCaseElement= (TestCaseElement) testElement;
 				manager.add(getOpenTestAction(testCaseElement));
@@ -392,6 +396,43 @@ public class TestViewer {
 		if (qualifiedName != null) {
 			manager.add(new RerunAction(JUnitMessages.RerunAction_label_run, fTestRunnerPart, testSuiteElement.getId(), qualifiedName, testMethodName, testSuiteElement.getDisplayName(), testSuiteElement.getUniqueId(), ILaunchManager.RUN_MODE));
 			manager.add(new RerunAction(JUnitMessages.RerunAction_label_debug, fTestRunnerPart, testSuiteElement.getId(), qualifiedName, testMethodName, testSuiteElement.getDisplayName(), testSuiteElement.getUniqueId(), ILaunchManager.DEBUG_MODE));
+		}
+	}
+
+	private void addReincludeExcludedValuesSubmenu(IMenuManager manager, TestSuiteElement testSuiteElement) {
+		IMethod method = TestMethodFinder.findMethodForParameterizedTest(testSuiteElement);
+		if (method == null) {
+			return;
+		}
+
+		try {
+			if (EnumSourceValidator.hasExcludedValues(method)) {
+				List<String> excludedNames = EnumSourceValidator.getExcludedNames(method);
+
+				if (!excludedNames.isEmpty()) {
+					manager.add(new Separator());
+
+					// Create submenu for re-including excluded values
+					MenuManager reincludeMenu = new MenuManager(JUnitMessages.TestViewer_reinclude_submenu_label);
+
+					// Add action for each excluded value
+					for (String enumValue : excludedNames) {
+						ReincludeEnumValueAction action = new ReincludeEnumValueAction(fTestRunnerPart, enumValue);
+						action.update(testSuiteElement);
+						reincludeMenu.add(action);
+					}
+
+					// Add separator and "Re-include All" action
+					reincludeMenu.add(new Separator());
+					ReincludeAllEnumValuesAction reincludeAllAction = new ReincludeAllEnumValuesAction(fTestRunnerPart);
+					reincludeAllAction.update(testSuiteElement);
+					reincludeMenu.add(reincludeAllAction);
+
+					manager.add(reincludeMenu);
+				}
+			}
+		} catch (Exception e) {
+			JUnitPlugin.log(e);
 		}
 	}
 
