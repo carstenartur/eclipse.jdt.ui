@@ -91,6 +91,24 @@ public class JUnitQuickAssistProcessor implements IQuickAssistProcessor {
 				proposals.add(new AddAnnotationProposal(context, methodDecl, JUNIT4_IGNORE_ANNOTATION, "Ignore")); //$NON-NLS-1$
 			}
 		}
+		
+		// Check if method has @EnumSource with invalid enum names
+		if (hasAnnotation(methodDecl, "org.junit.jupiter.params.provider.EnumSource")) { //$NON-NLS-1$
+			try {
+				ICompilationUnit cu = fContext.getCompilationUnit();
+				if (cu != null) {
+					IType primaryType = cu.findPrimaryType();
+					if (primaryType != null) {
+						IMethod method = findTestMethod(primaryType, methodDecl.getName().getIdentifier());
+						if (method != null && EnumSourceValidator.hasInvalidEnumNames(method)) {
+							proposals.add(new RemoveInvalidEnumNamesProposal(fContext, methodDecl));
+						}
+					}
+				}
+			} catch (Exception e) {
+				// Ignore - validation check failed
+			}
+		}
 
 		if (proposals.isEmpty()) {
 			return null;
@@ -170,5 +188,15 @@ public class JUnitQuickAssistProcessor implements IQuickAssistProcessor {
 		}
 
 		return false;
+	}
+	
+	private IMethod findTestMethod(org.eclipse.jdt.core.IType type, String methodName) throws org.eclipse.jdt.core.JavaModelException {
+		org.eclipse.jdt.core.IMethod[] methods = type.getMethods();
+		for (org.eclipse.jdt.core.IMethod method : methods) {
+			if (method.getElementName().equals(methodName)) {
+				return method;
+			}
+		}
+		return null;
 	}
 }
