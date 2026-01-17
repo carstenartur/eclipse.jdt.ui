@@ -3242,6 +3242,9 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		ASTRewrite rewrite= ASTRewrite.create(ast);
 		ImportRewrite importRewrite= StubUtility.createImportRewrite(context.getASTRoot(), true);
 		ImportRewriteContext importRewriteContext= new ContextSensitiveImportRewriteContext(ASTResolving.findParentBodyDeclaration(annotation), importRewrite);
+		
+		// Use tight source range computer to prevent unwanted line wrapping
+		rewrite.setTargetSourceRangeComputer(new TightSourceRangeComputer());
 
 		// Create new NormalAnnotation with value, names, and optionally mode parameters
 		org.eclipse.jdt.core.dom.NormalAnnotation newAnnotation= ast.newNormalAnnotation();
@@ -3299,9 +3302,6 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 		// Replace old annotation with new one
 		rewrite.replace(annotation, newAnnotation, null);
-		
-		// Use tight source range computer to prevent unwanted line wrapping
-		rewrite.setTargetSourceRangeComputer(new TightSourceRangeComputer());
 
 		String label= excludeMode ? 
 			CorrectionMessages.AdvancedQuickAssistProcessor_addEnumSourceNamesFilterExclude_description :

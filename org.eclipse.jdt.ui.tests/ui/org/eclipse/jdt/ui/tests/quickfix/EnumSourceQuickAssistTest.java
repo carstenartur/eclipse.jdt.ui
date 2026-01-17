@@ -122,7 +122,7 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 			}
 			""";
 
-		assertExpectedExistInProposals(proposals, new String[] { expected });
+		assertProposalPreviewEquals(expected, "Add 'names' filter to @EnumSource", proposals);
 	}
 
 	@Test
@@ -176,7 +176,7 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 			}
 			""";
 
-		assertExpectedExistInProposals(proposals, new String[] { expected });
+		assertProposalPreviewEquals(expected, "Add 'names' filter with EXCLUDE mode to @EnumSource", proposals);
 	}
 
 	@Test
@@ -230,6 +230,6 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 			}
 			""";
 
-		assertExpectedExistInProposals(proposals, new String[] { expected });
+		assertProposalPreviewEquals(expected, "Toggle @EnumSource mode between INCLUDE and EXCLUDE", proposals);
 	}
 }
