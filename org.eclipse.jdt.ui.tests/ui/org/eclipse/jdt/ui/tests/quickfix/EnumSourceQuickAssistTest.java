@@ -232,4 +232,125 @@ public class EnumSourceQuickAssistTest extends QuickFixTest {
 
 		assertProposalPreviewEquals(expected, "Toggle @EnumSource mode between INCLUDE and EXCLUDE", proposals);
 	}
+
+	@Test
+	public void testReincludeAllRemovesUnusedModeImport() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+
+		String enumContent= """
+			package test1;
+
+			public enum TestEnum {
+				VALUE1, VALUE2, VALUE3
+			}
+			""";
+		pack1.createCompilationUnit("TestEnum.java", enumContent, false, null);
+
+		String testContent= """
+			package test1;
+
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+			import org.junit.jupiter.params.provider.EnumSource.Mode;
+
+			class TestClass {
+				@ParameterizedTest
+				@EnumSource(value = TestEnum.class, mode = Mode.EXCLUDE, names = {"VALUE1", "VALUE2"})
+				void testWithEnum(TestEnum value) {
+					// test implementation
+				}
+			}
+			""";
+		ICompilationUnit cu= pack1.createCompilationUnit("TestClass.java", testContent, false, null);
+
+		// Use EnumSourceValidator.removeExcludeMode() to simulate "Re-include All" action
+		org.eclipse.jdt.core.IType type = cu.getType("TestClass");
+		org.eclipse.jdt.core.IMethod method = type.getMethod("testWithEnum", new String[]{"QTestEnum;"});
+		
+		org.eclipse.jdt.internal.junit.ui.EnumSourceValidator.removeExcludeMode(method);
+
+		String expected= """
+			package test1;
+
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+
+			class TestClass {
+				@ParameterizedTest
+				@EnumSource(value = TestEnum.class)
+				void testWithEnum(TestEnum value) {
+					// test implementation
+				}
+			}
+			""";
+
+		assertEqualString(cu.getSource(), expected);
+	}
+
+	@Test
+	public void testReincludeAllKeepsModeImportIfUsedElsewhere() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null);
+
+		String enumContent= """
+			package test1;
+
+			public enum TestEnum {
+				VALUE1, VALUE2, VALUE3
+			}
+			""";
+		pack1.createCompilationUnit("TestEnum.java", enumContent, false, null);
+
+		String testContent= """
+			package test1;
+
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+			import org.junit.jupiter.params.provider.EnumSource.Mode;
+
+			class TestClass {
+				@ParameterizedTest
+				@EnumSource(value = TestEnum.class, mode = Mode.EXCLUDE, names = {"VALUE1"})
+				void testFirstMethod(TestEnum value) {
+					// test implementation
+				}
+
+				@ParameterizedTest
+				@EnumSource(value = TestEnum.class, mode = Mode.EXCLUDE, names = {"VALUE2"})
+				void testSecondMethod(TestEnum value) {
+					// test implementation
+				}
+			}
+			""";
+		ICompilationUnit cu= pack1.createCompilationUnit("TestClass.java", testContent, false, null);
+
+		// Re-include all on first method only
+		org.eclipse.jdt.core.IType type = cu.getType("TestClass");
+		org.eclipse.jdt.core.IMethod method = type.getMethod("testFirstMethod", new String[]{"QTestEnum;"});
+		
+		org.eclipse.jdt.internal.junit.ui.EnumSourceValidator.removeExcludeMode(method);
+
+		String expected= """
+			package test1;
+
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+			import org.junit.jupiter.params.provider.EnumSource.Mode;
+
+			class TestClass {
+				@ParameterizedTest
+				@EnumSource(value = TestEnum.class)
+				void testFirstMethod(TestEnum value) {
+					// test implementation
+				}
+
+				@ParameterizedTest
+				@EnumSource(value = TestEnum.class, mode = Mode.EXCLUDE, names = {"VALUE2"})
+				void testSecondMethod(TestEnum value) {
+					// test implementation
+				}
+			}
+			""";
+
+		assertEqualString(cu.getSource(), expected);
+	}
 }

@@ -38,6 +38,10 @@ import org.eclipse.jdt.core.dom.MemberValuePair;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.StringLiteral;
 
+import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
+
+import org.eclipse.jdt.ui.CodeStyleConfiguration;
+
 /**
  * Validates @EnumSource annotations to ensure that excluded/included enum values
  * actually exist in the referenced enum class.
@@ -47,6 +51,7 @@ import org.eclipse.jdt.core.dom.StringLiteral;
 public class EnumSourceValidator {
 
 	private static final String ENUM_SOURCE_ANNOTATION = "org.junit.jupiter.params.provider.EnumSource"; //$NON-NLS-1$
+	private static final String ENUM_SOURCE_MODE_CLASS = "org.junit.jupiter.params.provider.EnumSource.Mode"; //$NON-NLS-1$
 	private static final String ATTR_MODE = "mode"; //$NON-NLS-1$
 	private static final String ATTR_NAMES = "names"; //$NON-NLS-1$
 	private static final String ATTR_VALUE = "value"; //$NON-NLS-1$
@@ -624,7 +629,8 @@ public class EnumSourceValidator {
 
 	/**
 	 * Removes the mode and names attributes from @EnumSource annotation,
-	 * restoring it to include all enum values.
+	 * restoring it to include all enum values. Also removes the Mode import
+	 * if it's no longer used elsewhere in the file.
 	 * 
 	 * @param method the test method with @EnumSource annotation
 	 * @throws JavaModelException if there's an error accessing the Java model
@@ -651,9 +657,34 @@ public class EnumSourceValidator {
 
 		if (modified[0]) {
 			try {
-				org.eclipse.text.edits.TextEdit edit = rewrite.rewriteAST();
-				cu.applyTextEdit(edit, null);
-				cu.save(null, true);
+				// Check if Mode is still used elsewhere in the file
+				boolean isModeUsedElsewhere = isModeTypeUsed(astRoot, method);
+				
+				// Combine AST rewrite with import removal if needed
+				org.eclipse.text.edits.MultiTextEdit multiEdit = new org.eclipse.text.edits.MultiTextEdit();
+				
+				// Add import removal if Mode is not used elsewhere
+				if (!isModeUsedElsewhere) {
+					ImportRewrite importRewrite = CodeStyleConfiguration.createImportRewrite(astRoot, true);
+					importRewrite.removeImport(ENUM_SOURCE_MODE_CLASS);
+					
+					org.eclipse.text.edits.TextEdit importEdit = importRewrite.rewriteImports(null);
+					if (importEdit.hasChildren() || importEdit.getLength() != 0) {
+						multiEdit.addChild(importEdit);
+					}
+				}
+				
+				// Add AST rewrite
+				org.eclipse.text.edits.TextEdit rewriteEdit = rewrite.rewriteAST();
+				if (rewriteEdit.hasChildren() || rewriteEdit.getLength() != 0) {
+					multiEdit.addChild(rewriteEdit);
+				}
+				
+				// Apply the combined edit
+				if (multiEdit.hasChildren()) {
+					cu.applyTextEdit(multiEdit, null);
+					cu.save(null, true);
+				}
 			} catch (Exception e) {
 				JUnitPlugin.log(e);
 			}
@@ -687,6 +718,51 @@ public class EnumSourceValidator {
 		}
 
 		return modified;
+	}
+
+	/**
+	 * Check if the Mode type is still used elsewhere in the compilation unit.
+	 * This method checks all @EnumSource annotations (except the one being modified)
+	 * to see if any of them still use mode=Mode.EXCLUDE or mode=Mode.INCLUDE.
+	 * 
+	 * @param astRoot the compilation unit AST root
+	 * @param excludeMethod the method being modified (to exclude from the search)
+	 * @return true if Mode is still referenced somewhere else in the file
+	 */
+	private static boolean isModeTypeUsed(CompilationUnit astRoot, IMethod excludeMethod) {
+		final boolean[] isUsed = new boolean[] { false };
+		final String excludeMethodName = excludeMethod.getElementName();
+
+		astRoot.accept(new ASTVisitor() {
+			@Override
+			public boolean visit(MethodDeclaration node) {
+				// Skip the method we're modifying
+				if (node.getName().getIdentifier().equals(excludeMethodName)) {
+					return false;
+				}
+				return true;
+			}
+
+			@Override
+			public boolean visit(MemberValuePair node) {
+				// Check if this is a mode attribute
+				if (ATTR_MODE.equals(node.getName().getIdentifier())) {
+					Expression value = node.getValue();
+					// Check if the value references Mode (as QualifiedName like Mode.EXCLUDE)
+					if (value instanceof org.eclipse.jdt.core.dom.QualifiedName) {
+						org.eclipse.jdt.core.dom.QualifiedName qn = (org.eclipse.jdt.core.dom.QualifiedName) value;
+						String qualifierName = qn.getQualifier().toString();
+						// Check if it's using Mode.EXCLUDE or Mode.INCLUDE
+						if ("Mode".equals(qualifierName)) { //$NON-NLS-1$
+							isUsed[0] = true;
+						}
+					}
+				}
+				return true;
+			}
+		});
+
+		return isUsed[0];
 	}
 
 	/**
