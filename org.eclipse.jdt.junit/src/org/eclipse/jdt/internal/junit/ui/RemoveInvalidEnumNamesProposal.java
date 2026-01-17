@@ -16,9 +16,6 @@ package org.eclipse.jdt.internal.junit.ui;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 
-import org.eclipse.core.runtime.CoreException;
-
-import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.contentassist.IContextInformation;
 
@@ -35,7 +32,7 @@ import org.eclipse.jdt.ui.text.java.IJavaCompletionProposal;
 
 /**
  * Quick Assist proposal to remove invalid enum names from @EnumSource annotation.
- * 
+ *
  * @since 3.15
  */
 public class RemoveInvalidEnumNamesProposal implements IJavaCompletionProposal {
@@ -73,7 +70,7 @@ public class RemoveInvalidEnumNamesProposal implements IJavaCompletionProposal {
 			JUnitPlugin.log(e);
 		}
 	}
-	
+
 	private IMethod findTestMethod(IType type, String methodName) throws JavaModelException {
 		IMethod[] methods = type.getMethods();
 		for (IMethod method : methods) {
