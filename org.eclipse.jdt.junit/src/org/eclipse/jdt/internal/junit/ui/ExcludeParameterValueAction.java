@@ -108,6 +108,15 @@ public class ExcludeParameterValueAction extends Action {
 
 			// Modify the @EnumSource annotation
 			TestAnnotationModifier.excludeEnumValue(method, paramValue);
+			
+			// After modifying, validate and remove any invalid enum names
+			// This handles cases where enum constants were renamed/removed
+			try {
+				EnumSourceValidator.removeInvalidEnumNames(method);
+			} catch (Exception e) {
+				// Log but don't fail the operation if validation cleanup fails
+				JUnitPlugin.log(e);
+			}
 
 			// Open the editor
 			try {
