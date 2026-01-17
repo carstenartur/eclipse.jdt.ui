@@ -57,29 +57,14 @@ public class EnumSourceValidator {
 	 */
 	public static List<String> findInvalidEnumNames(IMethod method) throws JavaModelException {
 		List<String> invalidNames = new ArrayList<>();
-		ICompilationUnit cu = method.getCompilationUnit();
-		if (cu == null) {
+		MethodDeclaration methodDecl = findMethodDeclaration(method);
+		if (methodDecl == null) {
 			return invalidNames;
 		}
 
-		// Parse the compilation unit
-		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
-		parser.setSource(cu);
-		parser.setResolveBindings(true);
-		CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
-
 		final List<String> namesInAnnotation = new ArrayList<>();
 		final IType[] enumType = new IType[1];
-
-		astRoot.accept(new ASTVisitor() {
-			@Override
-			public boolean visit(MethodDeclaration node) {
-				if (node.getName().getIdentifier().equals(method.getElementName())) {
-					extractEnumSourceData(node, namesInAnnotation, enumType);
-				}
-				return false;
-			}
-		});
+		extractEnumSourceData(methodDecl, namesInAnnotation, enumType);
 
 		// If we found names and enum type, validate them
 		if (!namesInAnnotation.isEmpty() && enumType[0] != null) {
@@ -201,6 +186,91 @@ public class EnumSourceValidator {
 	}
 
 	/**
+	 * Parse a compilation unit and create an AST.
+	 * 
+	 * @param cu the compilation unit to parse
+	 * @return the parsed CompilationUnit AST node
+	 */
+	private static CompilationUnit parseCompilationUnit(ICompilationUnit cu) {
+		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
+		parser.setSource(cu);
+		parser.setResolveBindings(true);
+		return (CompilationUnit) parser.createAST(null);
+	}
+
+	/**
+	 * Find the MethodDeclaration AST node for an IMethod.
+	 * 
+	 * @param method the IMethod to find
+	 * @return the MethodDeclaration node, or null if not found
+	 * @throws JavaModelException if there's an error accessing the Java model
+	 */
+	private static MethodDeclaration findMethodDeclaration(IMethod method) throws JavaModelException {
+		ICompilationUnit cu = method.getCompilationUnit();
+		if (cu == null) {
+			return null;
+		}
+
+		CompilationUnit astRoot = parseCompilationUnit(cu);
+		final MethodDeclaration[] result = new MethodDeclaration[1];
+
+		astRoot.accept(new ASTVisitor() {
+			@Override
+			public boolean visit(MethodDeclaration node) {
+				if (node.getName().getIdentifier().equals(method.getElementName())) {
+					result[0] = node;
+					return false;
+				}
+				return true;
+			}
+		});
+
+		return result[0];
+	}
+
+	/**
+	 * Find the @EnumSource annotation on a method declaration.
+	 * 
+	 * @param methodDecl the method declaration to search
+	 * @return the @EnumSource Annotation node, or null if not found
+	 */
+	private static Annotation findEnumSourceAnnotation(MethodDeclaration methodDecl) {
+		List<?> modifiers = methodDecl.modifiers();
+		for (Object modifier : modifiers) {
+			if (modifier instanceof Annotation) {
+				Annotation annotation = (Annotation) modifier;
+				String annotationName = annotation.getTypeName().getFullyQualifiedName();
+				if ("EnumSource".equals(annotationName) || ENUM_SOURCE_ANNOTATION.equals(annotationName)) { //$NON-NLS-1$
+					return annotation;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Find the enum type referenced in the @EnumSource annotation.
+	 * 
+	 * @param methodDecl the method declaration with @EnumSource annotation
+	 * @return the IType for the enum, or null if not found
+	 */
+	private static IType findEnumTypeInAnnotation(MethodDeclaration methodDecl) {
+		IMethodBinding methodBinding = methodDecl.resolveBinding();
+		if (methodBinding == null) {
+			return null;
+		}
+
+		IAnnotationBinding[] annotations = methodBinding.getAnnotations();
+		for (IAnnotationBinding annotationBinding : annotations) {
+			ITypeBinding annotationType = annotationBinding.getAnnotationType();
+			if (annotationType != null && ENUM_SOURCE_ANNOTATION.equals(annotationType.getQualifiedName())) {
+				return extractEnumType(annotationBinding, methodDecl);
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Get all enum values from the enum type referenced in @EnumSource annotation.
 	 * 
 	 * @param method the test method with @EnumSource annotation
@@ -208,41 +278,14 @@ public class EnumSourceValidator {
 	 * @throws JavaModelException if there's an error accessing the Java model
 	 */
 	public static List<String> getAllEnumValues(IMethod method) throws JavaModelException {
-		ICompilationUnit cu = method.getCompilationUnit();
-		if (cu == null) {
+		MethodDeclaration methodDecl = findMethodDeclaration(method);
+		if (methodDecl == null) {
 			return new ArrayList<>();
 		}
 
-		// Parse the compilation unit
-		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
-		parser.setSource(cu);
-		parser.setResolveBindings(true);
-		CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
-
-		final IType[] enumType = new IType[1];
-
-		astRoot.accept(new ASTVisitor() {
-			@Override
-			public boolean visit(MethodDeclaration node) {
-				if (node.getName().getIdentifier().equals(method.getElementName())) {
-					IMethodBinding methodBinding = node.resolveBinding();
-					if (methodBinding != null) {
-						IAnnotationBinding[] annotations = methodBinding.getAnnotations();
-						for (IAnnotationBinding annotationBinding : annotations) {
-							ITypeBinding annotationType = annotationBinding.getAnnotationType();
-							if (annotationType != null && ENUM_SOURCE_ANNOTATION.equals(annotationType.getQualifiedName())) {
-								enumType[0] = extractEnumType(annotationBinding, node);
-								break;
-							}
-						}
-					}
-				}
-				return false;
-			}
-		});
-
-		if (enumType[0] != null) {
-			Set<String> constants = getEnumConstants(enumType[0]);
+		IType enumType = findEnumTypeInAnnotation(methodDecl);
+		if (enumType != null) {
+			Set<String> constants = getEnumConstants(enumType);
 			return new ArrayList<>(constants);
 		}
 
@@ -257,41 +300,17 @@ public class EnumSourceValidator {
 	 * @throws JavaModelException if there's an error accessing the Java model
 	 */
 	public static EnumSourceNamesData getEnumSourceNamesData(IMethod method) throws JavaModelException {
-		ICompilationUnit cu = method.getCompilationUnit();
-		if (cu == null) {
+		MethodDeclaration methodDecl = findMethodDeclaration(method);
+		if (methodDecl == null) {
 			return null;
 		}
 
-		// Parse the compilation unit
-		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
-		parser.setSource(cu);
-		parser.setResolveBindings(true);
-		CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
+		Annotation enumSourceAnnotation = findEnumSourceAnnotation(methodDecl);
+		if (enumSourceAnnotation != null) {
+			return extractNamesAndMode(enumSourceAnnotation);
+		}
 
-		final EnumSourceNamesData[] result = new EnumSourceNamesData[1];
-
-		astRoot.accept(new ASTVisitor() {
-			@Override
-			public boolean visit(MethodDeclaration node) {
-				if (node.getName().getIdentifier().equals(method.getElementName())) {
-					List<?> modifiers = node.modifiers();
-					for (Object modifier : modifiers) {
-						if (modifier instanceof Annotation) {
-							Annotation annotation = (Annotation) modifier;
-							String annotationName = annotation.getTypeName().getFullyQualifiedName();
-
-							if ("EnumSource".equals(annotationName) || ENUM_SOURCE_ANNOTATION.equals(annotationName)) { //$NON-NLS-1$
-								result[0] = extractNamesAndMode(annotation);
-								break;
-							}
-						}
-					}
-				}
-				return false;
-			}
-		});
-
-		return result[0];
+		return null;
 	}
 
 	/**
@@ -424,12 +443,7 @@ public class EnumSourceValidator {
 			return;
 		}
 
-		// Parse the compilation unit
-		ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
-		parser.setSource(cu);
-		parser.setResolveBindings(true);
-		CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
-
+		CompilationUnit astRoot = parseCompilationUnit(cu);
 		org.eclipse.jdt.core.dom.rewrite.ASTRewrite rewrite = org.eclipse.jdt.core.dom.rewrite.ASTRewrite.create(astRoot.getAST());
 		final boolean[] modified = new boolean[] { false };
 
