@@ -3304,7 +3304,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 			CorrectionMessages.AdvancedQuickAssistProcessor_addEnumSourceNamesFilterExclude_description :
 			CorrectionMessages.AdvancedQuickAssistProcessor_addEnumSourceNamesFilter_description;
 		Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
-		ASTRewriteCorrectionProposalCore proposal= new ASTRewriteCorrectionProposalCore(label, context.getCompilationUnit(), rewrite, IProposalRelevance.ADD_ENUM_SOURCE_NAMES_FILTER, image);
+		ASTRewriteCorrectionProposal proposal= new ASTRewriteCorrectionProposal(label, context.getCompilationUnit(), rewrite, IProposalRelevance.ADD_ENUM_SOURCE_NAMES_FILTER, image);
 		proposal.setImportRewrite(importRewrite);
 		resultingCollections.add(proposal);
 	}
@@ -3376,7 +3376,7 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 
 		String label= CorrectionMessages.AdvancedQuickAssistProcessor_toggleEnumSourceMode_description;
 		Image image= JavaPluginImages.get(JavaPluginImages.IMG_CORRECTION_CHANGE);
-		ASTRewriteCorrectionProposalCore proposal= new ASTRewriteCorrectionProposalCore(label, context.getCompilationUnit(), rewrite, IProposalRelevance.TOGGLE_ENUM_SOURCE_MODE, image);
+		ASTRewriteCorrectionProposal proposal= new ASTRewriteCorrectionProposal(label, context.getCompilationUnit(), rewrite, IProposalRelevance.TOGGLE_ENUM_SOURCE_MODE, image);
 		proposal.setImportRewrite(importRewrite);
 		resultingCollections.add(proposal);
 	}
