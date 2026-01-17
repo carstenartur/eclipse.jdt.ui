@@ -57,6 +57,8 @@ public final class JUnitMessages extends NLS {
 	public static String DisableTestAction_label;
 	public static String DisableTestAction_enable_label;
 	public static String ExcludeParameterValueAction_label;
+	public static String ReincludeAllEnumValuesAction_label;
+	public static String TestViewer_reinclude_submenu_label;
 	public static String ExpandAllAction_text;
 	public static String ExpandAllAction_tooltip;
 	public static String CollapseAllAction_text;
