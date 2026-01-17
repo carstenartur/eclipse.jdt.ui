@@ -3242,7 +3242,6 @@ public class AdvancedQuickAssistProcessor implements IQuickAssistProcessor {
 		ASTRewrite rewrite= ASTRewrite.create(ast);
 		ImportRewrite importRewrite= StubUtility.createImportRewrite(context.getASTRoot(), true);
 		ImportRewriteContext importRewriteContext= new ContextSensitiveImportRewriteContext(ASTResolving.findParentBodyDeclaration(annotation), importRewrite);
-		
 		// Use tight source range computer to prevent unwanted line wrapping
 		rewrite.setTargetSourceRangeComputer(new TightSourceRangeComputer());
 
