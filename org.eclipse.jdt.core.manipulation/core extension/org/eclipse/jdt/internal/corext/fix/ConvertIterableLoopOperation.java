@@ -354,7 +354,7 @@ public final class ConvertIterableLoopOperation extends ConvertLoopOperation {
 		for (Object node : getForStatement().initializers()) {
 			if (node instanceof VariableDeclarationExpression) {
 				VariableDeclarationExpression variableDeclarationExpression= (VariableDeclarationExpression) node;
-				remover.registerRemovedNode(variableDeclarationExpression.getType());
+				remover.registerRemovedNode(variableDeclarationExpression);
 			} else {
 				remover.registerRemovedNode((ASTNode) node);
 			}
