@@ -536,7 +536,7 @@ public class WhileToForEach extends AbstractTool<WhileLoopToChangeHit> {
 			newEnhancedForStatement.setExpression(loopExpression);
 		}
 		ASTNodes.removeButKeepComment(rewrite, hit.iteratorDeclaration, group);
-		remover.registerRemovedNode(hit.iteratorDeclaration.getType());
+		remover.registerRemovedNode(hit.iteratorDeclaration);
 		if (hit.iteratorCall != hit.iteratorDeclaration) {
 			ASTNodes.removeButKeepComment(rewrite, hit.iteratorCall, group);
 			remover.registerRemovedNode(hit.iteratorCall);
