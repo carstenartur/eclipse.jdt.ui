@@ -13,7 +13,6 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.ui.fix;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
@@ -87,30 +86,23 @@ public class ExampleMultiFileCleanUp extends AbstractCleanUp implements IMultiFi
 			return null;
 		}
 
-		CompositeChange compositeChange= new CompositeChange("Example Multi-File Cleanup");
-		List<CompilationUnitChange> changes= new ArrayList<>();
+		CompositeChange compositeChange= new CompositeChange("Example Multi-File Cleanup"); //$NON-NLS-1$
 
 		// Analyze all contexts together to demonstrate multi-file coordination
 		for (CleanUpContext context : contexts) {
 			ICompilationUnit cu= context.getCompilationUnit();
 
-			try {
-				// Example: Check if this is a Java file we want to process
-				if (cu.getElementName().endsWith(".java")) {
-					// In a real implementation, this would analyze the code
-					// and create appropriate changes. For now, this is just
-					// a placeholder to demonstrate the infrastructure.
+			// Example: Check if this is a Java file we want to process
+			if (cu.getElementName().endsWith(".java")) { //$NON-NLS-1$
+				// In a real implementation, this would analyze the code
+				// and create appropriate changes. For now, this is just
+				// a placeholder to demonstrate the infrastructure.
 
-					// Uncomment to create actual changes:
-					// CompilationUnitChange change = createChangeForUnit(cu);
-					// if (change != null) {
-					//     changes.add(change);
-					//     compositeChange.add(change);
-					// }
-				}
-			} catch (CoreException e) {
-				// Log and continue with other files
-				// JavaPlugin.log(e);
+				// Uncomment to create actual changes:
+				// CompilationUnitChange change = createChangeForUnit(cu);
+				// if (change != null) {
+				//     compositeChange.add(change);
+				// }
 			}
 		}
 
@@ -121,16 +113,9 @@ public class ExampleMultiFileCleanUp extends AbstractCleanUp implements IMultiFi
 	@Override
 	public String[] getStepDescriptions() {
 		if (isEnabled(CLEANUP_MULTI_FILE_EXAMPLE)) {
-			return new String[] { "Example multi-file cleanup (proof of concept)" };
+			return new String[] { "Example multi-file cleanup (proof of concept)" }; //$NON-NLS-1$
 		}
 		return new String[0];
-	}
-
-	/**
-	 * Helper method to check if a cleanup option is enabled.
-	 */
-	private boolean isEnabled(String key) {
-		return getOptions() != null && getOptions().isEnabled(key);
 	}
 
 	/**
