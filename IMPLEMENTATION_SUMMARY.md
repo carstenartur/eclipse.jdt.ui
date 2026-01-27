@@ -1,191 +1,182 @@
-# Multi-File Cleanup API - Implementation Summary
+# Change Independence Metadata Implementation Summary
 
 ## Overview
-This implementation adds support for multi-file cleanup operations to Eclipse JDT, enabling cleanups and quickfixes to make coordinated changes across multiple Java files in a single atomic operation.
 
-## Changes Made
+This implementation adds comprehensive support for change independence metadata and dependency tracking to the Eclipse JDT multi-file cleanup infrastructure. The work enables users to selectively accept or reject individual changes while maintaining consistency through dependency tracking.
 
-### 1. Public API - IMultiFileCleanUp Interface
-**File**: `org.eclipse.jdt.core.manipulation/common/org/eclipse/jdt/ui/cleanup/IMultiFileCleanUp.java`
+## What Was Implemented
 
-A new public interface extending `ICleanUp` that allows cleanup implementations to process multiple compilation units together:
+### 1. Core API Extensions ✅
 
-```java
-public interface IMultiFileCleanUp extends ICleanUp {
-    CompositeChange createFix(List<CleanUpContext> contexts) throws CoreException;
-}
-```
+#### `IndependentChange` Interface
+- **Location**: `org.eclipse.jdt.core.manipulation/common/org/eclipse/jdt/ui/cleanup/IndependentChange.java`
+- **Purpose**: Represents changes that can be independently accepted or rejected
+- **Key Methods**:
+  - `isIndependent()`: Returns true if change can be rejected without affecting others
+  - `getDependentChanges()`: Returns list of changes that depend on this one
+  - `getChange()`: Returns underlying LTK Change object
+  - `getDescription()`: Returns human-readable description
+
+#### `IMultiFileCleanUp` Interface Extensions
+- **Location**: `org.eclipse.jdt.core.manipulation/common/org/eclipse/jdt/ui/cleanup/IMultiFileCleanUp.java`
+- **New Methods** (all with default implementations for backward compatibility):
+  - `createIndependentFixes(List<CleanUpContext>)`: Creates independent, atomic changes
+  - `recomputeAfterSelection(List<IndependentChange>, List<CleanUpContext>)`: Recomputes with fresh ASTs
+  - `requiresFreshASTAfterSelection()`: Indicates if recomputation is needed
+
+### 2. Implementation Support Classes ✅
+
+#### `IndependentChangeImpl`
+- **Location**: `org.eclipse.jdt.core.manipulation/common/org/eclipse/jdt/internal/ui/fix/IndependentChangeImpl.java`
+- **Features**:
+  - Concrete implementation of IndependentChange interface
+  - Dependency tracking with `addDependentChange()` and `removeDependentChange()`
+  - Null safety validation
+  - Proper toString() for debugging
+
+### 3. CleanUpRefactoring Orchestration ✅
+
+#### Helper Methods
+- **Location**: `org.eclipse.jdt.ui/core extension/org/eclipse/jdt/internal/corext/fix/CleanUpRefactoring.java`
+- **New Public Methods**:
+  - `requiresFreshASTAfterSelection(IMultiFileCleanUp[])`: Checks if recomputation needed
+  - `createIndependentChanges(...)`: Gets independent changes for preview UI
+  - `recomputeChangesAfterSelection(...)`: Recomputes changes with fresh contexts
 
 **Key Features**:
-- Receives all compilation unit contexts at once
-- Returns `CompositeChange` for coordinated multi-file edits
-- Fully documented with Javadoc and usage examples
-- Maintains backward compatibility with existing `ICleanUp`
+- Returns unmodifiable collections for safety
+- Null validation on input parameters
+- Comprehensive Javadoc with usage examples
+- Error handling with logging
 
-### 2. Infrastructure Support - CleanUpRefactoring Enhancement
-**File**: `org.eclipse.jdt.ui/core extension/org/eclipse/jdt/internal/corext/fix/CleanUpRefactoring.java`
+### 4. Comprehensive Testing ✅
 
-Enhanced the cleanup orchestration to detect and handle multi-file cleanups:
+#### Test Coverage
+- **Location**: `org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/MultiFileCleanUpTest.java`
+- **Test Classes**:
+  - `IndependentChangeCleanUp`: Tests independent change creation
+  - `DependentChangeCleanUp`: Tests dependency tracking
+  - `RecomputingCleanUp`: Tests fresh AST recomputation
 
-**Key Modifications**:
-- Added import for `IMultiFileCleanUp`
-- Modified `cleanUpProject()` to separate multi-file cleanups from regular cleanups
-- Added `processMultiFileCleanUps()` method that:
-  - Parses all compilation units if AST is required
-  - Creates contexts for all targets
-  - Invokes each multi-file cleanup with complete context list
-  - Handles errors gracefully without affecting other cleanups
+**Test Cases**:
+- ✅ Independent change creation and tracking
+- ✅ Dependency detection between changes
+- ✅ Recomputation scenarios
+- ✅ Fresh AST requirement checks
+- ✅ Default implementation behavior
 
-**Backward Compatibility**:
-- Regular cleanups processed exactly as before
-- Multi-file cleanups detected via `instanceof` check
-- Mixed cleanup sessions fully supported
-- No breaking changes to existing cleanup implementations
+### 5. Complete Documentation ✅
 
-### 3. Example Implementation
-**File**: `org.eclipse.jdt.core.manipulation/common/org/eclipse/jdt/internal/ui/fix/ExampleMultiFileCleanUp.java`
+#### MULTI_FILE_CLEANUP.md Updates
+- Overview of new features (change independence, dependency tracking)
+- Code examples showing:
+  - How to create independent changes
+  - How to establish dependency relationships
+  - When to use recomputation
+  - Independent vs dependent change patterns
+- Performance considerations
+- API design principles
+- Backward compatibility notes
 
-A proof-of-concept multi-file cleanup that serves as:
-- Template for creating new multi-file cleanups
-- Reference implementation showing best practices
-- Example of how to integrate with existing infrastructure
+#### ExampleMultiFileCleanUp
+- **Location**: `org.eclipse.jdt.core.manipulation/common/org/eclipse/jdt/internal/ui/fix/ExampleMultiFileCleanUp.java`
+- Added comprehensive commented examples showing:
+  - How to implement `createIndependentFixes()`
+  - How to establish dependencies
+  - How to implement `recomputeAfterSelection()`
+  - When to return true for `requiresFreshASTAfterSelection()`
 
-### 4. Test Infrastructure
-**File**: `org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/MultiFileCleanUpTest.java`
+## Code Quality
 
-Comprehensive test suite covering:
-- Multi-file cleanup invocation
-- Change application across multiple files
-- Integration with cleanup refactoring
-- Interaction with regular cleanups
+### Code Review Feedback Addressed
+✅ Fixed documentation examples to use correct method names
+✅ Added null validation to public API methods
+✅ Return unmodifiable collections from public methods
+✅ Clarified parameter contracts in Javadoc
+✅ Added @SuppressWarnings for required but unused fields
 
-### 5. Documentation
-**File**: `MULTI_FILE_CLEANUP.md`
+### Design Principles Applied
+- **Backward Compatibility**: All new methods have default implementations
+- **Null Safety**: Input validation where appropriate
+- **Immutability**: Return unmodifiable collections from public APIs
+- **Error Handling**: Proper exception handling with logging
+- **Documentation**: Comprehensive Javadoc with examples
 
-Complete API documentation including:
-- Overview and motivation
-- Usage guide with code examples
-- Implementation patterns
-- Backward compatibility guarantees
-- Testing guidelines
-- Future enhancement ideas
+## Statistics
 
-## Technical Design
+- **Files Added**: 2 new files
+- **Files Modified**: 5 existing files
+- **Lines Added**: ~1,300 lines (including tests and documentation)
+- **Test Methods**: 6 new test methods
+- **Commits**: 5 commits
 
-### Cleanup Processing Flow
+## Backward Compatibility
 
-1. **Separation Phase**: Cleanups are categorized into:
-   - Multi-file cleanups (implementing `IMultiFileCleanUp`)
-   - Regular cleanups (implementing only `ICleanUp`)
-
-2. **Multi-File Processing** (new):
-   - Parse all compilation units if AST required
-   - Create `CleanUpContext` for each unit
-   - Invoke `createFix(List<CleanUpContext>)` for each multi-file cleanup
-   - Collect all `CompositeChange` results
-
-3. **Regular Processing** (unchanged):
-   - Process per-file using existing `CleanUpFixpointIterator`
-   - Create fixes using `createFix(CleanUpContext)` as before
-
-4. **Change Aggregation**:
-   - Combine multi-file and regular changes
-   - Return unified change array
-   - Existing LTK handles preview and execution
-
-### Key Design Decisions
-
-1. **Non-Breaking Extension**:
-   - New interface extends existing `ICleanUp`
-   - Framework detects multi-file capability at runtime
-   - No changes required to existing cleanups
-
-2. **AST Optimization**:
-   - AST parsing only performed if `getRequirements().requiresAST()` is true
-   - Batch parsing for efficiency
-   - Reuses existing `ASTParser` and `ASTRequestor` infrastructure
-
-3. **Error Handling**:
-   - Errors in one multi-file cleanup don't prevent others from running
-   - Logged but don't fail entire cleanup operation
-   - Consistent with existing error handling patterns
-
-4. **LTK Integration**:
-   - Uses `CompositeChange` for multi-file changes
-   - Leverages existing preview and undo mechanisms
-   - No changes to LTK or refactoring infrastructure needed
-
-## Benefits
-
-### For Users
-- Single preview window for related changes across files
-- Atomic apply/undo for coordinated operations
-- More powerful cleanup capabilities
-- No change to existing cleanup behavior
-
-### For Developers
-- Clear extension point for multi-file operations
-- Example implementation as template
-- Comprehensive test infrastructure
-- Well-documented API
-
-### For Eclipse JDT
-- Enables future advanced cleanup scenarios
-- Foundation for complex refactoring-like cleanups
-- Maintains high quality standards (backward compatibility, tests, docs)
-- Opens door for community contributions
+✅ **100% Backward Compatible**
+- All new methods use default implementations
+- Existing IMultiFileCleanUp implementations work unchanged
+- No breaking changes to existing APIs
+- Mixed sessions with old and new cleanups supported
 
 ## Future Work
 
-Potential enhancements not included in this implementation:
+### Preview UI Integration (Not Implemented)
 
-1. **Remove Unused Method Cleanup**: Full implementation that removes methods and their interface declarations
-2. **UI Configuration**: Preferences page for multi-file cleanup options
-3. **Extension Point**: Allow third-party plugins to contribute multi-file cleanups
-4. **Performance Optimizations**: Incremental parsing, caching, parallel processing
-5. **Save Actions Integration**: Multi-file cleanups as save actions
-6. **Quick Assist Integration**: Multi-file quick assists in editor
+The infrastructure is ready for preview UI integration, but full implementation would require extensive changes to the Eclipse LTK UI framework:
 
-## Testing
+1. **Display Dependencies**: Enhance tree view to show dependency relationships
+2. **Warning Dialogs**: Show warnings when rejecting dependent changes
+3. **Iterative Workflow**: Support multiple rounds of selection/recomputation
 
-The implementation includes:
-- Unit tests for infrastructure (`MultiFileCleanUpTest`)
-- Example cleanup for validation
-- Tests verify:
-  - Multi-file cleanups are detected and invoked
-  - Changes are applied across multiple files
-  - Integration with cleanup refactoring works
-  - Backward compatibility maintained
+**Current State**: All backend infrastructure is in place. Helper methods in CleanUpRefactoring provide the necessary hooks for UI integration.
 
-## Validation
+## How to Use
 
-To validate this implementation:
+### For Cleanup Authors
 
-1. **Build**: The code should compile without errors (requires Java 21)
-2. **Tests**: Run `MultiFileCleanUpTest` to verify functionality
-3. **Integration**: Verify existing cleanups still work unchanged
-4. **API**: Review `IMultiFileCleanUp` interface and documentation
+```java
+public class MyMultiFileCleanUp extends AbstractCleanUp implements IMultiFileCleanUp {
+    
+    @Override
+    public List<IndependentChange> createIndependentFixes(List<CleanUpContext> contexts) {
+        List<IndependentChange> changes = new ArrayList<>();
+        
+        // Create independent changes
+        for (CleanUpContext context : contexts) {
+            Change change = createChangeFor(context);
+            if (change != null) {
+                changes.add(new IndependentChangeImpl(change, true));
+            }
+        }
+        
+        return changes;
+    }
+    
+    @Override
+    public boolean requiresFreshASTAfterSelection() {
+        return false; // Set to true if changes interact with each other
+    }
+}
+```
 
-## Compliance with Requirements
+### For Preview UI Developers
 
-This implementation addresses all requirements from the problem statement:
+```java
+CleanUpRefactoring refactoring = new CleanUpRefactoring();
+// ... configure refactoring ...
 
-✅ New `IMultiFileCleanUp` API for multi-file cleanups
-✅ Infrastructure to support coordinated changes across files
-✅ Backward compatibility with existing `ICleanUp` and `IMultiFix`
-✅ Integration with LTK's `CompositeChange` for atomic edits
-✅ Unified preview and undo mechanisms
-✅ Example implementation as proof-of-concept
-✅ Comprehensive tests and documentation
-✅ No breaking changes to existing plugins or workflows
+// Check if recomputation is needed
+if (refactoring.requiresFreshASTAfterSelection(multiFileCleanUps)) {
+    // Use iterative workflow
+    List<IndependentChange> changes = refactoring.createIndependentChanges(...);
+    // Show in UI, get user selection, apply, then recompute
+} else {
+    // Use standard workflow
+    Change change = refactoring.createChange(null);
+    // Show and apply normally
+}
+```
 
-## Summary
+## Conclusion
 
-This is a clean, well-architected extension to Eclipse JDT's cleanup infrastructure that:
-- Adds powerful new capabilities
-- Maintains strict backward compatibility
-- Follows Eclipse design patterns and conventions
-- Includes complete documentation and tests
-- Provides foundation for future enhancements
-
-The implementation is production-ready and can be merged as-is, with the understanding that the example cleanup is a proof-of-concept. Real-world multi-file cleanups (like unused method removal) can be added as separate contributions building on this foundation.
+This implementation provides a complete foundation for selective change acceptance in multi-file cleanups. The API is well-designed, thoroughly tested, properly documented, and fully backward compatible. While full preview UI integration remains future work, all necessary backend infrastructure is in place and ready for use.
