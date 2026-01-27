@@ -267,18 +267,18 @@ public class RemoveUnusedMethodCleanUp extends AbstractCleanUp implements IMulti
 		ITypeBinding declaringClass= binding.getDeclaringClass();
 		if (declaringClass != null) {
 			key.append(declaringClass.getQualifiedName());
-			key.append('.'); //$NON-NLS-1$
+			key.append('.');
 		}
 		key.append(binding.getName());
-		key.append('('); //$NON-NLS-1$
+		key.append('(');
 		ITypeBinding[] params= binding.getParameterTypes();
 		for (int i= 0; i < params.length; i++) {
 			if (i > 0) {
-				key.append(','); //$NON-NLS-1$
+				key.append(',');
 			}
 			key.append(params[i].getErasure().getQualifiedName());
 		}
-		key.append(')'); //$NON-NLS-1$
+		key.append(')');
 		return key.toString();
 	}
 
