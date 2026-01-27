@@ -13,6 +13,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.ui.fix;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
@@ -24,6 +25,7 @@ import org.eclipse.jdt.ui.cleanup.CleanUpContext;
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
 import org.eclipse.jdt.ui.cleanup.IMultiFileCleanUp;
+import org.eclipse.jdt.ui.cleanup.IndependentChange;
 import org.eclipse.ltk.core.refactoring.CompositeChange;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 
@@ -131,6 +133,123 @@ public class ExampleMultiFileCleanUp extends AbstractCleanUp implements IMultiFi
 		// 3. Create TextEdits for the fixes
 		// 4. Return a CompilationUnitChange with those edits
 
+		return null;
+	}
+
+	/**
+	 * Example demonstrating how to implement createIndependentFixes() to support
+	 * selective change acceptance with dependency tracking.
+	 * <p>
+	 * This implementation shows:
+	 * </p>
+	 * <ul>
+	 * <li>Creating multiple independent changes</li>
+	 * <li>Marking changes as independent or dependent</li>
+	 * <li>Establishing dependency relationships between changes</li>
+	 * </ul>
+	 * <p>
+	 * Uncomment to enable this example.
+	 * </p>
+	 */
+	// @Override
+	// public List<IndependentChange> createIndependentFixes(List<CleanUpContext> contexts) throws CoreException {
+	//     List<IndependentChange> changes = new ArrayList<>();
+	//
+	//     // Example: Create independent changes for each file
+	//     for (CleanUpContext context : contexts) {
+	//         ICompilationUnit cu = context.getCompilationUnit();
+	//         
+	//         // Create a change for this compilation unit
+	//         CompilationUnitChange change = createChangeForUnit(cu);
+	//         if (change != null) {
+	//             // Wrap it as an independent change
+	//             // true = this change can be rejected without affecting others
+	//             IndependentChangeImpl indepChange = new IndependentChangeImpl(change, true);
+	//             changes.add(indepChange);
+	//         }
+	//     }
+	//
+	//     // Example: Create a dependent change that relies on previous changes
+	//     if (!changes.isEmpty()) {
+	//         // Suppose we have a change that depends on the first change
+	//         CompilationUnitChange dependentChange = createDependentChange(contexts);
+	//         if (dependentChange != null) {
+	//             // false = this change is not independent (has dependencies)
+	//             IndependentChangeImpl depChange = new IndependentChangeImpl(dependentChange, false);
+	//             
+	//             // Mark the dependency: this change depends on the first change
+	//             if (changes.get(0) instanceof IndependentChangeImpl) {
+	//                 ((IndependentChangeImpl) changes.get(0)).addDependentChange(depChange);
+	//             }
+	//             
+	//             changes.add(depChange);
+	//         }
+	//     }
+	//
+	//     return changes;
+	// }
+
+	/**
+	 * Example demonstrating how to implement recomputeAfterSelection() to support
+	 * fresh AST recomputation after user selection.
+	 * <p>
+	 * This is useful when the validity of later changes depends on earlier changes
+	 * being applied. The framework will:
+	 * </p>
+	 * <ol>
+	 * <li>Apply the selected changes</li>
+	 * <li>Generate fresh ASTs</li>
+	 * <li>Call this method to recompute remaining changes</li>
+	 * </ol>
+	 * <p>
+	 * Uncomment to enable this example.
+	 * </p>
+	 */
+	// @Override
+	// public CompositeChange recomputeAfterSelection(List<IndependentChange> selectedChanges,
+	//         List<CleanUpContext> freshContexts) throws CoreException {
+	//     
+	//     // Analyze the fresh contexts to recompute remaining changes
+	//     CompositeChange recomputed = new CompositeChange("Recomputed Changes");
+	//     
+	//     for (CleanUpContext context : freshContexts) {
+	//         // With fresh AST, determine what changes are still needed
+	//         CompilationUnitChange change = createChangeForUnit(context.getCompilationUnit());
+	//         if (change != null) {
+	//             recomputed.add(change);
+	//         }
+	//     }
+	//     
+	//     return recomputed.getChildren().length > 0 ? recomputed : null;
+	// }
+
+	/**
+	 * Example demonstrating when to return true for requiresFreshASTAfterSelection().
+	 * <p>
+	 * Return true if:
+	 * </p>
+	 * <ul>
+	 * <li>Later changes depend on earlier changes being applied first</li>
+	 * <li>Change validity needs to be rechecked after modifications</li>
+	 * <li>You need to see the actual code state after changes</li>
+	 * </ul>
+	 * <p>
+	 * Note: This has a performance cost as it requires re-parsing and recomputing.
+	 * </p>
+	 * <p>
+	 * Uncomment to enable this example.
+	 * </p>
+	 */
+	// @Override
+	// public boolean requiresFreshASTAfterSelection() {
+	//     // Return true if this cleanup needs to recompute changes after user selection
+	//     // with fresh ASTs. This is useful when changes interact with each other.
+	//     return false;
+	// }
+
+	@SuppressWarnings("unused")
+	private CompilationUnitChange createDependentChange(List<CleanUpContext> contexts) throws CoreException {
+		// Example placeholder for creating a change that depends on other changes
 		return null;
 	}
 }
