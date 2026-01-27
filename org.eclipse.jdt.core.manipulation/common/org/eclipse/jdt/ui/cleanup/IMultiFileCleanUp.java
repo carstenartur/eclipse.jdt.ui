@@ -135,13 +135,14 @@ public interface IMultiFileCleanUp extends ICleanUp {
 	 * </pre>
 	 *
 	 * @param contexts list of clean up contexts, one per compilation unit; guaranteed to be
-	 *                 non-null and non-empty
+	 *                 non-null and non-empty by the caller
 	 * @return list of independent changes that can be individually accepted or rejected; may return
 	 *         an empty list if no changes are needed
 	 * @throws CoreException if an unexpected error occurred while analyzing or creating the fixes
 	 * @since 1.22
 	 */
 	default List<IndependentChange> createIndependentFixes(List<CleanUpContext> contexts) throws CoreException {
+		// Call the existing createFix method (which may return null)
 		CompositeChange compositeChange= createFix(contexts);
 		if (compositeChange == null || compositeChange.getChildren().length == 0) {
 			return new ArrayList<>();

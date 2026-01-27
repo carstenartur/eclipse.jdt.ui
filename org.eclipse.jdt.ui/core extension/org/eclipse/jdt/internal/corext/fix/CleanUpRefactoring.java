@@ -14,6 +14,7 @@
 package org.eclipse.jdt.internal.corext.fix;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
@@ -845,11 +846,14 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 	 * workflow of applying changes, regenerating ASTs, and recomputing remaining changes.
 	 * </p>
 	 *
-	 * @param multiFileCleanUps array of multi-file cleanups to check
+	 * @param multiFileCleanUps array of multi-file cleanups to check; must not be {@code null}
 	 * @return {@code true} if any cleanup requires fresh AST recomputation, {@code false} otherwise
 	 * @since 1.22
 	 */
 	public boolean requiresFreshASTAfterSelection(IMultiFileCleanUp[] multiFileCleanUps) {
+		if (multiFileCleanUps == null) {
+			return false;
+		}
 		for (IMultiFileCleanUp cleanUp : multiFileCleanUps) {
 			if (cleanUp.requiresFreshASTAfterSelection()) {
 				return true;
@@ -870,7 +874,7 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 	 * @param targets the cleanup targets (compilation units)
 	 * @param multiFileCleanUps the multi-file cleanups to process
 	 * @param monitor progress monitor
-	 * @return list of all independent changes from all cleanups
+	 * @return unmodifiable list of all independent changes from all cleanups
 	 * @throws CoreException if an error occurs while creating the changes
 	 * @since 1.22
 	 */
@@ -940,7 +944,7 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 			monitor.worked(1);
 		}
 
-		return allChanges;
+		return Collections.unmodifiableList(allChanges);
 	}
 
 	/**
@@ -955,7 +959,7 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 	 * @param multiFileCleanUps the multi-file cleanups to recompute
 	 * @param selectedChanges the changes that were selected by the user
 	 * @param monitor progress monitor
-	 * @return list of recomputed changes
+	 * @return unmodifiable list of recomputed changes
 	 * @throws CoreException if an error occurs while recomputing the changes
 	 * @since 1.22
 	 */
@@ -1017,7 +1021,7 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 			monitor.worked(1);
 		}
 
-		return changes;
+		return Collections.unmodifiableList(changes);
 	}
 
 	private RefactoringStatus setOptionsFromProfile(IJavaProject javaProject, ICleanUp[] cleanUps) {

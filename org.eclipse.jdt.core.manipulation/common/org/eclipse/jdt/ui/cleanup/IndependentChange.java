@@ -40,13 +40,14 @@ import org.eclipse.ltk.core.refactoring.Change;
  *         
  *         // Create independent changes
  *         Change changeA = createChangeA(contexts);
- *         changes.add(new IndependentChangeImpl(changeA, true)); // independent
+ *         IndependentChangeImpl changeAImpl = new IndependentChangeImpl(changeA, false);
+ *         changes.add(changeAImpl); // changeA is not independent (has dependents)
  *         
  *         // Create dependent change
  *         Change changeB = createChangeB(contexts);
- *         IndependentChangeImpl depChange = new IndependentChangeImpl(changeB, false);
- *         depChange.addDependency(changes.get(0)); // depends on changeA
- *         changes.add(depChange);
+ *         IndependentChangeImpl changeBImpl = new IndependentChangeImpl(changeB, false);
+ *         changeAImpl.addDependentChange(changeBImpl); // changeB depends on changeA
+ *         changes.add(changeBImpl);
  *         
  *         return changes;
  *     }

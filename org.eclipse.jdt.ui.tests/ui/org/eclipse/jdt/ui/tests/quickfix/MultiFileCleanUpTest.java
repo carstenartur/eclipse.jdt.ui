@@ -232,6 +232,7 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 	 * Test cleanup that creates independent changes.
 	 */
 	private static class IndependentChangeCleanUp implements IMultiFileCleanUp {
+		@SuppressWarnings("unused") // Required by ICleanUp interface contract
 		private CleanUpOptions options;
 
 		@Override
@@ -295,6 +296,7 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 	 * Test cleanup that creates dependent changes.
 	 */
 	private static class DependentChangeCleanUp implements IMultiFileCleanUp {
+		@SuppressWarnings("unused") // Required by ICleanUp interface contract
 		private CleanUpOptions options;
 
 		@Override
@@ -368,6 +370,7 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 	 * Test cleanup that requires fresh AST recomputation.
 	 */
 	private static class RecomputingCleanUp implements IMultiFileCleanUp {
+		@SuppressWarnings("unused") // Required by ICleanUp interface contract
 		private CleanUpOptions options;
 		private int recomputeCallCount = 0;
 
