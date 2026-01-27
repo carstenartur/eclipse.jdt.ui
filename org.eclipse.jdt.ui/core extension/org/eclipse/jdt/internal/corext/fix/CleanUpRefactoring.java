@@ -86,6 +86,7 @@ import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUp;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
 import org.eclipse.jdt.ui.cleanup.IMultiFileCleanUp;
+import org.eclipse.jdt.ui.cleanup.IndependentChange;
 import org.eclipse.jdt.ui.text.java.IProblemLocation;
 
 import org.eclipse.jdt.internal.ui.IJavaStatusConstants;
@@ -748,6 +749,25 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 	/**
 	 * Process multi-file cleanups by creating contexts for all targets and passing them
 	 * to each multi-file cleanup.
+	 * <p>
+	 * Note: This method processes all multi-file cleanups in a batch. For cleanups that require
+	 * fresh AST recomputation after user selection (indicated by
+	 * {@link IMultiFileCleanUp#requiresFreshASTAfterSelection()}), the preview UI should:
+	 * </p>
+	 * <ol>
+	 * <li>Call {@link IMultiFileCleanUp#createIndependentFixes(List)} to get independent changes</li>
+	 * <li>Show changes in preview UI with dependency tracking</li>
+	 * <li>Allow user to select which changes to apply</li>
+	 * <li>Apply selected changes</li>
+	 * <li>Regenerate fresh ASTs for remaining compilation units</li>
+	 * <li>Call {@link IMultiFileCleanUp#recomputeAfterSelection(List, List)} to get updated changes</li>
+	 * <li>Repeat from step 2 if there are remaining changes</li>
+	 * </ol>
+	 * <p>
+	 * The current implementation processes all changes upfront without recomputation. Full
+	 * recomputation support requires integration with the preview UI dialog, which would need
+	 * to be enhanced to support the iterative workflow described above.
+	 * </p>
 	 */
 	private Change[] processMultiFileCleanUps(IJavaProject project, CleanUpTarget[] targets, IMultiFileCleanUp[] multiFileCleanUps, IProgressMonitor monitor) throws CoreException {
 		List<Change> changes= new ArrayList<>();
@@ -815,6 +835,189 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 		}
 
 		return changes.toArray(new Change[0]);
+	}
+
+	/**
+	 * Checks if any of the given multi-file cleanups require fresh AST recomputation after user
+	 * selection.
+	 * <p>
+	 * This method can be used by the preview UI to determine if it needs to support the iterative
+	 * workflow of applying changes, regenerating ASTs, and recomputing remaining changes.
+	 * </p>
+	 *
+	 * @param multiFileCleanUps array of multi-file cleanups to check
+	 * @return {@code true} if any cleanup requires fresh AST recomputation, {@code false} otherwise
+	 * @since 1.22
+	 */
+	public boolean requiresFreshASTAfterSelection(IMultiFileCleanUp[] multiFileCleanUps) {
+		for (IMultiFileCleanUp cleanUp : multiFileCleanUps) {
+			if (cleanUp.requiresFreshASTAfterSelection()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Creates independent changes for all multi-file cleanups that support selective change
+	 * acceptance.
+	 * <p>
+	 * This method can be used by the preview UI to get fine-grained changes that can be individually
+	 * accepted or rejected by the user.
+	 * </p>
+	 *
+	 * @param project the Java project
+	 * @param targets the cleanup targets (compilation units)
+	 * @param multiFileCleanUps the multi-file cleanups to process
+	 * @param monitor progress monitor
+	 * @return list of all independent changes from all cleanups
+	 * @throws CoreException if an error occurs while creating the changes
+	 * @since 1.22
+	 */
+	public List<IndependentChange> createIndependentChanges(IJavaProject project, CleanUpTarget[] targets,
+			IMultiFileCleanUp[] multiFileCleanUps, IProgressMonitor monitor) throws CoreException {
+		List<IndependentChange> allChanges= new ArrayList<>();
+
+		// Build contexts for all targets
+		List<CleanUpContext> allContexts= new ArrayList<>();
+		Map<ICompilationUnit, CompilationUnit> astMap= new Hashtable<>();
+
+		// Check if any cleanup requires AST
+		boolean requiresAST= false;
+		for (IMultiFileCleanUp cleanUp : multiFileCleanUps) {
+			if (cleanUp.getRequirements().requiresAST()) {
+				requiresAST= true;
+				break;
+			}
+		}
+
+		if (requiresAST) {
+			// Parse all compilation units to get ASTs
+			ICompilationUnit[] units= new ICompilationUnit[targets.length];
+			for (int i= 0; i < targets.length; i++) {
+				units[i]= targets[i].getCompilationUnit();
+			}
+
+			ASTParser parser= createCleanUpASTParser();
+			parser.setProject(project);
+			Map<String, String> options= RefactoringASTParser.getCompilerOptions(project);
+			parser.setCompilerOptions(options);
+
+			ASTRequestor requestor= new ASTRequestor() {
+				@Override
+				public void acceptAST(ICompilationUnit source, CompilationUnit ast) {
+					astMap.put(source, ast);
+				}
+			};
+
+			parser.createASTs(units, new String[0], requestor, monitor);
+		}
+
+		// Create contexts for all targets
+		for (CleanUpTarget target : targets) {
+			ICompilationUnit cu= target.getCompilationUnit();
+			CompilationUnit ast= astMap.get(cu);
+			CleanUpContext context;
+			if (target instanceof MultiFixTarget) {
+				context= new MultiFixContext(cu, ast, ((MultiFixTarget)target).getProblems());
+			} else {
+				context= new CleanUpContext(cu, ast);
+			}
+			allContexts.add(context);
+		}
+
+		// Get independent changes from each multi-file cleanup
+		for (IMultiFileCleanUp multiFileCleanUp : multiFileCleanUps) {
+			try {
+				List<IndependentChange> changes= multiFileCleanUp.createIndependentFixes(allContexts);
+				if (changes != null && !changes.isEmpty()) {
+					allChanges.addAll(changes);
+				}
+			} catch (CoreException e) {
+				// Log and continue with other cleanups
+				JavaPlugin.log(e);
+			}
+			monitor.worked(1);
+		}
+
+		return allChanges;
+	}
+
+	/**
+	 * Recomputes changes for cleanups that require fresh AST after user selection.
+	 * <p>
+	 * This method should be called by the preview UI after applying selected changes, to get
+	 * updated changes based on the current state of the code.
+	 * </p>
+	 *
+	 * @param project the Java project
+	 * @param targets the cleanup targets (compilation units)
+	 * @param multiFileCleanUps the multi-file cleanups to recompute
+	 * @param selectedChanges the changes that were selected by the user
+	 * @param monitor progress monitor
+	 * @return list of recomputed changes
+	 * @throws CoreException if an error occurs while recomputing the changes
+	 * @since 1.22
+	 */
+	public List<Change> recomputeChangesAfterSelection(IJavaProject project, CleanUpTarget[] targets,
+			IMultiFileCleanUp[] multiFileCleanUps, List<IndependentChange> selectedChanges,
+			IProgressMonitor monitor) throws CoreException {
+		List<Change> changes= new ArrayList<>();
+
+		// Build fresh contexts for all targets (with fresh ASTs)
+		List<CleanUpContext> freshContexts= new ArrayList<>();
+		Map<ICompilationUnit, CompilationUnit> astMap= new Hashtable<>();
+
+		// Always parse with fresh AST when recomputing
+		ICompilationUnit[] units= new ICompilationUnit[targets.length];
+		for (int i= 0; i < targets.length; i++) {
+			units[i]= targets[i].getCompilationUnit();
+		}
+
+		ASTParser parser= createCleanUpASTParser();
+		parser.setProject(project);
+		Map<String, String> options= RefactoringASTParser.getCompilerOptions(project);
+		parser.setCompilerOptions(options);
+
+		ASTRequestor requestor= new ASTRequestor() {
+			@Override
+			public void acceptAST(ICompilationUnit source, CompilationUnit ast) {
+				astMap.put(source, ast);
+			}
+		};
+
+		parser.createASTs(units, new String[0], requestor, monitor);
+
+		// Create fresh contexts for all targets
+		for (CleanUpTarget target : targets) {
+			ICompilationUnit cu= target.getCompilationUnit();
+			CompilationUnit ast= astMap.get(cu);
+			CleanUpContext context;
+			if (target instanceof MultiFixTarget) {
+				context= new MultiFixContext(cu, ast, ((MultiFixTarget)target).getProblems());
+			} else {
+				context= new CleanUpContext(cu, ast);
+			}
+			freshContexts.add(context);
+		}
+
+		// Recompute changes from each multi-file cleanup that requires it
+		for (IMultiFileCleanUp multiFileCleanUp : multiFileCleanUps) {
+			if (multiFileCleanUp.requiresFreshASTAfterSelection()) {
+				try {
+					CompositeChange recomputed= multiFileCleanUp.recomputeAfterSelection(selectedChanges, freshContexts);
+					if (recomputed != null && recomputed.getChildren().length > 0) {
+						changes.add(recomputed);
+					}
+				} catch (CoreException e) {
+					// Log and continue with other cleanups
+					JavaPlugin.log(e);
+				}
+			}
+			monitor.worked(1);
+		}
+
+		return changes;
 	}
 
 	private RefactoringStatus setOptionsFromProfile(IJavaProject javaProject, ICleanUp[] cleanUps) {
