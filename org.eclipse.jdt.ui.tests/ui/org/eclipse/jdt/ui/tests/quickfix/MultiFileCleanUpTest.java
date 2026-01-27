@@ -13,16 +13,16 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.tests.quickfix;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.refactoring.CompilationUnitChange;
 import org.eclipse.jdt.ui.cleanup.CleanUpContext;
@@ -31,10 +31,10 @@ import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUp;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
 import org.eclipse.jdt.ui.cleanup.IMultiFileCleanUp;
+import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.CompositeChange;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
-import org.eclipse.text.edits.DeleteEdit;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -45,6 +45,16 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 
 	@Rule
 	public ProjectTestSetup projectSetup = new ProjectTestSetup();
+
+	@Override
+	protected IJavaProject getProject() {
+		return projectSetup.getProject();
+	}
+
+	@Override
+	protected IClasspathEntry[] getDefaultClasspath() throws CoreException {
+		return projectSetup.getDefaultClasspath();
+	}
 
 	/**
 	 * Simple test cleanup that removes all content from files (for testing purposes only).
@@ -64,7 +74,7 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 
 		@Override
 		public String[] getStepDescriptions() {
-			return new String[] { "Test multi-file cleanup: " + marker };
+			return new String[] { "Test multi-file cleanup: " + marker }; //$NON-NLS-1$
 		}
 
 		@Override
@@ -95,7 +105,7 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 				return null;
 			}
 
-			CompositeChange composite = new CompositeChange("Test Multi-File Cleanup: " + marker);
+			CompositeChange composite = new CompositeChange("Test Multi-File Cleanup: " + marker); //$NON-NLS-1$
 
 			// For each context, create a simple change (add a comment marker)
 			for (CleanUpContext context : contexts) {
@@ -103,9 +113,9 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 				String source = cu.getSource();
 
 				// Simple change: add a comment at the beginning
-				String newSource = "/* " + marker + " */\n" + source;
+				String newSource = "/* " + marker + " */\n" + source; //$NON-NLS-1$ //$NON-NLS-2$
 
-				CompilationUnitChange change = new CompilationUnitChange("Add marker to " + cu.getElementName(), cu);
+				CompilationUnitChange change = new CompilationUnitChange("Add marker to " + cu.getElementName(), cu); //$NON-NLS-1$
 				change.setEdit(new org.eclipse.text.edits.ReplaceEdit(0, source.length(), newSource));
 
 				composite.add(change);
@@ -120,7 +130,7 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 	 */
 	@Test
 	public void testMultiFileCleanUpInvoked() throws Exception {
-		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null);
+		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
 		// Create two compilation units
 		String input1 = """
@@ -135,25 +145,25 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 				}
 				""";
 
-		ICompilationUnit cu1 = pack.createCompilationUnit("A.java", input1, false, null);
-		ICompilationUnit cu2 = pack.createCompilationUnit("B.java", input2, false, null);
+		ICompilationUnit cu1 = pack.createCompilationUnit("A.java", input1, false, null); //$NON-NLS-1$
+		ICompilationUnit cu2 = pack.createCompilationUnit("B.java", input2, false, null); //$NON-NLS-1$
 
 		// Apply the multi-file cleanup
-		ICleanUp cleanup = new TestMultiFileCleanUp("TEST_MARKER");
+		ICleanUp cleanup = new TestMultiFileCleanUp("TEST_MARKER"); //$NON-NLS-1$
 
 		enable(cleanup.getRequirements());
 
 		Change[] changes = performCleanUp(cleanup, new ICompilationUnit[] { cu1, cu2 });
 
-		assertNotNull("Changes should not be null", changes);
-		assertTrue("Should have changes", changes.length > 0);
+		assertNotNull("Changes should not be null", changes); //$NON-NLS-1$
+		assertTrue("Should have changes", changes.length > 0); //$NON-NLS-1$
 
 		// Verify that both files were processed
 		String result1 = cu1.getSource();
 		String result2 = cu2.getSource();
 
-		assertTrue("File A should contain marker", result1.contains("TEST_MARKER"));
-		assertTrue("File B should contain marker", result2.contains("TEST_MARKER"));
+		assertTrue("File A should contain marker", result1.contains("TEST_MARKER")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue("File B should contain marker", result2.contains("TEST_MARKER")); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	/**
@@ -161,7 +171,7 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 	 */
 	@Test
 	public void testMultiFileCleanUpWithRegularCleanUp() throws Exception {
-		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null);
+		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
 		String input = """
 				package test;
@@ -169,18 +179,18 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 				}
 				""";
 
-		ICompilationUnit cu = pack.createCompilationUnit("C.java", input, false, null);
+		ICompilationUnit cu = pack.createCompilationUnit("C.java", input, false, null); //$NON-NLS-1$
 
 		// Use a multi-file cleanup
-		ICleanUp multiFileCleanup = new TestMultiFileCleanUp("MULTI");
+		ICleanUp multiFileCleanup = new TestMultiFileCleanUp("MULTI"); //$NON-NLS-1$
 
 		enable(multiFileCleanup.getRequirements());
 
 		Change[] changes = performCleanUp(multiFileCleanup, new ICompilationUnit[] { cu });
 
-		assertNotNull("Changes should not be null", changes);
+		assertNotNull("Changes should not be null", changes); //$NON-NLS-1$
 		String result = cu.getSource();
-		assertTrue("File should contain multi-file marker", result.contains("MULTI"));
+		assertTrue("File should contain multi-file marker", result.contains("MULTI")); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	private Change[] performCleanUp(ICleanUp cleanUp, ICompilationUnit[] units) throws Exception {
@@ -195,10 +205,10 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 		}
 
 		RefactoringStatus status = refactoring.checkAllConditions(null);
-		assertTrue("Preconditions should be OK: " + status.toString(), !status.hasFatalError());
+		assertTrue("Preconditions should be OK: " + status.toString(), !status.hasFatalError()); //$NON-NLS-1$
 
 		Change change = refactoring.createChange(null);
-		assertNotNull("Change should not be null", change);
+		assertNotNull("Change should not be null", change); //$NON-NLS-1$
 
 		change.perform(null);
 
