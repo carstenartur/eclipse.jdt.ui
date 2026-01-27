@@ -85,6 +85,7 @@ import org.eclipse.jdt.ui.cleanup.CleanUpOptions;
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUp;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
+import org.eclipse.jdt.ui.cleanup.IMultiFileCleanUp;
 import org.eclipse.jdt.ui.text.java.IProblemLocation;
 
 import org.eclipse.jdt.internal.ui.IJavaStatusConstants;
@@ -696,21 +697,124 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 	}
 
 	private Change[] cleanUpProject(IJavaProject project, CleanUpTarget[] targets, ICleanUp[] cleanUps, IProgressMonitor monitor) throws CoreException {
-		CleanUpFixpointIterator iter= new CleanUpFixpointIterator(targets, cleanUps);
+		// Separate multi-file cleanups from regular cleanups
+		List<IMultiFileCleanUp> multiFileCleanUps= new ArrayList<>();
+		List<ICleanUp> regularCleanUps= new ArrayList<>();
+		for (ICleanUp cleanUp : cleanUps) {
+			if (cleanUp instanceof IMultiFileCleanUp) {
+				multiFileCleanUps.add((IMultiFileCleanUp) cleanUp);
+			} else {
+				regularCleanUps.add(cleanUp);
+			}
+		}
+
+		List<Change> allChanges= new ArrayList<>();
 
 		IProgressMonitor subMonitor= Progress.subMonitor(monitor, 2 * targets.length * cleanUps.length);
-		subMonitor.beginTask("", targets.length); //$NON-NLS-1$
+		subMonitor.beginTask("", targets.length + multiFileCleanUps.size()); //$NON-NLS-1$
 		subMonitor.subTask(Messages.format(FixMessages.CleanUpRefactoring_Parser_Startup_message, BasicElementLabels.getResourceName(project.getProject())));
+
 		try {
-			while (iter.hasNext()) {
-				iter.next(subMonitor);
+			// Process multi-file cleanups first
+			if (!multiFileCleanUps.isEmpty()) {
+				Change[] multiFileChanges= processMultiFileCleanUps(project, targets, multiFileCleanUps.toArray(new IMultiFileCleanUp[0]), Progress.subMonitor(subMonitor, multiFileCleanUps.size()));
+				for (Change change : multiFileChanges) {
+					allChanges.add(change);
+				}
 			}
 
-			return iter.getResult();
+			// Process regular cleanups per-file
+			if (!regularCleanUps.isEmpty()) {
+				CleanUpFixpointIterator iter= new CleanUpFixpointIterator(targets, regularCleanUps.toArray(new ICleanUp[0]));
+				try {
+					while (iter.hasNext()) {
+						iter.next(subMonitor);
+					}
+					Change[] regularChanges= iter.getResult();
+					for (Change change : regularChanges) {
+						allChanges.add(change);
+					}
+				} finally {
+					iter.dispose();
+				}
+			}
+
+			return allChanges.toArray(new Change[0]);
 		} finally {
-			iter.dispose();
 			subMonitor.done();
 		}
+	}
+
+	/**
+	 * Process multi-file cleanups by creating contexts for all targets and passing them
+	 * to each multi-file cleanup.
+	 */
+	private Change[] processMultiFileCleanUps(IJavaProject project, CleanUpTarget[] targets, IMultiFileCleanUp[] multiFileCleanUps, IProgressMonitor monitor) throws CoreException {
+		List<Change> changes= new ArrayList<>();
+
+		// Build contexts for all targets
+		List<CleanUpContext> allContexts= new ArrayList<>();
+		Map<ICompilationUnit, CompilationUnit> astMap= new Hashtable<>();
+
+		// Check if any cleanup requires AST
+		boolean requiresAST= false;
+		for (IMultiFileCleanUp cleanUp : multiFileCleanUps) {
+			if (cleanUp.getRequirements().requiresAST()) {
+				requiresAST= true;
+				break;
+			}
+		}
+
+		if (requiresAST) {
+			// Parse all compilation units to get ASTs
+			ICompilationUnit[] units= new ICompilationUnit[targets.length];
+			for (int i= 0; i < targets.length; i++) {
+				units[i]= targets[i].getCompilationUnit();
+			}
+
+			ASTParser parser= createCleanUpASTParser();
+			parser.setProject(project);
+			Map<String, String> options= RefactoringASTParser.getCompilerOptions(project);
+			parser.setCompilerOptions(options);
+
+			ASTRequestor requestor= new ASTRequestor() {
+				@Override
+				public void acceptAST(ICompilationUnit source, CompilationUnit ast) {
+					astMap.put(source, ast);
+				}
+			};
+
+			parser.createASTs(units, new String[0], requestor, monitor);
+		}
+
+		// Create contexts for all targets
+		for (CleanUpTarget target : targets) {
+			ICompilationUnit cu= target.getCompilationUnit();
+			CompilationUnit ast= astMap.get(cu);
+			CleanUpContext context;
+			if (target instanceof MultiFixTarget) {
+				context= new MultiFixContext(cu, ast, ((MultiFixTarget)target).getProblems());
+			} else {
+				context= new CleanUpContext(cu, ast);
+			}
+			allContexts.add(context);
+		}
+
+		// Process each multi-file cleanup
+		for (IMultiFileCleanUp multiFileCleanUp : multiFileCleanUps) {
+			try {
+				CompositeChange compositeChange= multiFileCleanUp.createFix(allContexts);
+				if (compositeChange != null && compositeChange.getChildren().length > 0) {
+					changes.add(compositeChange);
+				}
+			} catch (CoreException e) {
+				// Log and continue with other cleanups
+				JavaPlugin.log(e);
+			}
+			monitor.worked(1);
+		}
+
+		return changes.toArray(new Change[0]);
 	}
 
 	private RefactoringStatus setOptionsFromProfile(IJavaProject javaProject, ICleanUp[] cleanUps) {
