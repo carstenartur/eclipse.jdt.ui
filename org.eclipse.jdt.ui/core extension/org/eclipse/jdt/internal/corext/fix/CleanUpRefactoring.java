@@ -14,6 +14,7 @@
 package org.eclipse.jdt.internal.corext.fix;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
@@ -85,6 +86,8 @@ import org.eclipse.jdt.ui.cleanup.CleanUpOptions;
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUp;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
+import org.eclipse.jdt.ui.cleanup.IMultiFileCleanUp;
+import org.eclipse.jdt.ui.cleanup.IndependentChange;
 import org.eclipse.jdt.ui.text.java.IProblemLocation;
 
 import org.eclipse.jdt.internal.ui.IJavaStatusConstants;
@@ -862,6 +865,75 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 		result.setBindingsRecovery(IASTSharedValues.SHARED_BINDING_RECOVERY);
 
 		return result;
+	}
+
+	/**
+	 * Returns whether any of the configured cleanups require fresh AST parsing after the user
+	 * makes selections in the preview dialog.
+	 *
+	 * @return true if any cleanup requires fresh AST after selection, false otherwise
+	 */
+	public boolean requiresFreshASTAfterSelection() {
+		for (ICleanUp cleanUp : fCleanUps) {
+			if (cleanUp instanceof IMultiFileCleanUp) {
+				if (((IMultiFileCleanUp) cleanUp).requiresFreshASTAfterSelection()) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Creates independent changes from all configured cleanups. These changes can be
+	 * selectively accepted or rejected in the preview dialog.
+	 *
+	 * @param contexts the cleanup contexts for all compilation units
+	 * @param monitor the progress monitor
+	 * @return a collection of independent changes
+	 * @throws CoreException if an error occurs
+	 */
+	public Collection<IndependentChange> createIndependentChanges(
+			Collection<CleanUpContext> contexts, IProgressMonitor monitor) throws CoreException {
+		List<IndependentChange> allChanges= new ArrayList<>();
+
+		for (ICleanUp cleanUp : fCleanUps) {
+			if (cleanUp instanceof IMultiFileCleanUp) {
+				Collection<IndependentChange> changes=
+						((IMultiFileCleanUp) cleanUp).createIndependentChanges(contexts, monitor);
+				allChanges.addAll(changes);
+			}
+		}
+
+		return allChanges;
+	}
+
+	/**
+	 * Recomputes changes after the user has made selections in the preview dialog.
+	 * This method triggers fresh AST parsing and asks cleanups to recompute their changes.
+	 *
+	 * @param contexts fresh cleanup contexts with updated ASTs
+	 * @param selectedChanges the changes that were previously selected
+	 * @param monitor the progress monitor
+	 * @return a collection of recomputed independent changes
+	 * @throws CoreException if an error occurs
+	 */
+	public Collection<IndependentChange> recomputeChangesAfterSelection(
+			Collection<CleanUpContext> contexts,
+			Collection<IndependentChange> selectedChanges,
+			IProgressMonitor monitor) throws CoreException {
+		List<IndependentChange> allChanges= new ArrayList<>();
+
+		for (ICleanUp cleanUp : fCleanUps) {
+			if (cleanUp instanceof IMultiFileCleanUp) {
+				Collection<IndependentChange> changes=
+						((IMultiFileCleanUp) cleanUp).recomputeChangesAfterSelection(
+								contexts, selectedChanges, monitor);
+				allChanges.addAll(changes);
+			}
+		}
+
+		return allChanges;
 	}
 
 }
