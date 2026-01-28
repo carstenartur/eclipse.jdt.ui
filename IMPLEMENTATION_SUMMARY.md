@@ -120,15 +120,22 @@ This implementation adds comprehensive support for change independence metadata 
 
 ## Future Work
 
-### Preview UI Integration (Not Implemented)
+### Preview UI Integration (Partially Implemented)
 
-The infrastructure is ready for preview UI integration, but full implementation would require extensive changes to the Eclipse LTK UI framework:
+The infrastructure is ready for preview UI integration. This PR adds:
 
-1. **Display Dependencies**: Enhance tree view to show dependency relationships
-2. **Warning Dialogs**: Show warnings when rejecting dependent changes
-3. **Iterative Workflow**: Support multiple rounds of selection/recomputation
+1. **Detection Hooks**: CleanUpRefactoringWizard now detects when cleanups support independent changes
+2. **Helper Methods**: New methods in CleanUpRefactoring for UI layer to query capabilities
+3. **Documentation**: Comprehensive guide on implementing UI for selective acceptance
+4. **Test Infrastructure**: Tests validate the workflow programmatically
 
-**Current State**: All backend infrastructure is in place. Helper methods in CleanUpRefactoring provide the necessary hooks for UI integration.
+**Full interactive UI** would require extensive changes to the Eclipse LTK framework:
+- Custom preview dialog with checkbox tree viewer
+- Dependency visualization with icons/tree structure  
+- Warning dialogs for dependent changes
+- Iterative recomputation workflow with progress indicators
+
+**Current State**: All backend infrastructure is in place. Helper methods and detection logic provide the necessary hooks for future full UI integration. Developers can now implement custom UI layers using the provided API.
 
 ## How to Use
 

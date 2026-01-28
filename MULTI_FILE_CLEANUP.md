@@ -312,11 +312,248 @@ Choose recomputation only when necessary for correctness.
 
 ## Future Enhancements
 
+### Implementing Custom Preview UI for Selective Acceptance
+
+The API is ready for custom UI integration. Here's a guide for implementing an interactive preview with selective change acceptance:
+
+#### Step 1: Extend CleanUpRefactoringWizard
+
+Create a subclass that adds a selection page before the standard preview:
+
+```java
+public class SelectiveCleanUpWizard extends CleanUpRefactoringWizard {
+    
+    @Override
+    protected void addUserInputPages() {
+        super.addUserInputPages(); // Add configuration page
+        
+        // Add custom selection page if cleanups support it
+        if (supportsSelectiveAcceptance()) {
+            addPage(new IndependentChangeSelectionPage());
+        }
+    }
+}
+```
+
+#### Step 2: Create Selection Page with Checkbox Tree
+
+```java
+public class IndependentChangeSelectionPage extends UserInputWizardPage {
+    
+    private CheckboxTreeViewer treeViewer;
+    private List<IndependentChange> allChanges;
+    private List<IndependentChange> selectedChanges;
+    
+    @Override
+    public void createControl(Composite parent) {
+        Composite composite = new Composite(parent, SWT.NONE);
+        composite.setLayout(new GridLayout());
+        
+        // Create tree viewer
+        Tree tree = new Tree(composite, SWT.CHECK | SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
+        tree.setLayoutData(new GridData(GridData.FILL_BOTH));
+        treeViewer = new CheckboxTreeViewer(tree);
+        
+        // Set content and label providers
+        treeViewer.setContentProvider(new IndependentChangeContentProvider());
+        treeViewer.setLabelProvider(new IndependentChangeLabelProvider());
+        
+        // Add check state listener
+        treeViewer.addCheckStateListener(event -> {
+            IndependentChange change = (IndependentChange) event.getElement();
+            if (!event.getChecked() && hasDependents(change)) {
+                // Show warning dialog
+                showDependencyWarning(change);
+                event.getCheckable().setChecked(change, true); // Revert
+            } else {
+                updateSelection();
+                if (requiresRecomputation()) {
+                    recomputeChanges();
+                }
+            }
+        });
+        
+        // Load initial changes
+        loadInitialChanges();
+        
+        setControl(composite);
+    }
+    
+    private void loadInitialChanges() {
+        CleanUpRefactoring refactoring = (CleanUpRefactoring) getRefactoring();
+        try {
+            // Get independent changes from refactoring
+            allChanges = refactoring.createIndependentChanges(...);
+            treeViewer.setInput(allChanges);
+            treeViewer.setAllChecked(true);
+            selectedChanges = new ArrayList<>(allChanges);
+        } catch (CoreException e) {
+            JavaPlugin.log(e);
+        }
+    }
+    
+    private void showDependencyWarning(IndependentChange change) {
+        List<IndependentChange> dependents = change.getDependentChanges();
+        StringBuilder message = new StringBuilder();
+        message.append("The following changes depend on this change:\n\n");
+        for (IndependentChange dependent : dependents) {
+            message.append("- ").append(dependent.getDescription()).append("\n");
+        }
+        message.append("\nDeselecting this change may cause errors. Continue?");
+        
+        MessageDialog.openWarning(getShell(), 
+            "Dependency Warning", 
+            message.toString());
+    }
+    
+    private void recomputeChanges() {
+        // Recompute with fresh ASTs after selection
+        CleanUpRefactoring refactoring = (CleanUpRefactoring) getRefactoring();
+        try {
+            CompositeChange recomputed = refactoring.recomputeChangesAfterSelection(
+                selectedChanges, freshContexts);
+            // Update tree with recomputed changes
+            updateTreeWithRecomputedChanges(recomputed);
+        } catch (CoreException e) {
+            JavaPlugin.log(e);
+        }
+    }
+}
+```
+
+#### Step 3: Content Provider for Tree
+
+```java
+public class IndependentChangeContentProvider implements ITreeContentProvider {
+    
+    @Override
+    public Object[] getElements(Object inputElement) {
+        if (inputElement instanceof List) {
+            return ((List<?>) inputElement).toArray();
+        }
+        return new Object[0];
+    }
+    
+    @Override
+    public Object[] getChildren(Object parentElement) {
+        if (parentElement instanceof IndependentChange) {
+            IndependentChange change = (IndependentChange) parentElement;
+            return change.getDependentChanges().toArray();
+        }
+        return new Object[0];
+    }
+    
+    @Override
+    public boolean hasChildren(Object element) {
+        if (element instanceof IndependentChange) {
+            return !((IndependentChange) element).getDependentChanges().isEmpty();
+        }
+        return false;
+    }
+}
+```
+
+#### Step 4: Label Provider with Dependency Icons
+
+```java
+public class IndependentChangeLabelProvider extends LabelProvider {
+    
+    private Image dependencyIcon;
+    private Image independentIcon;
+    
+    @Override
+    public String getText(Object element) {
+        if (element instanceof IndependentChange) {
+            IndependentChange change = (IndependentChange) element;
+            return change.getDescription();
+        }
+        return super.getText(element);
+    }
+    
+    @Override
+    public Image getImage(Object element) {
+        if (element instanceof IndependentChange) {
+            IndependentChange change = (IndependentChange) element;
+            return change.isIndependent() ? independentIcon : dependencyIcon;
+        }
+        return super.getImage(element);
+    }
+}
+```
+
+#### Step 5: Filtering Changes Before Preview
+
+Override `performFinish()` to apply only selected changes:
+
+```java
+@Override
+public boolean performFinish() {
+    // Filter refactoring to only include selected changes
+    CleanUpRefactoring refactoring = (CleanUpRefactoring) getRefactoring();
+    refactoring.setSelectedChanges(selectedChanges);
+    
+    return super.performFinish();
+}
+```
+
+### Design Considerations
+
+1. **Performance**: Cache ASTs where possible, only recompute when necessary
+2. **User Experience**: Show progress indicators during recomputation
+3. **Error Handling**: Gracefully handle cleanup errors, don't block entire wizard
+4. **Accessibility**: Ensure keyboard navigation works in tree viewer
+5. **Help Context**: Add F1 help documentation for the selection page
+
+### Integration Points
+
+The existing infrastructure provides these integration points:
+
+- `CleanUpRefactoring.requiresFreshASTAfterSelection()` - Check if recomputation needed
+- `CleanUpRefactoring.createIndependentChanges()` - Get independent changes
+- `CleanUpRefactoring.recomputeChangesAfterSelection()` - Recompute after selection
+- `IndependentChange.getDependentChanges()` - Get dependency information
+- `IndependentChange.isIndependent()` - Check if change can be safely rejected
+
+### Testing Custom UI
+
+Test your custom UI implementation with:
+
+```java
+@Test
+public void testCustomSelectionUI() {
+    // Create cleanup with independent changes
+    IMultiFileCleanUp cleanup = new TestCleanupWithIndependentChanges();
+    refactoring.addCleanUp(cleanup);
+    
+    // Open wizard
+    SelectiveCleanUpWizard wizard = new SelectiveCleanUpWizard(refactoring);
+    WizardDialog dialog = new WizardDialog(shell, wizard);
+    
+    // Verify selection page is shown
+    IWizardPage[] pages = wizard.getPages();
+    assertTrue(pages[1] instanceof IndependentChangeSelectionPage);
+    
+    // Simulate user deselecting a change
+    IndependentChangeSelectionPage page = (IndependentChangeSelectionPage) pages[1];
+    page.deselectChange(changeToReject);
+    
+    // Verify dependency warning is shown
+    // Verify recomputation is triggered
+    // Verify final changes match selection
+}
+```
+
+---
+
+## Future Enhancements (Beyond Custom UI)
+
 Potential future improvements:
 - UI for configuring multi-file cleanup preferences
 - Extension point for third-party multi-file cleanups
 - Performance optimizations for large codebases
 - Integration with Save Actions
+- Batch processing with selective acceptance
+- Change preview with syntax highlighting in selection page
 
 ## See Also
 
