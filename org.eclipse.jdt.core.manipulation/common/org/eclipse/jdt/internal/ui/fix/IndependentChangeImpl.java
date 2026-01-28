@@ -50,7 +50,7 @@ public class IndependentChangeImpl implements IndependentChange {
 	 */
 	public IndependentChangeImpl(Change change, boolean independent) {
 		if (change == null) {
-			throw new IllegalArgumentException("Change must not be null");
+			throw new IllegalArgumentException("Change must not be null"); //$NON-NLS-1$
 		}
 		this.change= change;
 		this.independent= independent;
@@ -84,7 +84,7 @@ public class IndependentChangeImpl implements IndependentChange {
 	 */
 	public void addDependentChange(IndependentChange dependentChange) {
 		if (dependentChange == null) {
-			throw new IllegalArgumentException("Dependent change must not be null");
+			throw new IllegalArgumentException("Dependent change must not be null"); //$NON-NLS-1$
 		}
 		if (!dependentChanges.contains(dependentChange)) {
 			dependentChanges.add(dependentChange);
@@ -103,8 +103,8 @@ public class IndependentChangeImpl implements IndependentChange {
 
 	@Override
 	public String toString() {
-		return "IndependentChange[independent=" + independent +
-				", dependents=" + dependentChanges.size() +
-				", change=" + change.getName() + "]";
+		return "IndependentChange[independent=" + independent + //$NON-NLS-1$
+				", dependents=" + dependentChanges.size() + //$NON-NLS-1$
+				", change=" + change.getName() + "]"; //$NON-NLS-1$ //$NON-NLS-2$
 	}
 }

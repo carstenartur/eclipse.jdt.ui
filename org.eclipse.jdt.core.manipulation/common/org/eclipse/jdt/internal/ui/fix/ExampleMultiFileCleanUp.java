@@ -13,7 +13,6 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.ui.fix;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
@@ -25,7 +24,6 @@ import org.eclipse.jdt.ui.cleanup.CleanUpContext;
 import org.eclipse.jdt.ui.cleanup.CleanUpRequirements;
 import org.eclipse.jdt.ui.cleanup.ICleanUpFix;
 import org.eclipse.jdt.ui.cleanup.IMultiFileCleanUp;
-import org.eclipse.jdt.ui.cleanup.IndependentChange;
 import org.eclipse.ltk.core.refactoring.CompositeChange;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
 
