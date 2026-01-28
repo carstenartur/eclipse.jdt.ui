@@ -119,6 +119,6 @@ public interface IndependentChange {
 	 */
 	default String getDescription() {
 		Change change= getChange();
-		return change != null ? change.getName() : "";
+		return change != null ? change.getName() : ""; //$NON-NLS-1$
 	}
 }
