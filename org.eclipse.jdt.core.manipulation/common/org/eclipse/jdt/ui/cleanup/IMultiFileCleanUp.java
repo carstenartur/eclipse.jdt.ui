@@ -13,10 +13,12 @@
  *******************************************************************************/
 package org.eclipse.jdt.ui.cleanup;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
 
+import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.CompositeChange;
 
 /**
@@ -95,5 +97,140 @@ public interface IMultiFileCleanUp extends ICleanUp {
 	 * @throws CoreException if an unexpected error occurred while analyzing or creating the fix
 	 */
 	CompositeChange createFix(List<CleanUpContext> contexts) throws CoreException;
+
+	/**
+	 * Creates independent, atomic change units that can be individually accepted or rejected without
+	 * breaking other changes.
+	 * <p>
+	 * This method is an alternative to {@link #createFix(List)} that provides fine-grained control
+	 * over change acceptance. Instead of returning a single {@link CompositeChange}, it returns a
+	 * list of {@link IndependentChange} objects, each of which can be independently accepted or
+	 * rejected by the user.
+	 * </p>
+	 * <p>
+	 * The default implementation wraps the result of {@link #createFix(List)} into a single
+	 * independent change, maintaining backward compatibility with existing implementations.
+	 * </p>
+	 * <p>
+	 * Implementations that want to support selective change acceptance should override this method
+	 * to return multiple independent changes with appropriate dependency relationships.
+	 * </p>
+	 * <p>
+	 * <strong>Example:</strong>
+	 * </p>
+	 * <pre>
+	 * public List&lt;IndependentChange&gt; createIndependentFixes(List&lt;CleanUpContext&gt; contexts) {
+	 *     List&lt;IndependentChange&gt; changes = new ArrayList&lt;&gt;();
+	 *     
+	 *     // Create each change independently
+	 *     for (CleanUpContext context : contexts) {
+	 *         Change change = createChangeFor(context);
+	 *         if (change != null) {
+	 *             changes.add(new IndependentChangeImpl(change, true));
+	 *         }
+	 *     }
+	 *     
+	 *     return changes;
+	 * }
+	 * </pre>
+	 *
+	 * @param contexts list of clean up contexts, one per compilation unit; guaranteed to be
+	 *                 non-null and non-empty by the caller
+	 * @return list of independent changes that can be individually accepted or rejected; may return
+	 *         an empty list if no changes are needed
+	 * @throws CoreException if an unexpected error occurred while analyzing or creating the fixes
+	 * @since 1.22
+	 */
+	default List<IndependentChange> createIndependentFixes(List<CleanUpContext> contexts) throws CoreException {
+		// Call the existing createFix method (which may return null)
+		CompositeChange compositeChange= createFix(contexts);
+		if (compositeChange == null || compositeChange.getChildren().length == 0) {
+			return new ArrayList<>();
+		}
+
+		// Default implementation: wrap the entire composite change as a single independent change
+		List<IndependentChange> result= new ArrayList<>();
+		result.add(new IndependentChange() {
+			@Override
+			public boolean isIndependent() {
+				return true;
+			}
+
+			@Override
+			public Change getChange() {
+				return compositeChange;
+			}
+		});
+		return result;
+	}
+
+	/**
+	 * Recomputes remaining changes after user selection with fresh AST contexts.
+	 * <p>
+	 * This method is called when {@link #requiresFreshASTAfterSelection()} returns {@code true} and
+	 * the user has made a selection in the preview UI. It allows the cleanup to recompute the
+	 * remaining changes based on the current state of the code after the selected changes have been
+	 * conceptually applied.
+	 * </p>
+	 * <p>
+	 * This is useful for cleanups that need to:
+	 * </p>
+	 * <ul>
+	 * <li>Recalculate which changes are still valid after previous changes</li>
+	 * <li>Update change descriptions based on the current code state</li>
+	 * <li>Avoid conflicts between changes that were valid initially but become invalid after other
+	 * changes are applied</li>
+	 * </ul>
+	 * <p>
+	 * The default implementation simply calls {@link #createFix(List)} with the fresh contexts,
+	 * which is appropriate for most cleanups.
+	 * </p>
+	 * <p>
+	 * <strong>Note:</strong> This method is only called if {@link #requiresFreshASTAfterSelection()}
+	 * returns {@code true}.
+	 * </p>
+	 *
+	 * @param selectedChanges changes that the user has chosen to apply
+	 * @param freshContexts updated contexts with fresh ASTs after previous changes have been applied
+	 * @return recomputed changes based on the current state; may return {@code null} if no changes
+	 *         are needed
+	 * @throws CoreException if an unexpected error occurred while recomputing the changes
+	 * @since 1.22
+	 */
+	default CompositeChange recomputeAfterSelection(List<IndependentChange> selectedChanges,
+			List<CleanUpContext> freshContexts) throws CoreException {
+		return createFix(freshContexts);
+	}
+
+	/**
+	 * Returns whether this cleanup requires fresh AST recomputation after each change selection.
+	 * <p>
+	 * When this method returns {@code true}, the framework will:
+	 * </p>
+	 * <ol>
+	 * <li>Show the user the initial set of changes in the preview UI</li>
+	 * <li>Allow the user to select which changes to apply</li>
+	 * <li>Apply the selected changes</li>
+	 * <li>Regenerate fresh ASTs for all compilation units</li>
+	 * <li>Call {@link #recomputeAfterSelection(List, List)} to get updated changes</li>
+	 * <li>Repeat from step 2 if there are remaining changes</li>
+	 * </ol>
+	 * <p>
+	 * This is useful for cleanups where the validity or applicability of later changes depends on
+	 * earlier changes being applied. However, it comes with a performance cost, as AST parsing and
+	 * change computation must be repeated.
+	 * </p>
+	 * <p>
+	 * The default implementation returns {@code false}, meaning changes are computed once and all
+	 * selected changes are applied together.
+	 * </p>
+	 *
+	 * @return {@code true} if this cleanup requires fresh AST recomputation after user selection,
+	 *         {@code false} otherwise
+	 * @since 1.22
+	 */
+	default boolean requiresFreshASTAfterSelection() {
+		return false;
+	}
 
 }
