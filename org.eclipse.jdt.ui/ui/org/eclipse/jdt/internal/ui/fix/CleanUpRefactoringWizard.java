@@ -536,6 +536,7 @@ public class CleanUpRefactoringWizard extends RefactoringWizard {
 	 */
 	protected boolean supportsSelectiveAcceptance() {
 		CleanUpRefactoring refactoring = (CleanUpRefactoring) getRefactoring();
+		// TODO: Implement capability detection by checking if any cleanups override createIndependentFixes()
 		// This would check if any cleanups override createIndependentFixes()
 		// Implementation pending - requires checking cleanup capabilities
 		return false; // Placeholder for future implementation
@@ -560,6 +561,7 @@ public class CleanUpRefactoringWizard extends RefactoringWizard {
 	 */
 	protected boolean requiresIterativeRecomputation() {
 		CleanUpRefactoring refactoring = (CleanUpRefactoring) getRefactoring();
+		// TODO: Implement by checking if any cleanups require recomputation
 		// This would check if any cleanups require recomputation
 		// Implementation pending - requires checking cleanup capabilities
 		return false; // Placeholder for future implementation

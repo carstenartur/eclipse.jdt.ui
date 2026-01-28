@@ -605,6 +605,10 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 	/**
 	 * Test the complete workflow: create independent changes, select some, recompute.
 	 * This validates the programmatic workflow that a UI would use.
+	 * 
+	 * Note: This test validates the programmatic API directly rather than testing through
+	 * the full refactoring framework integration. This approach allows us to test the
+	 * workflow logic in isolation.
 	 */
 	@Test
 	public void testSelectiveAcceptanceWorkflow() throws Exception {
@@ -694,7 +698,8 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 		assertEquals("Should have exactly 1 dependent", 1, dependents.size()); //$NON-NLS-1$
 		assertEquals("Dependent should be changeB", changeB, dependents.get(0)); //$NON-NLS-1$
 		
-		// UI decision: don't allow deselection of changeA without also deselecting changeB
+		// This test validates the dependency detection logic that the UI would use
+		// The UI would prevent deselection of changeA without also deselecting changeB
 	}
 
 	/**

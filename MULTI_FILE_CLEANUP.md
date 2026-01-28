@@ -379,11 +379,40 @@ public class IndependentChangeSelectionPage extends UserInputWizardPage {
         setControl(composite);
     }
     
+    private boolean hasDependents(IndependentChange change) {
+        return !change.getDependentChanges().isEmpty();
+    }
+    
+    private void updateSelection() {
+        Object[] checked = treeViewer.getCheckedElements();
+        selectedChanges = Arrays.stream(checked)
+            .filter(IndependentChange.class::isInstance)
+            .map(IndependentChange.class::cast)
+            .collect(Collectors.toList());
+    }
+    
+    private boolean requiresRecomputation() {
+        CleanUpRefactoring refactoring = (CleanUpRefactoring) getRefactoring();
+        // Check if any multi-file cleanups require recomputation
+        for (ICleanUp cleanup : refactoring.getCleanUps()) {
+            if (cleanup instanceof IMultiFileCleanUp) {
+                if (((IMultiFileCleanUp) cleanup).requiresFreshASTAfterSelection()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    
     private void loadInitialChanges() {
         CleanUpRefactoring refactoring = (CleanUpRefactoring) getRefactoring();
         try {
+            // Get project and targets from refactoring
+            IJavaProject project = refactoring.getProjects()[0];
+            CleanUpRefactoring.CleanUpTarget[] targets = refactoring.getCleanUpTargets();
+            
             // Get independent changes from refactoring
-            allChanges = refactoring.createIndependentChanges(...);
+            allChanges = refactoring.createIndependentChanges(project, targets, new NullProgressMonitor());
             treeViewer.setInput(allChanges);
             treeViewer.setAllChecked(true);
             selectedChanges = new ArrayList<>(allChanges);
@@ -410,12 +439,32 @@ public class IndependentChangeSelectionPage extends UserInputWizardPage {
         // Recompute with fresh ASTs after selection
         CleanUpRefactoring refactoring = (CleanUpRefactoring) getRefactoring();
         try {
+            // Obtain fresh contexts with updated ASTs
+            IJavaProject project = refactoring.getProjects()[0];
+            CleanUpRefactoring.CleanUpTarget[] targets = refactoring.getCleanUpTargets();
+            
+            // Get fresh contexts by re-parsing ASTs
+            List<CleanUpContext> freshContexts = refactoring.createCleanUpContexts(targets);
+            
+            // Recompute changes based on selection
             CompositeChange recomputed = refactoring.recomputeChangesAfterSelection(
                 selectedChanges, freshContexts);
+                
             // Update tree with recomputed changes
             updateTreeWithRecomputedChanges(recomputed);
         } catch (CoreException e) {
             JavaPlugin.log(e);
+        }
+    }
+    
+    private void updateTreeWithRecomputedChanges(CompositeChange recomputed) {
+        // Extract changes from composite and update tree
+        if (recomputed != null) {
+            Change[] children = recomputed.getChildren();
+            // Convert back to IndependentChange objects
+            // This logic depends on how changes are structured after recomputation
+            // Typically, you would call createIndependentChanges again with fresh contexts
+            treeViewer.refresh();
         }
     }
 }
@@ -483,18 +532,30 @@ public class IndependentChangeLabelProvider extends LabelProvider {
 
 #### Step 5: Filtering Changes Before Preview
 
-Override `performFinish()` to apply only selected changes:
+Override wizard behavior to apply only selected changes:
 
 ```java
 @Override
 public boolean performFinish() {
-    // Filter refactoring to only include selected changes
-    CleanUpRefactoring refactoring = (CleanUpRefactoring) getRefactoring();
-    refactoring.setSelectedChanges(selectedChanges);
+    // Build composite change from only selected changes
+    CompositeChange filteredChange = new CompositeChange("Selected Clean Up Changes");
+    for (IndependentChange selectedChange : selectedChanges) {
+        filteredChange.add(selectedChange.getChange());
+    }
+    
+    // Replace the refactoring's change with our filtered version
+    // Note: This requires extending CleanUpRefactoring or modifying its behavior
+    // Alternatively, create a custom Change that wraps the selected changes
     
     return super.performFinish();
 }
 ```
+
+**Note**: The actual implementation of filtering changes requires coordination with the
+CleanUpRefactoring class. The above is a conceptual example. In practice, you would:
+1. Create a custom composite change from selected changes
+2. Override the refactoring's createChange() to return your filtered change
+3. Or implement a new method in CleanUpRefactoring to support selection filtering
 
 ### Design Considerations
 
