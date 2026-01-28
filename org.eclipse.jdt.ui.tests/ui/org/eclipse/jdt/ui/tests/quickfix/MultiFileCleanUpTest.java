@@ -132,26 +132,43 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 
 	/**
 	 * Test that multi-file cleanups are properly detected and invoked.
+	 * Real-world scenario: Coordinated cleanup across multiple related files.
 	 */
 	@Test
 	public void testMultiFileCleanUpInvoked() throws Exception {
 		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
-		// Create two compilation units
+		// Create two related compilation units
 		String input1 = """
 				package test;
-				public class A {
+				import java.util.List;
+				import java.util.ArrayList;
+				
+				public class UserService {
+					private List<String> users = new ArrayList<>();
+					
+					public void addUser(String user) {
+						users.add(user);
+					}
 				}
 				""";
 
 		String input2 = """
 				package test;
-				public class B {
+				import java.util.Set;
+				import java.util.HashSet;
+				
+				public class RoleService {
+					private Set<String> roles = new HashSet<>();
+					
+					public void addRole(String role) {
+						roles.add(role);
+					}
 				}
 				""";
 
-		ICompilationUnit cu1 = pack.createCompilationUnit("A.java", input1, false, null); //$NON-NLS-1$
-		ICompilationUnit cu2 = pack.createCompilationUnit("B.java", input2, false, null); //$NON-NLS-1$
+		ICompilationUnit cu1 = pack.createCompilationUnit("UserService.java", input1, false, null); //$NON-NLS-1$
+		ICompilationUnit cu2 = pack.createCompilationUnit("RoleService.java", input2, false, null); //$NON-NLS-1$
 
 		// Apply the multi-file cleanup
 		ICleanUp cleanup = new TestMultiFileCleanUp("TEST_MARKER"); //$NON-NLS-1$
@@ -173,18 +190,32 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 
 	/**
 	 * Test that multi-file cleanups work alongside regular cleanups.
+	 * Real-world scenario: Multiple cleanup types can be combined.
 	 */
 	@Test
 	public void testMultiFileCleanUpWithRegularCleanUp() throws Exception {
 		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
+		// Class that could benefit from various cleanups
 		String input = """
 				package test;
-				public class C {
+				import java.util.Map;
+				import java.util.HashMap;
+				
+				public class ConfigurationManager {
+					private Map<String, String> config;
+					
+					public ConfigurationManager() {
+						config = new HashMap<>();
+					}
+					
+					public String get(String key) {
+						return config.get(key);
+					}
 				}
 				""";
 
-		ICompilationUnit cu = pack.createCompilationUnit("C.java", input, false, null); //$NON-NLS-1$
+		ICompilationUnit cu = pack.createCompilationUnit("ConfigurationManager.java", input, false, null); //$NON-NLS-1$
 
 		// Use a multi-file cleanup
 		ICleanUp multiFileCleanup = new TestMultiFileCleanUp("MULTI"); //$NON-NLS-1$
@@ -447,25 +478,49 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 
 	/**
 	 * Test that independent changes can be created and tracked.
+	 * Real-world scenario: Adding missing @Override annotations to unrelated classes.
 	 */
 	@Test
 	public void testIndependentChangeCreation() throws Exception {
 		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
+		// First class: Missing @Override on toString()
 		String input1 = """
 				package test;
-				public class D {
+				public class Employee {
+					private String name;
+					
+					public Employee(String name) {
+						this.name = name;
+					}
+					
+					public String toString() {
+						return "Employee: " + name;
+					}
 				}
 				""";
 
+		// Second class: Missing @Override on equals()
 		String input2 = """
 				package test;
-				public class E {
+				public class Product {
+					private String id;
+					
+					public Product(String id) {
+						this.id = id;
+					}
+					
+					public boolean equals(Object obj) {
+						if (obj instanceof Product) {
+							return id.equals(((Product)obj).id);
+						}
+						return false;
+					}
 				}
 				""";
 
-		ICompilationUnit cu1 = pack.createCompilationUnit("D.java", input1, false, null); //$NON-NLS-1$
-		ICompilationUnit cu2 = pack.createCompilationUnit("E.java", input2, false, null); //$NON-NLS-1$
+		ICompilationUnit cu1 = pack.createCompilationUnit("Employee.java", input1, false, null); //$NON-NLS-1$
+		ICompilationUnit cu2 = pack.createCompilationUnit("Product.java", input2, false, null); //$NON-NLS-1$
 
 		IndependentChangeCleanUp cleanup = new IndependentChangeCleanUp();
 		CleanUpOptions options = new CleanUpOptions();
@@ -489,25 +544,42 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 
 	/**
 	 * Test that dependent changes are properly tracked.
+	 * Real-world scenario: Removing unused interface method and its implementation.
 	 */
 	@Test
 	public void testDependentChangeTracking() throws Exception {
 		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
+		// Interface with an unused method
 		String input1 = """
 				package test;
-				public class F {
+				public interface DataRepository {
+					void save(Object data);
+					void delete(Object data);
+					void oldUnusedMethod(); // This method is never called
 				}
 				""";
 
+		// Implementation of the interface
 		String input2 = """
 				package test;
-				public class G {
+				public class DatabaseRepository implements DataRepository {
+					public void save(Object data) {
+						System.out.println("Saving: " + data);
+					}
+					
+					public void delete(Object data) {
+						System.out.println("Deleting: " + data);
+					}
+					
+					public void oldUnusedMethod() {
+						// Unused implementation
+					}
 				}
 				""";
 
-		ICompilationUnit cu1 = pack.createCompilationUnit("F.java", input1, false, null); //$NON-NLS-1$
-		ICompilationUnit cu2 = pack.createCompilationUnit("G.java", input2, false, null); //$NON-NLS-1$
+		ICompilationUnit cu1 = pack.createCompilationUnit("DataRepository.java", input1, false, null); //$NON-NLS-1$
+		ICompilationUnit cu2 = pack.createCompilationUnit("DatabaseRepository.java", input2, false, null); //$NON-NLS-1$
 
 		DependentChangeCleanUp cleanup = new DependentChangeCleanUp();
 		CleanUpOptions options = new CleanUpOptions();
@@ -544,18 +616,26 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 
 	/**
 	 * Test that recomputeAfterSelection is called correctly.
+	 * Real-world scenario: Cleanup needs to re-analyze code after changes are selected.
 	 */
 	@Test
 	public void testRecomputeAfterSelection() throws Exception {
 		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
+		// Code with potential cascading cleanup opportunities
 		String input = """
 				package test;
-				public class H {
+				public class DataProcessor {
+					// After cleanup, this might reveal more opportunities
+					private void processData(String data) {
+						String temp = data.trim();
+						String result = temp.toLowerCase();
+						System.out.println(result);
+					}
 				}
 				""";
 
-		ICompilationUnit cu = pack.createCompilationUnit("H.java", input, false, null); //$NON-NLS-1$
+		ICompilationUnit cu = pack.createCompilationUnit("DataProcessor.java", input, false, null); //$NON-NLS-1$
 
 		RecomputingCleanUp cleanup = new RecomputingCleanUp();
 		CleanUpOptions options = new CleanUpOptions();
@@ -574,18 +654,29 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 
 	/**
 	 * Test default createIndependentFixes implementation.
+	 * Real-world scenario: Cleanup without custom independent changes logic uses default wrapper.
 	 */
 	@Test
 	public void testDefaultCreateIndependentFixes() throws Exception {
 		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
+		// Simple class for testing default behavior
 		String input = """
 				package test;
-				public class I {
+				public class SimpleService {
+					private String name;
+					
+					public SimpleService(String name) {
+						this.name = name;
+					}
+					
+					public String getName() {
+						return name;
+					}
 				}
 				""";
 
-		ICompilationUnit cu = pack.createCompilationUnit("I.java", input, false, null); //$NON-NLS-1$
+		ICompilationUnit cu = pack.createCompilationUnit("SimpleService.java", input, false, null); //$NON-NLS-1$
 
 		TestMultiFileCleanUp cleanup = new TestMultiFileCleanUp("DEFAULT_TEST"); //$NON-NLS-1$
 		CleanUpOptions options = new CleanUpOptions();
@@ -606,6 +697,8 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 	 * Test the complete workflow: create independent changes, select some, recompute.
 	 * This validates the programmatic workflow that a UI would use.
 	 * 
+	 * Real-world scenario: Removing unused imports from multiple files.
+	 * 
 	 * Note: This test validates the programmatic API directly rather than testing through
 	 * the full refactoring framework integration. This approach allows us to test the
 	 * workflow logic in isolation.
@@ -614,20 +707,36 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 	public void testSelectiveAcceptanceWorkflow() throws Exception {
 		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
+		// Service class with unused imports
 		String input1 = """
 				package test;
-				public class Workflow1 {
+				import java.util.ArrayList;
+				import java.util.HashMap;
+				import java.util.List;
+				
+				public class UserService {
+					public List<String> getUsers() {
+						return new ArrayList<>();
+					}
 				}
 				""";
 
+		// Util class with unused imports
 		String input2 = """
 				package test;
-				public class Workflow2 {
+				import java.io.IOException;
+				import java.util.Set;
+				import java.util.HashSet;
+				
+				public class StringUtil {
+					public Set<String> toSet(String... items) {
+						return new HashSet<>();
+					}
 				}
 				""";
 
-		ICompilationUnit cu1 = pack.createCompilationUnit("Workflow1.java", input1, false, null); //$NON-NLS-1$
-		ICompilationUnit cu2 = pack.createCompilationUnit("Workflow2.java", input2, false, null); //$NON-NLS-1$
+		ICompilationUnit cu1 = pack.createCompilationUnit("UserService.java", input1, false, null); //$NON-NLS-1$
+		ICompilationUnit cu2 = pack.createCompilationUnit("StringUtil.java", input2, false, null); //$NON-NLS-1$
 
 		IndependentChangeCleanUp cleanup = new IndependentChangeCleanUp();
 		CleanUpOptions options = new CleanUpOptions();
@@ -657,25 +766,46 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 	/**
 	 * Test dependency validation workflow - what a UI would do when user tries to
 	 * deselect a change that has dependents.
+	 * 
+	 * Real-world scenario: Deprecating an API method and updating its usages.
 	 */
 	@Test
 	public void testDependencyValidationWorkflow() throws Exception {
 		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
+		// Base class with method to be deprecated
 		String input1 = """
 				package test;
-				public class DepValidation1 {
+				public class Logger {
+					/** @deprecated Use logMessage() instead */
+					public void log(String msg) {
+						logMessage(msg);
+					}
+					
+					public void logMessage(String msg) {
+						System.out.println(msg);
+					}
 				}
 				""";
 
+		// Client code using the deprecated method
 		String input2 = """
 				package test;
-				public class DepValidation2 {
+				public class Application {
+					private Logger logger = new Logger();
+					
+					public void start() {
+						logger.log("Application started");
+					}
+					
+					public void stop() {
+						logger.log("Application stopped");
+					}
 				}
 				""";
 
-		ICompilationUnit cu1 = pack.createCompilationUnit("DepValidation1.java", input1, false, null); //$NON-NLS-1$
-		ICompilationUnit cu2 = pack.createCompilationUnit("DepValidation2.java", input2, false, null); //$NON-NLS-1$
+		ICompilationUnit cu1 = pack.createCompilationUnit("Logger.java", input1, false, null); //$NON-NLS-1$
+		ICompilationUnit cu2 = pack.createCompilationUnit("Application.java", input2, false, null); //$NON-NLS-1$
 
 		DependentChangeCleanUp cleanup = new DependentChangeCleanUp();
 		CleanUpOptions options = new CleanUpOptions();
@@ -704,18 +834,39 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 
 	/**
 	 * Test the iterative recomputation workflow.
+	 * 
+	 * Real-world scenario: Removing unused private methods that call each other.
+	 * After removing method A, method B becomes unused and needs recomputation.
 	 */
 	@Test
 	public void testIterativeRecomputationWorkflow() throws Exception {
 		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
+		// Class with chain of unused private methods
 		String input = """
 				package test;
-				public class Iterative {
+				public class Calculator {
+					public int add(int a, int b) {
+						return a + b;
+					}
+					
+					// Unused method that calls another unused method
+					private int oldCalculate(int x) {
+						return helperMethod(x) * 2;
+					}
+					
+					// Only called by oldCalculate, becomes unused after its removal
+					private int helperMethod(int x) {
+						return x + 10;
+					}
+					
+					public int multiply(int a, int b) {
+						return a * b;
+					}
 				}
 				""";
 
-		ICompilationUnit cu = pack.createCompilationUnit("Iterative.java", input, false, null); //$NON-NLS-1$
+		ICompilationUnit cu = pack.createCompilationUnit("Calculator.java", input, false, null); //$NON-NLS-1$
 
 		RecomputingCleanUp cleanup = new RecomputingCleanUp();
 		CleanUpOptions options = new CleanUpOptions();
@@ -748,18 +899,32 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 
 	/**
 	 * Test edge case: all changes rejected by user.
+	 * 
+	 * Real-world scenario: User reviews cleanup suggestions and decides not to apply any.
 	 */
 	@Test
 	public void testAllChangesRejected() throws Exception {
 		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
+		// Code that could be cleaned but user might choose not to
 		String input = """
 				package test;
-				public class AllRejected {
+				public class LegacyCode {
+					// Old-style for loop that could be converted to enhanced for
+					public void processItems(String[] items) {
+						for (int i = 0; i < items.length; i++) {
+							System.out.println(items[i]);
+						}
+					}
+					
+					// Raw type that could have generics added
+					public java.util.List getList() {
+						return new java.util.ArrayList();
+					}
 				}
 				""";
 
-		ICompilationUnit cu = pack.createCompilationUnit("AllRejected.java", input, false, null); //$NON-NLS-1$
+		ICompilationUnit cu = pack.createCompilationUnit("LegacyCode.java", input, false, null); //$NON-NLS-1$
 
 		IndependentChangeCleanUp cleanup = new IndependentChangeCleanUp();
 		CleanUpOptions options = new CleanUpOptions();
@@ -782,18 +947,32 @@ public class MultiFileCleanUpTest extends CleanUpTestCase {
 
 	/**
 	 * Test that CleanUpRefactoring helper methods work correctly.
+	 * 
+	 * Real-world scenario: Checking if a cleanup requires recomputation for complex refactorings.
 	 */
 	@Test
 	public void testCleanUpRefactoringHelpers() throws Exception {
 		IPackageFragment pack = fSourceFolder.createPackageFragment("test", false, null); //$NON-NLS-1$
 
+		// Complex class where removing one thing affects others
 		String input = """
 				package test;
-				public class RefactoringHelper {
+				public class RefactoringScenario {
+					// Field only used in unusedMethod
+					private int unusedField = 0;
+					
+					// Unused method that uses unusedField
+					private void unusedMethod() {
+						System.out.println(unusedField);
+					}
+					
+					public void publicMethod() {
+						System.out.println("Used method");
+					}
 				}
 				""";
 
-		ICompilationUnit cu = pack.createCompilationUnit("RefactoringHelper.java", input, false, null); //$NON-NLS-1$
+		ICompilationUnit cu = pack.createCompilationUnit("RefactoringScenario.java", input, false, null); //$NON-NLS-1$
 
 		// Test with cleanup that requires recomputation
 		RecomputingCleanUp recomputingCleanUp = new RecomputingCleanUp();
