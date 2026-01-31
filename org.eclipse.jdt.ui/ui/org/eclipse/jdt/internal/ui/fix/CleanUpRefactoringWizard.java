@@ -516,4 +516,55 @@ public class CleanUpRefactoringWizard extends RefactoringWizard {
 		addPage(new CleanUpConfigurationPage((CleanUpRefactoring)getRefactoring()));
 	}
 
+	/**
+	 * Helper method for future UI enhancement: checks if any cleanup supports
+	 * selective change acceptance with independent changes.
+	 * 
+	 * <p>Usage example for future UI integration:</p>
+	 * <pre>
+	 * if (supportsSelectiveAcceptance()) {
+	 *     // Show custom selection page before preview
+	 *     List&lt;IndependentChange&gt; changes = refactoring.createIndependentChanges(...);
+	 *     // Display in checkbox tree, allow user selection
+	 *     // Filter to selected changes, then show standard preview
+	 * }
+	 * </pre>
+	 * 
+	 * @return true if at least one cleanup implements createIndependentFixes()
+	 * @see org.eclipse.jdt.ui.cleanup.IMultiFileCleanUp#createIndependentFixes
+	 * @since 3.36
+	 */
+	protected boolean supportsSelectiveAcceptance() {
+		CleanUpRefactoring refactoring = (CleanUpRefactoring) getRefactoring();
+		// TODO: Implement capability detection by checking if any cleanups override createIndependentFixes()
+		// This would check if any cleanups override createIndependentFixes()
+		// Implementation pending - requires checking cleanup capabilities
+		return false; // Placeholder for future implementation
+	}
+
+	/**
+	 * Helper method for future UI enhancement: checks if any cleanup requires
+	 * fresh AST recomputation after user selection.
+	 * 
+	 * <p>If true, the UI should support an iterative workflow:</p>
+	 * <ol>
+	 *   <li>Compute initial changes</li>
+	 *   <li>Show changes to user</li>
+	 *   <li>User selects which changes to apply</li>
+	 *   <li>Recompute remaining changes with fresh ASTs</li>
+	 *   <li>Repeat steps 2-4 until user accepts all or clicks Finish</li>
+	 * </ol>
+	 * 
+	 * @return true if recomputation after selection is needed
+	 * @see org.eclipse.jdt.ui.cleanup.IMultiFileCleanUp#requiresFreshASTAfterSelection
+	 * @since 3.36
+	 */
+	protected boolean requiresIterativeRecomputation() {
+		CleanUpRefactoring refactoring = (CleanUpRefactoring) getRefactoring();
+		// TODO: Implement by checking if any cleanups require recomputation
+		// This would check if any cleanups require recomputation
+		// Implementation pending - requires checking cleanup capabilities
+		return false; // Placeholder for future implementation
+	}
+
 }
