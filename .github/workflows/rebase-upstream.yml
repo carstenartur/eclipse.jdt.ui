@@ -57,22 +57,6 @@ jobs:
         with:
           result-encoding: string
           script: |
-            const { data: comment } = await github.rest.issues.getComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id
-            });
-            
-            const { data: user } = await github.rest.users.getByUsername({
-              username: comment.user.login
-            });
-            
-            const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              username: comment.user.login
-            });
-            
             const authorAssociation = context.payload.comment.author_association;
             const allowedRoles = ['OWNER', 'MEMBER', 'COLLABORATOR'];
             
