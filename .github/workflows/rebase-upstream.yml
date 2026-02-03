@@ -147,6 +147,13 @@ jobs:
           PR_COMMIT_COUNT=${{ steps.pr.outputs.commit_count }}
           echo "PR has $PR_COMMIT_COUNT commits"
           
+          # Validate commit count
+          if [ "$PR_COMMIT_COUNT" -eq 0 ]; then
+            echo "Error: PR has 0 commits"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
           # Rebase only the PR commits onto upstream/master
           if git rebase --onto upstream/master HEAD~${PR_COMMIT_COUNT}; then
             echo "success=true" >> $GITHUB_OUTPUT
@@ -202,9 +209,9 @@ jobs:
             # Fetch upstream
             git fetch upstream master
             
-            # Count the number of commits in your PR
-            # (use GitHub PR page or: git log --oneline origin/master..HEAD | wc -l)
-            PR_COMMIT_COUNT=<number_of_commits>
+            # Count the number of commits in your PR (check GitHub PR page)
+            # For example, if your PR has 3 commits:
+            PR_COMMIT_COUNT=3
             
             # Rebase only your PR commits onto upstream/master
             git rebase --onto upstream/master HEAD~\${PR_COMMIT_COUNT}
