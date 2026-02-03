@@ -116,6 +116,8 @@ jobs:
             core.setOutput('head_clone_url', pr.head.repo.clone_url);
             
             // Get the number of commits in the PR
+            // Note: per_page is set to 250, which covers most PRs.
+            // For PRs with >250 commits, manual rebasing would be required.
             const { data: commits } = await github.rest.pulls.listCommits({
               owner: context.repo.owner,
               repo: context.repo.repo,
