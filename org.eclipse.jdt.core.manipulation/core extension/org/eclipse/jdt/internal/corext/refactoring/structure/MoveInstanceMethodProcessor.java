@@ -1470,6 +1470,95 @@ public final class MoveInstanceMethodProcessor extends MoveProcessor implements 
 
 	}
 
+	/**
+	 * Checks whether moving the method would change which overloaded method gets called
+	 * in the target type's hierarchy.
+	 *
+	 * @param monitor
+	 *            the progress monitor to display progress
+	 * @param status
+	 *            the refactoring status
+	 * @throws JavaModelException
+	 *             if method resolution fails
+	 */
+	protected void checkOverloadResolutionChanges(final IProgressMonitor monitor, final RefactoringStatus status) throws JavaModelException {
+		Assert.isNotNull(monitor);
+		Assert.isNotNull(status);
+		
+		// Get the method declaration being moved
+		final MethodDeclaration declaration= ASTNodeSearchUtil.getMethodDeclarationNode(fMethod, fSourceRewrite.getRoot());
+		if (declaration == null) {
+			return;
+		}
+		
+		// Get method signature details
+		final String movedMethodName= fMethod.getElementName();
+		final String[] movedMethodParamTypes= fMethod.getParameterTypes();
+		
+		IType targetType= getTargetType();
+		if (targetType == null) {
+			return;
+		}
+		
+		try {
+			monitor.beginTask("", 10); //$NON-NLS-1$
+			monitor.setTaskName(RefactoringCoreMessages.MoveInstanceMethodProcessor_checking);
+			
+			// Check methods in the target type's hierarchy
+			ITypeHierarchy hierarchy= targetType.newSupertypeHierarchy(Progress.subMonitor(monitor, 5));
+			if (hierarchy == null) {
+				status.merge(RefactoringStatus.createWarningStatus(
+					RefactoringCoreMessages.MoveInstanceMethodProcessor_hierarchy_not_available,
+					JavaStatusContext.create(fMethod)));
+				return;
+			}
+			
+			// Look for methods with the same name in the hierarchy
+			IType[] supertypes= hierarchy.getAllSupertypes(targetType);
+			for (IType type : supertypes) {
+				for (IMethod method : type.getMethods()) {
+					if (method.getElementName().equals(movedMethodName)) {
+						// Found a method with the same name in the hierarchy
+						// Check if the moved method would create an overload resolution conflict
+						String[] existingParamTypes= method.getParameterTypes();
+						
+						// If parameter counts match, there could be a resolution change
+						if (existingParamTypes.length == movedMethodParamTypes.length) {
+							// Check if any parameters are different (potential overload)
+							boolean hasDifferentParams= false;
+							for (int i= 0; i < existingParamTypes.length; i++) {
+								String existingParam= Signature.toString(existingParamTypes[i]);
+								String movedParam= Signature.toString(movedMethodParamTypes[i]);
+								
+								// If types are different, this could cause resolution changes
+								if (!existingParam.equals(movedParam)) {
+									hasDifferentParams= true;
+									break;
+								}
+							}
+							
+							if (hasDifferentParams) {
+								// Found a potential overload resolution change
+								status.merge(RefactoringStatus.createErrorStatus(
+									Messages.format(RefactoringCoreMessages.MoveInstanceMethodProcessor_overload_resolution_change,
+										new String[] {
+											BasicElementLabels.getJavaElementName(movedMethodName),
+											BasicElementLabels.getJavaElementName(type.getFullyQualifiedName()),
+											BasicElementLabels.getJavaElementName(targetType.getElementName())
+										}),
+									JavaStatusContext.create(fMethod)));
+								return;
+							}
+						}
+					}
+				}
+				monitor.worked(5 / supertypes.length);
+			}
+		} finally {
+			monitor.done();
+		}
+	}
+
 	protected List<IMember> findMembersReferenced() throws JavaModelException {
 		final MethodDeclaration declaration= ASTNodeSearchUtil.getMethodDeclarationNode(fMethod, fSourceRewrite.getRoot());
 		final List<IMember> members= new ArrayList<>();
@@ -1731,6 +1820,7 @@ public final class MoveInstanceMethodProcessor extends MoveProcessor implements 
 								checkGenericTarget(Progress.subMonitor(monitor, 1), status);
 								checkConflictingTarget(Progress.subMonitor(monitor, 1), status);
 								checkConflictingMethod(Progress.subMonitor(monitor, 1), status);
+								checkOverloadResolutionChanges(Progress.subMonitor(monitor, 1), status);
 								checkOverrideOuterMethod(Progress.subMonitor(monitor, 1), status);
 								checkFinalMethod(status);
 
