@@ -2,7 +2,7 @@ name: Publish Unit Test Results
 
 on:
   workflow_run:
-    workflows: ["Continuous Integration"]
+    workflows: ["Java CI with Maven"]
     types:
       - completed
 
