@@ -32,8 +32,25 @@ jobs:
           git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.ui.git
           git fetch upstream master
 
+      - name: Check if sync needed
+        id: check_sync
+        run: |
+          UPSTREAM_SHA=$(git rev-parse upstream/master)
+          LAST_COMMIT_MSG=$(git log -1 --pretty=%s)
+          if [ "$LAST_COMMIT_MSG" = "Fork-specific CI and workflow configurations" ]; then
+            CURRENT_PARENT=$(git rev-parse HEAD~1 2>/dev/null || echo "none")
+            if [ "$UPSTREAM_SHA" = "$CURRENT_PARENT" ]; then
+              echo "Upstream has not changed since last sync. Skipping."
+              echo "needs_sync=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+          echo "Upstream has new commits. Syncing..."
+          echo "needs_sync=true" >> $GITHUB_OUTPUT
+
       - name: Identify and backup fork-specific files
         id: backup
+        if: steps.check_sync.outputs.needs_sync == 'true'
         run: |
           # Create temporary directory for fork-specific files
           mkdir -p /tmp/fork-specific
@@ -65,12 +82,13 @@ jobs:
           fi
 
       - name: Reset to upstream master
+        if: steps.check_sync.outputs.needs_sync == 'true'
         run: |
           # Reset fork master to upstream master
           git reset --hard upstream/master
 
       - name: Restore fork-specific files
-        if: steps.backup.outputs.has_fork_files == 'true'
+        if: steps.check_sync.outputs.needs_sync == 'true' && steps.backup.outputs.has_fork_files == 'true'
         run: |
           # Copy fork-specific files back
           if [ -d "/tmp/fork-specific" ]; then
@@ -81,7 +99,7 @@ jobs:
           git add .github/
 
       - name: Commit fork-specific changes
-        if: steps.backup.outputs.has_fork_files == 'true'
+        if: steps.check_sync.outputs.needs_sync == 'true' && steps.backup.outputs.has_fork_files == 'true'
         run: |
           # Check if there are changes to commit
           if ! git diff --cached --quiet; then
@@ -92,6 +110,7 @@ jobs:
           fi
 
       - name: Push to fork master
+        if: steps.check_sync.outputs.needs_sync == 'true'
         run: |
           git push --force origin master
           echo "✅ Successfully synced with upstream"
@@ -172,8 +191,25 @@ jobs:
           git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.ui.git
           git fetch upstream master
 
+      - name: Check if sync needed
+        id: check_sync
+        run: |
+          UPSTREAM_SHA=$(git rev-parse upstream/master)
+          LAST_COMMIT_MSG=$(git log -1 --pretty=%s)
+          if [ "$LAST_COMMIT_MSG" = "Fork-specific CI and workflow configurations" ]; then
+            CURRENT_PARENT=$(git rev-parse HEAD~1 2>/dev/null || echo "none")
+            if [ "$UPSTREAM_SHA" = "$CURRENT_PARENT" ]; then
+              echo "Upstream has not changed since last sync. Skipping."
+              echo "needs_sync=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+          echo "Upstream has new commits. Syncing..."
+          echo "needs_sync=true" >> $GITHUB_OUTPUT
+
       - name: Identify and backup fork-specific files
         id: backup
+        if: steps.check_sync.outputs.needs_sync == 'true'
         run: |
           # Create temporary directory for fork-specific files
           mkdir -p /tmp/fork-specific
@@ -206,13 +242,14 @@ jobs:
 
       - name: Reset to upstream master
         id: reset
+        if: steps.check_sync.outputs.needs_sync == 'true'
         run: |
           # Reset fork master to upstream master
           git reset --hard upstream/master
           echo "success=true" >> $GITHUB_OUTPUT
 
       - name: Restore fork-specific files
-        if: steps.backup.outputs.has_fork_files == 'true'
+        if: steps.check_sync.outputs.needs_sync == 'true' && steps.backup.outputs.has_fork_files == 'true'
         run: |
           # Copy fork-specific files back
           if [ -d "/tmp/fork-specific" ]; then
@@ -223,7 +260,7 @@ jobs:
           git add .github/
 
       - name: Commit fork-specific changes
-        if: steps.backup.outputs.has_fork_files == 'true'
+        if: steps.check_sync.outputs.needs_sync == 'true' && steps.backup.outputs.has_fork_files == 'true'
         run: |
           # Check if there are changes to commit
           if ! git diff --cached --quiet; then
@@ -235,12 +272,25 @@ jobs:
 
       - name: Push to fork master
         id: push
+        if: steps.check_sync.outputs.needs_sync == 'true'
         run: |
           if git push --force origin master; then
             echo "success=true" >> $GITHUB_OUTPUT
           else
             echo "success=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Add already-up-to-date comment
+        if: steps.check_sync.outputs.needs_sync == 'false'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: 'ℹ️ Fork master is already up to date with `eclipse-jdt/eclipse.jdt.ui:master`. No sync needed.'
+            });
 
       - name: Add success comment
         if: steps.push.outputs.success == 'true'
