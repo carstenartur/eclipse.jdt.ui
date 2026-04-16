@@ -24,6 +24,7 @@ import org.eclipse.jdt.core.JavaModelException;
 
 import org.eclipse.jdt.ui.JavaUI;
 
+import org.eclipse.jdt.internal.junit.Messages;
 import org.eclipse.jdt.internal.junit.model.TestCaseElement;
 import org.eclipse.jdt.internal.junit.model.TestElement;
 
@@ -111,17 +112,15 @@ public class ExcludeParameterValueAction extends Action {
 					Shell shell= fTestRunnerPart.getViewSite().getShell();
 					String message;
 					if (remainingValues == 0) {
-						message= "After excluding '" + paramValue + "', no values will remain. " //$NON-NLS-1$ //$NON-NLS-2$
-								+ "Consider disabling the entire test instead."; //$NON-NLS-1$
+						message= Messages.format(JUnitMessages.ExcludeParameterValueAction_warning_no_values, paramValue);
 					} else {
-						message= "After excluding '" + paramValue + "', only 1 value will remain. " //$NON-NLS-1$ //$NON-NLS-2$
-								+ "Consider disabling the entire test instead."; //$NON-NLS-1$
+						message= Messages.format(JUnitMessages.ExcludeParameterValueAction_warning_one_value, paramValue);
 					}
 
 					boolean proceed= MessageDialog.openQuestion(
 						shell,
-						"Only one or no values will remain", //$NON-NLS-1$
-						message + "\n\nDo you want to continue?" //$NON-NLS-1$
+						JUnitMessages.ExcludeParameterValueAction_warning_title,
+						message
 					);
 
 					if (!proceed) {
