@@ -650,7 +650,7 @@ public class EnumSourceValidator {
 	}
 
 	private static boolean isModeTypeUsed(CompilationUnit astRoot, IMethod excludeMethod) {
-		final boolean[] isUsed= new boolean[] { false };
+		final boolean[] modeTypeInUse= new boolean[] { false };
 		final String excludeMethodName= excludeMethod.getElementName();
 		final String[] excludeMethodParamTypes= excludeMethod.getParameterTypes();
 
@@ -680,7 +680,7 @@ public class EnumSourceValidator {
 				if (currentMethod != null) {
 					if (ATTR_MODE.equals(node.getName().getIdentifier())) {
 						if (isModeExpression(node.getValue())) {
-							isUsed[0]= true;
+							modeTypeInUse[0]= true;
 						}
 					}
 				}
@@ -688,7 +688,7 @@ public class EnumSourceValidator {
 			}
 		});
 
-		return isUsed[0];
+		return modeTypeInUse[0];
 	}
 
 	private static boolean isModeExpression(Expression expr) {

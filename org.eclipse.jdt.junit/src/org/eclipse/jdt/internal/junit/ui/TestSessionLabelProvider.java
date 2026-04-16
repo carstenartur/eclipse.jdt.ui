@@ -85,7 +85,7 @@ public class TestSessionLabelProvider extends LabelProvider implements IStyledLa
 
 	private String getTextForFlatLayout(TestCaseElement testCaseElement, String label) {
 		// Populate metadata on demand if not already populated
-		if (!testCaseElement.isParameterizedTest() && testCaseElement.getParameterSourceType() == null) {
+		if (testCaseElement.getParameterSourceType() == null) {
 			ParameterizedTestMetadataExtractor.populateMetadata(testCaseElement);
 		}
 

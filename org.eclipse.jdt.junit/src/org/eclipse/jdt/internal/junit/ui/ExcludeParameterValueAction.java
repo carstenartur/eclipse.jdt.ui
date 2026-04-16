@@ -13,6 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.junit.ui;
 
+import java.util.regex.Pattern;
+
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.widgets.Shell;
@@ -39,6 +41,8 @@ import org.eclipse.jdt.internal.junit.model.TestElement;
  */
 public class ExcludeParameterValueAction extends Action {
 
+	private static final Pattern DIGITS_PATTERN= Pattern.compile("\\d+"); //$NON-NLS-1$
+
 	private TestCaseElement fTestCaseElement;
 	private final TestRunnerViewPart fTestRunnerPart;
 
@@ -62,11 +66,11 @@ public class ExcludeParameterValueAction extends Action {
 
 		TestCaseElement testCase= (TestCaseElement) testElement;
 
-		if (!testCase.isParameterizedTest() && testCase.getParameterSourceType() == null) {
+		if (testCase.getParameterSourceType() == null) {
 			ParameterizedTestMetadataExtractor.populateMetadata(testCase);
 		}
 
-		if (testCase.isParameterizedTest() && "EnumSource".equals(testCase.getParameterSourceType())) { //$NON-NLS-1$
+		if ("EnumSource".equals(testCase.getParameterSourceType())) { //$NON-NLS-1$
 			fTestCaseElement= testCase;
 			setEnabled(true);
 			return;
@@ -177,7 +181,7 @@ public class ExcludeParameterValueAction extends Action {
 		int end= displayName.indexOf(']');
 		if (start >= 0 && end > start) {
 			String inBracket= displayName.substring(start + 1, end).trim();
-			if (!inBracket.matches("\\d+")) { //$NON-NLS-1$
+			if (!DIGITS_PATTERN.matcher(inBracket).matches()) {
 				int commaIndex= inBracket.indexOf(',');
 				if (commaIndex > 0) {
 					return inBracket.substring(0, commaIndex).trim();
