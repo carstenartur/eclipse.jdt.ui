@@ -13,6 +13,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.junit.ui;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.text.edits.MultiTextEdit;
@@ -26,10 +27,14 @@ import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.MemberValuePair;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.QualifiedName;
+import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
@@ -272,6 +277,166 @@ public class TestAnnotationModifier {
 			   JUNIT5_REPEATED_TEST_ANNOTATION.equals(qualifiedName) ||
 			   JUNIT5_TEST_FACTORY_ANNOTATION.equals(qualifiedName) ||
 			   JUNIT5_TEST_TEMPLATE_ANNOTATION.equals(qualifiedName);
+	}
+
+	/**
+	 * Modify @EnumSource annotation to exclude a specific value.
+	 *
+	 * @param method the method with the @EnumSource annotation
+	 * @param enumValue the enum value to exclude
+	 * @throws JavaModelException if there's an error accessing the Java model
+	 */
+	public static void excludeEnumValue(IMethod method, String enumValue) throws JavaModelException {
+		ICompilationUnit cu= method.getCompilationUnit();
+		if (cu == null) {
+			return;
+		}
+
+		ASTParser parser= ASTParser.newParser(AST.getJLSLatest());
+		parser.setSource(cu);
+		parser.setResolveBindings(true);
+		CompilationUnit astRoot= (CompilationUnit) parser.createAST(null);
+
+		ASTRewrite rewrite= ASTRewrite.create(astRoot.getAST());
+		final boolean[] modified= new boolean[] { false };
+
+		astRoot.accept(new ASTVisitor() {
+			@Override
+			public boolean visit(MethodDeclaration node) {
+				if (node.getName().getIdentifier().equals(method.getElementName())) {
+					modified[0]= modifyEnumSourceInMethod(node, enumValue, rewrite);
+				}
+				return false;
+			}
+		});
+
+		if (modified[0]) {
+			applyChanges(cu, astRoot, rewrite, "org.junit.jupiter.params.provider.EnumSource.Mode"); //$NON-NLS-1$
+		}
+	}
+
+	private static boolean modifyEnumSourceInMethod(MethodDeclaration methodDecl, String paramValue, ASTRewrite rewrite) {
+		List<?> modifiers= methodDecl.modifiers();
+		for (Object modifier : modifiers) {
+			if (modifier instanceof Annotation) {
+				Annotation annotation= (Annotation) modifier;
+				String annotationName= annotation.getTypeName().getFullyQualifiedName();
+
+				if ("EnumSource".equals(annotationName) || //$NON-NLS-1$
+					"org.junit.jupiter.params.provider.EnumSource".equals(annotationName)) { //$NON-NLS-1$
+					modifyAnnotationToExclude(annotation, paramValue, rewrite);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	@SuppressWarnings("unchecked")
+	private static void modifyAnnotationToExclude(Annotation annotation, String paramValue, ASTRewrite rewrite) {
+		AST ast= annotation.getAST();
+
+		Expression valueExpr= null;
+		MemberValuePair existingNamesPair= null;
+		List<String> existingNames= new ArrayList<>();
+		boolean isExcludeMode= false;
+
+		if (annotation instanceof org.eclipse.jdt.core.dom.NormalAnnotation) {
+			org.eclipse.jdt.core.dom.NormalAnnotation normalAnnotation= (org.eclipse.jdt.core.dom.NormalAnnotation) annotation;
+			List<?> values= normalAnnotation.values();
+			for (Object obj : values) {
+				if (obj instanceof MemberValuePair) {
+					MemberValuePair pair= (MemberValuePair) obj;
+					String name= pair.getName().getIdentifier();
+					if ("value".equals(name)) { //$NON-NLS-1$
+						valueExpr= pair.getValue();
+					} else if ("mode".equals(name)) { //$NON-NLS-1$
+						Expression modeValue= pair.getValue();
+						if (modeValue instanceof QualifiedName) {
+							QualifiedName qn= (QualifiedName) modeValue;
+							isExcludeMode= "EXCLUDE".equals(qn.getName().getIdentifier()); //$NON-NLS-1$
+						}
+					} else if ("names".equals(name)) { //$NON-NLS-1$
+						existingNamesPair= pair;
+						Expression namesValue= pair.getValue();
+						if (namesValue instanceof org.eclipse.jdt.core.dom.ArrayInitializer) {
+							org.eclipse.jdt.core.dom.ArrayInitializer array= (org.eclipse.jdt.core.dom.ArrayInitializer) namesValue;
+							List<?> expressions= array.expressions();
+							for (Object expr : expressions) {
+								if (expr instanceof StringLiteral) {
+									existingNames.add(((StringLiteral) expr).getLiteralValue());
+								}
+							}
+						}
+					}
+				}
+			}
+		} else if (annotation instanceof org.eclipse.jdt.core.dom.SingleMemberAnnotation) {
+			valueExpr= ((org.eclipse.jdt.core.dom.SingleMemberAnnotation) annotation).getValue();
+		}
+
+		// Create new NormalAnnotation
+		org.eclipse.jdt.core.dom.NormalAnnotation newAnnotation= ast.newNormalAnnotation();
+		newAnnotation.setTypeName(ast.newName(annotation.getTypeName().getFullyQualifiedName()));
+
+		// Copy value attribute
+		if (valueExpr != null) {
+			MemberValuePair valuePair= ast.newMemberValuePair();
+			valuePair.setName(ast.newSimpleName("value")); //$NON-NLS-1$
+			valuePair.setValue((Expression) rewrite.createCopyTarget(valueExpr));
+			newAnnotation.values().add(valuePair);
+		}
+
+		// Determine the new names list
+		List<String> newNames= new ArrayList<>();
+		if (existingNamesPair == null) {
+			// No existing names: add EXCLUDE mode + this value
+			newNames.add(paramValue);
+			isExcludeMode= true;
+		} else if (isExcludeMode) {
+			// Existing EXCLUDE mode: append if not already present
+			newNames.addAll(existingNames);
+			if (!newNames.contains(paramValue)) {
+				newNames.add(paramValue);
+			}
+		} else {
+			// Existing INCLUDE mode: remove this value
+			for (String name : existingNames) {
+				if (!name.equals(paramValue)) {
+					newNames.add(name);
+				}
+			}
+			if (newNames.isEmpty()) {
+				newNames.add(paramValue);
+				isExcludeMode= true;
+			}
+		}
+
+		// Add mode=EXCLUDE if in exclude mode
+		if (isExcludeMode) {
+			MemberValuePair modePair= ast.newMemberValuePair();
+			modePair.setName(ast.newSimpleName("mode")); //$NON-NLS-1$
+			QualifiedName modeName= ast.newQualifiedName(
+				ast.newSimpleName("Mode"), //$NON-NLS-1$
+				ast.newSimpleName("EXCLUDE") //$NON-NLS-1$
+			);
+			modePair.setValue(modeName);
+			newAnnotation.values().add(modePair);
+		}
+
+		// Add names array
+		MemberValuePair namesPair= ast.newMemberValuePair();
+		namesPair.setName(ast.newSimpleName("names")); //$NON-NLS-1$
+		org.eclipse.jdt.core.dom.ArrayInitializer arrayInit= ast.newArrayInitializer();
+		for (String name : newNames) {
+			StringLiteral literal= ast.newStringLiteral();
+			literal.setLiteralValue(name);
+			arrayInit.expressions().add(literal);
+		}
+		namesPair.setValue(arrayInit);
+		newAnnotation.values().add(namesPair);
+
+		rewrite.replace(annotation, newAnnotation, null);
 	}
 
 	private static void applyChanges(ICompilationUnit cu, CompilationUnit astRoot, ASTRewrite rewrite, String annotationToImport) {
