@@ -260,6 +260,89 @@ public class JUnitContextMenuTest {
 		assertFalse(TestAnnotationModifier.isDisabled(method), "Parameterized test should be enabled after removing annotation");
 	}
 
+	@Test
+	public void testExcludeEnumValue_AddsImportForMode() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null); //$NON-NLS-1$
+
+		String enumCode= """
+			package test1;
+
+			public enum TestEnum {
+				VALUE1, VALUE2, VALUE3
+			}
+			""";
+		pack1.createCompilationUnit("TestEnum.java", enumCode, false, null); //$NON-NLS-1$
+
+		String testCode= """
+			package test1;
+
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+
+			public class MyTest {
+			    @ParameterizedTest
+			    @EnumSource(TestEnum.class)
+			    public void testWithEnum(TestEnum value) {
+			        // test code
+			    }
+			}
+			""";
+
+		ICompilationUnit cu= pack1.createCompilationUnit("MyTest.java", testCode, false, null); //$NON-NLS-1$
+		IType type= cu.getType("MyTest"); //$NON-NLS-1$
+		IMethod method= type.getMethod("testWithEnum", new String[] { "QTestEnum;" }); //$NON-NLS-1$ //$NON-NLS-2$
+
+		TestAnnotationModifier.excludeEnumValue(method, "VALUE2"); //$NON-NLS-1$
+
+		String result= cu.getSource();
+		assertTrue(result.contains("import org.junit.jupiter.params.provider.EnumSource.Mode;"), "Should contain Mode import"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(result.contains("mode = Mode.EXCLUDE"), "Should use Mode.EXCLUDE"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(result.contains("org.junit.jupiter.params.provider.EnumSource.Mode.EXCLUDE"), "Should not use fully qualified Mode"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(result.contains("\"VALUE2\""), "Should have VALUE2 in names"); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Test
+	public void testExcludeEnumValue_MultipleExclusions() throws Exception {
+		IPackageFragment pack1= fSourceFolder.createPackageFragment("test1", false, null); //$NON-NLS-1$
+
+		String enumCode= """
+			package test1;
+
+			public enum TestEnum {
+				VALUE1, VALUE2, VALUE3
+			}
+			""";
+		pack1.createCompilationUnit("TestEnum.java", enumCode, false, null); //$NON-NLS-1$
+
+		String testCode= """
+			package test1;
+
+			import org.junit.jupiter.params.ParameterizedTest;
+			import org.junit.jupiter.params.provider.EnumSource;
+
+			public class MyTest {
+			    @ParameterizedTest
+			    @EnumSource(TestEnum.class)
+			    public void testWithEnum(TestEnum value) {
+			        // test code
+			    }
+			}
+			""";
+
+		ICompilationUnit cu= pack1.createCompilationUnit("MyTest.java", testCode, false, null); //$NON-NLS-1$
+		IType type= cu.getType("MyTest"); //$NON-NLS-1$
+		IMethod method= type.getMethod("testWithEnum", new String[] { "QTestEnum;" }); //$NON-NLS-1$ //$NON-NLS-2$
+
+		TestAnnotationModifier.excludeEnumValue(method, "VALUE2"); //$NON-NLS-1$
+		String afterFirst= cu.getSource();
+		assertTrue(afterFirst.contains("\"VALUE2\""), "Should have VALUE2"); //$NON-NLS-1$ //$NON-NLS-2$
+
+		TestAnnotationModifier.excludeEnumValue(method, "VALUE3"); //$NON-NLS-1$
+		String afterSecond= cu.getSource();
+		assertTrue(afterSecond.contains("\"VALUE2\""), "Should have VALUE2"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(afterSecond.contains("\"VALUE3\""), "Should have VALUE3"); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
 	/**
 	 * Helper method to count occurrences of a string
 	 */

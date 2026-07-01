@@ -69,6 +69,7 @@ import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchManager;
 
 import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.IType;
 
 import org.eclipse.jdt.internal.junit.launcher.ITestFinder;
@@ -200,6 +201,7 @@ public class TestViewer {
 	private final IgnoredOnlyFilter fIgnoredOnlyFilter= new IgnoredOnlyFilter();
 
 	private final DisableTestAction fDisableTestAction;
+	private final ExcludeParameterValueAction fExcludeParameterValueAction;
 
 	private final TestRunnerViewPart fTestRunnerPart;
 	private final Clipboard fClipboard;
@@ -233,6 +235,7 @@ public class TestViewer {
 		fClipboard= clipboard;
 
 		fDisableTestAction= new DisableTestAction();
+		fExcludeParameterValueAction= new ExcludeParameterValueAction(runner);
 
 		fLayoutMode= TestRunnerViewPart.LAYOUT_HIERARCHICAL;
 
@@ -302,11 +305,21 @@ public class TestViewer {
 					manager.add(new Separator());
 					manager.add(fDisableTestAction);
 				}
+
+				// Add "Re-include Excluded Values" submenu for parameterized tests with @EnumSource
+				addReincludeExcludedValuesSubmenu(manager, testSuiteElement);
 			} else {
 				TestCaseElement testCaseElement= (TestCaseElement) testElement;
 				manager.add(getOpenTestAction(testCaseElement));
 				manager.add(new Separator());
 				addRerunActions(manager, testCaseElement);
+
+				// Check if this test case is from a parameterized test with @EnumSource
+				fExcludeParameterValueAction.update(testCaseElement);
+				if (fExcludeParameterValueAction.isEnabled()) {
+					manager.add(new Separator());
+					manager.add(fExcludeParameterValueAction);
+				}
 
 				// For normal tests, offer to disable
 				fDisableTestAction.update(testCaseElement);
@@ -383,6 +396,40 @@ public class TestViewer {
 		if (qualifiedName != null) {
 			manager.add(new RerunAction(JUnitMessages.RerunAction_label_run, fTestRunnerPart, testSuiteElement.getId(), qualifiedName, testMethodName, testSuiteElement.getDisplayName(), testSuiteElement.getUniqueId(), ILaunchManager.RUN_MODE));
 			manager.add(new RerunAction(JUnitMessages.RerunAction_label_debug, fTestRunnerPart, testSuiteElement.getId(), qualifiedName, testMethodName, testSuiteElement.getDisplayName(), testSuiteElement.getUniqueId(), ILaunchManager.DEBUG_MODE));
+		}
+	}
+
+	private void addReincludeExcludedValuesSubmenu(IMenuManager manager, TestSuiteElement testSuiteElement) {
+		IMethod method= TestMethodFinder.findMethodForParameterizedTest(testSuiteElement);
+		if (method == null) {
+			return;
+		}
+
+		try {
+			if (EnumSourceValidator.hasExcludedValues(method)) {
+				List<String> excludedNames= EnumSourceValidator.getExcludedNames(method);
+
+				if (!excludedNames.isEmpty()) {
+					manager.add(new Separator());
+
+					MenuManager reincludeMenu= new MenuManager(JUnitMessages.TestViewer_reinclude_submenu_label);
+
+					for (String enumValue : excludedNames) {
+						ReincludeEnumValueAction action= new ReincludeEnumValueAction(enumValue);
+						action.update(testSuiteElement);
+						reincludeMenu.add(action);
+					}
+
+					reincludeMenu.add(new Separator());
+					ReincludeAllEnumValuesAction reincludeAllAction= new ReincludeAllEnumValuesAction();
+					reincludeAllAction.update(testSuiteElement);
+					reincludeMenu.add(reincludeAllAction);
+
+					manager.add(reincludeMenu);
+				}
+			}
+		} catch (Exception e) {
+			JUnitPlugin.log(e);
 		}
 	}
 
