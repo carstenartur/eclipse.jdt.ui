@@ -52,6 +52,7 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
 
 import org.eclipse.jdt.internal.ui.fix.AbstractCleanUp;
 
+/** Tests target-scope expansion before the established cleanup lifecycle. */
 public class MultiFileCleanUpScopeExpansionTest extends QuickFixTest {
 
 	@Rule
