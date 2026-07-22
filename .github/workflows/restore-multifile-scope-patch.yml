@@ -20,8 +20,8 @@ jobs:
       - name: Restore reviewed patch files
         run: |
           set -euo pipefail
-          git fetch origin refs/pull/94/merge:refs/remotes/origin/pr-94-merge
-          PATCH_COMMIT=refs/remotes/origin/pr-94-merge
+          git fetch origin refs/pull/94/head:refs/remotes/origin/pr-94-head
+          PATCH_COMMIT=refs/remotes/origin/pr-94-head
           git checkout "$PATCH_COMMIT" -- \
             'org.eclipse.jdt.ui/core extension/org/eclipse/jdt/internal/corext/fix/CleanUpRefactoring.java' \
             'org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/MultiFileCleanUpScopeExpansionTest.java'
