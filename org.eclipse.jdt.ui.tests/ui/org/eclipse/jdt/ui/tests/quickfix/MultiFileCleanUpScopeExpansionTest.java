@@ -15,6 +15,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.lang.reflect.Proxy;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -29,6 +30,8 @@ import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.OperationCanceledException;
+import org.eclipse.core.runtime.Status;
 
 import org.eclipse.text.edits.InsertEdit;
 import org.eclipse.text.edits.MultiTextEdit;
@@ -116,15 +119,81 @@ public class MultiFileCleanUpScopeExpansionTest extends QuickFixTest {
 
 	@Test
 	public void testInvalidProviderElementAbortsCleanup() throws Exception {
-		IPackageFragment pack= fSourceFolder.createPackageFragment("test1", false, null); //$NON-NLS-1$
-		ICompilationUnit first= pack.createCompilationUnit("First.java", "package test1;\nclass First {}\n", false, null); //$NON-NLS-1$ //$NON-NLS-2$
-		CleanUpRefactoring refactoring= createRefactoring(first, new InvalidScopeCleanUp());
+		ICompilationUnit first= createInitialUnit();
+		assertProviderCoreFailure(first, new InvalidScopeCleanUp(), "not an ICompilationUnit"); //$NON-NLS-1$
+	}
 
+	@Test
+	public void testCrossProjectCompilationUnitAbortsCleanup() throws Exception {
+		ICompilationUnit first= createInitialUnit();
+		IJavaProject otherProject= javaProjectProxy("OtherProject"); //$NON-NLS-1$
+		ICompilationUnit otherUnit= compilationUnitProxy(otherProject, true, "Other.java"); //$NON-NLS-1$
+		assertProviderCoreFailure(first, new ScopeExpandingCleanUp(otherUnit), "another Java project"); //$NON-NLS-1$
+	}
+
+	@Test
+	public void testMissingCompilationUnitAbortsCleanup() throws Exception {
+		ICompilationUnit first= createInitialUnit();
+		ICompilationUnit missing= compilationUnitProxy(fProject, false, "Missing.java"); //$NON-NLS-1$
+		assertProviderCoreFailure(first, new ScopeExpandingCleanUp(missing), "does not exist"); //$NON-NLS-1$
+	}
+
+	@Test
+	public void testProviderCoreExceptionIsPropagated() throws Exception {
+		ICompilationUnit first= createInitialUnit();
 		try {
-			refactoring.checkAllConditions(new NullProgressMonitor());
+			createRefactoring(first, new ThrowingScopeCleanUp(false)).checkAllConditions(new NullProgressMonitor());
+			fail("A provider CoreException must abort the cleanup"); //$NON-NLS-1$
+		} catch (CoreException exception) {
+			assertEquals("scope expansion failed", exception.getStatus().getMessage()); //$NON-NLS-1$
+		}
+	}
+
+	@Test(expected= OperationCanceledException.class)
+	public void testProviderCancellationIsPropagated() throws Exception {
+		ICompilationUnit first= createInitialUnit();
+		createRefactoring(first, new ThrowingScopeCleanUp(true)).checkAllConditions(new NullProgressMonitor());
+	}
+
+	@Test
+	public void testNullProviderResultIsTreatedAsEmpty() throws Exception {
+		assertNoExpansion(new NullScopeCleanUp());
+	}
+
+	@Test
+	public void testEmptyProviderResultIsTreatedAsEmpty() throws Exception {
+		assertNoExpansion(new EmptyScopeCleanUp());
+	}
+
+	@Test
+	public void testOrdinaryCleanupWithoutProviderKeepsOriginalLifecycle() throws Exception {
+		assertNoExpansion(new RecordingCleanUp() {
+			// no optional scope provider method
+		});
+	}
+
+	private ICompilationUnit createInitialUnit() throws Exception {
+		IPackageFragment pack= fSourceFolder.createPackageFragment("test1", false, null); //$NON-NLS-1$
+		return pack.createCompilationUnit("First.java", "package test1;\nclass First {}\n", false, null); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	private void assertNoExpansion(RecordingCleanUp cleanUp) throws Exception {
+		ICompilationUnit first= createInitialUnit();
+		CleanUpRefactoring refactoring= createRefactoring(first, cleanUp);
+		RefactoringStatus status= refactoring.checkAllConditions(new NullProgressMonitor());
+		assertFalse(status.toString(), status.hasError());
+		assertEquals(List.of(first), cleanUp.plannedUnits);
+		assertEquals(1, ((CompositeChange) refactoring.createChange(null)).getChildren().length);
+	}
+
+	private static void assertProviderCoreFailure(ICompilationUnit first, AbstractCleanUp cleanUp,
+			String expectedMessagePart) throws Exception {
+		try {
+			createRefactoring(first, cleanUp).checkAllConditions(new NullProgressMonitor());
 			fail("An invalid scope provider result must abort the cleanup"); //$NON-NLS-1$
 		} catch (CoreException exception) {
-			assertTrue(exception.getStatus().getMessage().contains("not an ICompilationUnit")); //$NON-NLS-1$
+			assertTrue(exception.getStatus().getMessage(),
+					exception.getStatus().getMessage().contains(expectedMessagePart));
 		}
 	}
 
@@ -133,6 +202,32 @@ public class MultiFileCleanUpScopeExpansionTest extends QuickFixTest {
 		refactoring.addCompilationUnit(initialUnit);
 		refactoring.addCleanUp(cleanUp);
 		return refactoring;
+	}
+
+	private static IJavaProject javaProjectProxy(String name) {
+		return (IJavaProject) Proxy.newProxyInstance(MultiFileCleanUpScopeExpansionTest.class.getClassLoader(),
+				new Class<?>[] { IJavaProject.class }, (proxy, method, arguments) -> switch (method.getName()) {
+					case "getElementName", "toString" -> name; //$NON-NLS-1$ //$NON-NLS-2$
+					case "hashCode" -> Integer.valueOf(System.identityHashCode(proxy)); //$NON-NLS-1$
+					case "equals" -> Boolean.valueOf(proxy == arguments[0]); //$NON-NLS-1$
+					default -> null;
+				});
+	}
+
+	private static ICompilationUnit compilationUnitProxy(IJavaProject project, boolean exists, String name) {
+		ICompilationUnit[] reference= new ICompilationUnit[1];
+		reference[0]= (ICompilationUnit) Proxy.newProxyInstance(
+				MultiFileCleanUpScopeExpansionTest.class.getClassLoader(), new Class<?>[] { ICompilationUnit.class },
+				(proxy, method, arguments) -> switch (method.getName()) {
+					case "getPrimary", "getPrimaryElement" -> reference[0]; //$NON-NLS-1$ //$NON-NLS-2$
+					case "getJavaProject" -> project; //$NON-NLS-1$
+					case "exists" -> Boolean.valueOf(exists); //$NON-NLS-1$
+					case "getElementName", "getHandleIdentifier", "toString" -> name; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+					case "hashCode" -> Integer.valueOf(System.identityHashCode(proxy)); //$NON-NLS-1$
+					case "equals" -> Boolean.valueOf(proxy == arguments[0]); //$NON-NLS-1$
+					default -> null;
+				});
+		return reference[0];
 	}
 
 	private abstract static class RecordingCleanUp extends AbstractCleanUp {
@@ -203,6 +298,41 @@ public class MultiFileCleanUpScopeExpansionTest extends QuickFixTest {
 		@Override
 		public ICleanUpFix createFix(CleanUpContext context) {
 			return null;
+		}
+	}
+
+	public static final class ThrowingScopeCleanUp extends AbstractCleanUp {
+		private final boolean cancel;
+
+		ThrowingScopeCleanUp(boolean cancel) {
+			this.cancel= cancel;
+		}
+
+		public Collection<ICompilationUnit> expandCleanUpScope(IJavaProject project,
+				Collection<ICompilationUnit> currentScope, IProgressMonitor monitor) throws CoreException {
+			if (cancel) {
+				throw new OperationCanceledException();
+			}
+			throw new CoreException(Status.error("scope expansion failed")); //$NON-NLS-1$
+		}
+
+		@Override
+		public ICleanUpFix createFix(CleanUpContext context) {
+			return null;
+		}
+	}
+
+	public static final class NullScopeCleanUp extends RecordingCleanUp {
+		public Collection<ICompilationUnit> expandCleanUpScope(IJavaProject project,
+				Collection<ICompilationUnit> currentScope, IProgressMonitor monitor) {
+			return null;
+		}
+	}
+
+	public static final class EmptyScopeCleanUp extends RecordingCleanUp {
+		public Collection<ICompilationUnit> expandCleanUpScope(IJavaProject project,
+				Collection<ICompilationUnit> currentScope, IProgressMonitor monitor) {
+			return List.of();
 		}
 	}
 }
