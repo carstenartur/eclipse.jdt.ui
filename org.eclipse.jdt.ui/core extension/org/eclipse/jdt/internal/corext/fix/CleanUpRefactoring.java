@@ -54,8 +54,6 @@ import org.eclipse.ltk.core.refactoring.CategorizedTextEditGroup;
 import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.CompositeChange;
 import org.eclipse.ltk.core.refactoring.ContentStamp;
-import org.eclipse.ltk.core.refactoring.GroupCategory;
-import org.eclipse.ltk.core.refactoring.GroupCategorySet;
 import org.eclipse.ltk.core.refactoring.NullChange;
 import org.eclipse.ltk.core.refactoring.Refactoring;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
@@ -657,7 +655,7 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 		boolean expandsScope= supportsScopeExpansion(cleanUps);
 		pm.beginTask("", expandsScope ? IProgressMonitor.UNKNOWN : cuCount * 2 * fCleanUps.size() + 4 * cleanUps.length); //$NON-NLS-1$
 		try {
-			DynamicValidationStateChange change= new DynamicValidationStateChange(getName());
+			DynamicValidationStateChange change= new CoordinatedCleanUpSelectionChange(getName());
 			change.setSchedulingRule(getSchedulingRule());
 			for (Entry<IJavaProject, List<CleanUpTarget>> entry : fProjects.entrySet()) {
 				IJavaProject project= entry.getKey();
@@ -938,9 +936,9 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 		for (TextEditBasedChangeGroup changeGroup : source.getChangeGroups()) {
 			TextEditGroup textEditGroup= changeGroup.getTextEditGroup();
 			TextEditGroup newGroup;
-			if (textEditGroup instanceof CategorizedTextEditGroup) {
-				String label= textEditGroup.getName();
-				newGroup= new CategorizedTextEditGroup(label, new GroupCategorySet(new GroupCategory(label, label, label)));
+			if (textEditGroup instanceof CategorizedTextEditGroup categorizedGroup) {
+				newGroup= new CategorizedTextEditGroup(textEditGroup.getName(),
+						categorizedGroup.getGroupCategorySet());
 			} else {
 				newGroup= new TextEditGroup(textEditGroup.getName());
 			}
