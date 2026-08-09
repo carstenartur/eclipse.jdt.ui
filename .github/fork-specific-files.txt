@@ -1,0 +1,12 @@
+.github/dependabot.yml
+.github/workflows/codacy.yml
+.github/workflows/codeql.yml
+.github/workflows/maven.yml
+.github/workflows/rebase.yml
+.github/workflows/rebase-upstream.yml
+.github/workflows/sync-upstream.yml
+.github/workflows/create-upstream-pr.yml
+.github/fork-specific-files.txt
+README.md
+org.eclipse.jdt.ui/core extension/org/eclipse/jdt/internal/corext/fix/CleanUpRefactoring.java
+org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/MultiFileCleanUpScopeExpansionTest.java
