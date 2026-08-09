@@ -1,0 +1,34 @@
+name: Apply atomic Cleanup selection patch
+
+on:
+  push:
+    branches:
+      - issue-96-atomic-cleanup-selection
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[atomic-selection-patch]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: issue-96-atomic-cleanup-selection
+          fetch-depth: 0
+
+      - name: Apply fork-specific patch
+        run: python3 .github/scripts/apply_atomic_cleanup_selection_patch.py
+
+      - name: Commit patched source
+        run: |
+          if git diff --quiet; then
+            echo "Patch already applied"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "org.eclipse.jdt.ui/core extension/org/eclipse/jdt/internal/corext/fix/CleanUpRefactoring.java"
+          git commit -m "Wire coordinated Cleanup selection validation [atomic-selection-patch]"
+          git push origin HEAD:issue-96-atomic-cleanup-selection
