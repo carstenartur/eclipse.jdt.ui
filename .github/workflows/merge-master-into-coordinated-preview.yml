@@ -1,4 +1,4 @@
-name: Diagnose master merge into coordinated preview branch
+name: Resolve coordinated preview branch onto current master
 
 on:
   push:
@@ -9,75 +9,88 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  diagnose:
+  merge:
     runs-on: ubuntu-24.04
     env:
       EXPECTED_MASTER: 6cf5001153897a303ac144790a28eda266287663
+      PR_BASE: c9a174e62c32be00bd14c368524d36de75e9fd0f
+      CLEANUP_FILE: org.eclipse.jdt.ui/core extension/org/eclipse/jdt/internal/corext/fix/CleanUpRefactoring.java
+      SCOPE_TEST: org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/MultiFileCleanUpScopeExpansionTest.java
+      FORK_FILES: .github/fork-specific-files.txt
+      WORKFLOW_FILE: .github/workflows/merge-master-into-coordinated-preview.yml
     steps:
       - name: Checkout branch
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Capture exact merge result
-        id: merge
+      - name: Merge pinned master with explicit conflict policy
         shell: bash
         run: |
-          set -uo pipefail
+          set -euo pipefail
           git fetch --no-tags origin master
           actual_master="$(git rev-parse origin/master)"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          {
-            echo "head=$(git rev-parse HEAD)"
-            echo "expected_master=$EXPECTED_MASTER"
-            echo "actual_master=$actual_master"
-          } | tee merge-summary.txt
           if [[ "$actual_master" != "$EXPECTED_MASTER" ]]; then
-            echo "master moved" | tee -a merge-summary.txt
-            echo "status=2" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "master moved: expected $EXPECTED_MASTER, found $actual_master" >&2
+            exit 1
           fi
 
+          original_head="$(git rev-parse HEAD)"
+          git diff "$PR_BASE" "$original_head" -- "$CLEANUP_FILE" > /tmp/coordinated-preview.patch
+          if [[ ! -s /tmp/coordinated-preview.patch ]]; then
+            echo "No coordinated preview patch was produced." >&2
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           set +e
-          git merge --no-ff --no-commit "$EXPECTED_MASTER" >merge-output.txt 2>&1
-          status=$?
+          git merge --no-ff --no-commit "$EXPECTED_MASTER"
+          merge_status=$?
           set -e
-          echo "merge_status=$status" | tee -a merge-summary.txt
-          git status --porcelain=v1 >merge-status.txt
-          git diff --name-only --diff-filter=U >unmerged-files.txt
-          git diff --cc >merge-conflicts.diff
-          while IFS= read -r file; do
-            [[ -z "$file" ]] && continue
-            mkdir -p "conflicts/$(dirname "$file")"
-            cp "$file" "conflicts/$file"
-            git show ":1:$file" >"conflicts/$file.BASE" 2>/dev/null || true
-            git show ":2:$file" >"conflicts/$file.HEAD" 2>/dev/null || true
-            git show ":3:$file" >"conflicts/$file.MASTER" 2>/dev/null || true
-          done <unmerged-files.txt
-          echo "status=$status" >> "$GITHUB_OUTPUT"
+          if [[ "$merge_status" -eq 0 ]]; then
+            echo "Expected the known independent scope-expansion conflicts, but merge was clean." >&2
+            exit 1
+          fi
 
-      - name: Upload merge diagnostics
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: coordinated-preview-master-merge-${{ github.run_number }}
-          path: |
-            merge-summary.txt
-            merge-output.txt
-            merge-status.txt
-            unmerged-files.txt
-            merge-conflicts.diff
-            conflicts/**
-          if-no-files-found: error
-          retention-days: 14
+          mapfile -t conflicts < <(git diff --name-only --diff-filter=U | sort)
+          expected=("$FORK_FILES" "$SCOPE_TEST" "$CLEANUP_FILE")
+          mapfile -t expected < <(printf '%s\n' "${expected[@]}" | sort)
+          if [[ "$(printf '%s\n' "${conflicts[@]}")" != "$(printf '%s\n' "${expected[@]}")" ]]; then
+            printf 'Unexpected conflicts:\n%s\n' "${conflicts[*]}" >&2
+            exit 1
+          fi
 
-      - name: Fail when merge is not clean
-        if: steps.merge.outputs.status != '0'
-        shell: bash
-        run: |
-          echo "The pinned master merge requires an explicit resolution." >&2
-          exit 1
+          git show ":2:$FORK_FILES" > /tmp/fork-files-head.txt
+          git show ":3:$FORK_FILES" > "$FORK_FILES"
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            if ! grep -Fqx -- "$line" "$FORK_FILES"; then
+              printf '%s\n' "$line" >> "$FORK_FILES"
+            fi
+          done < /tmp/fork-files-head.txt
+          git add "$FORK_FILES"
+
+          git checkout --theirs -- "$SCOPE_TEST"
+          git add "$SCOPE_TEST"
+
+          git checkout --theirs -- "$CLEANUP_FILE"
+          git add "$CLEANUP_FILE"
+          git apply --index --3way /tmp/coordinated-preview.patch
+
+          if git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- "$CLEANUP_FILE" "$SCOPE_TEST" "$FORK_FILES"; then
+            echo "Conflict markers remain after resolution." >&2
+            exit 1
+          fi
+          if [[ -n "$(git diff --name-only --diff-filter=U)" ]]; then
+            echo "Unmerged paths remain after resolution." >&2
+            git diff --name-only --diff-filter=U >&2
+            exit 1
+          fi
+
+          git rm "$WORKFLOW_FILE"
+          git diff --cached --check
+          git commit -m "Merge current master into coordinated Cleanup preview branch"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
