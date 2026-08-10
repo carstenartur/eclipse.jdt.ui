@@ -1,0 +1,42 @@
+name: Merge current master into coordinated preview branch
+
+on:
+  push:
+    branches:
+      - feature/coordinated-cleanup-preview-4.40
+    paths:
+      - '.github/workflows/merge-master-into-coordinated-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-24.04
+    env:
+      EXPECTED_MASTER: 6cf5001153897a303ac144790a28eda266287663
+      WORKFLOW_FILE: .github/workflows/merge-master-into-coordinated-preview.yml
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Merge pinned master and remove helper workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin master
+          actual_master="$(git rev-parse origin/master)"
+          if [[ "$actual_master" != "$EXPECTED_MASTER" ]]; then
+            echo "master moved: expected $EXPECTED_MASTER, found $actual_master" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git merge --no-ff --no-commit "$EXPECTED_MASTER"
+          git rm "$WORKFLOW_FILE"
+          git diff --cached --check
+          git commit -m "Merge current master into coordinated Cleanup preview branch"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
