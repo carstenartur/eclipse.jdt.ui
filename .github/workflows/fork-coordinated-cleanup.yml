@@ -1,5 +1,6 @@
 name: Fork Coordinated Cleanup Verification
 
+# Keep this fork-only workflow dispatchable after bot-authored repair commits.
 on:
   push:
     branches:
