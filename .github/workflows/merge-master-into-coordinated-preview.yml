@@ -1,4 +1,4 @@
-name: Merge current master into coordinated preview branch
+name: Diagnose master merge into coordinated preview branch
 
 on:
   push:
@@ -9,34 +9,73 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  merge:
+  diagnose:
     runs-on: ubuntu-24.04
     env:
       EXPECTED_MASTER: 6cf5001153897a303ac144790a28eda266287663
-      WORKFLOW_FILE: .github/workflows/merge-master-into-coordinated-preview.yml
     steps:
       - name: Checkout branch
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Merge pinned master and remove helper workflow
+      - name: Capture exact merge result
+        id: merge
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           git fetch --no-tags origin master
           actual_master="$(git rev-parse origin/master)"
+          {
+            echo "head=$(git rev-parse HEAD)"
+            echo "expected_master=$EXPECTED_MASTER"
+            echo "actual_master=$actual_master"
+          } | tee merge-summary.txt
           if [[ "$actual_master" != "$EXPECTED_MASTER" ]]; then
-            echo "master moved: expected $EXPECTED_MASTER, found $actual_master" >&2
-            exit 1
+            echo "master moved" | tee -a merge-summary.txt
+            echo "status=2" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git merge --no-ff --no-commit "$EXPECTED_MASTER"
-          git rm "$WORKFLOW_FILE"
-          git diff --cached --check
-          git commit -m "Merge current master into coordinated Cleanup preview branch"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+          set +e
+          git merge --no-ff --no-commit "$EXPECTED_MASTER" >merge-output.txt 2>&1
+          status=$?
+          set -e
+          echo "merge_status=$status" | tee -a merge-summary.txt
+          git status --porcelain=v1 >merge-status.txt
+          git diff --name-only --diff-filter=U >unmerged-files.txt
+          git diff --cc >merge-conflicts.diff
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            mkdir -p "conflicts/$(dirname "$file")"
+            cp "$file" "conflicts/$file"
+            git show ":1:$file" >"conflicts/$file.BASE" 2>/dev/null || true
+            git show ":2:$file" >"conflicts/$file.HEAD" 2>/dev/null || true
+            git show ":3:$file" >"conflicts/$file.MASTER" 2>/dev/null || true
+          done <unmerged-files.txt
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Upload merge diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coordinated-preview-master-merge-${{ github.run_number }}
+          path: |
+            merge-summary.txt
+            merge-output.txt
+            merge-status.txt
+            unmerged-files.txt
+            merge-conflicts.diff
+            conflicts/**
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Fail when merge is not clean
+        if: steps.merge.outputs.status != '0'
+        shell: bash
+        run: |
+          echo "The pinned master merge requires an explicit resolution." >&2
+          exit 1
