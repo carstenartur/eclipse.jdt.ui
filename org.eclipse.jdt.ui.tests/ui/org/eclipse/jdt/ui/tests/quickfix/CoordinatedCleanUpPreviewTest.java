@@ -167,6 +167,31 @@ public class CoordinatedCleanUpPreviewTest extends QuickFixTest {
 	}
 
 	@Test
+	public void testDisjointCandidatesFromOneCleanupRemainIndependentlySelectable() throws Exception {
+		Fixture fixture= createFixture();
+		DisjointCoordinatedCleanUp cleanUp= new DisjointCoordinatedCleanUp(
+				new Candidate("candidate-a", "First migration", fixture.first(), "// first\n"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+				new Candidate("candidate-b", "Second migration", fixture.second(), "// second\n")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+
+		CleanUpRefactoring refactoring= createRefactoring(List.of(fixture.first()), cleanUp);
+		assertFalse(refactoring.checkAllConditions(new NullProgressMonitor()).hasError());
+
+		CompositeChange root= (CompositeChange) refactoring.createChange(null);
+		assertEquals(2, root.getChildren().length);
+		Set<Set<String>> candidateIds= java.util.Arrays.stream(root.getChildren())
+				.map(CoordinatedCleanUpChange.class::cast)
+				.map(change -> Set.copyOf(change.getCandidateIds()))
+				.collect(java.util.stream.Collectors.toSet());
+		assertEquals(Set.of(Set.of("candidate-a"), Set.of("candidate-b")), candidateIds); //$NON-NLS-1$ //$NON-NLS-2$
+
+		CoordinatedCleanUpChange first= (CoordinatedCleanUpChange)root.getChildren()[0];
+		CoordinatedCleanUpChange second= (CoordinatedCleanUpChange)root.getChildren()[1];
+		first.setEnabled(false);
+		assertFalse(first.isEnabled());
+		assertTrue(second.isEnabled());
+	}
+
+	@Test
 	public void testOverlappingCandidatesAreMergedIntoOneSafeSelectionUnit() throws Exception {
 		Fixture fixture= createFixture();
 		CoordinatedScopeCleanUp firstCandidate= new CoordinatedScopeCleanUp("candidate-a", //$NON-NLS-1$
@@ -270,6 +295,48 @@ public class CoordinatedCleanUpPreviewTest extends QuickFixTest {
 				CompilationUnitChange change= new CompilationUnitChange(name, unit);
 				MultiTextEdit root= new MultiTextEdit();
 				root.addChild(new InsertEdit(offset, insertedText));
+				change.setEdit(root);
+				return change;
+			};
+		}
+	}
+
+	private record Candidate(String id, String name, ICompilationUnit unit, String text) {
+	}
+
+	public static final class DisjointCoordinatedCleanUp extends AbstractCleanUp {
+		private final List<Candidate> candidates;
+
+		DisjointCoordinatedCleanUp(Candidate... candidates) {
+			this.candidates= List.of(candidates);
+		}
+
+		public Collection<ICompilationUnit> expandCleanUpScope(IJavaProject project,
+				Collection<ICompilationUnit> currentScope, IProgressMonitor monitor) {
+			return candidates.stream().map(Candidate::unit).toList();
+		}
+
+		public Collection<Map<String, ?>> getCoordinatedCleanUpPreview(IJavaProject project) {
+			return candidates.stream().map(candidate -> Map.<String, Object>of(
+					"id", candidate.id(), //$NON-NLS-1$
+					"name", candidate.name(), //$NON-NLS-1$
+					"description", "One independently selectable coordinated candidate.", //$NON-NLS-1$ //$NON-NLS-2$
+					"compilationUnits", List.of(candidate.unit()), //$NON-NLS-1$
+					"details", List.of("The candidate scope is closed."))) //$NON-NLS-1$ //$NON-NLS-2$
+					.toList();
+		}
+
+		@Override
+		public ICleanUpFix createFix(CleanUpContext context) {
+			ICompilationUnit unit= context.getCompilationUnit().getPrimary();
+			Candidate candidate= candidates.stream().filter(value -> value.unit().equals(unit)).findFirst().orElse(null);
+			if (candidate == null) {
+				return null;
+			}
+			return progressMonitor -> {
+				CompilationUnitChange change= new CompilationUnitChange(candidate.name(), unit);
+				MultiTextEdit root= new MultiTextEdit();
+				root.addChild(new InsertEdit(0, candidate.text()));
 				change.setEdit(root);
 				return change;
 			};

@@ -831,43 +831,48 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 		List<CoordinatedCleanUpPreview> result= new ArrayList<>();
 		Set<String> ids= new HashSet<>();
 		for (ICleanUp cleanUp : cleanUps) {
-			CoordinatedCleanUpPreview preview= invokeCoordinatedCleanUpPreview(cleanUp, project);
-			if (preview == null) {
-				continue;
+			for (CoordinatedCleanUpPreview preview : invokeCoordinatedCleanUpPreviews(cleanUp, project)) {
+				if (!ids.add(preview.id())) {
+					throw invalidCoordinatedPreview(cleanUp,
+							"returned the duplicate candidate id " + preview.id(), null); //$NON-NLS-1$
+				}
+				result.add(preview);
 			}
-			if (!ids.add(preview.id())) {
-				throw invalidCoordinatedPreview(cleanUp,
-						"returned the duplicate candidate id " + preview.id(), null); //$NON-NLS-1$
-			}
-			result.add(preview);
 		}
 		return result;
 	}
 
-	private static CoordinatedCleanUpPreview invokeCoordinatedCleanUpPreview(ICleanUp cleanUp,
+	private static List<CoordinatedCleanUpPreview> invokeCoordinatedCleanUpPreviews(ICleanUp cleanUp,
 			IJavaProject project) throws CoreException {
 		Method method= findCoordinatedCleanUpPreviewMethod(cleanUp);
 		if (method == null) {
-			return null;
+			return List.of();
 		}
 		try {
 			Object value= method.invoke(cleanUp, project);
 			if (value == null) {
-				return null;
+				return List.of();
 			}
-			if (!(value instanceof Map<?, ?> map)) {
-				throw invalidCoordinatedPreview(cleanUp, "did not return a Map", null); //$NON-NLS-1$
+			if (value instanceof Map<?, ?> map) {
+				CoordinatedCleanUpPreview preview= parseCoordinatedCleanUpPreview(cleanUp, project, map);
+				return preview == null ? List.of() : List.of(preview);
 			}
-			String id= requiredPreviewString(cleanUp, map, PREVIEW_ID);
-			String name= optionalPreviewString(cleanUp, map, PREVIEW_NAME, id);
-			String description= optionalPreviewString(cleanUp, map, PREVIEW_DESCRIPTION, ""); //$NON-NLS-1$
-			List<ICompilationUnit> units= previewCompilationUnits(cleanUp, project,
-					map.get(PREVIEW_COMPILATION_UNITS));
-			List<String> details= previewDetails(cleanUp, map.get(PREVIEW_DETAILS));
-			if (units.isEmpty()) {
-				return null;
+			if (value instanceof Collection<?> collection) {
+				List<CoordinatedCleanUpPreview> previews= new ArrayList<>();
+				for (Object element : collection) {
+					if (!(element instanceof Map<?, ?> map)) {
+						throw invalidCoordinatedPreview(cleanUp,
+								"contains an element that is not a Map", null); //$NON-NLS-1$
+					}
+					CoordinatedCleanUpPreview preview= parseCoordinatedCleanUpPreview(cleanUp, project, map);
+					if (preview != null) {
+						previews.add(preview);
+					}
+				}
+				return List.copyOf(previews);
 			}
-			return new CoordinatedCleanUpPreview(id, name, description, units, details);
+			throw invalidCoordinatedPreview(cleanUp,
+					"did not return a Map or a Collection of Maps", null); //$NON-NLS-1$
 		} catch (IllegalAccessException | IllegalArgumentException e) {
 			throw invalidCoordinatedPreview(cleanUp, "could not be invoked", e); //$NON-NLS-1$
 		} catch (InvocationTargetException e) {
@@ -880,6 +885,20 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 			}
 			throw invalidCoordinatedPreview(cleanUp, "failed while describing coordinated changes", cause); //$NON-NLS-1$
 		}
+	}
+
+	private static CoordinatedCleanUpPreview parseCoordinatedCleanUpPreview(ICleanUp cleanUp,
+			IJavaProject project, Map<?, ?> map) throws CoreException {
+		String id= requiredPreviewString(cleanUp, map, PREVIEW_ID);
+		String name= optionalPreviewString(cleanUp, map, PREVIEW_NAME, id);
+		String description= optionalPreviewString(cleanUp, map, PREVIEW_DESCRIPTION, ""); //$NON-NLS-1$
+		List<ICompilationUnit> units= previewCompilationUnits(cleanUp, project,
+				map.get(PREVIEW_COMPILATION_UNITS));
+		List<String> details= previewDetails(cleanUp, map.get(PREVIEW_DETAILS));
+		if (units.isEmpty()) {
+			return null;
+		}
+		return new CoordinatedCleanUpPreview(id, name, description, units, details);
 	}
 
 	private static Method findCoordinatedCleanUpPreviewMethod(ICleanUp cleanUp) {
