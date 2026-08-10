@@ -1,0 +1,40 @@
+name: Apply coordinated cleanup preview patch
+
+on:
+  push:
+    branches:
+      - feature/coordinated-cleanup-preview-4.40
+    paths:
+      - .github/patches/coordinated-candidate-descriptors.patch
+      - .github/workflows/apply-coordinated-cleanup-preview.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Apply reviewed source patch
+        run: |
+          set -euo pipefail
+          patch_file=.github/patches/coordinated-candidate-descriptors.patch
+          git apply --check "$patch_file"
+          git apply "$patch_file"
+          rm "$patch_file"
+
+      - name: Commit patched source
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add --all
+          git commit -m "Support candidate-level coordinated cleanup previews"
+          git push origin HEAD:${{ github.ref_name }}
