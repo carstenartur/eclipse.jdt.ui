@@ -317,7 +317,7 @@ public class CoordinatedCleanUpPreviewTest extends QuickFixTest {
 		}
 
 		public Collection<Map<String, ?>> getCoordinatedCleanUpPreview(IJavaProject project) {
-			return candidates.stream().map(candidate -> Map.<String, Object>of(
+			return candidates.stream().<Map<String, ?>>map(candidate -> Map.<String, Object>of(
 					"id", candidate.id(), //$NON-NLS-1$
 					"name", candidate.name(), //$NON-NLS-1$
 					"description", "One independently selectable coordinated candidate.", //$NON-NLS-1$ //$NON-NLS-2$
