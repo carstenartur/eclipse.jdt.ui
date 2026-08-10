@@ -27,10 +27,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          git fetch origin feature/coordinated-cleanup-preview-4.40
+          git fetch --no-tags \
+            https://github.com/carstenartur/eclipse.jdt.ui.git \
+            +refs/heads/feature/coordinated-cleanup-preview-4.40:refs/remotes/old/coordinated-preview
 
           old_base=c9a174e62c32be00bd14c368524d36de75e9fd0f
-          old_head=47ef9bd65c53ddc436a82350bc426d90ca86349d
+          old_head=refs/remotes/old/coordinated-preview
+
+          git cat-file -e "$old_base^{commit}"
+          git cat-file -e "$old_head^{commit}"
 
           git diff --binary "$old_base" "$old_head" -- \
             'org.eclipse.jdt.ui/core extension/org/eclipse/jdt/internal/corext/fix/CleanUpRefactoring.java' \
@@ -38,6 +43,7 @@ jobs:
             'org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/CoordinatedCleanUpPreviewTest.java' \
             > /tmp/coordinated-cleanup-preview.patch
 
+          test -s /tmp/coordinated-cleanup-preview.patch
           git apply --3way /tmp/coordinated-cleanup-preview.patch
 
           python3 - <<'PY'
