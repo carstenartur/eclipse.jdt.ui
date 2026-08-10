@@ -50,9 +50,17 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
+          : > coordinated-cleanup-maven.log
+          last_status=1
           for attempt in 1 2 3; do
-            echo "Maven/Tycho verification attempt ${attempt}/3"
-            if xvfb-run --auto-servernum mvn \
+            {
+              echo "============================================================"
+              echo "Maven/Tycho verification attempt ${attempt}/3"
+              echo "UTC start: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+              echo "============================================================"
+            } | tee -a coordinated-cleanup-maven.log
+
+            xvfb-run --auto-servernum mvn \
               --no-transfer-progress \
               --batch-mode \
               -e \
@@ -64,15 +72,25 @@ jobs:
               -am \
               -Dtest=org.eclipse.jdt.ui.tests.quickfix.CoordinatedCleanUpPreviewTest \
               -DfailIfNoTests=false \
-              clean verify; then
+              clean verify 2>&1 | tee -a coordinated-cleanup-maven.log
+            last_status=${PIPESTATUS[0]}
+
+            if [[ "$last_status" -eq 0 ]]; then
+              echo "Maven/Tycho verification succeeded on attempt ${attempt}." \
+                | tee -a coordinated-cleanup-maven.log
               exit 0
             fi
-            if [[ "$attempt" -eq 3 ]]; then
-              echo "Maven/Tycho verification failed after three attempts." >&2
-              exit 1
+
+            echo "Maven/Tycho verification attempt ${attempt} failed with exit code ${last_status}." \
+              | tee -a coordinated-cleanup-maven.log
+            if [[ "$attempt" -lt 3 ]]; then
+              sleep $((attempt * 30))
             fi
-            sleep $((attempt * 30))
           done
+
+          echo "Maven/Tycho verification failed after three attempts." \
+            | tee -a coordinated-cleanup-maven.log >&2
+          exit "$last_status"
 
       - name: Require coordinated preview test evidence
         shell: bash
@@ -96,13 +114,14 @@ jobs:
           include_passed: false
           detailed_summary: true
 
-      - name: Upload test reports and Eclipse logs
+      - name: Upload verification evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: coordinated-cleanup-preview-${{ github.run_number }}
           path: |
+            coordinated-cleanup-maven.log
             **/target/surefire-reports/**
             **/target/work/data/.metadata/*.log
           retention-days: 14
-          if-no-files-found: warn
+          if-no-files-found: error
