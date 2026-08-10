@@ -29,6 +29,8 @@ jobs:
           set -uo pipefail
           git fetch --no-tags origin master
           actual_master="$(git rev-parse origin/master)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           {
             echo "head=$(git rev-parse HEAD)"
             echo "expected_master=$EXPECTED_MASTER"
