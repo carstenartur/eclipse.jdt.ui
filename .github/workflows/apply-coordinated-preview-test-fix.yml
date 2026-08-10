@@ -1,0 +1,49 @@
+name: Apply coordinated preview test type fix
+
+on:
+  push:
+    branches:
+      - feature/coordinated-cleanup-preview-4.40
+    paths:
+      - '.github/workflows/apply-coordinated-preview-test-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Apply validated type-inference fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/CoordinatedCleanUpPreviewTest.java")
+          text = path.read_text(encoding="utf-8")
+          old = "return candidates.stream().map(candidate -> Map.<String, Object>of("
+          new = "return candidates.stream().<Map<String, ?>>map(candidate -> Map.<String, Object>of("
+          if text.count(old) != 1:
+              raise SystemExit(f"Expected exactly one target expression, found {text.count(old)}")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+          rm -f .github/workflows/apply-coordinated-preview-test-fix.yml
+          git diff --check
+
+      - name: Commit the product-test fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix coordinated preview test map variance"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
