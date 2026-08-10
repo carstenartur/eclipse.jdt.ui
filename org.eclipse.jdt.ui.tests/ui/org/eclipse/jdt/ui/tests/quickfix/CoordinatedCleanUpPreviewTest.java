@@ -159,11 +159,8 @@ public class CoordinatedCleanUpPreviewTest extends QuickFixTest {
 
 		undo.initializeValidationData(new NullProgressMonitor());
 		assertFalse(undo.isValid(new NullProgressMonitor()).hasError());
-		Change redo= undo.perform(new NullProgressMonitor());
+		undo.perform(new NullProgressMonitor());
 		undo.dispose();
-		if (redo != null) {
-			redo.dispose();
-		}
 
 		assertEquals(fixture.firstSource(), fixture.first().getSource());
 		assertEquals(fixture.secondSource(), fixture.second().getSource());
@@ -224,6 +221,7 @@ public class CoordinatedCleanUpPreviewTest extends QuickFixTest {
 			if (!(child instanceof CoordinatedCleanUpChange)) {
 				return child;
 			}
+		}
 		throw new AssertionError("No independent cleanup change found"); //$NON-NLS-1$
 	}
 
