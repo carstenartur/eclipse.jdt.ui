@@ -1,4 +1,5 @@
 # Fork-specific files retained by the Sandbox patched JDT UI build.
+.github/workflows/fork-coordinated-cleanup.yml
 org.eclipse.jdt.ui/core extension/org/eclipse/jdt/internal/corext/fix/CleanUpRefactoring.java
 org.eclipse.jdt.ui/core extension/org/eclipse/jdt/internal/corext/fix/CoordinatedCleanUpChange.java
 org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/MultiFileCleanUpScopeExpansionTest.java
