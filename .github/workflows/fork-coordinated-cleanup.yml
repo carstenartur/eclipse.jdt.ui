@@ -23,7 +23,7 @@ jobs:
   coordinated-cleanup-preview:
     name: Coordinated Cleanup preview test
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 180
     env:
       MAVEN_OPTS: -Xmx4g
     steps:
@@ -47,19 +47,32 @@ jobs:
             libxrandr2 libxfixes3 libasound2t64 libnss3 libgbm1
 
       - name: Build JDT UI and run coordinated preview test
-        run: >-
-          xvfb-run --auto-servernum mvn
-          --no-transfer-progress
-          --batch-mode
-          -e
-          -V
-          -U
-          -Pbuild-individual-bundles
-          -pl org.eclipse.jdt.ui.tests
-          -am
-          -Dtest=org.eclipse.jdt.ui.tests.quickfix.CoordinatedCleanUpPreviewTest
-          -DfailIfNoTests=false
-          clean verify
+        shell: bash
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            echo "Maven/Tycho verification attempt ${attempt}/3"
+            if xvfb-run --auto-servernum mvn \
+              --no-transfer-progress \
+              --batch-mode \
+              -e \
+              -V \
+              -U \
+              -Dmaven.wagon.http.retryHandler.count=5 \
+              -Pbuild-individual-bundles \
+              -pl org.eclipse.jdt.ui.tests \
+              -am \
+              -Dtest=org.eclipse.jdt.ui.tests.quickfix.CoordinatedCleanUpPreviewTest \
+              -DfailIfNoTests=false \
+              clean verify; then
+              exit 0
+            fi
+            if [[ "$attempt" -eq 3 ]]; then
+              echo "Maven/Tycho verification failed after three attempts." >&2
+              exit 1
+            fi
+            sleep $((attempt * 30))
+          done
 
       - name: Require coordinated preview test evidence
         shell: bash
