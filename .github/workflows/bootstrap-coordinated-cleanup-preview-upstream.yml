@@ -1,0 +1,83 @@
+name: Bootstrap coordinated Cleanup preview upstream branch
+
+on:
+  push:
+    branches:
+      - feature/coordinated-cleanup-preview-upstream
+    paths:
+      - .github/workflows/bootstrap-coordinated-cleanup-preview-upstream.yml
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out clean upstream-based branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/coordinated-cleanup-preview-upstream
+          fetch-depth: 0
+
+      - name: Apply the reviewed implementation without fork-only history
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin feature/coordinated-cleanup-preview-4.40
+
+          old_base=c9a174e62c32be00bd14c368524d36de75e9fd0f
+          old_head=47ef9bd65c53ddc436a82350bc426d90ca86349d
+
+          git diff --binary "$old_base" "$old_head" -- \
+            'org.eclipse.jdt.ui/core extension/org/eclipse/jdt/internal/corext/fix/CleanUpRefactoring.java' \
+            'org.eclipse.jdt.ui/core extension/org/eclipse/jdt/internal/corext/fix/CoordinatedCleanUpChange.java' \
+            'org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/CoordinatedCleanUpPreviewTest.java' \
+            > /tmp/coordinated-cleanup-preview.patch
+
+          git apply --3way /tmp/coordinated-cleanup-preview.patch
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/CoordinatedCleanUpPreviewTest.java')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace('import java.util.Collection;\n', '')
+          text = text.replace(
+              'createRefactoring(List.of(fixture.first(), fixture.independent()),\n'
+              '\t\t\t\tcoordinated, independent);',
+              'createRefactoring(List.of(fixture.first(), fixture.second(), fixture.independent()),\n'
+              '\t\t\t\tcoordinated, independent);')
+          text = text.replace(
+              'createRefactoring(List.of(fixture.first()), coordinated);',
+              'createRefactoring(List.of(fixture.first(), fixture.second()), coordinated);')
+          text = text.replace(
+              'createRefactoring(List.of(fixture.first()), cleanUp);',
+              'createRefactoring(List.of(fixture.first(), fixture.second()), cleanUp);')
+          text = text.replace(
+              'createRefactoring(List.of(fixture.first()), firstCandidate, secondCandidate);',
+              'createRefactoring(List.of(fixture.first(), fixture.second()), firstCandidate, secondCandidate);')
+
+          scope_method = '''\n\t\tpublic Collection<ICompilationUnit> expandCleanUpScope(IJavaProject project,\n\t\t\t\tCollection<ICompilationUnit> currentScope, IProgressMonitor monitor) {\n\t\t\treturn affectedUnits;\n\t\t}\n'''
+          text = text.replace(scope_method, '\n')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          rm .github/workflows/bootstrap-coordinated-cleanup-preview-upstream.yml
+          git diff --check
+
+      - name: Commit clean upstream change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Carsten Hammer'
+          git config user.email 'carsten.hammer@t-online.de'
+          git add -A
+          git commit -m 'Add atomic coordinated Cleanup preview changes' \
+            -m 'Signed-off-by: Carsten Hammer <carsten.hammer@t-online.de>'
+          git push origin HEAD:feature/coordinated-cleanup-preview-upstream
