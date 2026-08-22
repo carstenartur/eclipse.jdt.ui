@@ -839,6 +839,7 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 				result.add(preview);
 			}
 		}
+		result.sort((left, right) -> left.id().compareTo(right.id()));
 		return result;
 	}
 
@@ -1015,7 +1016,9 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 
 		Map<CoordinatedPreviewComponent, List<Change>> changesByComponent= new LinkedHashMap<>();
 		Map<Change, CoordinatedPreviewComponent> componentByChange= new LinkedHashMap<>();
-		for (Change change : changes) {
+		Map<CoordinatedPreviewComponent, Integer> firstChangeIndex= new LinkedHashMap<>();
+		for (int changeIndex= 0; changeIndex < changes.length; changeIndex++) {
+			Change change= changes[changeIndex];
 			ICompilationUnit unit= getChangedCompilationUnit(change);
 			if (unit == null) {
 				continue;
@@ -1024,20 +1027,34 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 				if (component.compilationUnits.contains(unit)) {
 					changesByComponent.computeIfAbsent(component, ignored -> new ArrayList<>()).add(change);
 					componentByChange.put(change, component);
+					firstChangeIndex.putIfAbsent(component, Integer.valueOf(changeIndex));
 					break;
 				}
 			}
 		}
 
+		List<Integer> coordinatedSlots= firstChangeIndex.values().stream().sorted().toList();
+		List<CoordinatedPreviewComponent> orderedComponents= components.stream()
+				.filter(changesByComponent::containsKey)
+				.toList();
+		Map<Integer, Change> coordinatedBySlot= new LinkedHashMap<>();
+		for (int index= 0; index < orderedComponents.size(); index++) {
+			CoordinatedPreviewComponent component= orderedComponents.get(index);
+			coordinatedBySlot.put(coordinatedSlots.get(index),
+					createCoordinatedChange(component, changesByComponent.get(component)));
+		}
+
 		List<Change> result= new ArrayList<>(changes.length);
-		Set<CoordinatedPreviewComponent> emitted= new HashSet<>();
-		for (Change change : changes) {
+		for (int changeIndex= 0; changeIndex < changes.length; changeIndex++) {
+			Change change= changes[changeIndex];
 			CoordinatedPreviewComponent component= componentByChange.get(change);
 			if (component == null) {
 				result.add(change);
-			} else if (emitted.add(component)) {
-				List<Change> grouped= changesByComponent.get(component);
-				result.add(createCoordinatedChange(component, grouped));
+			} else {
+				Change coordinated= coordinatedBySlot.get(Integer.valueOf(changeIndex));
+				if (coordinated != null) {
+					result.add(coordinated);
+				}
 			}
 		}
 		return result.toArray(new Change[result.size()]);
@@ -1068,13 +1085,19 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 				.flatMap(preview -> preview.details().stream())
 				.distinct()
 				.toList();
-		List<ICompilationUnit> units= changes.stream()
-				.map(CleanUpRefactoring::getChangedCompilationUnit)
-				.filter(unit -> unit != null)
-				.distinct()
-				.toList();
+		List<ICompilationUnit> units= List.copyOf(component.compilationUnits);
+		List<Change> orderedChanges= new ArrayList<>(changes);
+		orderedChanges.sort((left, right) -> {
+			int leftIndex= units.indexOf(getChangedCompilationUnit(left));
+			int rightIndex= units.indexOf(getChangedCompilationUnit(right));
+			int unitOrder= Integer.compare(leftIndex, rightIndex);
+			if (unitOrder != 0) {
+				return unitOrder;
+			}
+			return left.getName().compareTo(right.getName());
+		});
 		return new CoordinatedCleanUpChange(name, description, candidateIds, details, units,
-				changes.toArray(new Change[changes.size()]));
+				orderedChanges.toArray(new Change[orderedChanges.size()]));
 	}
 
 	private static ICompilationUnit getChangedCompilationUnit(Change change) {

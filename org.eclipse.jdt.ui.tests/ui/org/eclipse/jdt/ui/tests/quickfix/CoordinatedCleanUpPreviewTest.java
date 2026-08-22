@@ -170,25 +170,39 @@ public class CoordinatedCleanUpPreviewTest extends QuickFixTest {
 	public void testDisjointCandidatesFromOneCleanupRemainIndependentlySelectable() throws Exception {
 		Fixture fixture= createFixture();
 		DisjointCoordinatedCleanUp cleanUp= new DisjointCoordinatedCleanUp(
-				new Candidate("candidate-a", "First migration", fixture.first(), "// first\n"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-				new Candidate("candidate-b", "Second migration", fixture.second(), "// second\n")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+				new Candidate("candidate-b", "Second migration", fixture.second(), "// second\n"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+				new Candidate("candidate-a", "First migration", fixture.first(), "// first\n")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
-		CleanUpRefactoring refactoring= createRefactoring(List.of(fixture.first()), cleanUp);
+		CleanUpRefactoring refactoring= createRefactoring(List.of(fixture.second()), cleanUp);
 		assertFalse(refactoring.checkAllConditions(new NullProgressMonitor()).hasError());
 
 		CompositeChange root= (CompositeChange) refactoring.createChange(null);
 		assertEquals(2, root.getChildren().length);
-		Set<Set<String>> candidateIds= java.util.Arrays.stream(root.getChildren())
-				.map(CoordinatedCleanUpChange.class::cast)
-				.map(change -> Set.copyOf(change.getCandidateIds()))
-				.collect(java.util.stream.Collectors.toSet());
-		assertEquals(Set.of(Set.of("candidate-a"), Set.of("candidate-b")), candidateIds); //$NON-NLS-1$ //$NON-NLS-2$
 
 		CoordinatedCleanUpChange first= (CoordinatedCleanUpChange)root.getChildren()[0];
 		CoordinatedCleanUpChange second= (CoordinatedCleanUpChange)root.getChildren()[1];
+		assertEquals(List.of("candidate-a"), first.getCandidateIds()); //$NON-NLS-1$
+		assertEquals(List.of("candidate-b"), second.getCandidateIds()); //$NON-NLS-1$
 		first.setEnabled(false);
 		assertFalse(first.isEnabled());
 		assertTrue(second.isEnabled());
+	}
+
+	@Test
+	public void testCoordinatedFilesFollowPreviewOrderRatherThanChangeOrder() throws Exception {
+		Fixture fixture= createFixture();
+		CoordinatedScopeCleanUp coordinated= new CoordinatedScopeCleanUp("candidate-a", //$NON-NLS-1$
+				"Convert the coordinated API", "// coordinated\n", false, fixture.second(), fixture.first()); //$NON-NLS-1$ //$NON-NLS-2$
+
+		CleanUpRefactoring refactoring= createRefactoring(List.of(fixture.first()), coordinated);
+		assertFalse(refactoring.checkAllConditions(new NullProgressMonitor()).hasError());
+
+		CoordinatedCleanUpChange atomic= findCoordinated((CompositeChange) refactoring.createChange(null));
+		assertEquals(List.of(fixture.second(), fixture.first()), atomic.getCompilationUnits());
+		assertEquals(List.of(fixture.second(), fixture.first()),
+				java.util.Arrays.stream(atomic.getChanges())
+						.map(change -> change.getAdapter(ICompilationUnit.class))
+						.toList());
 	}
 
 	@Test
