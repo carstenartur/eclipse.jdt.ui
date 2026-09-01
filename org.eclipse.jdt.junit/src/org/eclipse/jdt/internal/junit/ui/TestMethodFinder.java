@@ -85,26 +85,55 @@ public final class TestMethodFinder {
 	 */
 	public static IMethod findMethod(IType type, String methodName, String[] parameterTypes)
 			throws JavaModelException {
-		if (parameterTypes != null) {
-			String[] signatures= new String[parameterTypes.length];
-			for (int i= 0; i < parameterTypes.length; i++) {
-				String parameterType= parameterTypes[i];
-				if (parameterType.endsWith("...")) { //$NON-NLS-1$
-					parameterType= parameterType.substring(0, parameterType.length() - 3) + "[]"; //$NON-NLS-1$
-				}
-				signatures[i]= Signature.createTypeSignature(parameterType, true);
-			}
-			return JavaModelUtil.findMethod(methodName, signatures, false, type);
-		}
-
 		IMethod result= null;
 		for (IMethod method : type.getMethods()) {
-			if (methodName.equals(method.getElementName())) {
-				if (result != null) {
-					return null;
-				}
-				result= method;
+			if (!methodName.equals(method.getElementName())
+					|| parameterTypes != null && !hasParameterTypes(method, parameterTypes)) {
+				continue;
 			}
+			if (result != null) {
+				return null;
+			}
+			result= method;
+		}
+		return result;
+	}
+
+	private static boolean hasParameterTypes(IMethod method, String[] expectedParameterTypes)
+			throws JavaModelException {
+		String[] parameterTypes= method.getParameterTypes();
+		if (parameterTypes.length != expectedParameterTypes.length) {
+			return false;
+		}
+
+		IType declaringType= method.getDeclaringType();
+		for (int i= 0; i < parameterTypes.length; i++) {
+			String expectedType= normalizeParameterType(expectedParameterTypes[i]);
+			if (expectedType == null) {
+				return false;
+			}
+
+			String erasedType= Signature.getTypeErasure(parameterTypes[i]);
+			String binaryType= JavaModelUtil.getResolvedTypeName(erasedType, declaringType, '$');
+			if (expectedType.equals(binaryType)) {
+				continue;
+			}
+
+			String sourceType= JavaModelUtil.getResolvedTypeName(erasedType, declaringType, '.');
+			if (!expectedType.equals(sourceType)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static String normalizeParameterType(String parameterType) {
+		if (parameterType == null) {
+			return null;
+		}
+		String result= parameterType.trim();
+		if (result.endsWith("...")) { //$NON-NLS-1$
+			result= result.substring(0, result.length() - 3) + "[]"; //$NON-NLS-1$
 		}
 		return result;
 	}
