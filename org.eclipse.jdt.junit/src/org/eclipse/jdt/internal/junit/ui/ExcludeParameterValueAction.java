@@ -32,7 +32,7 @@ import org.eclipse.jdt.internal.junit.ui.EnumSourceValidator.ExclusionTarget;
  */
 public final class ExcludeParameterValueAction extends Action {
 
-	private ExclusionTarget fTarget;
+	private TestCaseElement fTestCaseElement;
 
 	public ExcludeParameterValueAction() {
 		super(JUnitMessages.ExcludeParameterValueAction_label);
@@ -44,37 +44,51 @@ public final class ExcludeParameterValueAction extends Action {
 	 * @param testCaseElement the selected test invocation
 	 */
 	public void update(TestCaseElement testCaseElement) {
-		fTarget= EnumSourceValidator.findExclusionTarget(testCaseElement);
-		setEnabled(fTarget != null);
+		fTestCaseElement= testCaseElement;
+		setEnabled(EnumSourceValidator.findExclusionTarget(testCaseElement) != null);
 	}
 
 	@Override
 	public void run() {
-		if (fTarget == null) {
+		ExclusionTarget target= EnumSourceValidator.findExclusionTarget(fTestCaseElement);
+		if (target == null) {
+			setEnabled(false);
 			return;
 		}
 
-		int remaining= fTarget.getRemainingValues();
+		int remaining= target.getRemainingValues();
 		if (remaining <= 1) {
 			String message= remaining == 0
 					? Messages.format(JUnitMessages.ExcludeParameterValueAction_warning_noValues,
-							fTarget.getEnumConstantName())
+							target.getEnumConstantName())
 					: Messages.format(JUnitMessages.ExcludeParameterValueAction_warning_oneValue,
-							fTarget.getEnumConstantName());
+							target.getEnumConstantName());
 			if (!MessageDialog.openQuestion(null, JUnitMessages.ExcludeParameterValueAction_label, message)) {
 				return;
 			}
 		}
 
+		ExclusionTarget currentTarget= EnumSourceValidator.findExclusionTarget(fTestCaseElement);
+		if (!isSameTarget(target, currentTarget)) {
+			return;
+		}
+
 		try {
 			if (EnumSourceValidator.excludeEnumValue(
-					fTarget.getMethod(), fTarget.getEnumConstantName())) {
-				JavaUI.openInEditor(fTarget.getMethod());
+					currentTarget.getMethod(), currentTarget.getEnumConstantName())) {
+				JavaUI.openInEditor(currentTarget.getMethod());
 			}
 		} catch (JavaModelException e) {
 			JUnitPlugin.log(e);
 		} catch (Exception e) {
 			JUnitPlugin.log(e);
 		}
+	}
+
+	private static boolean isSameTarget(ExclusionTarget first, ExclusionTarget second) {
+		return second != null
+				&& first.getMethod().equals(second.getMethod())
+				&& first.getEnumConstantName().equals(second.getEnumConstantName())
+				&& first.getRemainingValues() == second.getRemainingValues();
 	}
 }
