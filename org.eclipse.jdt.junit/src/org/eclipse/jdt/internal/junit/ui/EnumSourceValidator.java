@@ -279,18 +279,18 @@ public final class EnumSourceValidator {
 				namesRewrite.insertLast(newStringLiteral(ast, enumConstantName), null);
 			} else {
 				ArrayInitializer names= ast.newArrayInitializer();
-				names.expressions().add((Expression) ASTNode.copySubtree(ast, namesPair.getValue()));
+				names.expressions().add(ASTNode.copySubtree(ast, namesPair.getValue()));
 				names.expressions().add(newStringLiteral(ast, enumConstantName));
 				rewrite.replace(namesPair.getValue(), names, null);
 			}
 		} else {
 			NormalAnnotation replacement= ast.newNormalAnnotation();
-			replacement.setTypeName((Name) ASTNode.copySubtree(ast, parsed.fAnnotation.getTypeName()));
+			replacement.setTypeName(ASTNode.copySubtree(ast, parsed.fAnnotation.getTypeName()));
 
 			if (parsed.fAnnotation instanceof SingleMemberAnnotation) {
 				MemberValuePair valuePair= ast.newMemberValuePair();
 				valuePair.setName(ast.newSimpleName(MEMBER_VALUE));
-				valuePair.setValue((Expression) ASTNode.copySubtree(ast,
+				valuePair.setValue(ASTNode.copySubtree(ast,
 						((SingleMemberAnnotation) parsed.fAnnotation).getValue()));
 				replacement.values().add(valuePair);
 			}
