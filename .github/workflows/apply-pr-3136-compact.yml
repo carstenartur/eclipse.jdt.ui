@@ -3,7 +3,7 @@ name: Apply compact PR 3136 QA fixes
 on:
   push:
     branches:
-      - pr-2744-remaining-enumsource
+      - qa-pr-3136-compact-apply
 
 permissions:
   contents: write
@@ -13,10 +13,10 @@ jobs:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout feature branch
+      - name: Checkout isolated branch
         uses: actions/checkout@v4
         with:
-          ref: pr-2744-remaining-enumsource
+          ref: qa-pr-3136-compact-apply
           fetch-depth: 0
 
       - name: Apply compact reviewed implementation
@@ -27,11 +27,14 @@ jobs:
           rm .github/qa/apply_pr_3136_compact.py
           rm .github/workflows/apply-pr-3136-compact.yml
 
-      - name: Commit and push
+      - name: Verify and commit
         run: |
+          git status --short
+          git diff --stat
+          git diff --check
           git config user.name "Carsten Hammer"
           git config user.email "3164220+carstenartur@users.noreply.github.com"
           git add -A
           git diff --cached --check
-          git commit -m "Compact and harden EnumSource filtering" -m "Fix the ECJ compilation failure, keep the implementation below the significant-contribution threshold, preserve annotation semantics and imports, and retain focused executable regression coverage." -m "Assisted-by: GitHub Copilot" -m "Assisted-by: OpenAI ChatGPT"
-          git push origin HEAD:pr-2744-remaining-enumsource
+          git commit -m "Compact and harden EnumSource filtering" -m "Fix the ECJ compilation failure, preserve annotation semantics and imports, and retain focused executable regression coverage." -m "Assisted-by: GitHub Copilot" -m "Assisted-by: OpenAI ChatGPT"
+          git push origin HEAD:qa-pr-3136-compact-apply
