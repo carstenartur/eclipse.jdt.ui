@@ -37,12 +37,25 @@ jobs:
           git diff -- "$file"
 
       - name: Compile JUnit bundle with Tycho
-        run: >-
-          mvn -U -e -DskipTests=true
-          clean verify --batch-mode --fail-fast
-          -Pbuild-individual-bundles
-          -Dcompare-version-with-baselines.skip=true
-          -pl org.eclipse.jdt.junit -am
+        shell: bash
+        run: |
+          set +e
+          mvn -U -e -DskipTests=true \
+            clean verify --batch-mode --fail-fast \
+            -Pbuild-individual-bundles \
+            -Dcompare-version-with-baselines.skip=true \
+            -pl org.eclipse.jdt.junit -am \
+            > /tmp/maven-build.log 2>&1
+          status=$?
+          set -e
+
+          echo '--- concise Maven diagnostics ---'
+          grep -E '^\[ERROR\]|^\[INFO\] BUILD (SUCCESS|FAILURE)|Compilation failure|EnumSourceValidator\.java:' /tmp/maven-build.log || true
+          echo '--- end diagnostics ---'
+
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
 
       - name: Commit verified fix to feature branch
         shell: bash
