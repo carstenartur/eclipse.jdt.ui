@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025 Carsten Hammer and others.
+ * Copyright (c) 2025, 2026 Carsten Hammer and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -181,7 +181,7 @@ public final class TestMethodFinder {
 				componentType= "boolean"; //$NON-NLS-1$
 				break;
 			case 'L':
-				if (!descriptor.endsWith(";") || dimensions + 2 > descriptor.length()) { //$NON-NLS-1$
+				if (!descriptor.endsWith(";") || dimensions + 2 >= descriptor.length()) { //$NON-NLS-1$
 					return null;
 				}
 				componentType= descriptor.substring(dimensions + 1, descriptor.length() - 1)
