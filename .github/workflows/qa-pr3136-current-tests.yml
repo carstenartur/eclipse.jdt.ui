@@ -1,4 +1,4 @@
-name: PR3136 current targeted tests
+name: PR3136 current JUnit suite
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  targeted-tests:
+  junit-suite:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -29,19 +29,19 @@ jobs:
           -pl org.eclipse.jdt.ui.tests
           -am install
 
-      - name: Run targeted EnumSource tests
+      - name: Run complete JUnit plug-in suite
         shell: bash
         run: |
           set +e
           xvfb-run --auto-servernum mvn -B -ntp -Pbuild-individual-bundles \
             -pl org.eclipse.jdt.ui.tests \
-            -Dtest=org.eclipse.jdt.junit.tests.EnumSourceFilterTest,org.eclipse.jdt.junit.tests.EnumSourceSafetyTest \
-            test 2>&1 | tee /tmp/targeted-tests.log
+            -Dtest=org.eclipse.jdt.junit.tests.JUnitJUnitTests \
+            test 2>&1 | tee /tmp/junit-suite.log
           status=${PIPESTATUS[0]}
           echo "Maven exit status: ${status}"
           echo "===== Test reports ====="
           find . -type f \( -path '*/surefire-reports/*' -o -path '*/failsafe-reports/*' \) \
             -print -exec sh -c 'echo "--- $1"; cat "$1"' _ {} \; || true
           echo "===== Last 300 Maven log lines ====="
-          tail -n 300 /tmp/targeted-tests.log || true
+          tail -n 300 /tmp/junit-suite.log || true
           exit "${status}"
