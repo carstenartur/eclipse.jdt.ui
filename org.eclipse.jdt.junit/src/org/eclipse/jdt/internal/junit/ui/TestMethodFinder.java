@@ -132,10 +132,73 @@ public final class TestMethodFinder {
 			return null;
 		}
 		String result= parameterType.trim();
+		if (result.isEmpty()) {
+			return null;
+		}
+		if (result.startsWith("[")) { //$NON-NLS-1$
+			return normalizeArrayDescriptor(result);
+		}
 		if (result.endsWith("...")) { //$NON-NLS-1$
 			result= result.substring(0, result.length() - 3) + "[]"; //$NON-NLS-1$
 		}
 		return result;
+	}
+
+	private static String normalizeArrayDescriptor(String descriptor) {
+		int dimensions= 0;
+		while (dimensions < descriptor.length() && descriptor.charAt(dimensions) == '[') {
+			dimensions++;
+		}
+		if (dimensions == 0 || dimensions >= descriptor.length()) {
+			return null;
+		}
+
+		String componentType;
+		char kind= descriptor.charAt(dimensions);
+		switch (kind) {
+			case 'B':
+				componentType= "byte"; //$NON-NLS-1$
+				break;
+			case 'C':
+				componentType= "char"; //$NON-NLS-1$
+				break;
+			case 'D':
+				componentType= "double"; //$NON-NLS-1$
+				break;
+			case 'F':
+				componentType= "float"; //$NON-NLS-1$
+				break;
+			case 'I':
+				componentType= "int"; //$NON-NLS-1$
+				break;
+			case 'J':
+				componentType= "long"; //$NON-NLS-1$
+				break;
+			case 'S':
+				componentType= "short"; //$NON-NLS-1$
+				break;
+			case 'Z':
+				componentType= "boolean"; //$NON-NLS-1$
+				break;
+			case 'L':
+				if (!descriptor.endsWith(";") || dimensions + 2 > descriptor.length()) { //$NON-NLS-1$
+					return null;
+				}
+				componentType= descriptor.substring(dimensions + 1, descriptor.length() - 1)
+						.replace('/', '.');
+				break;
+			default:
+				return null;
+		}
+		if (kind != 'L' && dimensions + 1 != descriptor.length()) {
+			return null;
+		}
+
+		StringBuilder result= new StringBuilder(componentType);
+		for (int i= 0; i < dimensions; i++) {
+			result.append("[]"); //$NON-NLS-1$
+		}
+		return result.toString();
 	}
 
 	private TestMethodFinder() {
