@@ -24,7 +24,10 @@ import org.eclipse.text.edits.MultiTextEdit;
 import org.eclipse.text.edits.TextEdit;
 
 import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IField;
+import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IMethod;
+import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -50,8 +53,6 @@ import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 
 import org.eclipse.jdt.internal.corext.refactoring.structure.ImportRemover;
-
-import org.eclipse.jdt.junit.model.ITestElement;
 
 import org.eclipse.jdt.internal.junit.model.TestCaseElement;
 import org.eclipse.jdt.internal.junit.model.TestSuiteElement;
@@ -86,6 +87,12 @@ public final class EnumSourceValidator {
 
 	private static final Pattern INVOCATION_INDEX_PATTERN=
 			Pattern.compile("\\[test-template-invocation:#(\\d+)\\]"); //$NON-NLS-1$
+
+	private enum ArgumentsSourceStatus {
+		FOUND,
+		NOT_FOUND,
+		UNKNOWN
+	}
 
 	static final class ExclusionTarget {
 		private final IMethod fMethod;
@@ -498,35 +505,58 @@ public final class EnumSourceValidator {
 				argumentSourceCount++;
 			} else if (ENUM_SOURCES_ANNOTATION.equals(qualifiedName)) {
 				argumentSourceCount += 2;
-			} else if (hasArgumentsSourceMetaAnnotation(annotationType, new HashSet<>(), 0)) {
-				argumentSourceCount++;
+			} else {
+				ArgumentsSourceStatus status=
+						hasArgumentsSourceMetaAnnotation(annotationType, new HashSet<>());
+				if (status == ArgumentsSourceStatus.UNKNOWN) {
+					return null;
+				}
+				if (status == ArgumentsSourceStatus.FOUND) {
+					argumentSourceCount++;
+				}
 			}
 		}
 
 		return hasDirectParameterizedTest && argumentSourceCount == 1 ? enumSource : null;
 	}
 
-	private static boolean hasArgumentsSourceMetaAnnotation(ITypeBinding annotationType,
-			Set<String> visited, int depth) {
-		if (annotationType == null || depth > 4) {
-			return false;
+	private static ArgumentsSourceStatus hasArgumentsSourceMetaAnnotation(ITypeBinding annotationType,
+			Set<String> visited) {
+		if (annotationType == null) {
+			return ArgumentsSourceStatus.UNKNOWN;
 		}
 
 		String qualifiedName= annotationType.getQualifiedName();
 		if (ARGUMENTS_SOURCE_ANNOTATION.equals(qualifiedName)
 				|| ARGUMENTS_SOURCES_ANNOTATION.equals(qualifiedName)) {
-			return true;
-		}
-		if (!visited.add(qualifiedName)) {
-			return false;
+			return ArgumentsSourceStatus.FOUND;
 		}
 
+		String key= annotationType.getKey();
+		String visitedKey= key == null || key.isEmpty() ? qualifiedName : key;
+		if (visitedKey == null || visitedKey.isEmpty()) {
+			return ArgumentsSourceStatus.UNKNOWN;
+		}
+		if (!visited.add(visitedKey)) {
+			return ArgumentsSourceStatus.NOT_FOUND;
+		}
+
+		boolean unknown= false;
 		for (IAnnotationBinding metaAnnotation : annotationType.getAnnotations()) {
-			if (hasArgumentsSourceMetaAnnotation(metaAnnotation.getAnnotationType(), visited, depth + 1)) {
-				return true;
+			if (metaAnnotation == null) {
+				unknown= true;
+				continue;
+			}
+			ArgumentsSourceStatus status=
+					hasArgumentsSourceMetaAnnotation(metaAnnotation.getAnnotationType(), visited);
+			if (status == ArgumentsSourceStatus.FOUND) {
+				return status;
+			}
+			if (status == ArgumentsSourceStatus.UNKNOWN) {
+				unknown= true;
 			}
 		}
-		return false;
+		return unknown ? ArgumentsSourceStatus.UNKNOWN : ArgumentsSourceStatus.NOT_FOUND;
 	}
 
 	private static ITypeBinding getEnumType(IAnnotationBinding enumSourceBinding,
@@ -545,14 +575,24 @@ public final class EnumSourceValidator {
 		return parameterTypes[0].getTypeDeclaration();
 	}
 
-	private static List<String> getEnumConstants(ITypeBinding enumType) {
+	private static List<String> getEnumConstants(ITypeBinding enumType) throws JavaModelException {
 		List<String> result= new ArrayList<>();
 		if (enumType == null || !enumType.isEnum()) {
 			return result;
 		}
-		for (IVariableBinding field : enumType.getDeclaredFields()) {
+
+		IJavaElement javaElement= enumType.getJavaElement();
+		if (!(javaElement instanceof IType)) {
+			return result;
+		}
+		IType javaType= (IType) javaElement;
+		if (!javaType.isEnum()) {
+			return result;
+		}
+
+		for (IField field : javaType.getFields()) {
 			if (field.isEnumConstant()) {
-				result.add(field.getName());
+				result.add(field.getElementName());
 			}
 		}
 		return result;
@@ -622,28 +662,20 @@ public final class EnumSourceValidator {
 
 	private static int getInvocationIndex(TestCaseElement testCaseElement, int valueCount) {
 		String uniqueId= testCaseElement.getUniqueId();
-		if (uniqueId != null) {
-			Matcher matcher= INVOCATION_INDEX_PATTERN.matcher(uniqueId);
-			int oneBasedIndex= -1;
+		if (uniqueId == null) {
+			return -1;
+		}
+
+		Matcher matcher= INVOCATION_INDEX_PATTERN.matcher(uniqueId);
+		int oneBasedIndex= -1;
+		try {
 			while (matcher.find()) {
 				oneBasedIndex= Integer.parseInt(matcher.group(1));
 			}
-			if (oneBasedIndex >= 1 && oneBasedIndex <= valueCount) {
-				return oneBasedIndex - 1;
-			}
-		}
-
-		TestSuiteElement parent= testCaseElement.getParent();
-		ITestElement[] children= parent.getChildren();
-		if (children.length != valueCount) {
+		} catch (NumberFormatException e) {
 			return -1;
 		}
-		for (int i= 0; i < children.length; i++) {
-			if (children[i] == testCaseElement) {
-				return i;
-			}
-		}
-		return -1;
+		return oneBasedIndex >= 1 && oneBasedIndex <= valueCount ? oneBasedIndex - 1 : -1;
 	}
 
 	private static MemberValuePair findMemberValuePair(NormalAnnotation annotation, String name) {
