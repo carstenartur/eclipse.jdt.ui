@@ -1,0 +1,182 @@
+name: QA PR 3136 Jenkins 5 fix
+
+on:
+  push:
+    branches:
+      - qa-pr-3136-jenkins5-fix
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa-pr-3136-jenkins5-fix
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Apply the two Jenkins test fixes
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: Path, old: str, new: str) -> None:
+              source = path.read_text(encoding="utf-8")
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one match in {path}, found {count}")
+              path.write_text(source.replace(old, new), encoding="utf-8")
+
+          finder = Path("org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestMethodFinder.java")
+          replace_once(
+              finder,
+              '''\t\t\tString erasedType= Signature.getTypeErasure(parameterTypes[i]);
+\t\t\tString binaryType= JavaModelUtil.getResolvedTypeName(erasedType, declaringType, '$');
+\t\t\tif (expectedType.equals(binaryType)) {
+\t\t\t\tcontinue;
+\t\t\t}
+
+\t\t\tString sourceType= JavaModelUtil.getResolvedTypeName(erasedType, declaringType, '.');
+\t\t\tif (!expectedType.equals(sourceType)) {
+\t\t\t\treturn false;
+\t\t\t}
+''',
+              '''\t\t\tString erasedType= Signature.getTypeErasure(parameterTypes[i]);
+\t\t\tString binaryType= getResolvedParameterTypeName(erasedType, declaringType, '$');
+\t\t\tif (expectedType.equals(binaryType)) {
+\t\t\t\tcontinue;
+\t\t\t}
+
+\t\t\tString sourceType= getResolvedParameterTypeName(erasedType, declaringType, '.');
+\t\t\tif (!expectedType.equals(sourceType)) {
+\t\t\t\treturn false;
+\t\t\t}
+''')
+          replace_once(
+              finder,
+              '''\tprivate static String normalizeParameterType(String parameterType) {
+''',
+              '''\tprivate static String getResolvedParameterTypeName(String typeSignature, IType declaringType,
+\t\t\tchar enclosingTypeSeparator) throws JavaModelException {
+\t\tint dimensions= Signature.getArrayCount(typeSignature);
+\t\tString elementType= Signature.getElementType(typeSignature);
+\t\tString resolvedType;
+\t\tif (Signature.getTypeSignatureKind(elementType) == Signature.BASE_TYPE_SIGNATURE) {
+\t\t\tresolvedType= Signature.toString(elementType);
+\t\t} else {
+\t\t\tresolvedType= JavaModelUtil.getResolvedTypeName(
+\t\t\t\t\telementType, declaringType, enclosingTypeSeparator);
+\t\t}
+\t\tif (resolvedType == null) {
+\t\t\treturn null;
+\t\t}
+
+\t\tStringBuilder result= new StringBuilder(resolvedType);
+\t\tfor (int i= 0; i < dimensions; i++) {
+\t\t\tresult.append("[]"); //$NON-NLS-1$
+\t\t}
+\t\treturn result.toString();
+\t}
+
+\tprivate static String normalizeParameterType(String parameterType) {
+''')
+
+          safety = Path("org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/EnumSourceSafetyTest.java")
+          replace_once(
+              safety,
+              '''\t@Test
+\tpublic void testEnumDeclarationOrderFromBinaryType() throws Exception {
+\t\tICompilationUnit cu= createCompilationUnit("test1", "MyTest.java", """
+\t\t\t\tpackage test1;
+
+\t\t\t\timport java.time.DayOfWeek;
+
+\t\t\t\timport org.junit.jupiter.params.ParameterizedTest;
+\t\t\t\timport org.junit.jupiter.params.provider.EnumSource;
+
+\t\t\t\tpublic class MyTest {
+\t\t\t\t    @ParameterizedTest
+\t\t\t\t    @EnumSource(DayOfWeek.class)
+\t\t\t\t    public void testWithEnum(DayOfWeek day) {
+\t\t\t\t    }
+\t\t\t\t}
+\t\t\t\t""");
+\t\tIMethod method= getMethod(cu, "testWithEnum", "QDayOfWeek;"); //$NON-NLS-1$ //$NON-NLS-2$
+
+\t\tassertEquals("MONDAY", EnumSourceValidator.getEnumConstantForInvocation(method, 1)); //$NON-NLS-1$
+\t\tassertEquals("SUNDAY", EnumSourceValidator.getEnumConstantForInvocation(method, 7)); //$NON-NLS-1$
+\t\tassertNull(EnumSourceValidator.getEnumConstantForInvocation(method, 8));
+\t\tassertCompiles(cu);
+\t}
+''',
+              '''\t@Test
+\tpublic void testEnumDeclarationOrderFromBinaryType() throws Exception {
+\t\tICompilationUnit cu= createCompilationUnit("test1", "MyTest.java", """
+\t\t\t\tpackage test1;
+
+\t\t\t\timport org.junit.jupiter.params.ParameterizedTest;
+\t\t\t\timport org.junit.jupiter.params.provider.EnumSource;
+
+\t\t\t\tpublic class MyTest {
+\t\t\t\t    @ParameterizedTest
+\t\t\t\t    @EnumSource(EnumSource.Mode.class)
+\t\t\t\t    public void testWithEnum(EnumSource.Mode mode) {
+\t\t\t\t    }
+\t\t\t\t}
+\t\t\t\t""");
+\t\tIMethod method= Arrays.stream(cu.getType("MyTest").getMethods()) //$NON-NLS-1$
+\t\t\t\t.filter(candidate -> "testWithEnum".equals(candidate.getElementName())) //$NON-NLS-1$
+\t\t\t\t.findFirst()
+\t\t\t\t.orElseThrow(AssertionError::new);
+
+\t\tassertEquals("INCLUDE", EnumSourceValidator.getEnumConstantForInvocation(method, 1)); //$NON-NLS-1$
+\t\tassertEquals("EXCLUDE", EnumSourceValidator.getEnumConstantForInvocation(method, 2)); //$NON-NLS-1$
+\t\tassertNull(EnumSourceValidator.getEnumConstantForInvocation(method, 6));
+\t\tassertCompiles(cu);
+\t}
+''')
+          PY
+
+          git diff --check
+
+      - name: Build the affected reactor
+        run: >-
+          mvn -B -ntp -U
+          -Pbuild-individual-bundles
+          -DskipTests=true
+          -Dcompare-version-with-baselines.skip=true
+          -pl org.eclipse.jdt.ui.tests
+          -am install
+
+      - name: Run EnumSource regression tests
+        run: >-
+          xvfb-run --auto-servernum
+          mvn -B -ntp
+          -Pbuild-individual-bundles
+          -Dcompare-version-with-baselines.skip=true
+          -pl org.eclipse.jdt.ui.tests
+          -Dtest=org.eclipse.jdt.junit.tests.EnumSourceSafetyTest,org.eclipse.jdt.junit.tests.EnumSourceFilterTest
+          test
+
+      - name: Commit the verified Java changes and remove this workflow
+        shell: bash
+        run: |
+          rm .github/workflows/qa-pr-3136-jenkins5-fix.yml
+          git diff --check
+          git config user.name "Carsten Hammer"
+          git config user.email "carsten.hammer@t-online.de"
+          git add \
+            org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestMethodFinder.java \
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/EnumSourceSafetyTest.java \
+            .github/workflows/qa-pr-3136-jenkins5-fix.yml
+          git commit -m "Fix EnumSource binary and array resolution tests"
+          git push origin HEAD:qa-pr-3136-jenkins5-fix
