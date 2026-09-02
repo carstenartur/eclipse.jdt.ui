@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2026 Eclipse Foundation and others.
+ * Copyright (c) 2026 Carsten Hammer and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -130,7 +130,7 @@ public final class TestRunSessionHistory {
 				File historyFile= storedSession.fHistoryFile;
 				if (!historyFile.isFile() || historyFile.length() != storedSession.fFileLength) {
 					LOG.error("Ignoring incomplete JUnit history file: " + historyFile); //$NON-NLS-1$
-					delete(historyFile);
+					indexFullyUnderstood= false;
 					continue;
 				}
 				referencedFiles.add(historyFile.getName());
@@ -192,7 +192,7 @@ public final class TestRunSessionHistory {
 			if (storedSession == null) {
 				try {
 					storedSession= writeSessionAtomically(session, historyDirectory);
-				} catch (CoreException | IOException e) {
+				} catch (CoreException | IOException | RuntimeException e) {
 					persistenceFailure= true;
 					LOG.error("Could not persist JUnit test run history", e); //$NON-NLS-1$
 				}
@@ -201,13 +201,18 @@ public final class TestRunSessionHistory {
 				storedSessions.add(storedSession);
 		}
 
+		if (persistenceFailure) {
+			LOG.error("Keeping the previous JUnit history because not all sessions could be persisted"); //$NON-NLS-1$
+			return;
+		}
+
 		if (!writeIndexAtomically(storedSessions, historyDirectory))
 			return;
 
 		Set<String> retainedFiles= new HashSet<>();
 		for (StoredSession storedSession : storedSessions)
 			retainedFiles.add(storedSession.fHistoryFile.getName());
-		deleteOrphanedXmlFiles(historyDirectory, retainedFiles, !persistenceFailure);
+		deleteOrphanedXmlFiles(historyDirectory, retainedFiles, true);
 	}
 
 	private static boolean isPersistable(TestRunSession session) {
@@ -217,6 +222,20 @@ public final class TestRunSessionHistory {
 				&& !session.isKeptAlive();
 	}
 
+	static void exportAtomically(TestRunSession session, File targetFile) throws CoreException, IOException {
+		File directory= targetFile.getParentFile();
+		Files.createDirectories(directory.toPath());
+		File temporaryFile= Files.createTempFile(directory.toPath(), targetFile.getName() + '.', TEMP_SUFFIX).toFile();
+		try {
+			JUnitModel.exportTestRunSession(session, temporaryFile);
+			if (session.hasSwapInFailed())
+				throw new IOException("Could not load the complete JUnit test tree"); //$NON-NLS-1$
+			moveReplacing(temporaryFile, targetFile);
+		} finally {
+			delete(temporaryFile);
+		}
+	}
+
 	private static StoredSession writeSessionAtomically(TestRunSession session, File historyDirectory) throws CoreException, IOException {
 		String id;
 		File historyFile;
@@ -224,14 +243,8 @@ public final class TestRunSessionHistory {
 			id= UUID.randomUUID().toString();
 			historyFile= new File(historyDirectory, historyFileName(id));
 		} while (historyFile.exists());
-		File temporaryFile= Files.createTempFile(historyDirectory.toPath(), HISTORY_FILE_PREFIX + id + '-', TEMP_SUFFIX).toFile();
-		try {
-			JUnitModel.exportTestRunSession(session, temporaryFile);
-			moveReplacing(temporaryFile, historyFile);
-			return StoredSession.from(session, id, historyFile, historyTimestamp(session.getStartTime()));
-		} finally {
-			delete(temporaryFile);
-		}
+		exportAtomically(session, historyFile);
+		return StoredSession.from(session, id, historyFile, historyTimestamp(session.getStartTime()));
 	}
 
 	private static boolean writeIndexAtomically(List<StoredSession> storedSessions, File historyDirectory) {
