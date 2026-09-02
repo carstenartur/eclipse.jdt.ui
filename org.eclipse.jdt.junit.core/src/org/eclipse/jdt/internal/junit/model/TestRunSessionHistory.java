@@ -598,7 +598,8 @@ public final class TestRunSessionHistory {
 		@Override
 		public void removeSwapFile() {
 			fValid= false;
-			delete(fStoredSession.fHistoryFile);
+			// Keep the last published history generation intact. store() removes
+			// unreferenced files after publishing the replacement index.
 		}
 
 		StoredSession reusableStoredSession() {

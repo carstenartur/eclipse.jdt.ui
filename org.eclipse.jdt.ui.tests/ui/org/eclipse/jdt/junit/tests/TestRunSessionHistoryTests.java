@@ -367,6 +367,8 @@ public class TestRunSessionHistoryTests {
 
 		assertEquals(1, sessions.size());
 		assertEquals("valid", sessions.get(0).getTestRunName()); //$NON-NLS-1$
+		sessions.get(0).removeSwapFile();
+		assertTrue(validEntry.file(historyDirectory).isFile());
 		TestRunSessionHistory.store(sessions, historyDirectory, 10);
 
 		assertArrayEquals(indexBefore, Files.readAllBytes(indexFile.toPath()));
