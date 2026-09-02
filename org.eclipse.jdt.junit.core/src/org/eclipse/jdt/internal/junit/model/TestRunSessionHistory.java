@@ -19,6 +19,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.jdt.junit.model.ITestElement.Result;
 
@@ -78,6 +80,7 @@ public final class TestRunSessionHistory {
 	private static final String PROGRESS_STOPPED= "stopped"; //$NON-NLS-1$
 
 	private static final ILog LOG= ILog.of(TestRunSessionHistory.class);
+	private static final Set<Path> BLOCKED_HISTORY_DIRECTORIES= ConcurrentHashMap.newKeySet();
 
 	private TestRunSessionHistory() {
 	}
@@ -91,12 +94,19 @@ public final class TestRunSessionHistory {
 	 * @return the restored sessions, youngest first
 	 */
 	public static List<TestRunSession> load(File historyDirectory, int maxCount) {
+		Path historyPath= historyDirectoryPath(historyDirectory);
 		deleteTemporaryFiles(historyDirectory);
 		deleteTransientSwapFiles(historyDirectory);
 
 		File indexFile= new File(historyDirectory, INDEX_FILE_NAME);
-		if (!indexFile.isFile()) {
+		if (!indexFile.exists()) {
+			BLOCKED_HISTORY_DIRECTORIES.remove(historyPath);
 			deleteOrphanedXmlFiles(historyDirectory, Set.of(), true);
+			return List.of();
+		}
+		if (!indexFile.isFile()) {
+			BLOCKED_HISTORY_DIRECTORIES.add(historyPath);
+			LOG.error("Could not read the JUnit history index: " + indexFile); //$NON-NLS-1$
 			return List.of();
 		}
 
@@ -104,6 +114,7 @@ public final class TestRunSessionHistory {
 		try (BufferedInputStream input= new BufferedInputStream(new FileInputStream(indexFile))) {
 			properties.load(input);
 		} catch (IOException | IllegalArgumentException e) {
+			BLOCKED_HISTORY_DIRECTORIES.add(historyPath);
 			LOG.error("Could not read the JUnit history index", e); //$NON-NLS-1$
 			return List.of();
 		}
@@ -114,13 +125,16 @@ public final class TestRunSessionHistory {
 			formatVersion= readInt(properties, KEY_FORMAT_VERSION, 0, Integer.MAX_VALUE);
 			entryCount= readInt(properties, KEY_ENTRY_COUNT, 0, MAX_INDEX_ENTRIES);
 		} catch (IllegalArgumentException e) {
+			BLOCKED_HISTORY_DIRECTORIES.add(historyPath);
 			LOG.error("Invalid JUnit history index", e); //$NON-NLS-1$
 			return List.of();
 		}
 		if (formatVersion != FORMAT_VERSION) {
+			BLOCKED_HISTORY_DIRECTORIES.add(historyPath);
 			LOG.error("Unsupported JUnit history index version: " + formatVersion); //$NON-NLS-1$
 			return List.of();
 		}
+		BLOCKED_HISTORY_DIRECTORIES.remove(historyPath);
 
 		int limit= Math.max(0, maxCount);
 		List<StoredSession> validEntries= new ArrayList<>(entryCount);
@@ -169,6 +183,11 @@ public final class TestRunSessionHistory {
 	 * @param maxCount the maximum number of entries to retain
 	 */
 	public static void store(List<TestRunSession> sessions, File historyDirectory, int maxCount) {
+		if (BLOCKED_HISTORY_DIRECTORIES.contains(historyDirectoryPath(historyDirectory))) {
+			LOG.error("Keeping the existing JUnit history because its index could not be read"); //$NON-NLS-1$
+			return;
+		}
+
 		try {
 			Files.createDirectories(historyDirectory.toPath());
 		} catch (IOException e) {
@@ -382,6 +401,10 @@ public final class TestRunSessionHistory {
 
 	private static long historyTimestamp(long startTime) {
 		return startTime == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(startTime);
+	}
+
+	private static Path historyDirectoryPath(File historyDirectory) {
+		return historyDirectory.toPath().toAbsolutePath().normalize();
 	}
 
 	private static IJavaProject resolveProject(String projectName) {

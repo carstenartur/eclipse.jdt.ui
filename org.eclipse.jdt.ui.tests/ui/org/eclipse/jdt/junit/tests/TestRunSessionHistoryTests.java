@@ -11,6 +11,7 @@
 
 package org.eclipse.jdt.junit.tests;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -326,6 +327,41 @@ public class TestRunSessionHistoryTests {
 		assertFalse(historyFile.exists());
 		assertFalse(swapFile.exists());
 		assertFalse(legacyFile.exists());
+	}
+
+	@Test
+	public void keepsAnUnsupportedHistoryGenerationUntouched() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry entry= emptyEntry("future", 1_788_336_011_000L); //$NON-NLS-1$
+		writeHistory(historyDirectory, entry);
+		File indexFile= new File(historyDirectory, INDEX_FILE_NAME);
+		String index= Files.readString(indexFile.toPath());
+		Files.writeString(indexFile.toPath(), index.replace("formatVersion=2", "formatVersion=999")); //$NON-NLS-1$ //$NON-NLS-2$
+		byte[] indexBefore= Files.readAllBytes(indexFile.toPath());
+		byte[] xmlBefore= Files.readAllBytes(entry.file(historyDirectory).toPath());
+
+		assertTrue(TestRunSessionHistory.load(historyDirectory, 10).isEmpty());
+		TestRunSessionHistory.store(List.of(), historyDirectory, 10);
+
+		assertArrayEquals(indexBefore, Files.readAllBytes(indexFile.toPath()));
+		assertArrayEquals(xmlBefore, Files.readAllBytes(entry.file(historyDirectory).toPath()));
+	}
+
+	@Test
+	public void keepsANonRegularHistoryIndexUntouched() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry entry= emptyEntry("unreadable-index", 1_788_336_012_000L); //$NON-NLS-1$
+		writeHistory(historyDirectory, entry);
+		File indexFile= new File(historyDirectory, INDEX_FILE_NAME);
+		byte[] xmlBefore= Files.readAllBytes(entry.file(historyDirectory).toPath());
+		Files.delete(indexFile.toPath());
+		assertTrue(indexFile.mkdir());
+
+		assertTrue(TestRunSessionHistory.load(historyDirectory, 10).isEmpty());
+		TestRunSessionHistory.store(List.of(), historyDirectory, 10);
+
+		assertTrue(indexFile.isDirectory());
+		assertArrayEquals(xmlBefore, Files.readAllBytes(entry.file(historyDirectory).toPath()));
 	}
 
 	@Test
