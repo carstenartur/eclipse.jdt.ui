@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025 Carsten Hammer and others.
+ * Copyright (c) 2025, 2026 Carsten Hammer and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -56,6 +56,7 @@ public final class ExcludeParameterValueAction extends Action {
 			return;
 		}
 
+		ExclusionTarget currentTarget= target;
 		int remaining= target.getRemainingValues();
 		if (remaining <= 1) {
 			String message= remaining == 0
@@ -63,14 +64,15 @@ public final class ExcludeParameterValueAction extends Action {
 							target.getEnumConstantName())
 					: Messages.format(JUnitMessages.ExcludeParameterValueAction_warning_oneValue,
 							target.getEnumConstantName());
-			if (!MessageDialog.openQuestion(null, JUnitMessages.ExcludeParameterValueAction_label, message)) {
+			if (!MessageDialog.openQuestion(JUnitPlugin.getActiveWorkbenchShell(),
+					JUnitMessages.ExcludeParameterValueAction_label, message)) {
 				return;
 			}
-		}
 
-		ExclusionTarget currentTarget= EnumSourceValidator.findExclusionTarget(fTestCaseElement);
-		if (!isSameTarget(target, currentTarget)) {
-			return;
+			currentTarget= EnumSourceValidator.findExclusionTarget(fTestCaseElement);
+			if (!isSameTarget(target, currentTarget)) {
+				return;
+			}
 		}
 
 		try {

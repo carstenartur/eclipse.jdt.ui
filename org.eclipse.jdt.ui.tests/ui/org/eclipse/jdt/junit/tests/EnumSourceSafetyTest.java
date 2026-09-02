@@ -13,20 +13,20 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 
 import org.eclipse.jdt.junit.JUnitCore;
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
@@ -60,13 +60,13 @@ import org.eclipse.jdt.ui.tests.core.rules.ProjectTestSetup;
  */
 public class EnumSourceSafetyTest {
 
-	@RegisterExtension
+	@Rule
 	public ProjectTestSetup projectSetup= new Java1d8ProjectTestSetup();
 
 	private IJavaProject fJProject;
 	private IPackageFragmentRoot fSourceFolder;
 
-	@BeforeEach
+	@Before
 	public void setUp() throws Exception {
 		fJProject= projectSetup.getProject();
 		fSourceFolder= JavaProjectHelper.addSourceContainer(fJProject, "src"); //$NON-NLS-1$
@@ -77,7 +77,7 @@ public class EnumSourceSafetyTest {
 		JavaProjectHelper.set18CompilerOptions(fJProject);
 	}
 
-	@AfterEach
+	@After
 	public void tearDown() throws Exception {
 		JavaProjectHelper.clear(fJProject, projectSetup.getDefaultClasspath());
 	}
