@@ -5,9 +5,55 @@ on:
     branches:
       - automation/pr3137-rerun-follow-up
 
+permissions:
+  contents: write
+
 jobs:
   validate:
+    if: github.event.head_commit.message != 'Keep JUnit rerun context for transient launches'
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
-      - run: echo workflow-ok
+      - name: Check out the temporary branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Apply the source changes
+        run: python3 .github/scripts/apply-pr3137-rerun-follow-up.py
+
+      - name: Check the patch
+        shell: bash
+        run: |
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 4
+          grep -q "getPersistableRerunLaunchConfiguration" org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunSession.java
+          grep -q "restoresRelaunchContextForFailuresFirstWorkingCopy" org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/TestRunSessionHistoryTests.java
+
+      - name: Run the focused JUnit history suite
+        shell: bash
+        run: |
+          xvfb-run -a ./mvnw -V -B -ntp \
+            -pl org.eclipse.jdt.ui.tests -am \
+            -Dtest=org.eclipse.jdt.junit.tests.TestRunSessionHistoryTests \
+            verify
+
+      - name: Commit the validated changes
+        shell: bash
+        run: |
+          git config user.name "OpenAI"
+          git config user.email "noreply@openai.com"
+          git add \
+            org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunSession.java \
+            org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunSessionHistory.java \
+            org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java \
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/TestRunSessionHistoryTests.java
+          git commit -m "Keep JUnit rerun context for transient launches"
+          git push origin HEAD:automation/pr3137-rerun-follow-up
