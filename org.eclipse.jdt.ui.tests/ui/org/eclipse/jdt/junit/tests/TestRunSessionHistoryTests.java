@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2026 Eclipse Foundation and others.
+ * Copyright (c) 2026 Carsten Hammer and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -125,6 +125,20 @@ public class TestRunSessionHistoryTests {
 	}
 
 	@Test
+	public void storesExplicitStoppedState() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		TestRunSession stopped= new TestRunSession("stopped", null); //$NON-NLS-1$
+		long startTime= stopped.getStartTime();
+		stopped.stopTestRun();
+
+		TestRunSessionHistory.store(List.of(stopped), historyDirectory, 10);
+		TestRunSession restored= TestRunSessionHistory.load(historyDirectory, 10).get(0);
+
+		assertTrue(restored.isStopped());
+		assertEquals(startTime, restored.getStartTime());
+	}
+
+	@Test
 	public void preservesStoppedStateWhenTheRunContainsAFailure() throws Exception {
 		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
 		HistoryEntry entry= entry("stoppedWithFailure", 1_788_336_004_000L, 1_788_336_004_000L, //$NON-NLS-1$
@@ -213,8 +227,12 @@ public class TestRunSessionHistoryTests {
 
 		assertEquals(1, sessions.size());
 		assertEquals("older", sessions.get(0).getTestRunName()); //$NON-NLS-1$
-		assertFalse(newer.file(historyDirectory).exists());
+		assertTrue(newer.file(historyDirectory).isFile());
 		assertTrue(older.file(historyDirectory).isFile());
+
+		TestRunSessionHistory.store(sessions, historyDirectory, 1);
+
+		assertFalse(newer.file(historyDirectory).exists());
 	}
 
 	@Test
@@ -251,6 +269,7 @@ public class TestRunSessionHistoryTests {
 		TestRunSessionHistory.store(List.of(session), historyDirectory, 10);
 
 		assertTrue(TestRunSessionHistory.load(historyDirectory, 10).isEmpty());
+		assertTrue(entry.file(historyDirectory).isFile());
 	}
 
 	@Test

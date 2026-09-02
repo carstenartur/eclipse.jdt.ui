@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -16,13 +16,14 @@
 package org.eclipse.jdt.internal.junit.model;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 import org.eclipse.jdt.junit.model.ITestElement;
 import org.eclipse.jdt.junit.model.ITestElementContainer;
@@ -104,6 +105,10 @@ public class TestRunSession implements ITestRunSession {
 	private static final ILog LOG = ILog.of(TestRunSession.class);
 
 	private static final String EMPTY_STRING= ""; //$NON-NLS-1$
+	private static final String SWAP_FILE_PREFIX= "swap-"; //$NON-NLS-1$
+	private static final String XML_SUFFIX= ".xml"; //$NON-NLS-1$
+
+	private final String fSwapFileName= SWAP_FILE_PREFIX + UUID.randomUUID() + XML_SUFFIX;
 
 	/**
 	 * Tags included in this test run.
@@ -150,6 +155,7 @@ public class TestRunSession implements ITestRunSession {
 	volatile boolean fIsRunning;
 
 	volatile boolean fIsStopped;
+	volatile boolean fSwapInFailed;
 
 
 	/**
@@ -238,6 +244,7 @@ public class TestRunSession implements ITestRunSession {
 		fErrorCount= 0;
 		fIgnoredCount= 0;
 		fTotalCount= 0;
+		fSwapInFailed= false;
 
 		fTestRoot= new TestRoot(this);
 		fTestResult= null;
@@ -371,9 +378,7 @@ public class TestRunSession implements ITestRunSession {
 		}
 
 		try {
-			File swapFile= getSwapFile();
-
-			JUnitModel.exportTestRunSession(this, swapFile);
+			TestRunSessionHistory.exportAtomically(this, getSwapFile());
 			fTestResult= fTestRoot.getTestResult(true);
 			fTestRoot= null;
 			fTestRunnerClient= null;
@@ -382,7 +387,7 @@ public class TestRunSession implements ITestRunSession {
 			fFactoryTestSuites= null;
 			fUnrootedSuite= null;
 
-		} catch (IllegalStateException | CoreException e) {
+		} catch (IllegalStateException | CoreException | IOException e) {
 			LOG.error(e.getMessage(), e);
 		}
 	}
@@ -399,10 +404,7 @@ public class TestRunSession implements ITestRunSession {
 	}
 
 	private File getSwapFile() throws IllegalStateException {
-		File historyDir= JUnitCorePlugin.getHistoryDirectory();
-		String isoTime= new SimpleDateFormat("yyyyMMdd-HHmmss.SSS").format(new Date(getStartTime())); //$NON-NLS-1$
-		String swapFileName= isoTime + ".xml"; //$NON-NLS-1$
-		return new File(historyDir, swapFileName);
+		return new File(JUnitCorePlugin.getHistoryDirectory(), fSwapFileName);
 	}
 
 
@@ -412,11 +414,17 @@ public class TestRunSession implements ITestRunSession {
 
 		try {
 			JUnitModel.importIntoTestRunSession(getSwapFile(), this);
+			fSwapInFailed= false;
 		} catch (IllegalStateException | CoreException e) {
+			fSwapInFailed= true;
 			LOG.error(e.getMessage(), e);
 			fTestRoot= new TestRoot(this);
 			fTestResult= null;
 		}
+	}
+
+	boolean hasSwapInFailed() {
+		return fSwapInFailed;
 	}
 
 	public void stopTestRun() {
