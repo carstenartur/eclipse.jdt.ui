@@ -545,8 +545,10 @@ public final class TestRunSessionHistory {
 
 		@Override
 		public synchronized void swapOut() {
-			// The persistent XML file already owns the test tree. Keeping a selected
-			// restored session in memory avoids creating a second, legacy swap file.
+			if (!fValid || !fContentsLoaded || !canSwapOut())
+				return;
+			discardTestTree();
+			fContentsLoaded= false;
 		}
 
 		@Override

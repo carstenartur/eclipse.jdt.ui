@@ -367,29 +367,37 @@ public class TestRunSession implements ITestRunSession {
 	}
 
 	public synchronized void swapOut() {
-		if (fTestRoot == null)
+		if (!canSwapOut())
 			return;
-		if (isRunning() || isStarting() || isKeptAlive())
-			return;
-
-		for (ITestSessionListener registered : fSessionListeners) {
-			if (! registered.acceptsSwapToDisk())
-				return;
-		}
 
 		try {
 			TestRunSessionHistory.exportAtomically(this, getSwapFile());
-			fTestResult= fTestRoot.getTestResult(true);
-			fTestRoot= null;
-			fTestRunnerClient= null;
-			fIdToTest= new HashMap<>();
-			fIncompleteTestSuites= null;
-			fFactoryTestSuites= null;
-			fUnrootedSuite= null;
-
+			discardTestTree();
 		} catch (IllegalStateException | CoreException | IOException e) {
 			LOG.error(e.getMessage(), e);
 		}
+	}
+
+	synchronized boolean canSwapOut() {
+		if (fTestRoot == null || isRunning() || isStarting() || isKeptAlive())
+			return false;
+		for (ITestSessionListener registered : fSessionListeners) {
+			if (!registered.acceptsSwapToDisk())
+				return false;
+		}
+		return true;
+	}
+
+	synchronized void discardTestTree() {
+		if (fTestRoot == null)
+			return;
+		fTestResult= fTestRoot.getTestResult(true);
+		fTestRoot= null;
+		fTestRunnerClient= null;
+		fIdToTest= new HashMap<>();
+		fIncompleteTestSuites= null;
+		fFactoryTestSuites= null;
+		fUnrootedSuite= null;
 	}
 
 	public boolean isStarting() {

@@ -196,6 +196,31 @@ public class TestRunSessionHistoryTests {
 	}
 
 	@Test
+	public void releasesAndReloadsTheSelectedTestTree() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry entry= entry("reload", 1_788_336_005_500L, 1_788_336_005_500L, //$NON-NLS-1$
+				"completed", 1, 1, 0, 0, 0, //$NON-NLS-1$
+				"""
+				<testrun name="reload" tests="1" started="1" failures="0" errors="0" ignored="0">
+				  <testcase name="testOne" classname="example.ExampleTest"/>
+				</testrun>
+				"""); //$NON-NLS-1$
+		writeHistory(historyDirectory, entry);
+		TestRunSession session= TestRunSessionHistory.load(historyDirectory, 1).get(0);
+		assertEquals(1, session.getChildren().length);
+
+		session.swapOut();
+		Files.writeString(entry.file(historyDirectory).toPath(), """
+				<testrun name="reload" tests="2" started="2" failures="0" errors="0" ignored="0">
+				  <testcase name="testOne" classname="example.ExampleTest"/>
+				  <testcase name="testTwo" classname="example.ExampleTest"/>
+				</testrun>
+				"""); //$NON-NLS-1$
+
+		assertEquals(2, session.getChildren().length);
+	}
+
+	@Test
 	public void keepsEqualHistoryTimestampsDistinct() throws Exception {
 		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
 		long timestamp= 1_788_336_006_000L;
