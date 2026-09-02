@@ -114,17 +114,39 @@ public final class TestMethodFinder {
 			}
 
 			String erasedType= Signature.getTypeErasure(parameterTypes[i]);
-			String binaryType= JavaModelUtil.getResolvedTypeName(erasedType, declaringType, '$');
+			String binaryType= getResolvedParameterTypeName(erasedType, declaringType, '$');
 			if (expectedType.equals(binaryType)) {
 				continue;
 			}
 
-			String sourceType= JavaModelUtil.getResolvedTypeName(erasedType, declaringType, '.');
+			String sourceType= getResolvedParameterTypeName(erasedType, declaringType, '.');
 			if (!expectedType.equals(sourceType)) {
 				return false;
 			}
 		}
 		return true;
+	}
+
+	private static String getResolvedParameterTypeName(String typeSignature, IType declaringType,
+			char enclosingTypeSeparator) throws JavaModelException {
+		int dimensions= Signature.getArrayCount(typeSignature);
+		String elementType= Signature.getElementType(typeSignature);
+		String resolvedType;
+		if (Signature.getTypeSignatureKind(elementType) == Signature.BASE_TYPE_SIGNATURE) {
+			resolvedType= Signature.toString(elementType);
+		} else {
+			resolvedType= JavaModelUtil.getResolvedTypeName(
+					elementType, declaringType, enclosingTypeSeparator);
+		}
+		if (resolvedType == null) {
+			return null;
+		}
+
+		StringBuilder result= new StringBuilder(resolvedType);
+		for (int i= 0; i < dimensions; i++) {
+			result.append("[]"); //$NON-NLS-1$
+		}
+		return result.toString();
 	}
 
 	private static String normalizeParameterType(String parameterType) {
