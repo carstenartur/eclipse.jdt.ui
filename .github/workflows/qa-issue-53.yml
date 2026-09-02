@@ -1,0 +1,586 @@
+name: Apply and verify issue 53 fix
+
+on:
+  push:
+    branches:
+      - qa-fix-53-disabled-parameterized-test
+
+permissions:
+  contents: write
+
+jobs:
+  apply-test-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out target branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix-53-disabled-parameterized-test
+          fetch-depth: 0
+
+      - name: Apply issue 53 fix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"{path}: expected one occurrence, found {count}")
+              file.write_text(text.replace(old, new), encoding="utf-8")
+
+          for path in (
+              "org.eclipse.jdt.junit5.runtime/src/org/eclipse/jdt/internal/junit5/runner/JUnit5TestListener.java",
+              "org.eclipse.jdt.junit6.runtime/src/org/eclipse/jdt/internal/junit6/runner/JUnit6TestListener.java",
+          ):
+              replace_once(
+                  path,
+                  "import org.junit.platform.engine.reporting.ReportEntry;\n",
+                  "import org.junit.platform.engine.reporting.ReportEntry;\n"
+                  "import org.junit.platform.engine.support.descriptor.MethodSource;\n",
+              )
+              replace_once(
+                  path,
+                  """\t@Override
+          \tpublic void executionSkipped(TestIdentifier testIdentifier, String reason) {
+          \t\tif (testIdentifier.isContainer() && fTestPlan != null) {
+          \t\t\tfTestPlan.getDescendants(testIdentifier).stream().filter(TestIdentifier::isTest).forEachOrdered(this::notifySkipped);
+          \t\t} else {
+          \t\t\tnotifySkipped(testIdentifier);
+          \t\t}
+          \t}
+          """,
+                  """\t@Override
+          \tpublic void executionSkipped(TestIdentifier testIdentifier, String reason) {
+          \t\tif (!testIdentifier.isContainer()) {
+          \t\t\tnotifySkipped(testIdentifier);
+          \t\t\treturn;
+          \t\t}
+
+          \t\tif (fTestPlan != null) {
+          \t\t\tList<TestIdentifier> skippedTests= fTestPlan.getDescendants(testIdentifier).stream()
+          \t\t\t\t\t.filter(TestIdentifier::isTest)
+          \t\t\t\t\t.toList();
+          \t\t\tif (!skippedTests.isEmpty()) {
+          \t\t\t\tskippedTests.forEach(this::notifySkipped);
+          \t\t\t\treturn;
+          \t\t\t}
+          \t\t}
+
+          \t\t// Parameterized, repeated, and template tests are method containers. When the
+          \t\t// method itself is disabled, the engine does not register invocation children.
+          \t\t// Report the method container as one ignored test instead of dropping it.
+          \t\tif (testIdentifier.getSource().filter(MethodSource.class::isInstance).isPresent()) {
+          \t\t\tnotifySkipped(testIdentifier);
+          \t\t}
+          \t}
+          """,
+              )
+
+          replace_once(
+              "org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestSuiteElement.java",
+              """\tprivate List<TestElement> fChildren;
+          \tprivate Status fChildrenStatus;
+          """,
+              """\tprivate List<TestElement> fChildren;
+          \tprivate Status fChildrenStatus;
+          \tprivate boolean fIgnored;
+          """,
+          )
+          replace_once(
+              "org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestSuiteElement.java",
+              """\t@Override
+          \tpublic Result getTestResult(boolean includeChildren) {
+          \t\tif (includeChildren) {
+          \t\t\treturn getStatus().convertToResult();
+          \t\t} else {
+          \t\t\treturn super.getStatus().convertToResult();
+          \t\t}
+          \t}
+          """,
+              """\t@Override
+          \tpublic Result getTestResult(boolean includeChildren) {
+          \t\tif (fIgnored) {
+          \t\t\treturn Result.IGNORED;
+          \t\t}
+          \t\tif (includeChildren) {
+          \t\t\treturn getStatus().convertToResult();
+          \t\t}
+          \t\treturn super.getStatus().convertToResult();
+          \t}
+          """,
+          )
+          replace_once(
+              "org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestSuiteElement.java",
+              """\t@Override
+          \tpublic ITestElement[] getChildren() {
+          \t\treturn fChildren.toArray(new ITestElement[fChildren.size()]);
+          \t}
+
+          """,
+              """\t@Override
+          \tpublic ITestElement[] getChildren() {
+          \t\treturn fChildren.toArray(new ITestElement[fChildren.size()]);
+          \t}
+
+          \tpublic void setIgnored(boolean ignored) {
+          \t\tfIgnored= ignored;
+          \t}
+
+          \tpublic boolean isIgnored() {
+          \t\treturn fIgnored;
+          \t}
+
+          """,
+          )
+
+          session_path = "org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunSession.java"
+          replace_once(
+              session_path,
+              """\t\t@Override
+          \t\tpublic void testStarted(String testId, String testName) {
+          \t\t\tif (fStartedCount == 0) {
+          """,
+              """\t\t@Override
+          \t\tpublic void testStarted(String testId, String testName) {
+          \t\t\tboolean isIgnored= testName.startsWith(MessageIds.IGNORED_TEST_PREFIX);
+
+          \t\t\tif (fStartedCount == 0) {
+          """,
+          )
+          replace_once(
+              session_path,
+              """\t\t\tif (testElement == null) {
+          \t\t\t\ttestElement= createUnrootedTestElement(testId, testName);
+          \t\t\t} else if (! (testElement instanceof TestCaseElement)) {
+          \t\t\t\tlogUnexpectedTest(testId, testElement);
+          \t\t\t\treturn;
+          \t\t\t}
+          \t\t\tTestCaseElement testCaseElement= (TestCaseElement) testElement;
+          """,
+              """\t\t\tif (testElement == null) {
+          \t\t\t\ttestElement= createUnrootedTestElement(testId, testName);
+          \t\t\t} else if (testElement instanceof TestSuiteElement) {
+          \t\t\t\tif (isIgnored) {
+          \t\t\t\t\tsetStatus(testElement, Status.RUNNING);
+          \t\t\t\t\tfTotalCount++;
+          \t\t\t\t\tfStartedCount++;
+          \t\t\t\t} else {
+          \t\t\t\t\tlogUnexpectedTest(testId, testElement);
+          \t\t\t\t}
+          \t\t\t\treturn;
+          \t\t\t} else if (! (testElement instanceof TestCaseElement)) {
+          \t\t\t\tlogUnexpectedTest(testId, testElement);
+          \t\t\t\treturn;
+          \t\t\t}
+          \t\t\tTestCaseElement testCaseElement= (TestCaseElement) testElement;
+          """,
+          )
+          replace_once(
+              session_path,
+              """\t\t\tif (testElement == null) {
+          \t\t\t\ttestElement= createUnrootedTestElement(testId, testName);
+          \t\t\t} else if (! (testElement instanceof TestCaseElement)) {
+          \t\t\t\tif (isIgnored) {
+          \t\t\t\t\ttestElement.setAssumptionFailed(true);
+          \t\t\t\t\tfAssumptionFailureCount++;
+          \t\t\t\t\tsetStatus(testElement, Status.OK);
+          \t\t\t\t} else {
+          \t\t\t\t\tlogUnexpectedTest(testId, testElement);
+          \t\t\t\t}
+          \t\t\t\treturn;
+          \t\t\t}
+          """,
+              """\t\t\tif (testElement == null) {
+          \t\t\t\ttestElement= createUnrootedTestElement(testId, testName);
+          \t\t\t} else if (testElement instanceof TestSuiteElement) {
+          \t\t\t\tif (isIgnored) {
+          \t\t\t\t\t((TestSuiteElement) testElement).setIgnored(true);
+          \t\t\t\t\tfIgnoredCount++;
+          \t\t\t\t\tsetStatus(testElement, Status.OK);
+          \t\t\t\t} else {
+          \t\t\t\t\tlogUnexpectedTest(testId, testElement);
+          \t\t\t\t}
+          \t\t\t\treturn;
+          \t\t\t} else if (! (testElement instanceof TestCaseElement)) {
+          \t\t\t\tlogUnexpectedTest(testId, testElement);
+          \t\t\t\treturn;
+          \t\t\t}
+          """,
+          )
+          replace_once(
+              session_path,
+              """\tpublic void registerTestEnded(TestElement testElement, boolean completed) {
+          \t\tif (testElement instanceof TestCaseElement) {
+          \t\t\tfTotalCount++;
+          \t\t\tif (! completed) {
+          \t\t\t\treturn;
+          \t\t\t}
+          \t\t\tfStartedCount++;
+          \t\t\tif (((TestCaseElement) testElement).isIgnored()) {
+          \t\t\t\tfIgnoredCount++;
+          \t\t\t}
+          \t\t\tif (! testElement.getStatus().isErrorOrFailure())
+          \t\t\t\tsetStatus(testElement, Status.OK);
+          \t\t}
+
+          \t\tif (testElement.isAssumptionFailure()) {
+          """,
+              """\tpublic void registerTestEnded(TestElement testElement, boolean completed) {
+          \t\tif (testElement instanceof TestCaseElement) {
+          \t\t\tfTotalCount++;
+          \t\t\tif (! completed) {
+          \t\t\t\treturn;
+          \t\t\t}
+          \t\t\tfStartedCount++;
+          \t\t\tif (((TestCaseElement) testElement).isIgnored()) {
+          \t\t\t\tfIgnoredCount++;
+          \t\t\t}
+          \t\t\tif (! testElement.getStatus().isErrorOrFailure())
+          \t\t\t\tsetStatus(testElement, Status.OK);
+          \t\t} else if (testElement instanceof TestSuiteElement
+          \t\t\t\t&& ((TestSuiteElement) testElement).isIgnored()) {
+          \t\t\tfTotalCount++;
+          \t\t\tif (! completed) {
+          \t\t\t\treturn;
+          \t\t\t}
+          \t\t\tfStartedCount++;
+          \t\t\tfIgnoredCount++;
+          \t\t\tsetStatus(testElement, Status.OK);
+          \t\t}
+
+          \t\tif (testElement.isAssumptionFailure()) {
+          """,
+          )
+
+          serializer = "org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunSessionSerializer.java"
+          replace_once(
+              serializer,
+              """\t\t\tif (testElement.getProgressState() != ProgressState.COMPLETED || testElement.getTestResult(false) != Result.UNDEFINED)
+          \t\t\t\taddCDATA(atts, IXMLTags.ATTR_INCOMPLETE, Boolean.TRUE.toString());
+          \t\t\tif (testSuiteElement.getDisplayName() != null) {
+          """,
+              """\t\t\tif (! testSuiteElement.isIgnored()
+          \t\t\t\t\t&& (testElement.getProgressState() != ProgressState.COMPLETED
+          \t\t\t\t\t\t\t|| testElement.getTestResult(false) != Result.UNDEFINED)) {
+          \t\t\t\taddCDATA(atts, IXMLTags.ATTR_INCOMPLETE, Boolean.TRUE.toString());
+          \t\t\t}
+          \t\t\tif (testSuiteElement.isIgnored()) {
+          \t\t\t\taddCDATA(atts, IXMLTags.ATTR_IGNORED, Boolean.TRUE.toString());
+          \t\t\t}
+          \t\t\tif (testSuiteElement.getDisplayName() != null) {
+          """,
+          )
+
+          handler = "org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunHandler.java"
+          replace_once(
+              handler,
+              """\t\t\t\tfTestSuite= (TestSuiteElement) fTestRunSession.createTestElement(fTestSuite, getNextId(), suiteName, true, 0, false, displayName, paramTypes, uniqueId);
+          \t\t\t\treadTime(fTestSuite, attributes);
+          \t\t\t\tfNotRun.push(Boolean.valueOf(attributes.getValue(IXMLTags.ATTR_INCOMPLETE)));
+          """,
+              """\t\t\t\tfTestSuite= (TestSuiteElement) fTestRunSession.createTestElement(fTestSuite, getNextId(), suiteName, true, 0, false, displayName, paramTypes, uniqueId);
+          \t\t\t\tfTestSuite.setIgnored(Boolean.parseBoolean(attributes.getValue(IXMLTags.ATTR_IGNORED)));
+          \t\t\t\treadTime(fTestSuite, attributes);
+          \t\t\t\tfNotRun.push(Boolean.valueOf(attributes.getValue(IXMLTags.ATTR_INCOMPLETE)));
+          """,
+          )
+
+          label_provider = "org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestSessionLabelProvider.java"
+          replace_once(
+              label_provider,
+              """\t\t} else if (element instanceof TestSuiteElement) {
+          \t\t\tStatus status= ((TestSuiteElement) element).getStatus();
+          """,
+              """\t\t} else if (element instanceof TestSuiteElement) {
+          \t\t\tTestSuiteElement testSuiteElement= (TestSuiteElement) element;
+          \t\t\tif (testSuiteElement.isIgnored())
+          \t\t\t\treturn fTestRunnerPart.fSuiteIgnoredIcon;
+
+          \t\t\tStatus status= testSuiteElement.getStatus();
+          """,
+          )
+
+          view = "org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java"
+          replace_once(
+              view,
+              """\tfinal Image fSuiteIcon;
+          \tfinal Image fSuiteOkIcon;
+          """,
+              """\tfinal Image fSuiteIcon;
+          \tfinal Image fSuiteIgnoredIcon;
+          \tfinal Image fSuiteOkIcon;
+          """,
+          )
+          replace_once(
+              view,
+              """\t\tfSuiteIcon= createManagedImage(fSuiteIconDescriptor);
+          \t\tfSuiteOkIcon= createManagedImage(fSuiteOkIconDescriptor);
+          """,
+              """\t\tfSuiteIcon= createManagedImage(fSuiteIconDescriptor);
+          \t\tfSuiteIgnoredIcon= createManagedImage("obj16/tsuiteignored.svg"); //$NON-NLS-1$
+          \t\tfSuiteOkIcon= createManagedImage(fSuiteOkIconDescriptor);
+          """,
+          )
+
+          suite_icon = Path("org.eclipse.jdt.junit/icons/full/obj16/tsuite.svg").read_text(encoding="utf-8")
+          marker = """  </g>
+            <g
+               id="layer2" />"""
+          overlay = """    <circle
+                 cx="4.5"
+                 cy="1047.8622"
+                 r="3.05"
+                 style="fill:#ffffff;fill-opacity:1;stroke:none" />
+              <circle
+                 cx="4.5"
+                 cy="1047.8622"
+                 r="3.05"
+                 style="fill:none;stroke:#656a70;stroke-width:0.9;stroke-linecap:round;stroke-linejoin:round" />
+              <path
+                 d="m 2.1256192,1050.2205 4.710634,-4.7106"
+                 style="fill:none;stroke:#656a70;stroke-width:0.9;stroke-linecap:butt;stroke-linejoin:miter" />
+          """
+          if suite_icon.count(marker) != 1:
+              raise RuntimeError("Unexpected tsuite.svg structure")
+          Path("org.eclipse.jdt.junit/icons/full/obj16/tsuiteignored.svg").write_text(
+              suite_icon.replace(marker, overlay + marker),
+              encoding="utf-8",
+          )
+
+          test_file = Path("org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/DisabledParameterizedTestTest.java")
+          test_file.write_text("""/*******************************************************************************
+           * Copyright (c) 2026 Carsten Hammer and others.
+           *
+           * This program and the accompanying materials
+           * are made available under the terms of the Eclipse Public License 2.0
+           * which accompanies this distribution, and is available at
+           * https://www.eclipse.org/legal/epl-2.0/
+           *
+           * SPDX-License-Identifier: EPL-2.0
+           *
+           * Contributors:
+           *     Carsten Hammer - initial API and implementation
+           *******************************************************************************/
+
+          package org.eclipse.jdt.junit.tests;
+
+          import static org.junit.Assert.assertEquals;
+          import static org.junit.Assert.assertNotNull;
+          import static org.junit.Assert.assertTrue;
+
+          import java.io.File;
+          import java.io.FileOutputStream;
+          import java.util.concurrent.atomic.AtomicReference;
+
+          import org.junit.Before;
+          import org.junit.Test;
+
+          import org.eclipse.jdt.junit.JUnitCore;
+          import org.eclipse.jdt.junit.TestRunListener;
+          import org.eclipse.jdt.junit.model.ITestElement;
+          import org.eclipse.jdt.junit.model.ITestElement.ProgressState;
+          import org.eclipse.jdt.junit.model.ITestElement.Result;
+          import org.eclipse.jdt.junit.model.ITestRunSession;
+          import org.eclipse.jdt.testplugin.JavaProjectHelper;
+
+          import org.eclipse.core.runtime.IPath;
+
+          import org.eclipse.jdt.core.IType;
+          import org.eclipse.jdt.core.JavaCore;
+
+          import org.eclipse.jdt.internal.junit.JUnitCorePlugin;
+          import org.eclipse.jdt.internal.junit.launcher.TestKindRegistry;
+          import org.eclipse.jdt.internal.junit.model.TestRunSession;
+          import org.eclipse.jdt.internal.junit.model.TestSuiteElement;
+
+          public class DisabledParameterizedTestTest extends AbstractTestRunListenerTest {
+
+          \t@Override
+          \t@Before
+          \tpublic void setUp() throws Exception {
+          \t\tfProject= JavaProjectHelper.createJavaProject("DisabledParameterizedTestTest", "bin");
+          \t\tJavaProjectHelper.addRTJar_17(fProject, false);
+          \t}
+
+          \t@Test
+          \tpublic void testDisabledParameterizedTestWithJUnit5() throws Exception {
+          \t\tassertDisabledParameterizedTest(
+          \t\t\t\tJUnitCore.JUNIT5_CONTAINER_PATH,
+          \t\t\t\tTestKindRegistry.JUNIT5_TEST_KIND_ID);
+          \t}
+
+          \t@Test
+          \tpublic void testDisabledParameterizedTestWithJUnit6() throws Exception {
+          \t\tassertDisabledParameterizedTest(
+          \t\t\t\tJUnitCore.JUNIT6_CONTAINER_PATH,
+          \t\t\t\tTestKindRegistry.JUNIT6_TEST_KIND_ID);
+          \t}
+
+          \tprivate void assertDisabledParameterizedTest(IPath containerPath, String testKindId)
+          \t\t\tthrows Exception {
+          \t\tJavaProjectHelper.addToClasspath(fProject, JavaCore.newContainerEntry(containerPath));
+          \t\tString source=
+          \t\t\t\t"""
+          \t\t\t\tpackage pack;
+          \t\t\t\timport org.junit.jupiter.api.Disabled;
+          \t\t\t\timport org.junit.jupiter.params.ParameterizedTest;
+          \t\t\t\timport org.junit.jupiter.params.provider.CsvSource;
+          \t\t\t\tpublic class ATestCase {
+          \t\t\t\t    @Disabled("temporarily disabled")
+          \t\t\t\t    @ParameterizedTest
+          \t\t\t\t    @CsvSource({
+          \t\t\t\t        "input1, output1",
+          \t\t\t\t        "input2, output2"
+          \t\t\t\t    })
+          \t\t\t\t    void test(String input, String expected) {
+          \t\t\t\t    }
+          \t\t\t\t}""";
+
+          \t\tIType testType= createType(source, "pack", "ATestCase.java");
+          \t\tAtomicReference<TestRunSession> sessionReference= new AtomicReference<>();
+          \t\tTestRunLog log= new TestRunLog();
+          \t\tTestRunListener listener= new TestRunListener() {
+          \t\t\t@Override
+          \t\t\tpublic void sessionFinished(ITestRunSession session) {
+          \t\t\t\tsessionReference.set((TestRunSession) session);
+          \t\t\t\tlog.setDone();
+          \t\t\t}
+          \t\t};
+
+          \t\tJUnitCore.addTestRunListener(listener);
+          \t\ttry {
+          \t\t\tlaunchJUnit(testType, testKindId, log);
+          \t\t} finally {
+          \t\t\tJUnitCore.removeTestRunListener(listener);
+          \t\t}
+
+          \t\tTestRunSession session= sessionReference.get();
+          \t\tassertNotNull(session);
+          \t\tassertIgnoredParameterizedMethod(session);
+          \t\tassertSerializationRoundTrip(session);
+          \t}
+
+          \tprivate static void assertIgnoredParameterizedMethod(TestRunSession session) {
+          \t\tassertEquals(1, session.getTotalCount());
+          \t\tassertEquals(1, session.getStartedCount());
+          \t\tassertEquals(1, session.getIgnoredCount());
+
+          \t\tTestSuiteElement classSuite= onlySuite(session.getTestRoot().getChildren());
+          \t\tTestSuiteElement methodSuite= onlySuite(classSuite.getChildren());
+          \t\tassertEquals(0, methodSuite.getChildren().length);
+          \t\tassertTrue(methodSuite.isIgnored());
+          \t\tassertEquals(ProgressState.COMPLETED, methodSuite.getProgressState());
+          \t\tassertEquals(Result.IGNORED, methodSuite.getTestResult(false));
+          \t\tassertEquals(Result.IGNORED, methodSuite.getTestResult(true));
+          \t}
+
+          \tprivate static void assertSerializationRoundTrip(TestRunSession session) throws Exception {
+          \t\tFile file= File.createTempFile("disabled-parameterized-test", ".xml");
+          \t\tTestRunSession imported= null;
+          \t\ttry {
+          \t\t\ttry (FileOutputStream output= new FileOutputStream(file)) {
+          \t\t\t\tJUnitCore.exportTestRunSession(session, output);
+          \t\t\t}
+          \t\t\timported= (TestRunSession) JUnitCore.importTestRunSession(file);
+          \t\t\tassertIgnoredParameterizedMethod(imported);
+          \t\t} finally {
+          \t\t\tif (imported != null) {
+          \t\t\t\tJUnitCorePlugin.getModel().removeTestRunSession(imported);
+          \t\t\t}
+          \t\t\tfile.delete();
+          \t\t}
+          \t}
+
+          \tprivate static TestSuiteElement onlySuite(ITestElement[] elements) {
+          \t\tassertEquals(1, elements.length);
+          \t\tassertTrue(elements[0] instanceof TestSuiteElement);
+          \t\treturn (TestSuiteElement) elements[0];
+          \t}
+          }
+          """, encoding="utf-8")
+
+          suite = "org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/JUnitJUnitTests.java"
+          replace_once(
+              suite,
+              """TestRunListenerTest5.class,
+          TestRunListenerTest6.class,
+
+          """,
+              """TestRunListenerTest5.class,
+          TestRunListenerTest6.class,
+          DisabledParameterizedTestTest.class,
+
+          """,
+          )
+
+          for path, old, new in (
+              ("org.eclipse.jdt.junit.core/META-INF/MANIFEST.MF", "Bundle-Version: 3.15.0.qualifier", "Bundle-Version: 3.15.100.qualifier"),
+              ("org.eclipse.jdt.junit/META-INF/MANIFEST.MF", "Bundle-Version: 3.17.600.qualifier", "Bundle-Version: 3.17.700.qualifier"),
+              ("org.eclipse.jdt.junit5.runtime/META-INF/MANIFEST.MF", "Bundle-Version: 1.2.100.qualifier", "Bundle-Version: 1.2.200.qualifier"),
+              ("org.eclipse.jdt.junit6.runtime/META-INF/MANIFEST.MF", "Bundle-Version: 1.0.200.qualifier", "Bundle-Version: 1.0.300.qualifier"),
+          ):
+              replace_once(path, old, new)
+          PY
+
+      - name: Check patch
+        run: |
+          git diff --check
+          git status --short
+          test "$(git status --short | wc -l)" -eq 15
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Install UI test reactor
+        run: |
+          mvn -B -ntp -Pbuild-individual-bundles \
+            -DskipTests=true \
+            -Dcompare-version-with-baselines.skip=true \
+            -pl org.eclipse.jdt.ui.tests \
+            -am install
+
+      - name: Run issue 53 regression tests
+        run: |
+          xvfb-run --auto-servernum mvn -B -ntp \
+            -Pbuild-individual-bundles \
+            -Dcompare-version-with-baselines.skip=true \
+            -pl org.eclipse.jdt.ui.tests \
+            -Dtest=org.eclipse.jdt.junit.tests.DisabledParameterizedTestTest \
+            test
+
+      - name: Commit verified fix
+        run: |
+          git config user.name "Carsten Hammer"
+          git config user.email "3164220+carstenartur@users.noreply.github.com"
+          git add \
+            org.eclipse.jdt.junit.core/META-INF/MANIFEST.MF \
+            org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunHandler.java \
+            org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunSession.java \
+            org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunSessionSerializer.java \
+            org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestSuiteElement.java \
+            org.eclipse.jdt.junit/META-INF/MANIFEST.MF \
+            org.eclipse.jdt.junit/icons/full/obj16/tsuiteignored.svg \
+            org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java \
+            org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestSessionLabelProvider.java \
+            org.eclipse.jdt.junit5.runtime/META-INF/MANIFEST.MF \
+            org.eclipse.jdt.junit5.runtime/src/org/eclipse/jdt/internal/junit5/runner/JUnit5TestListener.java \
+            org.eclipse.jdt.junit6.runtime/META-INF/MANIFEST.MF \
+            org.eclipse.jdt.junit6.runtime/src/org/eclipse/jdt/internal/junit6/runner/JUnit6TestListener.java \
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/DisabledParameterizedTestTest.java \
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/JUnitJUnitTests.java
+          git diff --cached --check
+          git commit \
+            -m "Show disabled parameterized tests in JUnit view" \
+            -m "Count skipped method containers without invocation children as ignored tests, show an ignored suite icon, and preserve the state when test runs are exported and imported." \
+            -m "Fixes #53" \
+            -m "Assisted-by: OpenAI ChatGPT"
+          git push origin HEAD:fix-53-disabled-parameterized-test
