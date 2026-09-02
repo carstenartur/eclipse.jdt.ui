@@ -39,6 +39,7 @@ public class TestRunSessionHistoryTests {
 
 	private static final String INDEX_FILE_NAME= "history.properties"; //$NON-NLS-1$
 	private static final String HISTORY_FILE_PREFIX= "history-"; //$NON-NLS-1$
+	private static final String SWAP_FILE_PREFIX= "swap-"; //$NON-NLS-1$
 	private static final String XML_SUFFIX= ".xml"; //$NON-NLS-1$
 
 	@Rule
@@ -78,6 +79,19 @@ public class TestRunSessionHistoryTests {
 
 		assertEquals(1, session.getChildren().length);
 		assertEquals(Result.OK, session.getTestResult(true));
+	}
+
+	@Test
+	public void preservesUndefinedResultForAnEmptyCompletedRun() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry entry= emptyEntry("empty", 1_788_336_001_500L); //$NON-NLS-1$
+		writeHistory(historyDirectory, entry);
+
+		TestRunSession session= TestRunSessionHistory.load(historyDirectory, 1).get(0);
+
+		assertEquals(Result.UNDEFINED, session.getTestResult(true));
+		assertEquals(0, session.getChildren().length);
+		assertEquals(Result.UNDEFINED, session.getTestResult(true));
 	}
 
 	@Test
@@ -273,6 +287,23 @@ public class TestRunSessionHistoryTests {
 	}
 
 	@Test
+	public void removesUnpublishedXmlFilesWhenNoIndexExists() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		File historyFile= new File(historyDirectory, HISTORY_FILE_PREFIX + UUID.randomUUID() + XML_SUFFIX);
+		File swapFile= new File(historyDirectory, SWAP_FILE_PREFIX + UUID.randomUUID() + XML_SUFFIX);
+		File legacyFile= new File(historyDirectory, "20260901-120000.000.xml"); //$NON-NLS-1$
+		Files.writeString(historyFile.toPath(), "unpublished"); //$NON-NLS-1$
+		Files.writeString(swapFile.toPath(), "transient"); //$NON-NLS-1$
+		Files.writeString(legacyFile.toPath(), "legacy"); //$NON-NLS-1$
+
+		assertTrue(TestRunSessionHistory.load(historyDirectory, 10).isEmpty());
+
+		assertFalse(historyFile.exists());
+		assertFalse(swapFile.exists());
+		assertFalse(legacyFile.exists());
+	}
+
+	@Test
 	public void removesAbandonedTemporaryFiles() throws Exception {
 		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
 		File temporaryFile= new File(historyDirectory, "abandoned.tmp"); //$NON-NLS-1$
@@ -290,13 +321,22 @@ public class TestRunSessionHistoryTests {
 
 	private static HistoryEntry entry(String name, long startTime, long historyTimestamp, String progress,
 			int totalCount, int startedCount, int failureCount, int errorCount, int ignoredCount, String xml) {
-		return new HistoryEntry(UUID.randomUUID().toString(), name, startTime, historyTimestamp, progress,
+		Result result;
+		if (errorCount > 0)
+			result= Result.ERROR;
+		else if (failureCount > 0)
+			result= Result.FAILURE;
+		else if ("stopped".equals(progress) || totalCount == 0) //$NON-NLS-1$
+			result= Result.UNDEFINED;
+		else
+			result= Result.OK;
+		return new HistoryEntry(UUID.randomUUID().toString(), name, startTime, historyTimestamp, progress, result,
 				totalCount, startedCount, failureCount, errorCount, ignoredCount, 0, xml);
 	}
 
 	private static void writeHistory(File directory, HistoryEntry... entries) throws Exception {
 		Properties properties= new Properties();
-		properties.setProperty("formatVersion", "1"); //$NON-NLS-1$ //$NON-NLS-2$
+		properties.setProperty("formatVersion", "2"); //$NON-NLS-1$ //$NON-NLS-2$
 		properties.setProperty("entryCount", Integer.toString(entries.length)); //$NON-NLS-1$
 		for (int i= 0; i < entries.length; i++) {
 			HistoryEntry entry= entries[i];
@@ -308,6 +348,7 @@ public class TestRunSessionHistoryTests {
 			properties.setProperty(prefix + "startTime", Long.toString(entry.fStartTime)); //$NON-NLS-1$
 			properties.setProperty(prefix + "historyTimestamp", Long.toString(entry.fHistoryTimestamp)); //$NON-NLS-1$
 			properties.setProperty(prefix + "progress", entry.fProgress); //$NON-NLS-1$
+			properties.setProperty(prefix + "result", entry.fResult.name()); //$NON-NLS-1$
 			properties.setProperty(prefix + "totalCount", Integer.toString(entry.fTotalCount)); //$NON-NLS-1$
 			properties.setProperty(prefix + "startedCount", Integer.toString(entry.fStartedCount)); //$NON-NLS-1$
 			properties.setProperty(prefix + "failureCount", Integer.toString(entry.fFailureCount)); //$NON-NLS-1$
@@ -336,6 +377,7 @@ public class TestRunSessionHistoryTests {
 		final long fStartTime;
 		final long fHistoryTimestamp;
 		final String fProgress;
+		final Result fResult;
 		final int fTotalCount;
 		final int fStartedCount;
 		final int fFailureCount;
@@ -344,7 +386,7 @@ public class TestRunSessionHistoryTests {
 		final int fAssumptionFailureCount;
 		final String fXml;
 
-		HistoryEntry(String id, String name, long startTime, long historyTimestamp, String progress,
+		HistoryEntry(String id, String name, long startTime, long historyTimestamp, String progress, Result result,
 				int totalCount, int startedCount, int failureCount, int errorCount, int ignoredCount,
 				int assumptionFailureCount, String xml) {
 			fId= id;
@@ -352,6 +394,7 @@ public class TestRunSessionHistoryTests {
 			fStartTime= startTime;
 			fHistoryTimestamp= historyTimestamp;
 			fProgress= progress;
+			fResult= result;
 			fTotalCount= totalCount;
 			fStartedCount= startedCount;
 			fFailureCount= failureCount;

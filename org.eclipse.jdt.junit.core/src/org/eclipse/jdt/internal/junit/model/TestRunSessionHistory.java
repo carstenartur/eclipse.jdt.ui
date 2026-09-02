@@ -46,11 +46,12 @@ import org.eclipse.jdt.core.JavaCore;
  */
 public final class TestRunSessionHistory {
 
-	private static final int FORMAT_VERSION= 1;
+	private static final int FORMAT_VERSION= 2;
 	private static final int MAX_INDEX_ENTRIES= 10_000;
 
 	private static final String INDEX_FILE_NAME= "history.properties"; //$NON-NLS-1$
 	private static final String HISTORY_FILE_PREFIX= "history-"; //$NON-NLS-1$
+	private static final String SWAP_FILE_PREFIX= "swap-"; //$NON-NLS-1$
 	private static final String XML_SUFFIX= ".xml"; //$NON-NLS-1$
 	private static final String TEMP_SUFFIX= ".tmp"; //$NON-NLS-1$
 
@@ -62,6 +63,7 @@ public final class TestRunSessionHistory {
 	private static final String KEY_START_TIME= "startTime"; //$NON-NLS-1$
 	private static final String KEY_HISTORY_TIMESTAMP= "historyTimestamp"; //$NON-NLS-1$
 	private static final String KEY_PROGRESS= "progress"; //$NON-NLS-1$
+	private static final String KEY_RESULT= "result"; //$NON-NLS-1$
 	private static final String KEY_TOTAL_COUNT= "totalCount"; //$NON-NLS-1$
 	private static final String KEY_STARTED_COUNT= "startedCount"; //$NON-NLS-1$
 	private static final String KEY_FAILURE_COUNT= "failureCount"; //$NON-NLS-1$
@@ -90,10 +92,13 @@ public final class TestRunSessionHistory {
 	 */
 	public static List<TestRunSession> load(File historyDirectory, int maxCount) {
 		deleteTemporaryFiles(historyDirectory);
+		deleteTransientSwapFiles(historyDirectory);
 
 		File indexFile= new File(historyDirectory, INDEX_FILE_NAME);
-		if (!indexFile.isFile())
+		if (!indexFile.isFile()) {
+			deleteOrphanedXmlFiles(historyDirectory, Set.of(), true);
 			return List.of();
+		}
 
 		Properties properties= new Properties();
 		try (BufferedInputStream input= new BufferedInputStream(new FileInputStream(indexFile))) {
@@ -171,7 +176,6 @@ public final class TestRunSessionHistory {
 			return;
 		}
 
-		deleteTemporaryFiles(historyDirectory);
 		int limit= Math.max(0, maxCount);
 		List<StoredSession> storedSessions= new ArrayList<>(Math.min(limit, sessions.size()));
 		boolean persistenceFailure= false;
@@ -284,6 +288,7 @@ public final class TestRunSessionHistory {
 		properties.setProperty(entryKey(index, KEY_START_TIME), Long.toString(session.fStartTime));
 		properties.setProperty(entryKey(index, KEY_HISTORY_TIMESTAMP), Long.toString(session.fHistoryTimestamp));
 		properties.setProperty(entryKey(index, KEY_PROGRESS), session.fStopped ? PROGRESS_STOPPED : PROGRESS_COMPLETED);
+		properties.setProperty(entryKey(index, KEY_RESULT), session.fResult.name());
 		properties.setProperty(entryKey(index, KEY_TOTAL_COUNT), Integer.toString(session.fTotalCount));
 		properties.setProperty(entryKey(index, KEY_STARTED_COUNT), Integer.toString(session.fStartedCount));
 		properties.setProperty(entryKey(index, KEY_FAILURE_COUNT), Integer.toString(session.fFailureCount));
@@ -311,6 +316,14 @@ public final class TestRunSessionHistory {
 			throw new IllegalArgumentException("Unsupported JUnit history progress state: " + progress); //$NON-NLS-1$
 		}
 
+		Result result;
+		String resultName= required(properties, entryKey(index, KEY_RESULT));
+		try {
+			result= Result.valueOf(resultName);
+		} catch (IllegalArgumentException e) {
+			throw new IllegalArgumentException("Unsupported JUnit history result: " + resultName, e); //$NON-NLS-1$
+		}
+
 		int totalCount= readInt(properties, entryKey(index, KEY_TOTAL_COUNT), 0, Integer.MAX_VALUE);
 		int startedCount= readInt(properties, entryKey(index, KEY_STARTED_COUNT), 0, Integer.MAX_VALUE);
 		int failureCount= readInt(properties, entryKey(index, KEY_FAILURE_COUNT), 0, Integer.MAX_VALUE);
@@ -322,7 +335,7 @@ public final class TestRunSessionHistory {
 		long fileLength= readLong(properties, entryKey(index, KEY_FILE_LENGTH), 1, Long.MAX_VALUE);
 		File historyFile= new File(historyDirectory, historyFileName(id));
 		return new StoredSession(id, historyFile, fileLength, testRunName, projectName, startTime,
-				historyTimestamp, stopped, totalCount, startedCount, failureCount, errorCount,
+				historyTimestamp, stopped, result, totalCount, startedCount, failureCount, errorCount,
 				ignoredCount, assumptionFailureCount, includeTags, excludeTags);
 	}
 
@@ -379,14 +392,14 @@ public final class TestRunSessionHistory {
 		return project.exists() ? project : null;
 	}
 
-	private static Result result(StoredSession session) {
-		if (session.fErrorCount > 0)
-			return Result.ERROR;
-		if (session.fFailureCount > 0)
-			return Result.FAILURE;
-		if (session.fStopped)
-			return Result.UNDEFINED;
-		return Result.OK;
+	private static void deleteTransientSwapFiles(File historyDirectory) {
+		File[] swapFiles= historyDirectory.listFiles(file -> file.isFile()
+				&& file.getName().startsWith(SWAP_FILE_PREFIX)
+				&& file.getName().endsWith(XML_SUFFIX));
+		if (swapFiles != null) {
+			for (File swapFile : swapFiles)
+				delete(swapFile);
+		}
 	}
 
 	private static void deleteTemporaryFiles(File historyDirectory) {
@@ -434,6 +447,7 @@ public final class TestRunSessionHistory {
 		final long fStartTime;
 		final long fHistoryTimestamp;
 		final boolean fStopped;
+		final Result fResult;
 		final int fTotalCount;
 		final int fStartedCount;
 		final int fFailureCount;
@@ -444,7 +458,7 @@ public final class TestRunSessionHistory {
 		final String fExcludeTags;
 
 		StoredSession(String id, File historyFile, long fileLength, String testRunName, String projectName,
-				long startTime, long historyTimestamp, boolean stopped, int totalCount, int startedCount,
+				long startTime, long historyTimestamp, boolean stopped, Result result, int totalCount, int startedCount,
 				int failureCount, int errorCount, int ignoredCount, int assumptionFailureCount,
 				String includeTags, String excludeTags) {
 			fId= id;
@@ -455,6 +469,7 @@ public final class TestRunSessionHistory {
 			fStartTime= startTime;
 			fHistoryTimestamp= historyTimestamp;
 			fStopped= stopped;
+			fResult= result;
 			fTotalCount= totalCount;
 			fStartedCount= startedCount;
 			fFailureCount= failureCount;
@@ -469,7 +484,7 @@ public final class TestRunSessionHistory {
 			IJavaProject project= session.getLaunchedProject();
 			return new StoredSession(id, historyFile, historyFile.length(), session.getTestRunName(),
 					project == null ? null : project.getElementName(), session.getStartTime(), historyTimestamp,
-					session.isStopped(), session.getTotalCount(), session.getStartedCount(),
+					session.isStopped(), session.getTestResult(true), session.getTotalCount(), session.getStartedCount(),
 					session.getFailureCount(), session.getErrorCount(), session.getIgnoredCount(),
 					session.getAssumptionFailureCount(), session.getIncludeTags(), session.getExcludeTags());
 		}
@@ -485,7 +500,7 @@ public final class TestRunSessionHistory {
 		RestoredTestRunSession(StoredSession storedSession) {
 			super(storedSession.fTestRunName, resolveProject(storedSession.fProjectName));
 			fStoredSession= storedSession;
-			fHeaderResult= result(storedSession);
+			fHeaderResult= storedSession.fResult;
 			fStartTime= storedSession.fStartTime;
 			fTotalCount= storedSession.fTotalCount;
 			fStartedCount= storedSession.fStartedCount;
