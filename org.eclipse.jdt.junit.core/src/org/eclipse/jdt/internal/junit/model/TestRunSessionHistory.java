@@ -240,6 +240,8 @@ public final class TestRunSessionHistory {
 	}
 
 	private static boolean isPersistable(TestRunSession session) {
+		if (session instanceof RestoredTestRunSession restoredSession && !restoredSession.fValid)
+			return false;
 		return session.getStartTime() != 0
 				&& !session.isRunning()
 				&& !session.isStarting()

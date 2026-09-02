@@ -313,6 +313,25 @@ public class TestRunSessionHistoryTests {
 	}
 
 	@Test
+	public void invalidRestoredSessionDoesNotBlockPersistingOtherRuns() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry invalidEntry= emptyEntry("invalid", 1_788_336_010_500L); //$NON-NLS-1$
+		writeHistory(historyDirectory, invalidEntry);
+		TestRunSession invalidSession= TestRunSessionHistory.load(historyDirectory, 10).get(0);
+		Files.writeString(invalidEntry.file(historyDirectory).toPath(), "broken"); //$NON-NLS-1$
+
+		assertEquals(0, invalidSession.getChildren().length);
+		assertFalse(invalidEntry.file(historyDirectory).isFile());
+
+		TestRunSession currentSession= new TestRunSession("current", null); //$NON-NLS-1$
+		TestRunSessionHistory.store(List.of(currentSession, invalidSession), historyDirectory, 10);
+		List<TestRunSession> restored= TestRunSessionHistory.load(historyDirectory, 10);
+
+		assertEquals(1, restored.size());
+		assertEquals("current", restored.get(0).getTestRunName()); //$NON-NLS-1$
+	}
+
+	@Test
 	public void removesUnpublishedXmlFilesWhenNoIndexExists() throws Exception {
 		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
 		File historyFile= new File(historyDirectory, HISTORY_FILE_PREFIX + UUID.randomUUID() + XML_SUFFIX);
