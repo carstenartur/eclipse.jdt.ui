@@ -11,35 +11,27 @@
 
 package org.eclipse.jdt.internal.junit.model;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.text.ParsePosition;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
-
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-
-import org.xml.sax.Attributes;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
+import java.util.UUID;
 
 import org.eclipse.jdt.junit.model.ITestElement.Result;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.ILog;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
 
 import org.eclipse.core.resources.ResourcesPlugin;
 
@@ -47,47 +39,130 @@ import org.eclipse.jdt.core.IJavaModel;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 
-import org.eclipse.jdt.internal.junit.BasicElementLabels;
-import org.eclipse.jdt.internal.junit.JUnitCorePlugin;
-import org.eclipse.jdt.internal.junit.Messages;
-import org.eclipse.jdt.internal.junit.util.XmlProcessorFactoryJdtJunit;
 
+/**
+ * Persists the bounded JUnit test-run history independently of the transient
+ * swap files used by {@link TestRunSession} while Eclipse is running.
+ */
 public final class TestRunSessionHistory {
 
+	private static final int FORMAT_VERSION= 1;
+	private static final int MAX_INDEX_ENTRIES= 10_000;
+
+	private static final String INDEX_FILE_NAME= "history.properties"; //$NON-NLS-1$
+	private static final String HISTORY_FILE_PREFIX= "history-"; //$NON-NLS-1$
 	private static final String XML_SUFFIX= ".xml"; //$NON-NLS-1$
 	private static final String TEMP_SUFFIX= ".tmp"; //$NON-NLS-1$
-	private static final String HISTORY_FILE_DATE_PATTERN= "yyyyMMdd-HHmmss.SSS"; //$NON-NLS-1$
+
+	private static final String KEY_FORMAT_VERSION= "formatVersion"; //$NON-NLS-1$
+	private static final String KEY_ENTRY_COUNT= "entryCount"; //$NON-NLS-1$
+	private static final String KEY_ID= "id"; //$NON-NLS-1$
+	private static final String KEY_NAME= "name"; //$NON-NLS-1$
+	private static final String KEY_PROJECT= "project"; //$NON-NLS-1$
+	private static final String KEY_START_TIME= "startTime"; //$NON-NLS-1$
+	private static final String KEY_HISTORY_TIMESTAMP= "historyTimestamp"; //$NON-NLS-1$
+	private static final String KEY_PROGRESS= "progress"; //$NON-NLS-1$
+	private static final String KEY_TOTAL_COUNT= "totalCount"; //$NON-NLS-1$
+	private static final String KEY_STARTED_COUNT= "startedCount"; //$NON-NLS-1$
+	private static final String KEY_FAILURE_COUNT= "failureCount"; //$NON-NLS-1$
+	private static final String KEY_ERROR_COUNT= "errorCount"; //$NON-NLS-1$
+	private static final String KEY_IGNORED_COUNT= "ignoredCount"; //$NON-NLS-1$
+	private static final String KEY_ASSUMPTION_FAILURE_COUNT= "assumptionFailureCount"; //$NON-NLS-1$
+	private static final String KEY_INCLUDE_TAGS= "includeTags"; //$NON-NLS-1$
+	private static final String KEY_EXCLUDE_TAGS= "excludeTags"; //$NON-NLS-1$
+	private static final String KEY_FILE_LENGTH= "fileLength"; //$NON-NLS-1$
+
+	private static final String PROGRESS_COMPLETED= "completed"; //$NON-NLS-1$
+	private static final String PROGRESS_STOPPED= "stopped"; //$NON-NLS-1$
 
 	private static final ILog LOG= ILog.of(TestRunSessionHistory.class);
 
 	private TestRunSessionHistory() {
 	}
 
+	/**
+	 * Restores at most {@code maxCount} history entries. Only the small index is
+	 * read here; the test trees remain in their XML files until selected.
+	 *
+	 * @param historyDirectory the JUnit history directory
+	 * @param maxCount the maximum number of entries to restore
+	 * @return the restored sessions, youngest first
+	 */
 	public static List<TestRunSession> load(File historyDirectory, int maxCount) {
 		deleteTemporaryFiles(historyDirectory);
 
-		File[] historyFiles= historyDirectory.listFiles(file -> file.isFile() && file.getName().endsWith(XML_SUFFIX));
-		if (historyFiles == null || historyFiles.length == 0)
+		File indexFile= new File(historyDirectory, INDEX_FILE_NAME);
+		if (!indexFile.isFile())
 			return List.of();
 
-		Arrays.sort(historyFiles, Comparator.comparing(File::getName).reversed());
+		Properties properties= new Properties();
+		try (BufferedInputStream input= new BufferedInputStream(new FileInputStream(indexFile))) {
+			properties.load(input);
+		} catch (IOException | IllegalArgumentException e) {
+			LOG.error("Could not read the JUnit history index", e); //$NON-NLS-1$
+			return List.of();
+		}
+
+		int formatVersion;
+		int entryCount;
+		try {
+			formatVersion= readInt(properties, KEY_FORMAT_VERSION, 0, Integer.MAX_VALUE);
+			entryCount= readInt(properties, KEY_ENTRY_COUNT, 0, MAX_INDEX_ENTRIES);
+		} catch (IllegalArgumentException e) {
+			LOG.error("Invalid JUnit history index", e); //$NON-NLS-1$
+			return List.of();
+		}
+		if (formatVersion != FORMAT_VERSION) {
+			LOG.error("Unsupported JUnit history index version: " + formatVersion); //$NON-NLS-1$
+			return List.of();
+		}
+
 		int limit= Math.max(0, maxCount);
-		List<TestRunSession> sessions= new ArrayList<>(Math.min(limit, historyFiles.length));
-		for (File historyFile : historyFiles) {
-			if (sessions.size() >= limit) {
-				delete(historyFile);
-				continue;
-			}
+		List<StoredSession> validEntries= new ArrayList<>(entryCount);
+		Set<String> referencedFiles= new HashSet<>();
+		Set<String> seenIds= new HashSet<>();
+		boolean indexFullyUnderstood= true;
+		for (int i= 0; i < entryCount; i++) {
 			try {
-				sessions.add(read(historyFile));
-			} catch (CoreException e) {
-				LOG.log(e.getStatus());
-				delete(historyFile);
+				StoredSession storedSession= readEntry(properties, i, historyDirectory);
+				if (!seenIds.add(storedSession.fId))
+					throw new IllegalArgumentException("Duplicate JUnit history identifier: " + storedSession.fId); //$NON-NLS-1$
+				File historyFile= storedSession.fHistoryFile;
+				if (!historyFile.isFile() || historyFile.length() != storedSession.fFileLength) {
+					LOG.error("Ignoring incomplete JUnit history file: " + historyFile); //$NON-NLS-1$
+					delete(historyFile);
+					continue;
+				}
+				referencedFiles.add(historyFile.getName());
+				validEntries.add(storedSession);
+			} catch (IllegalArgumentException e) {
+				indexFullyUnderstood= false;
+				LOG.error("Invalid JUnit history entry " + i, e); //$NON-NLS-1$
 			}
+		}
+
+		if (indexFullyUnderstood)
+			deleteOrphanedXmlFiles(historyDirectory, referencedFiles, false);
+
+		validEntries.sort(Comparator.comparingLong((StoredSession entry) -> entry.fHistoryTimestamp).reversed());
+		List<TestRunSession> sessions= new ArrayList<>(Math.min(limit, validEntries.size()));
+		for (StoredSession storedSession : validEntries) {
+			if (sessions.size() >= limit)
+				break;
+			sessions.add(new RestoredTestRunSession(storedSession));
 		}
 		return sessions;
 	}
 
+	/**
+	 * Atomically persists at most {@code maxCount} completed sessions and then
+	 * atomically publishes the new history index. Files not referenced by the
+	 * new index are removed only after the index has been committed.
+	 *
+	 * @param sessions sessions ordered youngest first
+	 * @param historyDirectory the JUnit history directory
+	 * @param maxCount the maximum number of entries to retain
+	 */
 	public static void store(List<TestRunSession> sessions, File historyDirectory, int maxCount) {
 		try {
 			Files.createDirectories(historyDirectory.toPath());
@@ -97,78 +172,208 @@ public final class TestRunSessionHistory {
 		}
 
 		deleteTemporaryFiles(historyDirectory);
-		Set<String> retainedFileNames= new HashSet<>();
 		int limit= Math.max(0, maxCount);
+		List<StoredSession> storedSessions= new ArrayList<>(Math.min(limit, sessions.size()));
+		boolean persistenceFailure= false;
 		for (TestRunSession session : sessions) {
-			if (retainedFileNames.size() >= limit)
+			if (storedSessions.size() >= limit)
 				break;
-			if (session.getStartTime() == 0 || session.isRunning() || session.isStarting() || session.isKeptAlive())
+			if (!isPersistable(session))
 				continue;
 
-			File historyFile= historyFile(historyDirectory, session.getStartTime());
-			String fileName= historyFile.getName();
-			retainedFileNames.add(fileName);
-
-			// Inactive sessions may already have been swapped to this file. Keeping an
-			// existing file avoids loading a potentially large test tree during shutdown.
-			if (historyFile.isFile())
-				continue;
-
-			File temporaryFile= new File(historyDirectory, fileName + TEMP_SUFFIX);
-			try {
-				Files.deleteIfExists(temporaryFile.toPath());
-				JUnitModel.exportTestRunSession(session, temporaryFile);
-				moveReplacing(temporaryFile, historyFile);
-			} catch (CoreException | IOException e) {
-				LOG.error("Could not persist JUnit test run history", e); //$NON-NLS-1$
-				delete(temporaryFile);
-				if (!historyFile.isFile())
-					retainedFileNames.remove(fileName);
+			StoredSession storedSession= null;
+			if (session instanceof RestoredTestRunSession restoredSession) {
+				storedSession= restoredSession.reusableStoredSession();
+				if (storedSession == null && !restoredSession.canWriteFromMemory()) {
+					persistenceFailure= true;
+					continue;
+				}
 			}
+			if (storedSession == null) {
+				try {
+					storedSession= writeSessionAtomically(session, historyDirectory);
+				} catch (CoreException | IOException e) {
+					persistenceFailure= true;
+					LOG.error("Could not persist JUnit test run history", e); //$NON-NLS-1$
+				}
+			}
+			if (storedSession != null)
+				storedSessions.add(storedSession);
 		}
 
-		File[] historyFiles= historyDirectory.listFiles(file -> file.isFile() && file.getName().endsWith(XML_SUFFIX));
-		if (historyFiles != null) {
-			for (File historyFile : historyFiles) {
-				if (!retainedFileNames.contains(historyFile.getName()))
-					delete(historyFile);
-			}
-		}
+		if (!writeIndexAtomically(storedSessions, historyDirectory))
+			return;
+
+		Set<String> retainedFiles= new HashSet<>();
+		for (StoredSession storedSession : storedSessions)
+			retainedFiles.add(storedSession.fHistoryFile.getName());
+		deleteOrphanedXmlFiles(historyDirectory, retainedFiles, !persistenceFailure);
 	}
 
-	static TestRunSession read(File historyFile) throws CoreException {
-		long startTime= readStartTime(historyFile);
-		HeaderHandler handler= new HeaderHandler(historyFile, startTime);
+	private static boolean isPersistable(TestRunSession session) {
+		return session.getStartTime() != 0
+				&& !session.isRunning()
+				&& !session.isStarting()
+				&& !session.isKeptAlive();
+	}
+
+	private static StoredSession writeSessionAtomically(TestRunSession session, File historyDirectory) throws CoreException, IOException {
+		String id;
+		File historyFile;
+		do {
+			id= UUID.randomUUID().toString();
+			historyFile= new File(historyDirectory, historyFileName(id));
+		} while (historyFile.exists());
+		File temporaryFile= Files.createTempFile(historyDirectory.toPath(), HISTORY_FILE_PREFIX + id + '-', TEMP_SUFFIX).toFile();
 		try {
-			SAXParserFactory parserFactory= XmlProcessorFactoryJdtJunit.createSAXFactoryWithErrorOnDOCTYPE();
-			SAXParser parser= parserFactory.newSAXParser();
-			parser.parse(historyFile, handler);
-		} catch (StopParsingException e) {
-			return handler.getSession();
-		} catch (ParserConfigurationException | SAXException | IOException | IllegalArgumentException e) {
-			throw readError(historyFile, e);
+			JUnitModel.exportTestRunSession(session, temporaryFile);
+			moveReplacing(temporaryFile, historyFile);
+			return StoredSession.from(session, id, historyFile, historyTimestamp(session.getStartTime()));
+		} finally {
+			delete(temporaryFile);
 		}
-		throw readError(historyFile, new SAXException("JUnit history file has no test-run root element")); //$NON-NLS-1$
 	}
 
-	static File historyFile(File historyDirectory, long startTime) {
-		String timestamp= new SimpleDateFormat(HISTORY_FILE_DATE_PATTERN).format(new Date(startTime));
-		return new File(historyDirectory, timestamp + XML_SUFFIX);
+	private static boolean writeIndexAtomically(List<StoredSession> storedSessions, File historyDirectory) {
+		Properties properties= new Properties();
+		properties.setProperty(KEY_FORMAT_VERSION, Integer.toString(FORMAT_VERSION));
+		properties.setProperty(KEY_ENTRY_COUNT, Integer.toString(storedSessions.size()));
+		for (int i= 0; i < storedSessions.size(); i++)
+			writeEntry(properties, i, storedSessions.get(i));
+
+		File indexFile= new File(historyDirectory, INDEX_FILE_NAME);
+		File temporaryFile;
+		try {
+			temporaryFile= Files.createTempFile(historyDirectory.toPath(), INDEX_FILE_NAME + '.', TEMP_SUFFIX).toFile();
+		} catch (IOException e) {
+			LOG.error("Could not create a temporary JUnit history index", e); //$NON-NLS-1$
+			return false;
+		}
+
+		try {
+			try (BufferedOutputStream output= new BufferedOutputStream(new FileOutputStream(temporaryFile))) {
+				properties.store(output, null);
+			}
+			moveReplacing(temporaryFile, indexFile);
+			return true;
+		} catch (IOException e) {
+			LOG.error("Could not write the JUnit history index", e); //$NON-NLS-1$
+			return false;
+		} finally {
+			delete(temporaryFile);
+		}
 	}
 
-	private static long readStartTime(File historyFile) throws CoreException {
-		String fileName= historyFile.getName();
-		if (!fileName.endsWith(XML_SUFFIX))
-			throw readError(historyFile, new IllegalArgumentException("Not a JUnit history XML file")); //$NON-NLS-1$
+	private static void writeEntry(Properties properties, int index, StoredSession session) {
+		properties.setProperty(entryKey(index, KEY_ID), session.fId);
+		properties.setProperty(entryKey(index, KEY_NAME), session.fTestRunName);
+		setOptional(properties, entryKey(index, KEY_PROJECT), session.fProjectName);
+		properties.setProperty(entryKey(index, KEY_START_TIME), Long.toString(session.fStartTime));
+		properties.setProperty(entryKey(index, KEY_HISTORY_TIMESTAMP), Long.toString(session.fHistoryTimestamp));
+		properties.setProperty(entryKey(index, KEY_PROGRESS), session.fStopped ? PROGRESS_STOPPED : PROGRESS_COMPLETED);
+		properties.setProperty(entryKey(index, KEY_TOTAL_COUNT), Integer.toString(session.fTotalCount));
+		properties.setProperty(entryKey(index, KEY_STARTED_COUNT), Integer.toString(session.fStartedCount));
+		properties.setProperty(entryKey(index, KEY_FAILURE_COUNT), Integer.toString(session.fFailureCount));
+		properties.setProperty(entryKey(index, KEY_ERROR_COUNT), Integer.toString(session.fErrorCount));
+		properties.setProperty(entryKey(index, KEY_IGNORED_COUNT), Integer.toString(session.fIgnoredCount));
+		properties.setProperty(entryKey(index, KEY_ASSUMPTION_FAILURE_COUNT), Integer.toString(session.fAssumptionFailureCount));
+		setOptional(properties, entryKey(index, KEY_INCLUDE_TAGS), session.fIncludeTags);
+		setOptional(properties, entryKey(index, KEY_EXCLUDE_TAGS), session.fExcludeTags);
+		properties.setProperty(entryKey(index, KEY_FILE_LENGTH), Long.toString(session.fFileLength));
+	}
 
-		String timestamp= fileName.substring(0, fileName.length() - XML_SUFFIX.length());
-		SimpleDateFormat format= new SimpleDateFormat(HISTORY_FILE_DATE_PATTERN);
-		format.setLenient(false);
-		ParsePosition position= new ParsePosition(0);
-		Date parsed= format.parse(timestamp, position);
-		if (parsed == null || position.getIndex() != timestamp.length())
-			throw readError(historyFile, new IllegalArgumentException("Invalid JUnit history file name")); //$NON-NLS-1$
-		return parsed.getTime();
+	private static StoredSession readEntry(Properties properties, int index, File historyDirectory) {
+		String id= UUID.fromString(required(properties, entryKey(index, KEY_ID))).toString();
+		String testRunName= required(properties, entryKey(index, KEY_NAME));
+		String projectName= properties.getProperty(entryKey(index, KEY_PROJECT));
+		long startTime= readLong(properties, entryKey(index, KEY_START_TIME));
+		long historyTimestamp= readLong(properties, entryKey(index, KEY_HISTORY_TIMESTAMP), 0, Long.MAX_VALUE);
+		String progress= required(properties, entryKey(index, KEY_PROGRESS));
+		boolean stopped;
+		if (PROGRESS_STOPPED.equals(progress)) {
+			stopped= true;
+		} else if (PROGRESS_COMPLETED.equals(progress)) {
+			stopped= false;
+		} else {
+			throw new IllegalArgumentException("Unsupported JUnit history progress state: " + progress); //$NON-NLS-1$
+		}
+
+		int totalCount= readInt(properties, entryKey(index, KEY_TOTAL_COUNT), 0, Integer.MAX_VALUE);
+		int startedCount= readInt(properties, entryKey(index, KEY_STARTED_COUNT), 0, Integer.MAX_VALUE);
+		int failureCount= readInt(properties, entryKey(index, KEY_FAILURE_COUNT), 0, Integer.MAX_VALUE);
+		int errorCount= readInt(properties, entryKey(index, KEY_ERROR_COUNT), 0, Integer.MAX_VALUE);
+		int ignoredCount= readInt(properties, entryKey(index, KEY_IGNORED_COUNT), 0, Integer.MAX_VALUE);
+		int assumptionFailureCount= readInt(properties, entryKey(index, KEY_ASSUMPTION_FAILURE_COUNT), 0, Integer.MAX_VALUE);
+		String includeTags= properties.getProperty(entryKey(index, KEY_INCLUDE_TAGS));
+		String excludeTags= properties.getProperty(entryKey(index, KEY_EXCLUDE_TAGS));
+		long fileLength= readLong(properties, entryKey(index, KEY_FILE_LENGTH), 1, Long.MAX_VALUE);
+		File historyFile= new File(historyDirectory, historyFileName(id));
+		return new StoredSession(id, historyFile, fileLength, testRunName, projectName, startTime,
+				historyTimestamp, stopped, totalCount, startedCount, failureCount, errorCount,
+				ignoredCount, assumptionFailureCount, includeTags, excludeTags);
+	}
+
+	private static String historyFileName(String id) {
+		return HISTORY_FILE_PREFIX + id + XML_SUFFIX;
+	}
+
+	private static String entryKey(int index, String name) {
+		return "entry." + index + '.' + name; //$NON-NLS-1$
+	}
+
+	private static String required(Properties properties, String key) {
+		String value= properties.getProperty(key);
+		if (value == null)
+			throw new IllegalArgumentException("Missing JUnit history property: " + key); //$NON-NLS-1$
+		return value;
+	}
+
+	private static int readInt(Properties properties, String key, int minimum, int maximum) {
+		long value= readLong(properties, key, minimum, maximum);
+		return (int) value;
+	}
+
+	private static long readLong(Properties properties, String key) {
+		String value= required(properties, key);
+		try {
+			return Long.parseLong(value);
+		} catch (NumberFormatException e) {
+			throw new IllegalArgumentException("Invalid JUnit history number: " + key, e); //$NON-NLS-1$
+		}
+	}
+
+	private static long readLong(Properties properties, String key, long minimum, long maximum) {
+		long value= readLong(properties, key);
+		if (value < minimum || value > maximum)
+			throw new IllegalArgumentException("JUnit history number out of range: " + key); //$NON-NLS-1$
+		return value;
+	}
+
+	private static void setOptional(Properties properties, String key, String value) {
+		if (value != null)
+			properties.setProperty(key, value);
+	}
+
+	private static long historyTimestamp(long startTime) {
+		return startTime == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(startTime);
+	}
+
+	private static IJavaProject resolveProject(String projectName) {
+		if (projectName == null)
+			return null;
+		IJavaModel javaModel= JavaCore.create(ResourcesPlugin.getWorkspace().getRoot());
+		IJavaProject project= javaModel.getJavaProject(projectName);
+		return project.exists() ? project : null;
+	}
+
+	private static Result result(StoredSession session) {
+		if (session.fErrorCount > 0)
+			return Result.ERROR;
+		if (session.fFailureCount > 0)
+			return Result.FAILURE;
+		if (session.fStopped)
+			return Result.UNDEFINED;
+		return Result.OK;
 	}
 
 	private static void deleteTemporaryFiles(File historyDirectory) {
@@ -176,6 +381,18 @@ public final class TestRunSessionHistory {
 		if (temporaryFiles != null) {
 			for (File temporaryFile : temporaryFiles)
 				delete(temporaryFile);
+		}
+	}
+
+	private static void deleteOrphanedXmlFiles(File historyDirectory, Set<String> retainedFileNames, boolean deleteLegacyFiles) {
+		File[] historyFiles= historyDirectory.listFiles(file -> file.isFile() && file.getName().endsWith(XML_SUFFIX));
+		if (historyFiles != null) {
+			for (File historyFile : historyFiles) {
+				String fileName= historyFile.getName();
+				if (!retainedFileNames.contains(fileName)
+						&& (deleteLegacyFiles || fileName.startsWith(HISTORY_FILE_PREFIX)))
+					delete(historyFile);
+			}
 		}
 	}
 
@@ -195,116 +412,77 @@ public final class TestRunSessionHistory {
 		}
 	}
 
-	private static CoreException readError(File file, Exception e) {
-		return new CoreException(new Status(IStatus.ERROR,
-				JUnitCorePlugin.getPluginId(),
-				Messages.format(ModelMessages.JUnitModel_could_not_read, BasicElementLabels.getPathLabel(file)),
-				e));
-	}
+	private static final class StoredSession {
+		final String fId;
+		final File fHistoryFile;
+		final long fFileLength;
+		final String fTestRunName;
+		final String fProjectName;
+		final long fStartTime;
+		final long fHistoryTimestamp;
+		final boolean fStopped;
+		final int fTotalCount;
+		final int fStartedCount;
+		final int fFailureCount;
+		final int fErrorCount;
+		final int fIgnoredCount;
+		final int fAssumptionFailureCount;
+		final String fIncludeTags;
+		final String fExcludeTags;
 
-	private static IJavaProject resolveProject(String projectName) {
-		if (projectName == null)
-			return null;
-		IJavaModel javaModel= JavaCore.create(ResourcesPlugin.getWorkspace().getRoot());
-		IJavaProject project= javaModel.getJavaProject(projectName);
-		return project.exists() ? project : null;
-	}
-
-	private static int readCount(Attributes attributes, String name) throws SAXException {
-		String value= attributes.getValue(name);
-		if (value == null)
-			return 0;
-		try {
-			return Math.max(0, Integer.parseInt(value));
-		} catch (NumberFormatException e) {
-			throw new SAXException("Invalid JUnit history count: " + name, e); //$NON-NLS-1$
-		}
-	}
-
-	private static final class HeaderHandler extends DefaultHandler {
-		private final File fHistoryFile;
-		private final long fStartTime;
-		private TestRunSession fSession;
-
-		HeaderHandler(File historyFile, long startTime) {
+		StoredSession(String id, File historyFile, long fileLength, String testRunName, String projectName,
+				long startTime, long historyTimestamp, boolean stopped, int totalCount, int startedCount,
+				int failureCount, int errorCount, int ignoredCount, int assumptionFailureCount,
+				String includeTags, String excludeTags) {
+			fId= id;
 			fHistoryFile= historyFile;
+			fFileLength= fileLength;
+			fTestRunName= testRunName;
+			fProjectName= projectName;
 			fStartTime= startTime;
-		}
-
-		@Override
-		public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
-			if (!IXMLTags.NODE_TESTRUN.equals(qName))
-				throw new SAXException("JUnit history file has an unexpected root element: " + qName); //$NON-NLS-1$
-
-			String name= attributes.getValue(IXMLTags.ATTR_NAME);
-			if (name == null)
-				throw new SAXException("JUnit history file has no test-run name"); //$NON-NLS-1$
-
-			int totalCount= readCount(attributes, IXMLTags.ATTR_TESTS);
-			int startedCount= readCount(attributes, IXMLTags.ATTR_STARTED);
-			int failureCount= readCount(attributes, IXMLTags.ATTR_FAILURES);
-			int errorCount= readCount(attributes, IXMLTags.ATTR_ERRORS);
-			int ignoredCount= readCount(attributes, IXMLTags.ATTR_IGNORED);
-			boolean stopped= startedCount < totalCount && failureCount == 0 && errorCount == 0;
-			Result result= result(errorCount, failureCount, stopped);
-
-			fSession= new RestoredTestRunSession(
-					fHistoryFile,
-					name,
-					resolveProject(attributes.getValue(IXMLTags.ATTR_PROJECT)),
-					fStartTime,
-					totalCount,
-					startedCount,
-					failureCount,
-					errorCount,
-					ignoredCount,
-					stopped,
-					result,
-					attributes.getValue(IXMLTags.ATTR_INCLUDE_TAGS),
-					attributes.getValue(IXMLTags.ATTR_EXCLUDE_TAGS));
-			throw new StopParsingException();
-		}
-
-		TestRunSession getSession() {
-			return fSession;
-		}
-
-		private static Result result(int errorCount, int failureCount, boolean stopped) {
-			if (errorCount > 0)
-				return Result.ERROR;
-			if (failureCount > 0)
-				return Result.FAILURE;
-			if (stopped)
-				return Result.UNDEFINED;
-			return Result.OK;
-		}
-	}
-
-	private static final class StopParsingException extends SAXException {
-		private static final long serialVersionUID= 1L;
-	}
-
-	private static final class RestoredTestRunSession extends TestRunSession {
-		private final File fHistoryFile;
-		private final Result fHeaderResult;
-		private boolean fLoadingContents;
-		private boolean fContentsLoaded;
-
-		RestoredTestRunSession(File historyFile, String testRunName, IJavaProject project, long startTime,
-				int totalCount, int startedCount, int failureCount, int errorCount, int ignoredCount,
-				boolean stopped, Result result, String includeTags, String excludeTags) {
-			super(testRunName, project);
-			fHistoryFile= historyFile;
-			fHeaderResult= result;
-			fStartTime= startTime;
+			fHistoryTimestamp= historyTimestamp;
+			fStopped= stopped;
 			fTotalCount= totalCount;
 			fStartedCount= startedCount;
 			fFailureCount= failureCount;
 			fErrorCount= errorCount;
 			fIgnoredCount= ignoredCount;
-			fIsStopped= stopped;
-			setIncludeTags(includeTags);
-			setExcludeTags(excludeTags);
+			fAssumptionFailureCount= assumptionFailureCount;
+			fIncludeTags= includeTags;
+			fExcludeTags= excludeTags;
+		}
+
+		static StoredSession from(TestRunSession session, String id, File historyFile, long historyTimestamp) {
+			IJavaProject project= session.getLaunchedProject();
+			return new StoredSession(id, historyFile, historyFile.length(), session.getTestRunName(),
+					project == null ? null : project.getElementName(), session.getStartTime(), historyTimestamp,
+					session.isStopped(), session.getTotalCount(), session.getStartedCount(),
+					session.getFailureCount(), session.getErrorCount(), session.getIgnoredCount(),
+					session.getAssumptionFailureCount(), session.getIncludeTags(), session.getExcludeTags());
+		}
+	}
+
+	private static final class RestoredTestRunSession extends TestRunSession {
+		private final StoredSession fStoredSession;
+		private final Result fHeaderResult;
+		private boolean fLoadingContents;
+		private boolean fContentsLoaded;
+		private boolean fValid= true;
+
+		RestoredTestRunSession(StoredSession storedSession) {
+			super(storedSession.fTestRunName, resolveProject(storedSession.fProjectName));
+			fStoredSession= storedSession;
+			fHeaderResult= result(storedSession);
+			fStartTime= storedSession.fStartTime;
+			fTotalCount= storedSession.fTotalCount;
+			fStartedCount= storedSession.fStartedCount;
+			fFailureCount= storedSession.fFailureCount;
+			fErrorCount= storedSession.fErrorCount;
+			fIgnoredCount= storedSession.fIgnoredCount;
+			fAssumptionFailureCount= storedSession.fAssumptionFailureCount;
+			fIsStopped= storedSession.fStopped;
+			setIncludeTags(storedSession.fIncludeTags);
+			setExcludeTags(storedSession.fExcludeTags);
 		}
 
 		@Override
@@ -319,22 +497,19 @@ public final class TestRunSessionHistory {
 
 		@Override
 		public synchronized void swapIn() {
-			if (fContentsLoaded) {
-				super.swapIn();
-				return;
-			}
-			if (fLoadingContents)
+			if (fContentsLoaded || fLoadingContents || !fValid)
 				return;
 
 			fLoadingContents= true;
 			try {
-				JUnitModel.importIntoTestRunSession(fHistoryFile, this);
+				JUnitModel.importIntoTestRunSession(fStoredSession.fHistoryFile, this);
 				fContentsLoaded= true;
 			} catch (CoreException e) {
 				LOG.log(e.getStatus());
 				reset();
 				fContentsLoaded= true;
-				delete(fHistoryFile);
+				fValid= false;
+				delete(fStoredSession.fHistoryFile);
 			} finally {
 				fLoadingContents= false;
 			}
@@ -342,14 +517,25 @@ public final class TestRunSessionHistory {
 
 		@Override
 		public synchronized void swapOut() {
-			if (fContentsLoaded)
-				super.swapOut();
+			// The persistent XML file already owns the test tree. Keeping a selected
+			// restored session in memory avoids creating a second, legacy swap file.
 		}
 
 		@Override
 		public void removeSwapFile() {
-			delete(fHistoryFile);
+			fValid= false;
+			delete(fStoredSession.fHistoryFile);
 		}
 
+		StoredSession reusableStoredSession() {
+			if (fValid && fStoredSession.fHistoryFile.isFile()
+					&& fStoredSession.fHistoryFile.length() == fStoredSession.fFileLength)
+				return fStoredSession;
+			return null;
+		}
+
+		boolean canWriteFromMemory() {
+			return fValid && fContentsLoaded;
+		}
 	}
 }

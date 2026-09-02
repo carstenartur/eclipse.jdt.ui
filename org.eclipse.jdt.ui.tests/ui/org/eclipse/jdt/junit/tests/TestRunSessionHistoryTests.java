@@ -15,9 +15,16 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Properties;
+import java.util.TimeZone;
+import java.util.UUID;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -30,21 +37,25 @@ import org.eclipse.jdt.internal.junit.model.TestRunSessionHistory;
 
 public class TestRunSessionHistoryTests {
 
+	private static final String INDEX_FILE_NAME= "history.properties"; //$NON-NLS-1$
+	private static final String HISTORY_FILE_PREFIX= "history-"; //$NON-NLS-1$
+	private static final String XML_SUFFIX= ".xml"; //$NON-NLS-1$
+
 	@Rule
 	public TemporaryFolder fTemporaryFolder= new TemporaryFolder();
 
 	@Test
-	public void readsOnlyTheTestRunHeader() throws Exception {
-		File historyFile= fTemporaryFolder.newFile("20260901-120000.000.xml"); //$NON-NLS-1$
-		Files.writeString(historyFile.toPath(), """
-				<?xml version="1.0" encoding="UTF-8"?>
-				<testrun name="header" tests="3" started="3" failures="1" errors="0" ignored="0">
-				  <malformed
-				"""); //$NON-NLS-1$
+	public void readsMetadataWithoutParsingTheTestTree() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry entry= entry("header", -1_788_336_000_000L, 1_788_336_000_000L, //$NON-NLS-1$
+				"completed", 3, 3, 1, 0, 0, //$NON-NLS-1$
+				"<testrun name=\"header\"><malformed"); //$NON-NLS-1$
+		writeHistory(historyDirectory, entry);
 
-		TestRunSession session= TestRunSessionHistory.load(historyFile.getParentFile(), 1).get(0);
+		TestRunSession session= TestRunSessionHistory.load(historyDirectory, 1).get(0);
 
 		assertEquals("header", session.getTestRunName()); //$NON-NLS-1$
+		assertEquals(-1_788_336_000_000L, session.getStartTime());
 		assertEquals(3, session.getTotalCount());
 		assertEquals(3, session.getStartedCount());
 		assertEquals(1, session.getFailureCount());
@@ -53,57 +64,286 @@ public class TestRunSessionHistoryTests {
 
 	@Test
 	public void loadsTheTestTreeOnDemand() throws Exception {
-		File historyFile= fTemporaryFolder.newFile("20260901-120001.000.xml"); //$NON-NLS-1$
-		Files.writeString(historyFile.toPath(), """
-				<?xml version="1.0" encoding="UTF-8"?>
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry entry= entry("lazy", 1_788_336_001_000L, 1_788_336_001_000L, //$NON-NLS-1$
+				"completed", 1, 1, 0, 0, 0, //$NON-NLS-1$
+				"""
 				<testrun name="lazy" tests="1" started="1" failures="0" errors="0" ignored="0">
 				  <testcase name="testOne" classname="example.ExampleTest" time="0.1"/>
 				</testrun>
 				"""); //$NON-NLS-1$
+		writeHistory(historyDirectory, entry);
 
-		TestRunSession session= TestRunSessionHistory.load(historyFile.getParentFile(), 1).get(0);
+		TestRunSession session= TestRunSessionHistory.load(historyDirectory, 1).get(0);
 
 		assertEquals(1, session.getChildren().length);
 		assertEquals(Result.OK, session.getTestResult(true));
 	}
 
 	@Test
-	public void restoresNewestEntriesAndRemovesOlderOnes() throws Exception {
+	public void restoresConfiguredNumberWithoutDeletingValidExcessEntries() throws Exception {
 		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
-		File oldest= writeTestRun(historyDirectory, "20260901-120000.000.xml", "oldest"); //$NON-NLS-1$ //$NON-NLS-2$
-		File middle= writeTestRun(historyDirectory, "20260901-120001.000.xml", "middle"); //$NON-NLS-1$ //$NON-NLS-2$
-		File newest= writeTestRun(historyDirectory, "20260901-120002.000.xml", "newest"); //$NON-NLS-1$ //$NON-NLS-2$
+		HistoryEntry newest= emptyEntry("newest", 1_788_336_003_000L); //$NON-NLS-1$
+		HistoryEntry middle= emptyEntry("middle", 1_788_336_002_000L); //$NON-NLS-1$
+		HistoryEntry oldest= emptyEntry("oldest", 1_788_336_001_000L); //$NON-NLS-1$
+		writeHistory(historyDirectory, newest, middle, oldest);
+
 		List<TestRunSession> sessions= TestRunSessionHistory.load(historyDirectory, 2);
 
 		assertEquals(2, sessions.size());
 		assertEquals("newest", sessions.get(0).getTestRunName()); //$NON-NLS-1$
 		assertEquals("middle", sessions.get(1).getTestRunName()); //$NON-NLS-1$
-		assertFalse(oldest.exists());
-		assertTrue(middle.exists());
-		assertTrue(newest.exists());
+		assertTrue(oldest.file(historyDirectory).isFile());
 	}
 
 	@Test
-	public void persistsCompletedSessions() throws Exception {
+	public void preservesImportedStartTimeAcrossLocaleAndTimeZoneChanges() throws Exception {
 		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
-		File historyFile= writeTestRun(historyDirectory, "20260901-120004.000.xml", "persisted"); //$NON-NLS-1$ //$NON-NLS-2$
-		TestRunSession session= TestRunSessionHistory.load(historyFile.getParentFile(), 1).get(0);
+		Locale originalLocale= Locale.getDefault();
+		TimeZone originalTimeZone= TimeZone.getDefault();
+		try {
+			Locale.setDefault(Locale.forLanguageTag("th-TH")); //$NON-NLS-1$
+			TimeZone.setDefault(TimeZone.getTimeZone("Asia/Bangkok")); //$NON-NLS-1$
+			TestRunSession imported= new TestRunSession("imported", null); //$NON-NLS-1$
+			long originalStartTime= imported.getStartTime();
+
+			TestRunSessionHistory.store(List.of(imported), historyDirectory, 10);
+			assertEquals(1, xmlFiles(historyDirectory).size());
+			assertTrue(xmlFiles(historyDirectory).get(0).getName().matches(
+					"history-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.xml")); //$NON-NLS-1$
+
+			Locale.setDefault(Locale.GERMANY);
+			TimeZone.setDefault(TimeZone.getTimeZone("UTC")); //$NON-NLS-1$
+			TestRunSession restored= TestRunSessionHistory.load(historyDirectory, 10).get(0);
+
+			assertTrue(originalStartTime < 0);
+			assertEquals(originalStartTime, restored.getStartTime());
+		} finally {
+			Locale.setDefault(originalLocale);
+			TimeZone.setDefault(originalTimeZone);
+		}
+	}
+
+	@Test
+	public void preservesStoppedStateWhenTheRunContainsAFailure() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry entry= entry("stoppedWithFailure", 1_788_336_004_000L, 1_788_336_004_000L, //$NON-NLS-1$
+				"stopped", 10, 3, 1, 0, 0, //$NON-NLS-1$
+				"""
+				<testrun name="stoppedWithFailure" tests="10" started="3" failures="1" errors="0" ignored="0">
+				  <testcase name="testOne" classname="example.ExampleTest" time="0.1">
+				    <failure>failed</failure>
+				  </testcase>
+				</testrun>
+				"""); //$NON-NLS-1$
+		writeHistory(historyDirectory, entry);
+
+		TestRunSession session= TestRunSessionHistory.load(historyDirectory, 1).get(0);
+
+		assertTrue(session.isStopped());
+		assertEquals(Result.FAILURE, session.getTestResult(true));
+		assertEquals(1, session.getChildren().length);
+		assertTrue(session.isStopped());
+		assertEquals(Result.FAILURE, session.getTestResult(true));
+	}
+
+	@Test
+	public void preservesStoppedStateWhenAllTestsWereStarted() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry entry= entry("stoppedAfterStart", 1_788_336_005_000L, 1_788_336_005_000L, //$NON-NLS-1$
+				"stopped", 1, 1, 0, 0, 0, //$NON-NLS-1$
+				"""
+				<testrun name="stoppedAfterStart" tests="1" started="1" failures="0" errors="0" ignored="0">
+				  <testcase name="testOne" classname="example.ExampleTest" incomplete="true"/>
+				</testrun>
+				"""); //$NON-NLS-1$
+		writeHistory(historyDirectory, entry);
+
+		TestRunSession session= TestRunSessionHistory.load(historyDirectory, 1).get(0);
+
+		assertTrue(session.isStopped());
+		assertEquals(Result.UNDEFINED, session.getTestResult(true));
+		assertEquals(1, session.getChildren().length);
+		assertTrue(session.isStopped());
+	}
+
+	@Test
+	public void keepsEqualHistoryTimestampsDistinct() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		long timestamp= 1_788_336_006_000L;
+		HistoryEntry first= emptyEntry("first", timestamp); //$NON-NLS-1$
+		HistoryEntry second= emptyEntry("second", timestamp); //$NON-NLS-1$
+		writeHistory(historyDirectory, first, second);
+
+		List<TestRunSession> sessions= TestRunSessionHistory.load(historyDirectory, 10);
+		TestRunSessionHistory.store(sessions, historyDirectory, 10);
+		List<TestRunSession> restored= TestRunSessionHistory.load(historyDirectory, 10);
+
+		assertEquals(2, xmlFiles(historyDirectory).size());
+		assertEquals(2, restored.size());
+		assertEquals("first", restored.get(0).getTestRunName()); //$NON-NLS-1$
+		assertEquals("second", restored.get(1).getTestRunName()); //$NON-NLS-1$
+	}
+
+	@Test
+	public void doesNotReuseAnUnownedStaleFile() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		File staleFile= new File(historyDirectory, HISTORY_FILE_PREFIX + UUID.randomUUID() + XML_SUFFIX);
+		Files.writeString(staleFile.toPath(), "<testrun name=\"stale\"/>"); //$NON-NLS-1$
+		TestRunSession current= new TestRunSession("current", null); //$NON-NLS-1$
+
+		TestRunSessionHistory.store(List.of(current), historyDirectory, 10);
+		List<TestRunSession> restored= TestRunSessionHistory.load(historyDirectory, 10);
+
+		assertFalse(staleFile.exists());
+		assertEquals(1, xmlFiles(historyDirectory).size());
+		assertEquals(1, restored.size());
+		assertEquals("current", restored.get(0).getTestRunName()); //$NON-NLS-1$
+	}
+
+	@Test
+	public void ignoresATruncatedNewerFileWithoutPruningAnOlderValidEntry() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry newer= emptyEntry("newer", 1_788_336_008_000L); //$NON-NLS-1$
+		HistoryEntry older= emptyEntry("older", 1_788_336_007_000L); //$NON-NLS-1$
+		writeHistory(historyDirectory, newer, older);
+		Files.writeString(newer.file(historyDirectory).toPath(), "<testrun"); //$NON-NLS-1$
+
+		List<TestRunSession> sessions= TestRunSessionHistory.load(historyDirectory, 1);
+
+		assertEquals(1, sessions.size());
+		assertEquals("older", sessions.get(0).getTestRunName()); //$NON-NLS-1$
+		assertFalse(newer.file(historyDirectory).exists());
+		assertTrue(older.file(historyDirectory).isFile());
+	}
+
+	@Test
+	public void rewritesALoadedSessionWhenItsPersistentFileDisappears() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry entry= entry("loaded", 1_788_336_009_000L, 1_788_336_009_000L, //$NON-NLS-1$
+				"completed", 1, 1, 0, 0, 0, //$NON-NLS-1$
+				"""
+				<testrun name="loaded" tests="1" started="1" failures="0" errors="0" ignored="0">
+				  <testcase name="testOne" classname="example.ExampleTest"/>
+				</testrun>
+				"""); //$NON-NLS-1$
+		writeHistory(historyDirectory, entry);
+		TestRunSession session= TestRunSessionHistory.load(historyDirectory, 1).get(0);
 		session.getChildren();
-		Files.delete(historyFile.toPath());
+		Files.delete(entry.file(historyDirectory).toPath());
+
+		TestRunSessionHistory.store(List.of(session), historyDirectory, 10);
+		List<TestRunSession> restored= TestRunSessionHistory.load(historyDirectory, 10);
+
+		assertEquals(1, restored.size());
+		assertEquals("loaded", restored.get(0).getTestRunName()); //$NON-NLS-1$
+		assertEquals(1, restored.get(0).getChildren().length);
+	}
+
+	@Test
+	public void doesNotRewriteAnUnreadableSessionAsAnEmptyRun() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry entry= emptyEntry("unreadable", 1_788_336_010_000L); //$NON-NLS-1$
+		writeHistory(historyDirectory, entry);
+		TestRunSession session= TestRunSessionHistory.load(historyDirectory, 1).get(0);
+		Files.writeString(entry.file(historyDirectory).toPath(), "broken"); //$NON-NLS-1$
 
 		TestRunSessionHistory.store(List.of(session), historyDirectory, 10);
 
-		assertTrue(historyFile.isFile());
-		TestRunSession restored= TestRunSessionHistory.load(historyDirectory, 1).get(0);
-		assertEquals("persisted", restored.getTestRunName()); //$NON-NLS-1$
-		assertEquals(0, restored.getTotalCount());
-		assertEquals(Result.OK, restored.getTestResult(true));
+		assertTrue(TestRunSessionHistory.load(historyDirectory, 10).isEmpty());
 	}
 
-	private static File writeTestRun(File directory, String fileName, String testRunName) throws Exception {
-		File file= new File(directory, fileName);
-		Files.writeString(file.toPath(), "<testrun name=\"" + testRunName //$NON-NLS-1$
-				+ "\" tests=\"0\" started=\"0\" failures=\"0\" errors=\"0\" ignored=\"0\"/>"); //$NON-NLS-1$
-		return file;
+	@Test
+	public void removesAbandonedTemporaryFiles() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		File temporaryFile= new File(historyDirectory, "abandoned.tmp"); //$NON-NLS-1$
+		Files.writeString(temporaryFile.toPath(), "temporary"); //$NON-NLS-1$
+
+		TestRunSessionHistory.load(historyDirectory, 10);
+
+		assertFalse(temporaryFile.exists());
+	}
+
+	private static HistoryEntry emptyEntry(String name, long timestamp) {
+		return entry(name, timestamp, timestamp, "completed", 0, 0, 0, 0, 0, //$NON-NLS-1$
+				"<testrun name=\"" + name + "\" tests=\"0\" started=\"0\" failures=\"0\" errors=\"0\" ignored=\"0\"/>"); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	private static HistoryEntry entry(String name, long startTime, long historyTimestamp, String progress,
+			int totalCount, int startedCount, int failureCount, int errorCount, int ignoredCount, String xml) {
+		return new HistoryEntry(UUID.randomUUID().toString(), name, startTime, historyTimestamp, progress,
+				totalCount, startedCount, failureCount, errorCount, ignoredCount, 0, xml);
+	}
+
+	private static void writeHistory(File directory, HistoryEntry... entries) throws Exception {
+		Properties properties= new Properties();
+		properties.setProperty("formatVersion", "1"); //$NON-NLS-1$ //$NON-NLS-2$
+		properties.setProperty("entryCount", Integer.toString(entries.length)); //$NON-NLS-1$
+		for (int i= 0; i < entries.length; i++) {
+			HistoryEntry entry= entries[i];
+			File file= entry.file(directory);
+			Files.writeString(file.toPath(), entry.fXml);
+			String prefix= "entry." + i + '.'; //$NON-NLS-1$
+			properties.setProperty(prefix + "id", entry.fId); //$NON-NLS-1$
+			properties.setProperty(prefix + "name", entry.fName); //$NON-NLS-1$
+			properties.setProperty(prefix + "startTime", Long.toString(entry.fStartTime)); //$NON-NLS-1$
+			properties.setProperty(prefix + "historyTimestamp", Long.toString(entry.fHistoryTimestamp)); //$NON-NLS-1$
+			properties.setProperty(prefix + "progress", entry.fProgress); //$NON-NLS-1$
+			properties.setProperty(prefix + "totalCount", Integer.toString(entry.fTotalCount)); //$NON-NLS-1$
+			properties.setProperty(prefix + "startedCount", Integer.toString(entry.fStartedCount)); //$NON-NLS-1$
+			properties.setProperty(prefix + "failureCount", Integer.toString(entry.fFailureCount)); //$NON-NLS-1$
+			properties.setProperty(prefix + "errorCount", Integer.toString(entry.fErrorCount)); //$NON-NLS-1$
+			properties.setProperty(prefix + "ignoredCount", Integer.toString(entry.fIgnoredCount)); //$NON-NLS-1$
+			properties.setProperty(prefix + "assumptionFailureCount", Integer.toString(entry.fAssumptionFailureCount)); //$NON-NLS-1$
+			properties.setProperty(prefix + "fileLength", Long.toString(file.length())); //$NON-NLS-1$
+		}
+		try (BufferedOutputStream output= new BufferedOutputStream(
+				new FileOutputStream(new File(directory, INDEX_FILE_NAME)))) {
+			properties.store(output, null);
+		}
+	}
+
+	private static List<File> xmlFiles(File directory) throws Exception {
+		File[] files= directory.listFiles(file -> file.isFile() && file.getName().endsWith(XML_SUFFIX));
+		List<File> result= new ArrayList<>();
+		if (files != null)
+			result.addAll(List.of(files));
+		return result;
+	}
+
+	private static final class HistoryEntry {
+		final String fId;
+		final String fName;
+		final long fStartTime;
+		final long fHistoryTimestamp;
+		final String fProgress;
+		final int fTotalCount;
+		final int fStartedCount;
+		final int fFailureCount;
+		final int fErrorCount;
+		final int fIgnoredCount;
+		final int fAssumptionFailureCount;
+		final String fXml;
+
+		HistoryEntry(String id, String name, long startTime, long historyTimestamp, String progress,
+				int totalCount, int startedCount, int failureCount, int errorCount, int ignoredCount,
+				int assumptionFailureCount, String xml) {
+			fId= id;
+			fName= name;
+			fStartTime= startTime;
+			fHistoryTimestamp= historyTimestamp;
+			fProgress= progress;
+			fTotalCount= totalCount;
+			fStartedCount= startedCount;
+			fFailureCount= failureCount;
+			fErrorCount= errorCount;
+			fIgnoredCount= ignoredCount;
+			fAssumptionFailureCount= assumptionFailureCount;
+			fXml= xml;
+		}
+
+		File file(File directory) {
+			return new File(directory, HISTORY_FILE_PREFIX + fId + XML_SUFFIX);
+		}
 	}
 }
