@@ -31,8 +31,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import org.eclipse.debug.core.DebugPlugin;
+import org.eclipse.debug.core.ILaunchConfiguration;
+import org.eclipse.debug.core.ILaunchConfigurationType;
+import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
+import org.eclipse.debug.core.ILaunchManager;
+
 import org.eclipse.jdt.junit.model.ITestElement.Result;
 
+import org.eclipse.jdt.internal.junit.launcher.JUnitLaunchConfigurationConstants;
+import org.eclipse.jdt.internal.junit.launcher.TestKindRegistry;
 import org.eclipse.jdt.internal.junit.model.TestRunSession;
 import org.eclipse.jdt.internal.junit.model.TestRunSessionHistory;
 
@@ -62,6 +70,7 @@ public class TestRunSessionHistoryTests {
 		assertEquals(3, session.getStartedCount());
 		assertEquals(1, session.getFailureCount());
 		assertEquals(Result.FAILURE, session.getTestResult(true));
+		assertFalse(session.canRerun());
 	}
 
 	@Test
@@ -136,6 +145,46 @@ public class TestRunSessionHistoryTests {
 		} finally {
 			Locale.setDefault(originalLocale);
 			TimeZone.setDefault(originalTimeZone);
+		}
+	}
+
+	@Test
+	public void restoresRelaunchConfigurationAndMode() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		ILaunchConfiguration configuration= createLaunchConfiguration();
+		try {
+			TestRunSession session= relaunchableSession("relaunchable", configuration, ILaunchManager.DEBUG_MODE); //$NON-NLS-1$
+
+			TestRunSessionHistory.store(List.of(session), historyDirectory, 10);
+			TestRunSession restored= TestRunSessionHistory.load(historyDirectory, 10).get(0);
+
+			assertTrue(restored.canRerun());
+			assertEquals(configuration.getMemento(), restored.getRerunLaunchConfiguration().getMemento());
+			assertEquals(ILaunchManager.DEBUG_MODE, restored.getRerunLaunchMode());
+			assertEquals(TestKindRegistry.JUNIT5_TEST_KIND_ID, restored.getTestRunnerKind().getId());
+		} finally {
+			if (configuration.exists())
+				configuration.delete();
+		}
+	}
+
+	@Test
+	public void missingLaunchConfigurationDisablesRelaunchWithoutLosingHistory() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		ILaunchConfiguration configuration= createLaunchConfiguration();
+		try {
+			TestRunSession session= relaunchableSession("deleted configuration", configuration, ILaunchManager.RUN_MODE); //$NON-NLS-1$
+			TestRunSessionHistory.store(List.of(session), historyDirectory, 10);
+			configuration.delete();
+
+			TestRunSession restored= TestRunSessionHistory.load(historyDirectory, 10).get(0);
+
+			assertFalse(restored.canRerun());
+			assertEquals("deleted configuration", restored.getTestRunName()); //$NON-NLS-1$
+			assertEquals(Result.UNDEFINED, restored.getTestResult(true));
+		} finally {
+			if (configuration.exists())
+				configuration.delete();
 		}
 	}
 
@@ -421,6 +470,32 @@ public class TestRunSessionHistoryTests {
 		TestRunSessionHistory.load(historyDirectory, 10);
 
 		assertFalse(temporaryFile.exists());
+	}
+
+	private static ILaunchConfiguration createLaunchConfiguration() throws Exception {
+		ILaunchManager launchManager= DebugPlugin.getDefault().getLaunchManager();
+		ILaunchConfigurationType type= launchManager.getLaunchConfigurationType(
+				JUnitLaunchConfigurationConstants.ID_JUNIT_APPLICATION);
+		ILaunchConfigurationWorkingCopy workingCopy= type.newInstance(null,
+				launchManager.generateLaunchConfigurationName("JUnit history relaunch")); //$NON-NLS-1$
+		workingCopy.setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_RUNNER_KIND,
+				TestKindRegistry.JUNIT5_TEST_KIND_ID);
+		return workingCopy.doSave();
+	}
+
+	private static TestRunSession relaunchableSession(String name, ILaunchConfiguration configuration,
+			String launchMode) {
+		return new TestRunSession(name, null) {
+			@Override
+			public ILaunchConfiguration getRerunLaunchConfiguration() {
+				return configuration;
+			}
+
+			@Override
+			public String getRerunLaunchMode() {
+				return launchMode;
+			}
+		};
 	}
 
 	private static HistoryEntry emptyEntry(String name, long timestamp) {

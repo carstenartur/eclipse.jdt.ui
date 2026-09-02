@@ -37,9 +37,15 @@ import org.eclipse.core.runtime.ILog;
 
 import org.eclipse.core.resources.ResourcesPlugin;
 
+import org.eclipse.debug.core.DebugPlugin;
+import org.eclipse.debug.core.ILaunchConfiguration;
+
 import org.eclipse.jdt.core.IJavaModel;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
+
+import org.eclipse.jdt.internal.junit.launcher.ITestKind;
+import org.eclipse.jdt.internal.junit.launcher.JUnitLaunchConfigurationConstants;
 
 
 /**
@@ -62,6 +68,8 @@ public final class TestRunSessionHistory {
 	private static final String KEY_ID= "id"; //$NON-NLS-1$
 	private static final String KEY_NAME= "name"; //$NON-NLS-1$
 	private static final String KEY_PROJECT= "project"; //$NON-NLS-1$
+	private static final String KEY_LAUNCH_CONFIGURATION_MEMENTO= "launchConfigurationMemento"; //$NON-NLS-1$
+	private static final String KEY_LAUNCH_MODE= "launchMode"; //$NON-NLS-1$
 	private static final String KEY_START_TIME= "startTime"; //$NON-NLS-1$
 	private static final String KEY_HISTORY_TIMESTAMP= "historyTimestamp"; //$NON-NLS-1$
 	private static final String KEY_PROGRESS= "progress"; //$NON-NLS-1$
@@ -307,6 +315,8 @@ public final class TestRunSessionHistory {
 		properties.setProperty(entryKey(index, KEY_ID), session.fId);
 		properties.setProperty(entryKey(index, KEY_NAME), session.fTestRunName);
 		setOptional(properties, entryKey(index, KEY_PROJECT), session.fProjectName);
+		setOptional(properties, entryKey(index, KEY_LAUNCH_CONFIGURATION_MEMENTO), session.fLaunchConfigurationMemento);
+		setOptional(properties, entryKey(index, KEY_LAUNCH_MODE), session.fLaunchMode);
 		properties.setProperty(entryKey(index, KEY_START_TIME), Long.toString(session.fStartTime));
 		properties.setProperty(entryKey(index, KEY_HISTORY_TIMESTAMP), Long.toString(session.fHistoryTimestamp));
 		properties.setProperty(entryKey(index, KEY_PROGRESS), session.fStopped ? PROGRESS_STOPPED : PROGRESS_COMPLETED);
@@ -326,6 +336,13 @@ public final class TestRunSessionHistory {
 		String id= UUID.fromString(required(properties, entryKey(index, KEY_ID))).toString();
 		String testRunName= required(properties, entryKey(index, KEY_NAME));
 		String projectName= properties.getProperty(entryKey(index, KEY_PROJECT));
+		String launchConfigurationMemento= properties.getProperty(entryKey(index, KEY_LAUNCH_CONFIGURATION_MEMENTO));
+		String launchMode= properties.getProperty(entryKey(index, KEY_LAUNCH_MODE));
+		if (launchConfigurationMemento == null || launchConfigurationMemento.isEmpty()
+				|| launchMode == null || launchMode.isEmpty()) {
+			launchConfigurationMemento= null;
+			launchMode= null;
+		}
 		long startTime= readLong(properties, entryKey(index, KEY_START_TIME));
 		long historyTimestamp= readLong(properties, entryKey(index, KEY_HISTORY_TIMESTAMP), 0, Long.MAX_VALUE);
 		String progress= required(properties, entryKey(index, KEY_PROGRESS));
@@ -351,9 +368,10 @@ public final class TestRunSessionHistory {
 		String excludeTags= properties.getProperty(entryKey(index, KEY_EXCLUDE_TAGS));
 		long fileLength= readLong(properties, entryKey(index, KEY_FILE_LENGTH), 1, Long.MAX_VALUE);
 		File historyFile= new File(historyDirectory, historyFileName(id));
-		return new StoredSession(id, historyFile, fileLength, testRunName, projectName, startTime,
-				historyTimestamp, stopped, result, totalCount, startedCount, failureCount, errorCount,
-				ignoredCount, assumptionFailureCount, includeTags, excludeTags);
+		return new StoredSession(id, historyFile, fileLength, testRunName, projectName,
+				launchConfigurationMemento, launchMode, startTime, historyTimestamp, stopped, result,
+				totalCount, startedCount, failureCount, errorCount, ignoredCount, assumptionFailureCount,
+				includeTags, excludeTags);
 	}
 
 	private static String resultName(Result result) {
@@ -430,6 +448,17 @@ public final class TestRunSessionHistory {
 		return historyDirectory.toPath().toAbsolutePath().normalize();
 	}
 
+	private static ILaunchConfiguration resolveLaunchConfiguration(String memento) {
+		if (memento == null)
+			return null;
+		try {
+			return DebugPlugin.getDefault().getLaunchManager().getLaunchConfiguration(memento);
+		} catch (CoreException e) {
+			LOG.log(e.getStatus());
+			return null;
+		}
+	}
+
 	private static IJavaProject resolveProject(String projectName) {
 		if (projectName == null)
 			return null;
@@ -490,6 +519,8 @@ public final class TestRunSessionHistory {
 		final long fFileLength;
 		final String fTestRunName;
 		final String fProjectName;
+		final String fLaunchConfigurationMemento;
+		final String fLaunchMode;
 		final long fStartTime;
 		final long fHistoryTimestamp;
 		final boolean fStopped;
@@ -504,14 +535,16 @@ public final class TestRunSessionHistory {
 		final String fExcludeTags;
 
 		StoredSession(String id, File historyFile, long fileLength, String testRunName, String projectName,
-				long startTime, long historyTimestamp, boolean stopped, Result result, int totalCount, int startedCount,
-				int failureCount, int errorCount, int ignoredCount, int assumptionFailureCount,
-				String includeTags, String excludeTags) {
+				String launchConfigurationMemento, String launchMode, long startTime, long historyTimestamp,
+				boolean stopped, Result result, int totalCount, int startedCount, int failureCount, int errorCount,
+				int ignoredCount, int assumptionFailureCount, String includeTags, String excludeTags) {
 			fId= id;
 			fHistoryFile= historyFile;
 			fFileLength= fileLength;
 			fTestRunName= testRunName;
 			fProjectName= projectName;
+			fLaunchConfigurationMemento= launchConfigurationMemento;
+			fLaunchMode= launchMode;
 			fStartTime= startTime;
 			fHistoryTimestamp= historyTimestamp;
 			fStopped= stopped;
@@ -528,16 +561,34 @@ public final class TestRunSessionHistory {
 
 		static StoredSession from(TestRunSession session, String id, File historyFile, long historyTimestamp) {
 			IJavaProject project= session.getLaunchedProject();
+			String launchConfigurationMemento= null;
+			String launchMode= null;
+			ILaunchConfiguration launchConfiguration= session.getRerunLaunchConfiguration();
+			if (launchConfiguration != null && launchConfiguration.exists()) {
+				try {
+					launchConfigurationMemento= launchConfiguration.getMemento();
+					launchMode= session.getRerunLaunchMode();
+				} catch (CoreException e) {
+					LOG.log(e.getStatus());
+				}
+				if (launchConfigurationMemento == null || launchConfigurationMemento.isEmpty()
+						|| launchMode == null || launchMode.isEmpty()) {
+					launchConfigurationMemento= null;
+					launchMode= null;
+				}
+			}
 			return new StoredSession(id, historyFile, historyFile.length(), session.getTestRunName(),
-					project == null ? null : project.getElementName(), session.getStartTime(), historyTimestamp,
-					session.isStopped(), session.getTestResult(true), session.getTotalCount(), session.getStartedCount(),
-					session.getFailureCount(), session.getErrorCount(), session.getIgnoredCount(),
-					session.getAssumptionFailureCount(), session.getIncludeTags(), session.getExcludeTags());
+					project == null ? null : project.getElementName(), launchConfigurationMemento, launchMode,
+					session.getStartTime(), historyTimestamp, session.isStopped(), session.getTestResult(true),
+					session.getTotalCount(), session.getStartedCount(), session.getFailureCount(), session.getErrorCount(),
+					session.getIgnoredCount(), session.getAssumptionFailureCount(), session.getIncludeTags(),
+					session.getExcludeTags());
 		}
 	}
 
 	private static final class RestoredTestRunSession extends TestRunSession {
 		private final StoredSession fStoredSession;
+		private final ILaunchConfiguration fRerunLaunchConfiguration;
 		private final Result fHeaderResult;
 		private boolean fLoadingContents;
 		private boolean fContentsLoaded;
@@ -546,6 +597,7 @@ public final class TestRunSessionHistory {
 		RestoredTestRunSession(StoredSession storedSession) {
 			super(storedSession.fTestRunName, resolveProject(storedSession.fProjectName));
 			fStoredSession= storedSession;
+			fRerunLaunchConfiguration= resolveLaunchConfiguration(storedSession.fLaunchConfigurationMemento);
 			fHeaderResult= storedSession.fResult;
 			fStartTime= storedSession.fStartTime;
 			fTotalCount= storedSession.fTotalCount;
@@ -557,6 +609,24 @@ public final class TestRunSessionHistory {
 			fIsStopped= storedSession.fStopped;
 			setIncludeTags(storedSession.fIncludeTags);
 			setExcludeTags(storedSession.fExcludeTags);
+		}
+
+		@Override
+		public ILaunchConfiguration getRerunLaunchConfiguration() {
+			return fRerunLaunchConfiguration != null && fRerunLaunchConfiguration.exists()
+					? fRerunLaunchConfiguration : null;
+		}
+
+		@Override
+		public String getRerunLaunchMode() {
+			return getRerunLaunchConfiguration() == null ? null : fStoredSession.fLaunchMode;
+		}
+
+		@Override
+		public ITestKind getTestRunnerKind() {
+			ILaunchConfiguration configuration= getRerunLaunchConfiguration();
+			return configuration == null ? super.getTestRunnerKind()
+					: JUnitLaunchConfigurationConstants.getTestRunnerKind(configuration);
 		}
 
 		@Override

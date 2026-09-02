@@ -317,6 +317,30 @@ public class TestRunSession implements ITestRunSession {
 		return fLaunch;
 	}
 
+	/**
+	 * @return the launch configuration that can be used to rerun this session,
+	 *         or <code>null</code> if no configuration is available
+	 */
+	public ILaunchConfiguration getRerunLaunchConfiguration() {
+		return fLaunch == null ? null : fLaunch.getLaunchConfiguration();
+	}
+
+	/**
+	 * @return the original launch mode, or <code>null</code> if it is not available
+	 */
+	public String getRerunLaunchMode() {
+		return fLaunch == null ? null : fLaunch.getLaunchMode();
+	}
+
+	/**
+	 * @return <code>true</code> if this session has an existing launch
+	 *         configuration and a launch mode for rerunning it
+	 */
+	public boolean canRerun() {
+		ILaunchConfiguration configuration= getRerunLaunchConfiguration();
+		return configuration != null && configuration.exists() && getRerunLaunchMode() != null;
+	}
+
 	@Override
 	public String getTestRunName() {
 		return fTestRunName;
