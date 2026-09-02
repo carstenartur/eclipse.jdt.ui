@@ -119,23 +119,22 @@ public class EnumSourceSafetyTest {
 		ICompilationUnit cu= createCompilationUnit("test1", "MyTest.java", """
 				package test1;
 
-				import java.time.DayOfWeek;
-
 				import org.junit.jupiter.params.ParameterizedTest;
 				import org.junit.jupiter.params.provider.EnumSource;
+				import org.junit.jupiter.params.provider.EnumSource.Mode;
 
 				public class MyTest {
 				    @ParameterizedTest
-				    @EnumSource(DayOfWeek.class)
-				    public void testWithEnum(DayOfWeek day) {
+				    @EnumSource(Mode.class)
+				    public void testWithEnum(Mode mode) {
 				    }
 				}
 				""");
-		IMethod method= getMethod(cu, "testWithEnum", "QDayOfWeek;"); //$NON-NLS-1$ //$NON-NLS-2$
+		IMethod method= getMethod(cu, "testWithEnum", "QMode;"); //$NON-NLS-1$ //$NON-NLS-2$
 
-		assertEquals("MONDAY", EnumSourceValidator.getEnumConstantForInvocation(method, 1)); //$NON-NLS-1$
-		assertEquals("SUNDAY", EnumSourceValidator.getEnumConstantForInvocation(method, 7)); //$NON-NLS-1$
-		assertNull(EnumSourceValidator.getEnumConstantForInvocation(method, 8));
+		assertEquals("INCLUDE", EnumSourceValidator.getEnumConstantForInvocation(method, 1)); //$NON-NLS-1$
+		assertEquals("MATCH_NONE", EnumSourceValidator.getEnumConstantForInvocation(method, 5)); //$NON-NLS-1$
+		assertNull(EnumSourceValidator.getEnumConstantForInvocation(method, 6));
 		assertCompiles(cu);
 	}
 
