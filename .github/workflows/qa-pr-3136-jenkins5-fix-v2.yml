@@ -31,117 +31,24 @@ jobs:
               source = path.read_text(encoding="utf-8")
               count = source.count(old)
               if count != 1:
-                  raise SystemExit(f"Expected exactly one match in {path}, found {count}")
+                  raise SystemExit(f"Expected exactly one match in {path}, found {count}: {old!r}")
               path.write_text(source.replace(old, new), encoding="utf-8")
 
           finder = Path("org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestMethodFinder.java")
-          replace_once(
-              finder,
-              """\t\t\tString erasedType= Signature.getTypeErasure(parameterTypes[i]);
-\t\t\tString binaryType= JavaModelUtil.getResolvedTypeName(erasedType, declaringType, '$');
-\t\t\tif (expectedType.equals(binaryType)) {
-\t\t\t\tcontinue;
-\t\t\t}
-
-\t\t\tString sourceType= JavaModelUtil.getResolvedTypeName(erasedType, declaringType, '.');
-\t\t\tif (!expectedType.equals(sourceType)) {
-\t\t\t\treturn false;
-\t\t\t}
-""",
-              """\t\t\tString erasedType= Signature.getTypeErasure(parameterTypes[i]);
-\t\t\tString binaryType= getResolvedParameterTypeName(erasedType, declaringType, '$');
-\t\t\tif (expectedType.equals(binaryType)) {
-\t\t\t\tcontinue;
-\t\t\t}
-
-\t\t\tString sourceType= getResolvedParameterTypeName(erasedType, declaringType, '.');
-\t\t\tif (!expectedType.equals(sourceType)) {
-\t\t\t\treturn false;
-\t\t\t}
-""")
-          replace_once(
-              finder,
-              """\tprivate static String normalizeParameterType(String parameterType) {
-""",
-              """\tprivate static String getResolvedParameterTypeName(String typeSignature, IType declaringType,
-\t\t\tchar enclosingTypeSeparator) throws JavaModelException {
-\t\tint dimensions= Signature.getArrayCount(typeSignature);
-\t\tString elementType= Signature.getElementType(typeSignature);
-\t\tString resolvedType;
-\t\tif (Signature.getTypeSignatureKind(elementType) == Signature.BASE_TYPE_SIGNATURE) {
-\t\t\tresolvedType= Signature.toString(elementType);
-\t\t} else {
-\t\t\tresolvedType= JavaModelUtil.getResolvedTypeName(
-\t\t\t\t\telementType, declaringType, enclosingTypeSeparator);
-\t\t}
-\t\tif (resolvedType == null) {
-\t\t\treturn null;
-\t\t}
-
-\t\tStringBuilder result= new StringBuilder(resolvedType);
-\t\tfor (int i= 0; i < dimensions; i++) {
-\t\t\tresult.append("[]"); //$NON-NLS-1$
-\t\t}
-\t\treturn result.toString();
-\t}
-
-\tprivate static String normalizeParameterType(String parameterType) {
-""")
+          replace_once(finder, "String binaryType= JavaModelUtil.getResolvedTypeName(erasedType, declaringType, '$');", "String binaryType= getResolvedParameterTypeName(erasedType, declaringType, '$');")
+          replace_once(finder, "String sourceType= JavaModelUtil.getResolvedTypeName(erasedType, declaringType, '.');", "String sourceType= getResolvedParameterTypeName(erasedType, declaringType, '.');")
+          marker = "\tprivate static String normalizeParameterType(String parameterType) {\n"
+          helper = "\tprivate static String getResolvedParameterTypeName(String typeSignature, IType declaringType,\n\t\t\tchar enclosingTypeSeparator) throws JavaModelException {\n\t\tint dimensions= Signature.getArrayCount(typeSignature);\n\t\tString elementType= Signature.getElementType(typeSignature);\n\t\tString resolvedType;\n\t\tif (Signature.getTypeSignatureKind(elementType) == Signature.BASE_TYPE_SIGNATURE) {\n\t\t\tresolvedType= Signature.toString(elementType);\n\t\t} else {\n\t\t\tresolvedType= JavaModelUtil.getResolvedTypeName(\n\t\t\t\t\telementType, declaringType, enclosingTypeSeparator);\n\t\t}\n\t\tif (resolvedType == null) {\n\t\t\treturn null;\n\t\t}\n\n\t\tStringBuilder result= new StringBuilder(resolvedType);\n\t\tfor (int i= 0; i < dimensions; i++) {\n\t\t\tresult.append(\"[]\"); //$NON-NLS-1$\n\t\t}\n\t\treturn result.toString();\n\t}\n\n"
+          replace_once(finder, marker, helper + marker)
 
           safety = Path("org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/EnumSourceSafetyTest.java")
-          replace_once(
-              safety,
-              """\t@Test
-\tpublic void testEnumDeclarationOrderFromBinaryType() throws Exception {
-\t\tICompilationUnit cu= createCompilationUnit("test1", "MyTest.java", """
-\t\t\t\tpackage test1;
-
-\t\t\t\timport java.time.DayOfWeek;
-
-\t\t\t\timport org.junit.jupiter.params.ParameterizedTest;
-\t\t\t\timport org.junit.jupiter.params.provider.EnumSource;
-
-\t\t\t\tpublic class MyTest {
-\t\t\t\t    @ParameterizedTest
-\t\t\t\t    @EnumSource(DayOfWeek.class)
-\t\t\t\t    public void testWithEnum(DayOfWeek day) {
-\t\t\t\t    }
-\t\t\t\t}
-\t\t\t\t""");
-\t\tIMethod method= getMethod(cu, "testWithEnum", "QDayOfWeek;"); //$NON-NLS-1$ //$NON-NLS-2$
-
-\t\tassertEquals("MONDAY", EnumSourceValidator.getEnumConstantForInvocation(method, 1)); //$NON-NLS-1$
-\t\tassertEquals("SUNDAY", EnumSourceValidator.getEnumConstantForInvocation(method, 7)); //$NON-NLS-1$
-\t\tassertNull(EnumSourceValidator.getEnumConstantForInvocation(method, 8));
-\t\tassertCompiles(cu);
-\t}
-""",
-              """\t@Test
-\tpublic void testEnumDeclarationOrderFromBinaryType() throws Exception {
-\t\tICompilationUnit cu= createCompilationUnit("test1", "MyTest.java", """
-\t\t\t\tpackage test1;
-
-\t\t\t\timport org.junit.jupiter.params.ParameterizedTest;
-\t\t\t\timport org.junit.jupiter.params.provider.EnumSource;
-
-\t\t\t\tpublic class MyTest {
-\t\t\t\t    @ParameterizedTest
-\t\t\t\t    @EnumSource(EnumSource.Mode.class)
-\t\t\t\t    public void testWithEnum(EnumSource.Mode mode) {
-\t\t\t\t    }
-\t\t\t\t}
-\t\t\t\t""");
-\t\tIMethod method= Arrays.stream(cu.getType("MyTest").getMethods()) //$NON-NLS-1$
-\t\t\t\t.filter(candidate -> "testWithEnum".equals(candidate.getElementName())) //$NON-NLS-1$
-\t\t\t\t.findFirst()
-\t\t\t\t.orElseThrow(AssertionError::new);
-
-\t\tassertEquals("INCLUDE", EnumSourceValidator.getEnumConstantForInvocation(method, 1)); //$NON-NLS-1$
-\t\tassertEquals("EXCLUDE", EnumSourceValidator.getEnumConstantForInvocation(method, 2)); //$NON-NLS-1$
-\t\tassertNull(EnumSourceValidator.getEnumConstantForInvocation(method, 6));
-\t\tassertCompiles(cu);
-\t}
-""")
+          replace_once(safety, "\t\t\t\timport java.time.DayOfWeek;\n\n", "")
+          replace_once(safety, "@EnumSource(DayOfWeek.class)", "@EnumSource(EnumSource.Mode.class)")
+          replace_once(safety, "public void testWithEnum(DayOfWeek day)", "public void testWithEnum(EnumSource.Mode mode)")
+          replace_once(safety, "\t\tIMethod method= getMethod(cu, \"testWithEnum\", \"QDayOfWeek;\"); //$NON-NLS-1$ //$NON-NLS-2$\n", "\t\tIMethod method= Arrays.stream(cu.getType(\"MyTest\").getMethods()) //$NON-NLS-1$\n\t\t\t\t.filter(candidate -> \"testWithEnum\".equals(candidate.getElementName())) //$NON-NLS-1$\n\t\t\t\t.findFirst()\n\t\t\t\t.orElseThrow(AssertionError::new);\n")
+          replace_once(safety, "assertEquals(\"MONDAY\", EnumSourceValidator.getEnumConstantForInvocation(method, 1));", "assertEquals(\"INCLUDE\", EnumSourceValidator.getEnumConstantForInvocation(method, 1));")
+          replace_once(safety, "assertEquals(\"SUNDAY\", EnumSourceValidator.getEnumConstantForInvocation(method, 7));", "assertEquals(\"EXCLUDE\", EnumSourceValidator.getEnumConstantForInvocation(method, 2));")
+          replace_once(safety, "assertNull(EnumSourceValidator.getEnumConstantForInvocation(method, 8));", "assertNull(EnumSourceValidator.getEnumConstantForInvocation(method, 6));")
           PY
           git diff --check
 
