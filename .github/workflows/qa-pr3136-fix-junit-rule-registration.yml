@@ -1,0 +1,90 @@
+name: Fix PR3136 JUnit rule registration
+
+on:
+  push:
+    branches:
+      - qa-pr3136-junit-rule-fix-20260902
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: pr-2744-remaining-enumsource
+          fetch-depth: 0
+
+      - name: Convert the new workspace tests to the supported JUnit 4 rule lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          files=(
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/EnumSourceFilterTest.java
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/EnumSourceSafetyTest.java
+          )
+
+          for file in "${files[@]}"; do
+            sed -i \
+              -e 's/import static org\.junit\.jupiter\.api\.Assertions\./import static org.junit.Assert./g' \
+              -e 's/import org\.junit\.jupiter\.api\.AfterEach;/import org.junit.After;/' \
+              -e 's/import org\.junit\.jupiter\.api\.BeforeEach;/import org.junit.Before;/' \
+              -e 's/import org\.junit\.jupiter\.api\.Test;/import org.junit.Test;/' \
+              -e 's/import org\.junit\.jupiter\.api\.extension\.RegisterExtension;/import org.junit.Rule;/' \
+              -e 's/@RegisterExtension/@Rule/g' \
+              -e 's/@BeforeEach/@Before/g' \
+              -e 's/@AfterEach/@After/g' \
+              "$file"
+
+            perl -0pi -e 's/import org\.junit\.Test;\nimport org\.junit\.Rule;/import org.junit.Rule;\nimport org.junit.Test;/g' "$file"
+
+            if grep -n 'org\.junit\.jupiter\.api' "$file"; then
+              echo "Unexpected Jupiter API import remains in $file" >&2
+              exit 1
+            fi
+            test "$(grep -c '^\s*@Rule$' "$file")" -eq 1
+            test "$(grep -c '^\s*@Before$' "$file")" -eq 1
+            test "$(grep -c '^\s*@After$' "$file")" -eq 1
+          done
+
+          git diff --check
+          git diff -- "${files[@]}"
+
+      - name: Build affected bundles
+        run: >-
+          mvn -B -ntp -Pbuild-individual-bundles
+          -DskipTests=true
+          -Dcompare-version-with-baselines.skip=true
+          -pl org.eclipse.jdt.ui.tests
+          -am install
+
+      - name: Run the affected tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum mvn -B -ntp -Pbuild-individual-bundles \
+            -Dcompare-version-with-baselines.skip=true \
+            -pl org.eclipse.jdt.ui.tests \
+            -Dtest=org.eclipse.jdt.junit.tests.EnumSourceFilterTest,org.eclipse.jdt.junit.tests.EnumSourceSafetyTest \
+            verify
+
+          reports=org.eclipse.jdt.ui.tests/target/surefire-reports
+          test -d "$reports"
+          grep -R --include='*.xml' -q 'EnumSourceFilterTest' "$reports"
+          grep -R --include='*.xml' -q 'EnumSourceSafetyTest' "$reports"
+
+      - name: Commit the verified fix to the pull-request branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/EnumSourceFilterTest.java \
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/EnumSourceSafetyTest.java
+          git commit -m "Use JUnit 4 rules in EnumSource tests"
+          git push origin HEAD:pr-2744-remaining-enumsource
