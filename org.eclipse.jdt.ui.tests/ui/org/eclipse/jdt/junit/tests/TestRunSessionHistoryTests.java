@@ -348,6 +348,33 @@ public class TestRunSessionHistoryTests {
 	}
 
 	@Test
+	public void keepsHistoryWithAnInvalidEntryUntouched() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		HistoryEntry validEntry= emptyEntry("valid", 1_788_336_012_000L); //$NON-NLS-1$
+		HistoryEntry invalidEntry= emptyEntry("invalid", 1_788_336_011_000L); //$NON-NLS-1$
+		writeHistory(historyDirectory, validEntry, invalidEntry);
+		File indexFile= new File(historyDirectory, INDEX_FILE_NAME);
+		String index= Files.readString(indexFile.toPath());
+		String invalidIdProperty= "entry.1.id=" + invalidEntry.fId; //$NON-NLS-1$
+		assertTrue(index.contains(invalidIdProperty));
+		Files.writeString(indexFile.toPath(),
+				index.replace(invalidIdProperty, "entry.1.id=invalid")); //$NON-NLS-1$
+		byte[] indexBefore= Files.readAllBytes(indexFile.toPath());
+		byte[] validXmlBefore= Files.readAllBytes(validEntry.file(historyDirectory).toPath());
+		byte[] invalidXmlBefore= Files.readAllBytes(invalidEntry.file(historyDirectory).toPath());
+
+		List<TestRunSession> sessions= TestRunSessionHistory.load(historyDirectory, 10);
+
+		assertEquals(1, sessions.size());
+		assertEquals("valid", sessions.get(0).getTestRunName()); //$NON-NLS-1$
+		TestRunSessionHistory.store(sessions, historyDirectory, 10);
+
+		assertArrayEquals(indexBefore, Files.readAllBytes(indexFile.toPath()));
+		assertArrayEquals(validXmlBefore, Files.readAllBytes(validEntry.file(historyDirectory).toPath()));
+		assertArrayEquals(invalidXmlBefore, Files.readAllBytes(invalidEntry.file(historyDirectory).toPath()));
+	}
+
+	@Test
 	public void keepsANonRegularHistoryIndexUntouched() throws Exception {
 		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
 		HistoryEntry entry= emptyEntry("unreadable-index", 1_788_336_012_000L); //$NON-NLS-1$
@@ -409,7 +436,7 @@ public class TestRunSessionHistoryTests {
 			properties.setProperty(prefix + "startTime", Long.toString(entry.fStartTime)); //$NON-NLS-1$
 			properties.setProperty(prefix + "historyTimestamp", Long.toString(entry.fHistoryTimestamp)); //$NON-NLS-1$
 			properties.setProperty(prefix + "progress", entry.fProgress); //$NON-NLS-1$
-			properties.setProperty(prefix + "result", entry.fResult.name()); //$NON-NLS-1$
+			properties.setProperty(prefix + "result", resultName(entry.fResult)); //$NON-NLS-1$
 			properties.setProperty(prefix + "totalCount", Integer.toString(entry.fTotalCount)); //$NON-NLS-1$
 			properties.setProperty(prefix + "startedCount", Integer.toString(entry.fStartedCount)); //$NON-NLS-1$
 			properties.setProperty(prefix + "failureCount", Integer.toString(entry.fFailureCount)); //$NON-NLS-1$
@@ -422,6 +449,20 @@ public class TestRunSessionHistoryTests {
 				new FileOutputStream(new File(directory, INDEX_FILE_NAME)))) {
 			properties.store(output, null);
 		}
+	}
+
+	private static String resultName(Result result) {
+		if (result == Result.UNDEFINED)
+			return "UNDEFINED"; //$NON-NLS-1$
+		if (result == Result.OK)
+			return "OK"; //$NON-NLS-1$
+		if (result == Result.ERROR)
+			return "ERROR"; //$NON-NLS-1$
+		if (result == Result.FAILURE)
+			return "FAILURE"; //$NON-NLS-1$
+		if (result == Result.IGNORED)
+			return "IGNORED"; //$NON-NLS-1$
+		throw new AssertionError("Unsupported result: " + result); //$NON-NLS-1$
 	}
 
 	private static List<File> xmlFiles(File directory) throws Exception {

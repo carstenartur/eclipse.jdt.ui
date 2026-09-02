@@ -156,6 +156,7 @@ public final class TestRunSessionHistory {
 				validEntries.add(storedSession);
 			} catch (IllegalArgumentException e) {
 				indexFullyUnderstood= false;
+				BLOCKED_HISTORY_DIRECTORIES.add(historyPath);
 				LOG.error("Invalid JUnit history entry " + i, e); //$NON-NLS-1$
 			}
 		}
@@ -307,7 +308,7 @@ public final class TestRunSessionHistory {
 		properties.setProperty(entryKey(index, KEY_START_TIME), Long.toString(session.fStartTime));
 		properties.setProperty(entryKey(index, KEY_HISTORY_TIMESTAMP), Long.toString(session.fHistoryTimestamp));
 		properties.setProperty(entryKey(index, KEY_PROGRESS), session.fStopped ? PROGRESS_STOPPED : PROGRESS_COMPLETED);
-		properties.setProperty(entryKey(index, KEY_RESULT), session.fResult.name());
+		properties.setProperty(entryKey(index, KEY_RESULT), resultName(session.fResult));
 		properties.setProperty(entryKey(index, KEY_TOTAL_COUNT), Integer.toString(session.fTotalCount));
 		properties.setProperty(entryKey(index, KEY_STARTED_COUNT), Integer.toString(session.fStartedCount));
 		properties.setProperty(entryKey(index, KEY_FAILURE_COUNT), Integer.toString(session.fFailureCount));
@@ -335,13 +336,8 @@ public final class TestRunSessionHistory {
 			throw new IllegalArgumentException("Unsupported JUnit history progress state: " + progress); //$NON-NLS-1$
 		}
 
-		Result result;
 		String resultName= required(properties, entryKey(index, KEY_RESULT));
-		try {
-			result= Result.valueOf(resultName);
-		} catch (IllegalArgumentException e) {
-			throw new IllegalArgumentException("Unsupported JUnit history result: " + resultName, e); //$NON-NLS-1$
-		}
+		Result result= parseResult(resultName);
 
 		int totalCount= readInt(properties, entryKey(index, KEY_TOTAL_COUNT), 0, Integer.MAX_VALUE);
 		int startedCount= readInt(properties, entryKey(index, KEY_STARTED_COUNT), 0, Integer.MAX_VALUE);
@@ -356,6 +352,31 @@ public final class TestRunSessionHistory {
 		return new StoredSession(id, historyFile, fileLength, testRunName, projectName, startTime,
 				historyTimestamp, stopped, result, totalCount, startedCount, failureCount, errorCount,
 				ignoredCount, assumptionFailureCount, includeTags, excludeTags);
+	}
+
+	private static String resultName(Result result) {
+		if (result == Result.UNDEFINED)
+			return "UNDEFINED"; //$NON-NLS-1$
+		if (result == Result.OK)
+			return "OK"; //$NON-NLS-1$
+		if (result == Result.ERROR)
+			return "ERROR"; //$NON-NLS-1$
+		if (result == Result.FAILURE)
+			return "FAILURE"; //$NON-NLS-1$
+		if (result == Result.IGNORED)
+			return "IGNORED"; //$NON-NLS-1$
+		throw new IllegalArgumentException("Unsupported JUnit history result: " + result); //$NON-NLS-1$
+	}
+
+	private static Result parseResult(String resultName) {
+		return switch (resultName) {
+			case "UNDEFINED" -> Result.UNDEFINED; //$NON-NLS-1$
+			case "OK" -> Result.OK; //$NON-NLS-1$
+			case "ERROR" -> Result.ERROR; //$NON-NLS-1$
+			case "FAILURE" -> Result.FAILURE; //$NON-NLS-1$
+			case "IGNORED" -> Result.IGNORED; //$NON-NLS-1$
+			default -> throw new IllegalArgumentException("Unsupported JUnit history result: " + resultName); //$NON-NLS-1$
+		};
 	}
 
 	private static String historyFileName(String id) {
