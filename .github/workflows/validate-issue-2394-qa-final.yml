@@ -1,0 +1,45 @@
+name: Validate issue 2394 final QA
+
+on:
+  push:
+    branches:
+      - validation/issue-2394-qa-final
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Java toolchains
+        uses: actions/setup-java@v4
+        with:
+          java-version: |
+            8
+            11
+            17
+            21
+          mvn-toolchain-id: |
+            JavaSE-1.8
+            JavaSE-11
+            JavaSE-17
+            JavaSE-21
+          distribution: temurin
+          cache: maven
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@12eb41b233df95d49b0c11fc1b5bc8312e5d4ce0
+        with:
+          maven-version: 3.9.16
+      - name: Clean verify with tests and API checks
+        run: >-
+          xvfb-run
+          mvn -U -e -DskipTests=false
+          clean verify --batch-mode --fail-at-end
+          -Pbree-libs -Papi-check -Pjavadoc -Pbuild-individual-bundles
+          -Dcompare-version-with-baselines.skip=false
