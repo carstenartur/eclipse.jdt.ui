@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2005, 2021 IBM Corporation and others.
+ * Copyright (c) 2005, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -38,6 +38,7 @@ TestRunFilteredParameterizedRunnerTest4.class,
 
 TestRunSessionSerializationTests3.class,
 TestRunSessionSerializationTests4.class,
+TestRunSessionHistoryTests.class,
 
 JUnit3TestFinderTest.class,
 JUnitTestFinderTest.class,
