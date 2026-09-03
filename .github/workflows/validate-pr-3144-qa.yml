@@ -49,15 +49,16 @@ jobs:
           rm workbench/pr3144-qa.patch
           rmdir workbench
           rm .github/workflows/validate-pr-3144-qa.yml
-          git diff --check
-          if git diff --name-only "$TARGET_HEAD" -- .github | grep -q .; then
+          git add -A
+          git diff --cached --check
+          if git diff --cached --name-only "$TARGET_HEAD" -- .github | grep -q .; then
             echo "Unexpected .github changes in final tree"
-            git diff --name-status "$TARGET_HEAD" -- .github
+            git diff --cached --name-status "$TARGET_HEAD" -- .github
             exit 1
           fi
-          if git diff --name-only "$TARGET_HEAD" -- workbench | grep -q .; then
+          if git diff --cached --name-only "$TARGET_HEAD" -- workbench | grep -q .; then
             echo "Unexpected workbench files in final tree"
-            git diff --name-status "$TARGET_HEAD" -- workbench
+            git diff --cached --name-status "$TARGET_HEAD" -- workbench
             exit 1
           fi
 
@@ -75,7 +76,7 @@ jobs:
           org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/DisabledParameterizedTestViewTest.java
           org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/JUnitJUnitTests.java
           EOF
-          git diff --name-only "$TARGET_HEAD" | sort > /tmp/actual-files
+          git diff --cached --name-only "$TARGET_HEAD" | sort > /tmp/actual-files
           sort -o /tmp/expected-files /tmp/expected-files
           diff -u /tmp/expected-files /tmp/actual-files
 
@@ -115,7 +116,6 @@ jobs:
           set -euo pipefail
           git config user.name "Carsten Hammer"
           git config user.email "carsten.hammer@t-online.de"
-          git add -A
           git diff --cached --check
           tree_sha=$(git write-tree)
           commit_message=$(cat <<'MSG'
