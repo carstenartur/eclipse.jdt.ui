@@ -1,0 +1,438 @@
+name: QA issue 3128 reload imported test results
+
+on:
+  push:
+    branches:
+      - qa-issue-3128-reload-imported-test-results
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: qa-issue-3128-reload-imported-test-results
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Apply implementation
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import base64
+          from pathlib import Path
+
+          def replace_once(path: Path, old: str, new: str) -> None:
+              source = path.read_text(encoding="utf-8")
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one match in {path}, found {count}")
+              path.write_text(source.replace(old, new), encoding="utf-8")
+
+          core_manifest = Path("org.eclipse.jdt.junit.core/META-INF/MANIFEST.MF")
+          replace_once(core_manifest, "Bundle-Version: 3.15.0.qualifier",
+                       "Bundle-Version: 3.15.100.qualifier")
+
+          ui_manifest = Path("org.eclipse.jdt.junit/META-INF/MANIFEST.MF")
+          replace_once(ui_manifest, "Bundle-Version: 3.17.600.qualifier",
+                       "Bundle-Version: 3.17.700.qualifier")
+
+          session = Path("org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunSession.java")
+          replace_once(session, "Copyright (c) 2000, 2018 IBM Corporation and others.",
+                       "Copyright (c) 2000, 2026 IBM Corporation and others.")
+          replace_once(
+              session,
+              " *     Thirumala Reddy Mutchukota <thirumala@google.com> - [JUnit] Avoid rerun test launch on UI thread - https://bugs.eclipse.org/bugs/show_bug.cgi?id=411841\n",
+              " *     Thirumala Reddy Mutchukota <thirumala@google.com> - [JUnit] Avoid rerun test launch on UI thread - https://bugs.eclipse.org/bugs/show_bug.cgi?id=411841\n"
+              " *     Carsten Hammer - reload imported test runs\n",
+          )
+          replace_once(session, "import java.io.File;\nimport java.text.DateFormat;",
+                       "import java.io.File;\nimport java.nio.file.Path;\nimport java.text.DateFormat;")
+          replace_once(
+              session,
+              "\tprivate final IJavaProject fProject;\n\n\tprivate final ITestKind fTestRunnerKind;",
+              "\tprivate final IJavaProject fProject;\n\n"
+              "\t/**\n"
+              "\t * Source file of an imported test run, or <code>null</code> for launched and URL-imported sessions.\n"
+              "\t */\n"
+              "\tprivate Path fImportedFromFile;\n\n"
+              "\tprivate final ITestKind fTestRunnerKind;",
+          )
+          replace_once(
+              session,
+              "\tvoid reset() {\n"
+              "\t\tfStartedCount= 0;\n"
+              "\t\tfFailureCount= 0;\n"
+              "\t\tfAssumptionFailureCount = 0;\n"
+              "\t\tfErrorCount= 0;\n"
+              "\t\tfIgnoredCount= 0;\n"
+              "\t\tfTotalCount= 0;\n\n"
+              "\t\tfTestRoot= new TestRoot(this);\n"
+              "\t\tfTestResult= null;\n"
+              "\t\tfIdToTest= new HashMap<>();\n"
+              "\t}\n\n"
+              "\t@Override\n"
+              "\tpublic ProgressState getProgressState() {",
+              "\tvoid reset() {\n"
+              "\t\tfStartedCount= 0;\n"
+              "\t\tfFailureCount= 0;\n"
+              "\t\tfAssumptionFailureCount = 0;\n"
+              "\t\tfErrorCount= 0;\n"
+              "\t\tfIgnoredCount= 0;\n"
+              "\t\tfTotalCount= 0;\n\n"
+              "\t\tfTestRoot= new TestRoot(this);\n"
+              "\t\tfTestResult= null;\n"
+              "\t\tfIdToTest= new HashMap<>();\n"
+              "\t}\n\n"
+              "\t/**\n"
+              "\t * Returns the source file from which this test run was imported.\n"
+              "\t *\n"
+              "\t * @return the normalized absolute source path, or <code>null</code>\n"
+              "\t */\n"
+              "\tpublic Path getImportedFromFile() {\n"
+              "\t\treturn fImportedFromFile;\n"
+              "\t}\n\n"
+              "\tvoid setImportedFromFile(Path sourceFile) {\n"
+              "\t\tfImportedFromFile= sourceFile;\n"
+              "\t}\n\n"
+              "\t@Override\n"
+              "\tpublic ProgressState getProgressState() {",
+          )
+
+          model = Path("org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/JUnitModel.java")
+          replace_once(model, "Copyright (c) 2000, 2016 IBM Corporation and others.",
+                       "Copyright (c) 2000, 2026 IBM Corporation and others.")
+          replace_once(
+              model,
+              " *     Achim Demelt <a.demelt@exxcellent.de> - [JUnit] Separate UI from non-UI code - https://bugs.eclipse.org/bugs/show_bug.cgi?id=278844\n",
+              " *     Achim Demelt <a.demelt@exxcellent.de> - [JUnit] Separate UI from non-UI code - https://bugs.eclipse.org/bugs/show_bug.cgi?id=278844\n"
+              " *     Carsten Hammer - reload imported test runs\n",
+          )
+          replace_once(model, "import java.lang.reflect.InvocationTargetException;\nimport java.util.ArrayList;",
+                       "import java.lang.reflect.InvocationTargetException;\nimport java.nio.file.Path;\nimport java.util.ArrayList;")
+          replace_once(
+              model,
+              "\tpublic static TestRunSession importTestRunSession(File file) throws CoreException {\n"
+              "\t\ttry {\n"
+              "\t\t\tSAXParserFactory parserFactory= XmlProcessorFactoryJdtJunit.createSAXFactoryWithErrorOnDOCTYPE();\n"
+              "//\t\t\tparserFactory.setValidating(true); // TODO: add DTD and debug flag\n"
+              "\t\t\tSAXParser parser= parserFactory.newSAXParser();\n"
+              "\t\t\tTestRunHandler handler= new TestRunHandler();\n"
+              "\t\t\tparser.parse(file, handler);\n"
+              "\t\t\tTestRunSession session= handler.getTestRunSession();\n"
+              "\t\t\tJUnitCorePlugin.getModel().addTestRunSession(session);\n"
+              "\t\t\treturn session;\n"
+              "\t\t} catch (ParserConfigurationException | SAXException e) {\n"
+              "\t\t\tthrowImportError(file, e);\n"
+              "\t\t} catch (IOException e) {\n"
+              "\t\t\tthrowImportError(file, e);\n"
+              "\t\t} catch (IllegalArgumentException e) {\n"
+              "\t\t\t// Bug in parser: can throw IAE even if file is not null\n"
+              "\t\t\tthrowImportError(file, e);\n"
+              "\t\t}\n"
+              "\t\treturn null; // does not happen\n"
+              "\t}\n",
+              "\tpublic static TestRunSession importTestRunSession(File file) throws CoreException {\n"
+              "\t\tPath sourceFile= file.toPath().toAbsolutePath().normalize();\n"
+              "\t\tTestRunSession session= readTestRunSession(sourceFile.toFile());\n"
+              "\t\tsession.setImportedFromFile(sourceFile);\n"
+              "\t\tJUnitCorePlugin.getModel().addTestRunSession(session);\n"
+              "\t\treturn session;\n"
+              "\t}\n\n"
+              "\t/**\n"
+              "\t * Reloads a previously file-imported test run and replaces it in the model only after\n"
+              "\t * the updated XML has been parsed successfully.\n"
+              "\t *\n"
+              "\t * @param testRunSession the imported session to replace\n"
+              "\t * @return the replacement session, or <code>null</code> if the original session is no longer registered\n"
+              "\t * @throws CoreException if the source file cannot be read or parsed\n"
+              "\t */\n"
+              "\tpublic static TestRunSession reloadTestRunSession(TestRunSession testRunSession) throws CoreException {\n"
+              "\t\tAssert.isNotNull(testRunSession);\n"
+              "\t\tPath sourceFile= testRunSession.getImportedFromFile();\n"
+              "\t\tAssert.isNotNull(sourceFile);\n\n"
+              "\t\tTestRunSession replacement= readTestRunSession(sourceFile.toFile());\n"
+              "\t\treplacement.setImportedFromFile(sourceFile);\n"
+              "\t\tif (!JUnitCorePlugin.getModel().replaceTestRunSession(testRunSession, replacement)) {\n"
+              "\t\t\treturn null;\n"
+              "\t\t}\n"
+              "\t\treturn replacement;\n"
+              "\t}\n\n"
+              "\tprivate static TestRunSession readTestRunSession(File file) throws CoreException {\n"
+              "\t\ttry {\n"
+              "\t\t\tSAXParserFactory parserFactory= XmlProcessorFactoryJdtJunit.createSAXFactoryWithErrorOnDOCTYPE();\n"
+              "//\t\t\tparserFactory.setValidating(true); // TODO: add DTD and debug flag\n"
+              "\t\t\tSAXParser parser= parserFactory.newSAXParser();\n"
+              "\t\t\tTestRunHandler handler= new TestRunHandler();\n"
+              "\t\t\tparser.parse(file, handler);\n"
+              "\t\t\treturn handler.getTestRunSession();\n"
+              "\t\t} catch (ParserConfigurationException | SAXException e) {\n"
+              "\t\t\tthrowImportError(file, e);\n"
+              "\t\t} catch (IOException e) {\n"
+              "\t\t\tthrowImportError(file, e);\n"
+              "\t\t} catch (IllegalArgumentException e) {\n"
+              "\t\t\t// Bug in parser: can throw IAE even if file is not null\n"
+              "\t\t\tthrowImportError(file, e);\n"
+              "\t\t}\n"
+              "\t\treturn null; // does not happen\n"
+              "\t}\n",
+          )
+          replace_once(
+              model,
+              "\t/**\n"
+              "\t * Removes the given {@link TestRunSession} and notifies all registered\n",
+              "\tprivate boolean replaceTestRunSession(TestRunSession oldSession, TestRunSession newSession) {\n"
+              "\t\tsynchronized (this) {\n"
+              "\t\t\tint index= fTestRunSessions.indexOf(oldSession);\n"
+              "\t\t\tif (index < 0) {\n"
+              "\t\t\t\treturn false;\n"
+              "\t\t\t}\n"
+              "\t\t\tfTestRunSessions.set(index, newSession);\n"
+              "\t\t}\n\n"
+              "\t\tnotifyTestRunSessionRemoved(oldSession);\n"
+              "\t\toldSession.removeSwapFile();\n"
+              "\t\tnotifyTestRunSessionAdded(newSession);\n"
+              "\t\treturn true;\n"
+              "\t}\n\n"
+              "\t/**\n"
+              "\t * Removes the given {@link TestRunSession} and notifies all registered\n",
+          )
+
+          watcher = Path("org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/ImportedTestRunFileWatcher.java")
+          watcher.write_bytes(base64.b64decode("LyoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKi8KICogQ29weXJpZ2h0IChjKSAyMDI2IENhcnN0ZW4gSGFtbWVyIGFuZCBvdGhlcnMuCiAqCiAqIFRoaXMgcHJvZ3JhbSBhbmQgdGhlIGFjY29tcGFueWluZyBtYXRlcmlhbHMKICogYXJlIG1hZGUgYXZhaWxhYmxlIHVuZGVyIHRoZSB0ZXJtcyBvZiB0aGUgRWNsaXBzZSBQdWJsaWMgTGljZW5zZSAyLjAKICogd2hpY2ggYWNjb21wYW5pZXMgdGhpcyBkaXN0cmlidXRpb24sIGFuZCBpcyBhdmFpbGFibGUgYXQKICogaHR0cHM6Ly93d3cuZWNsaXBzZS5vcmcvbGVnYWwvZXBsLTIuMC8KICoKICogU1BEWC1MaWNlbnNlLUlkZW50aWZpZXI6IEVQTC0yLjAKICoKICogQ29udHJpYnV0b3JzOgogKiAgICAgQ2Fyc3RlbiBIYW1tZXIgLSBpbml0aWFsIEFQSSBhbmQgaW1wbGVtZW50YXRpb24KICoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKi8KcGFja2FnZSBvcmcuZWNsaXBzZS5qZHQuaW50ZXJuYWwuanVuaXQudWk7CgppbXBvcnQgamF2YS5pby5JT0V4Y2VwdGlvbjsKaW1wb3J0IGphdmEubmlvLmZpbGUuQ2xvc2VkV2F0Y2hTZXJ2aWNlRXhjZXB0aW9uOwppbXBvcnQgamF2YS5uaW8uZmlsZS5QYXRoOwppbXBvcnQgamF2YS5uaW8uZmlsZS5TdGFuZGFyZFdhdGNoRXZlbnRLaW5kczsKaW1wb3J0IGphdmEubmlvLmZpbGUuV2F0Y2hFdmVudDsKaW1wb3J0IGphdmEubmlvLmZpbGUuV2F0Y2hLZXk7CmltcG9ydCBqYXZhLm5pby5maWxlLldhdGNoU2VydmljZTsKaW1wb3J0IGphdmEudXRpbC5PYmplY3RzOwppbXBvcnQgamF2YS51dGlsLmNvbmN1cnJlbnQuRXhlY3V0b3JzOwppbXBvcnQgamF2YS51dGlsLmNvbmN1cnJlbnQuUmVqZWN0ZWRFeGVjdXRpb25FeGNlcHRpb247CmltcG9ydCBqYXZhLnV0aWwuY29uY3VycmVudC5TY2hlZHVsZWRFeGVjdXRvclNlcnZpY2U7CmltcG9ydCBqYXZhLnV0aWwuY29uY3VycmVudC5TY2hlZHVsZWRGdXR1cmU7CmltcG9ydCBqYXZhLnV0aWwuY29uY3VycmVudC5UaW1lVW5pdDsKaW1wb3J0IGphdmEudXRpbC5mdW5jdGlvbi5Db25zdW1lcjsKCi8qKgogKiBXYXRjaGVzIG9uZSBpbXBvcnRlZCBKVW5pdCByZXN1bHQgZmlsZSBhbmQgY29hbGVzY2VzIGZpbGUtc3lzdGVtIGV2ZW50cy4KICovCnB1YmxpYyBmaW5hbCBjbGFzcyBJbXBvcnRlZFRlc3RSdW5GaWxlV2F0Y2hlciBpbXBsZW1lbnRzIEF1dG9DbG9zZWFibGUgewoKCXByaXZhdGUgc3RhdGljIGZpbmFsIGxvbmcgREVCT1VOQ0VfTUlMTElTPSA1MDA7CgogCXByaXZhdGUgZmluYWwgQ29uc3VtZXI8UGF0aD4gZkNoYW5nZUxpc3RlbmVyOwoJcHJpdmF0ZSBmaW5hbCBTY2hlZHVsZWRFeGVjdXRvclNlcnZpY2UgZkRlYm91bmNlcjsKCglwcml2YXRlIFdhdGNoU2VydmljZSBmV2F0Y2hTZXJ2aWNlOwoJcHJpdmF0ZSBQYXRoIGZXYXRjaGVkRmlsZTsKCXByaXZhdGUgU2NoZWR1bGVkRnV0dXJlPD8+IGZQZW5kaW5nTm90aWZpY2F0aW9uOwoKCXB1YmxpYyBJbXBvcnRlZFRlc3RSdW5GaWxlV2F0Y2hlcihDb25zdW1lcjxQYXRoPiBjaGFuZ2VMaXN0ZW5lcikgewoJCWZDaGFuZ2VMaXN0ZW5lcj0gT2JqZWN0cy5yZXF1aXJlTm9uTnVsbChjaGFuZ2VMaXN0ZW5lcik7CgkJZkRlYm91bmNlcj0gRXhlY3V0b3JzLm5ld1NpbmdsZVRocmVhZFNjaGVkdWxlZEV4ZWN1dG9yKHJ1bm5hYmxlIC0+IHsKCQkJVGhyZWFkIHRocmVhZD0gbmV3IFRocmVhZChydW5uYWJsZSwgIkpVbml0IGltcG9ydGVkIHRlc3QgcmVzdWx0cyBkZWJvdW5jZSIpOyAvLyROT04tTFMxJAkKCQkJdGhyZWFkLnNldERhZW1vbih0cnVlKTsKCQkJcmV0dXJuIHRocmVhZDsKCQl9KTsKCX0KCi8qKgoJICogU3RhcnRzIHdhdGNoaW5nIHRoZSBnaXZlbiBmaWxlLiBXYXRjaGluZyBhbiBhbHJlYWR5IGFjdGl2ZSBwYXRoIGlzIGEgbm8tb3AuCgkgKgoJICogQHBhcmFtIGZpbGUgZmlsZSB0byB3YXRjaAoJICogQHRocm93cyBJT0V4Y2VwdGlvbiBpZiB0aGUgcGFyZW50IGRpcmVjdG9yeSBjYW5ub3QgYmUgd2F0Y2hlZAoJICovCglwdWJsaWMgc3luY2hyb25pemVkIHZvaWQgd2F0Y2goUGF0aCBmaWxlKSB0aHJvd3MgSU9FeGNlcHRpb24gewoJCVBhdGggbm9ybWFsaXplZEZpbGU9IE9iamVjdHMucmVxdWlyZU5vbk51bGwoZmlsZSkudG9BYnNvbHV0ZVBhdGgoKS5ub3JtYWxpemUoKTsKCQlpZiAobm9ybWFsaXplZEZpbGUuZXF1YWxzKGZXYXRjaGVkRmlsZSkgJiYgZldhdGNoU2VydmljZSAhPSBudWxsKSB7CgkJCXJldHVybjsKCQl9CgoJCXN0b3BXYXRjaGluZygpOwoJCVBhdGggcGFyZW50PSBub3JtYWxpemVkRmlsZS5nZXRQYXJlbnQoKTsKCQlpZiAocGFyZW50ID09IG51bGwpIHsKCQkJdGhyb3cgbmV3IElPRXhjZXB0aW9uKCJUaGUgaW1wb3J0ZWQgdGVzdCByZXN1bHQgZmlsZSBoYXMgbm8gcGFyZW50IGRpcmVjdG9yeS4iKTsgLy8kTk9OLUxTMSQKCQl9CgoJCVdhdGNoU2VydmljZSB3YXRjaFNlcnZpY2U9IHBhcmVudC5nZXRGaWxlU3lzdGVtKCkubmV3V2F0Y2hTZXJ2aWNlKCk7CgkJcGFyZW50LnJlZ2lzdGVyKHdhdGNoU2VydmljZSwgU3RhbmRhcmRXYXRjaEV2ZW50S2luZHMuRU5UUllfQ1JFQVRFLCgKCQkJCVN0YW5kYXJkV2F0Y2hFdmVudEtpbmRzLkVOVFJZX01PRElGWSwgU3RhbmRhcmRXYXRjaEV2ZW50S2luZHMuRU5UUllfREVMRVRFKTsKCQlmV2F0Y2hTZXJ2aWNlPSB3YXRjaFNlcnZpY2U7CgkJZldhdGNoZWRGaWxlPSBub3JtYWxpemVkRmlsZTsKCgkJVGhyZWFkIHdhdGNoZXJUaHJlYWQ9IG5ldyBUaHJlYWQoKCkgLT4gcnVuV2F0Y2hlcih3YXRjaFNlcnZpY2UsIG5vcm1hbGl6ZWRGaWxlKSwKCQkJCSJKVW5pdCBpbXBvcnRlZCB0ZXN0IHJlc3VsdHMgd2F0Y2hlciIpOyAvLyROT04tTFMxJAkKCQl3YXRjaGVyVGhyZWFkLnNldERhZW1vbih0cnVlKTsKCQl3YXRjaGVyVGhyZWFkLnN0YXJ0KCk7Cgl9CgovKioKCSAqIFN0b3BzIHdhdGNoaW5nIHdpdGhvdXQgc2h1dHRpbmcgZG93biB0aGlzIHJldXNhYmxlIHdhdGNoZXIuCgkgKi8KCXB1YmxpYyBzeW5jaHJvbml6ZWQgdm9pZCBjbGVhcigpIHsKCQlzdG9wV2F0Y2hpbmcoKTsKCX0KCiAJcHJpdmF0ZSB2b2lkIHJ1bldhdGNoZXIoV2F0Y2hTZXJ2aWNlIHdhdGNoU2VydmljZSwgUGF0aCB3YXRjaGVkRmlsZSkgewoJCXdoaWxlICh0cnVlKSB7CgkJCVdhdGNoS2V5IGtleTsKCQkJdHJ5IHsKCQkJCWtleT0gd2F0Y2hTZXJ2aWNlLnRha2UoKTsKCQkJfSBjYXRjaCAoSW50ZXJydXB0ZWRFeGNlcHRpb24gZSkgewoJCQkJVGhyZWFkLmN1cnJlbnRUaHJlYWQoKS5pbnRlcnJ1cHQoKTsKCQkJCXJldHVybjsKCQkJfSBjYXRjaCAoQ2xvc2VkV2F0Y2hTZXJ2aWNlRXhjZXB0aW9uIGUpIHsKCQkJCXJldHVybjsKCQkJfQoKCQkJYm9vbGVhbiByZWxldmFudENoYW5nZT0gZmFsc2U7CgkJCWZvciAoV2F0Y2hFdmVudDw/PiBldmVudCA6IGtleS5wb2xsRXZlbnRzKCkpIHsKCQkJCWlmIChldmVudC5raW5kKCkgPT0gU3RhbmRhcmRXYXRjaEV2ZW50S2luZHMuT1ZFUkZMT1cpIHsKCQkJCQlyZWxldmFudENoYW5nZT0gdHJ1ZTsKCQkJCQljb250aW51ZTsKCQkJCX0KCQkJCU9iamVjdCBjb250ZXh0PSBldmVudC5jb250ZXh0KCk7CgkJCQlpZiAoY29udGV4dCBpbnN0YW5jZW9mIFBhdGggJiYgd2F0Y2hlZEZpbGUuZ2V0RmlsZU5hbWUoKS5lcXVhbHMoY29udGV4dCkpIHsKCQkJCQlyZWxldmFudENoYW5nZT0gdHJ1ZTsKCQkJCX0KCQkJfQoJCQlpZiAocmVsZXZhbnRDaGFuZ2UpIHsKCQkJCXNjaGVkdWxlTm90aWZpY2F0aW9uKHdhdGNoU2VydmljZSwgd2F0Y2hlZEZpbGUpOwoJCQl9CgkJCWlmICgha2V5LnJlc2V0KCkpIHsKCQkJCXJldHVybjsKCQkJfQoJfQoKCXByaXZhdGUgc3luY2hyb25pemVkIHZvaWQgc2NoZWR1bGVOb3RpZmljYXRpb24oV2F0Y2hTZXJ2aWNlIHdhdGNoU2VydmljZSwgUGF0aCB3YXRjaGVkRmlsZSkgewoJCWlmICh3YXRjaFNlcnZpY2UgIT0gZldhdGNoU2VydmljZSB8fCAhd2F0Y2hlZEZpbGUuZXF1YWxzKGZXYXRjaGVkRmlsZSkpIHsKCQkJcmV0dXJuOwoJCX0KCQlpZiAoZlBlbmRpbmdOb3RpZmljYXRpb24gIT0gbnVsbCkgewoJCQlmUGVuZGluZ05vdGlmaWNhdGlvbi5jYW5jZWwoZmFsc2UpOwoJCX0KCQl0cnkgewoJCQlmUGVuZGluZ05vdGlmaWNhdGlvbj0gZkRlYm91bmNlci5zY2hlZHVsZSgKCQkJCQkoKSAtPiBub3RpZnlDaGFuZ2Uod2F0Y2hTZXJ2aWNlLCB3YXRjaGVkRmlsZSksIERFQk9VTkNFX01JTExJUywgVGltZVVuaXQuTUlMTElTRUNPTkRTKTsKCQl9IGNhdGNoIChSZWplY3RlZEV4ZWN1dGlvbkV4Y2VwdGlvbiBlKSB7CgkJCS8vIFRoZSB2aWV3IGlzIGJlaW5nIGRpc3Bvc2VkLgoJCX0KCX0KCiAJcHJpdmF0ZSB2b2lkIG5vdGlmeUNoYW5nZShXYXRjaFNlcnZpY2Ugd2F0Y2hTZXJ2aWNlLCBQYXRoIHdhdGNoZWRGaWxlKSB7CgkJc3luY2hyb25pemVkICh0aGlzKSB7CgkJCWlmICh3YXRjaFNlcnZpY2UgIT0gZldhdGNoU2VydmljZSB8fCAhd2F0Y2hlZEZpbGUuZXF1YWxzKGZXYXRjaGVkRmlsZSkpIHsKCQkJCXJldHVybjsKCQkJfQoJCWZQZW5kaW5nTm90aWZpY2F0aW9uPSBudWxsOwoJfQoJZkNoYW5nZUxpc3RlbmVyLmFjY2VwdCh3YXRjaGVkRmlsZSk7Cgl9CgogCXByaXZhdGUgdm9pZCBzdG9wV2F0Y2hpbmcoKSB7CgkJaWYgKGZQZW5kaW5nTm90aWZpY2F0aW9uICE9IG51bGwpIHsKCQkJZlBlbmRpbmdOb3RpZmljYXRpb24uY2FuY2VsKGZhbHNlKTsKCQkJZlBlbmRpbmdOb3RpZmljYXRpb249IG51bGw7CgkJfQoJCWlmIChmV2F0Y2hTZXJ2aWNlICE9IG51bGwpIHsKCQkJdHJ5IHsKCQkJCWZXYXRjaFNlcnZpY2UuY2xvc2UoKTsKCQkJfSBjYXRjaCAoSU9FeGNlcHRpb24gZSkgewoJCQkJLy8gTm90aGluZyB1c2VmdWwgY2FuIGJlIGRvbmUgd2hpbGUgc3RvcHBpbmcgdGhlIHdhdGNoZXIuCgkJfQoJCX0KCQlmV2F0Y2hTZXJ2aWNlPSBudWxsOwoJCWZXYXRjaGVkRmlsZT0gbnVsbDsKCX0KCiAJQE92ZXJyaWRlCglwdWJsaWMgc3luY2hyb25pemVkIHZvaWQgY2xvc2UoKSB7CgkJc3RvcFdhdGNoaW5nKCk7CgkJZkRlYm91bmNlci5zaHV0ZG93bk5vdygpOwoJfQp9Cg=="))
+
+          view = Path("org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java")
+          replace_once(view, "Copyright (c) 2000, 2024 IBM Corporation and others.",
+                       "Copyright (c) 2000, 2026 IBM Corporation and others.")
+          replace_once(
+              view,
+              " *     Sandra Lions <sandra.lions-piron@oracle.com> - [junit] allow to sort by name and by execution time - https://bugs.eclipse.org/bugs/show_bug.cgi?id=219466\n",
+              " *     Sandra Lions <sandra.lions-piron@oracle.com> - [junit] allow to sort by name and by execution time - https://bugs.eclipse.org/bugs/show_bug.cgi?id=219466\n"
+              " *     Carsten Hammer - reload imported test runs\n",
+          )
+          replace_once(view, "import java.nio.charset.StandardCharsets;\nimport java.text.DateFormat;",
+                       "import java.nio.charset.StandardCharsets;\nimport java.nio.file.Path;\nimport java.text.DateFormat;")
+          replace_once(view, "import org.eclipse.ui.IMemento;\nimport org.eclipse.ui.IPartListener2;",
+                       "import org.eclipse.ui.IMemento;\nimport org.eclipse.ui.IPartListener2;\nimport org.eclipse.ui.ISharedImages;")
+          replace_once(
+              view,
+              "\tprivate Action fRerunFailedFirstAction;\n\tprivate IHandlerActivation fRerunFailedFirstActivation;\n\n"
+              "\tprivate Action fFailuresOnlyFilterAction;",
+              "\tprivate Action fRerunFailedFirstAction;\n"
+              "\tprivate IHandlerActivation fRerunFailedFirstActivation;\n"
+              "\tprivate ReloadTestRunAction fReloadTestRunAction;\n"
+              "\tprivate AutoReloadTestRunAction fAutoReloadTestRunAction;\n\n"
+              "\tprivate Action fFailuresOnlyFilterAction;",
+          )
+          replace_once(
+              view,
+              "\tprivate TestRunSession fTestRunSession;\n\tprivate TestSessionListener fTestSessionListener;\n",
+              "\tprivate TestRunSession fTestRunSession;\n"
+              "\tprivate TestSessionListener fTestSessionListener;\n"
+              "\tprivate ImportedTestRunFileWatcher fImportedTestRunFileWatcher;\n"
+              "\tprivate Job fReloadTestRunJob;\n",
+          )
+          replace_once(
+              view,
+              "\tstatic final String TAG_SORTING_CRITERION= \"sortingCriterion\"; //$NON-NLS-1$\n",
+              "\tstatic final String TAG_SORTING_CRITERION= \"sortingCriterion\"; //$NON-NLS-1$\n"
+              "\tstatic final String TAG_AUTO_RELOAD= \"autoReloadImportedTestRun\"; //$NON-NLS-1$\n",
+          )
+          replace_once(
+              view,
+              "\t\tmemento.putInteger(TAG_SORTING_CRITERION, fSortingCriterion.ordinal());\n",
+              "\t\tmemento.putInteger(TAG_SORTING_CRITERION, fSortingCriterion.ordinal());\n"
+              "\t\tmemento.putString(TAG_AUTO_RELOAD, fAutoReloadTestRunAction.isChecked() ? \"true\" : \"false\"); //$NON-NLS-1$ //$NON-NLS-2$\n",
+          )
+          replace_once(
+              view,
+              "\t\tString time= memento.getString(TAG_SHOW_TIME);\n"
+              "\t\tboolean showTime= true;\n"
+              "\t\tif (time != null)\n"
+              "\t\t\tshowTime= \"true\".equals(time); //$NON-NLS-1$\n\n",
+              "\t\tString time= memento.getString(TAG_SHOW_TIME);\n"
+              "\t\tboolean showTime= true;\n"
+              "\t\tif (time != null)\n"
+              "\t\t\tshowTime= \"true\".equals(time); //$NON-NLS-1$\n\n"
+              "\t\tString autoReload= memento.getString(TAG_AUTO_RELOAD);\n"
+              "\t\tif (autoReload != null) {\n"
+              "\t\t\tfAutoReloadTestRunAction.setChecked(\"true\".equals(autoReload)); //$NON-NLS-1$\n"
+              "\t\t}\n\n",
+          )
+          replace_once(
+              view,
+              "\t\tsetFilterAndLayout(showFailuresOnly, showIgnoredOnly, layoutValue);\n"
+              "\t\tsetShowExecutionTime(showTime);\n"
+              "\t}\n",
+              "\t\tsetFilterAndLayout(showFailuresOnly, showIgnoredOnly, layoutValue);\n"
+              "\t\tsetShowExecutionTime(showTime);\n"
+              "\t\tupdateImportedTestRunActions();\n"
+              "\t}\n",
+          )
+          replace_once(
+              view,
+              "\t\tfStopAction= new StopAction();\n"
+              "\t\tfStopAction.setEnabled(false);\n\n"
+              "\t\tfRerunLastTestAction= new RerunLastAction();",
+              "\t\tfStopAction= new StopAction();\n"
+              "\t\tfStopAction.setEnabled(false);\n"
+              "\t\tfReloadTestRunAction= new ReloadTestRunAction();\n"
+              "\t\tfAutoReloadTestRunAction= new AutoReloadTestRunAction();\n"
+              "\t\tfImportedTestRunFileWatcher= new ImportedTestRunFileWatcher(this::handleImportedTestRunFileChanged);\n\n"
+              "\t\tfRerunLastTestAction= new RerunLastAction();",
+          )
+          replace_once(
+              view,
+              "\t\ttoolBar.add(fRerunFailedFirstAction);\n"
+              "\t\ttoolBar.add(fStopAction);\n"
+              "\t\ttoolBar.add(fViewHistory.createHistoryDropDownAction());\n",
+              "\t\ttoolBar.add(fRerunFailedFirstAction);\n"
+              "\t\ttoolBar.add(fStopAction);\n"
+              "\t\ttoolBar.add(fReloadTestRunAction);\n"
+              "\t\ttoolBar.add(fViewHistory.createHistoryDropDownAction());\n",
+          )
+          replace_once(
+              view,
+              "\t\tfActivateOnErrorAction= new ActivateOnErrorAction();\n"
+              "\t\tviewMenu.add(fActivateOnErrorAction);\n"
+              "\t\tfViewMenuListener= manager -> fActivateOnErrorAction.update();\n",
+              "\t\tfActivateOnErrorAction= new ActivateOnErrorAction();\n"
+              "\t\tviewMenu.add(fActivateOnErrorAction);\n"
+              "\t\tviewMenu.add(new Separator());\n"
+              "\t\tviewMenu.add(fReloadTestRunAction);\n"
+              "\t\tviewMenu.add(fAutoReloadTestRunAction);\n"
+              "\t\tfViewMenuListener= manager -> {\n"
+              "\t\t\tfActivateOnErrorAction.update();\n"
+              "\t\t\tupdateImportedTestRunActions();\n"
+              "\t\t};\n",
+          )
+          replace_once(
+              view,
+              "\t\tfTestRunSession= testRunSession;\n"
+              "\t\tfTestViewer.registerActiveSession(testRunSession);\n",
+              "\t\tfTestRunSession= testRunSession;\n"
+              "\t\tfTestViewer.registerActiveSession(testRunSession);\n"
+              "\t\tupdateImportedTestRunActions();\n",
+          )
+          replace_once(
+              view,
+              "\t\tsetActiveTestRunSession(null);\n\n"
+              "\t\tif (fProgressImages != null)\n",
+              "\t\tsetActiveTestRunSession(null);\n"
+              "\t\tif (fReloadTestRunJob != null) {\n"
+              "\t\t\tfReloadTestRunJob.cancel();\n"
+              "\t\t\tfReloadTestRunJob= null;\n"
+              "\t\t}\n"
+              "\t\tif (fImportedTestRunFileWatcher != null) {\n"
+              "\t\t\tfImportedTestRunFileWatcher.close();\n"
+              "\t\t\tfImportedTestRunFileWatcher= null;\n"
+              "\t\t}\n\n"
+              "\t\tif (fProgressImages != null)\n",
+          )
+          replace_once(
+              view,
+              "\tprivate class StopAction extends Action {\n",
+              base64.b64decode("XHRwcml2YXRlIFBhdGggZ2V0SW1wb3J0ZWRUZXN0UnVuRmlsZSgpIHsKCQlyZXR1cm4gZlRlc3RSdW5TZXNzaW9uID09IG51bGwgPyBudWxsIDogZlRlc3RSdW5TZXNzaW9uLmdldEltcG9ydGVkRnJvbUZpbGUoKTsKCX0KCiAJcHJpdmF0ZSB2b2lkIHVwZGF0ZUltcG9ydGVkVGVzdFJ1bkFjdGlvbnMoKSB7CgkJUGF0aCBpbXBvcnRlZEZpbGU9IGdldEltcG9ydGVkVGVzdFJ1bkZpbGUoKTsKCQlmUmVsb2FkVGVzdFJ1bkFjdGlvbi5zZXRFbmFibGVkKGltcG9ydGVkRmlsZSAhPSBudWxsICYmIGZSZWxvYWRUZXN0UnVuSm9iID09IG51bGwpOwoJCWZBdXRvUmVsb2FkVGVzdFJ1bkFjdGlvbi5zZXRFbmFibGVkKGltcG9ydGVkRmlsZSAhPSBudWxsKTsKCgkJaWYgKGZJbXBvcnRlZFRlc3RSdW5GaWxlV2F0Y2hlciA9PSBudWxsKSB7CgkJCXJldHVybjsKCQl9CgkJaWYgKCFmQXV0b1JlbG9hZFRlc3RSdW5BY3Rpb24uaXNDaGVja2VkKCkgfHwgaW1wb3J0ZWRGaWxlID09IG51bGwpIHsKCQkJZkltcG9ydGVkVGVzdFJ1bkZpbGVXYXRjaGVyLmNsZWFyKCk7CgkJCXJldHVybjsKCQl9CgkJdHJ5IHsKCQkJZkltcG9ydGVkVGVzdFJ1bkZpbGVXYXRjaGVyLndhdGNoKGltcG9ydGVkRmlsZSk7CgkJfSBjYXRjaCAoSU9FeGNlcHRpb24gZSkgewoJCQlmQXV0b1JlbG9hZFRlc3RSdW5BY3Rpb24uc2V0Q2hlY2tlZChmYWxzZSk7CgkJCWZJbXBvcnRlZFRlc3RSdW5GaWxlV2F0Y2hlci5jbGVhcigpOwoJCQlTdHJpbmcgbWVzc2FnZT0gTWVzc2FnZXMuZm9ybWF0KEpVbml0TWVzc2FnZXMuVGVzdFJ1bm5lclZpZXdQYXJ0X2F1dG9fcmVsb2FkX2Vycm9yLAoJCQkJCUJhc2ljRWxlbWVudExhYmVscy5nZXRQYXRoTGFiZWwoaW1wb3J0ZWRGaWxlLnRvRmlsZSgpKSk7CgkJCU1Vbml0UGx1Z2luLmxvZyhuZXcgU3RhdHVzKElTdGF0dXMuRVJST1IsIEpVbml0UGx1Z2luLlBMVUdJTl9JRCwgbWVzc2FnZSwgZSkpOwoJCX0KCX0KCiAJcHJpdmF0ZSB2b2lkIGhhbmRsZUltcG9ydGVkVGVzdFJ1bkZpbGVDaGFuZ2VkKFBhdGggaW1wb3J0ZWRGaWxlKSB7CgkJRGlzcGxheSBkaXNwbGF5PSBnZXREaXNwbGF5KCk7CgkJaWYgKGRpc3BsYXkuaXNEaXNwb3NlZCgpKSB7CgkJCXJldHVybjsKCQl9CgkJZGlzcGxheS5hc3luY0V4ZWMoKCkgLT4gewoJCQlpZiAoIWlzRGlzcG9zZWQoKSAmJiBmQXV0b1JlbG9hZFRlc3RSdW5BY3Rpb24uaXNDaGVja2VkKCkKCQkJCQkmJiBpbXBvcnRlZEZpbGUuZXF1YWxzKGdldEltcG9ydGVkVGVzdFJ1bkZpbGUoKSkpIHsKCQkJCXJlbG9hZEltcG9ydGVkVGVzdFJ1blNlc3Npb24oZmFsc2UpOwoJCQl9CgkJfSk7Cgl9CgogCXByaXZhdGUgdm9pZCByZWxvYWRJbXBvcnRlZFRlc3RSdW5TZXNzaW9uKGJvb2xlYW4gbWFudWFsKSB7CgkJVGVzdFJ1blNlc3Npb24gc2Vzc2lvbj0gZlRlc3RSdW5TZXNzaW9uOwoJCVBhdGggaW1wb3J0ZWRGaWxlPSBnZXRJbXBvcnRlZFRlc3RSdW5GaWxlKCk7CgkJaWYgKHNlc3Npb24gPT0gbnVsbCB8fCBpbXBvcnRlZEZpbGUgPT0gbnVsbCB8fCBmUmVsb2FkVGVzdFJ1bkpvYiAhPSBudWxsKSB7CgkJCXJldHVybjsKCQl9CgoJCURpc3BsYXkgZGlzcGxheT0gZ2V0RGlzcGxheSgpOwoJCUxvYiByZWxvYWRKb2I9IG5ldyBKb2IoSlVuaXRNZXNzYWdlcy5UZXN0UnVubmVyVmlld1BhcnRfcmVsb2FkX2pvYl9uYW1lKSB7CgkJCUCPdmVycmlkZQoJCQl wcm90ZWN0ZWQgSVN0YXR1cyBydW4oSVByb2dyZXNzTW9uaXRvciBtb25pdG9yKSB7CgkJCQlDb3JlRXhjZXB0aW9uIGZhaWx1cmU9IG51bGw7CgkJCQlpbnQgYXR0ZW1wdHM9IG1hbnVhbCA/IDEgOiA1OwoJCQkJdHJ5IHsKCQkJCQlmb3IgKGludCBhdHRlbXB0PSAwOyBhdHRlbXAgPCBhdHRlbXB0cyAmJiAhbW9uaXRvci5pc0NhbmNlbGVkKCk7IGF0dGVtcHQrKykgewoJCQkJCQl0cnkgewoJCQkJCQkJVGVzdFJ1blNlc3Npb24gcmVsb2FkZWQ9IEpVbml0TW9kZWwucmVsb2FkVGVzdFJ1blNlc3Npb24oc2Vzc2lvbik7CgkJCQkJCQlpZiAocmVsb2FkZWQgIT0gbnVsbICYmICFkaXNwbGF5LmlzRGlzcG9zZWQoKSkgewoJCQkJCQkJCWRpc3BsYXkuYXN5bmNFeGVjKCgpIC0+IHsKCQkJCQkJCQkJaWYgKCFpc0Rpc3Bvc2VkKCkgJiYgZlRlc3RSdW5TZXNzaW9uID09IHJlbG9hZGVkKSB7CgkJCQkJCQkJCQlyZWdpc3RlckluZm9NZXNzYWdlKE1lc3NhZ2VzLmZvcm1hdCgKCQkJCQkJCQkJCQlKVW5pdE1lc3NhZ2VzLlRlc3RSdW5uZXJWaWV3UGFydF9yZWxvYWRfc3VjY2VzcywKCQkJCQkJCQkJCQlCYXNpY0VsZW1lbnRMYWJlbHMuZ2V0UGF0aExhYmVsKGltcG9ydGVkRmlsZS50b0ZpbGUoKSkpKTsKCQkJCQkJCQkJCXByb2Nlc3NDaGFuZ2VzSW5VSSgpOwoJCQkJCQkJCQl9CgkJCQkJCQkJfSk7CgkJCQkJCQl9CgkJCQkJCQlyZXR1cm4gU3RhdHVzLk9LX1NUQVRVUzsKCQkJCQkJfSBjYXRjaCAoQ29yZUV4Y2VwdGlvbiBlKSB7CgkJCQkJCQl mYWlsdXJlPSBlOwoJCQkJCQkJaWYgKGF0dGVtcHQgKyAxIDwgYXR0ZW1wdHMpIHsKCQkJCQkJCQl0cnkgewoJCQkJCQkJCQlUaHJlYWQuc2xlZXAoMzAwKTsKCQkJCQkJCQl9IGNhdGNoIChJbnRlcnJ1cHRlZEV4Y2VwdGlvbiBpbnRlcnJ1cHRlZCkgewoJCQkJCQkJCQlUaHJlYWQuY3VycmVudFRocmVhZCgpLmludGVycnVwdCgpOwoJCQkJCQkJCQlyZXR1cm4gU3RhdHVzLkNBTkNFTF9TVEFUVVM7CgkJCQkJCQkJfQoJCQkJCQkJfQoJCQkJCQl9CgkJCQl9CgkJCQlpZiAoZmFpbHVyZSAhPSBudWxsKSB7CgkJCQkJaWYgKG1hbnVhbCAmJiAhZGlzcGxheS5pc0Rpc3Bvc2VkKCkpIHsKCQkJCQkJSVN0YXR1cyBzdGF0dXM9IGZhaWx1cmUuZ2V0U3RhdHVzKCk7CgkJCQkJCWRpc3BsYXkuYXN5bmNFeGVjKCgpIC0+IHsKCQkJCQkJCWlmICghaXNEaXNwb3NlZCgpKSB7CgkJCQkJCQkJRXJyb3JEaWFsb2cub3BlbkVycm9yKGdldFNpdGUoKS5nZXRTaGVsbCgpLAoJCQkJCQkJCQlKVW5pdE1lc3NhZ2VzLlRlc3RSdW5uZXJWaWV3UGFydF9yZWxvYWRfZXJyb3JfdGl0bGUsCgkJCQkJCQkJCXN0YXR1cy5nZXRNZXNzYWdlKCksIHN0YXR1cyk7CgkJCQkJCQl9CgkJCQkJCX0pOwoJCQkJCX0gZWxzZSB7CgkJCQkJCU1Vbml0UGx1Z2luLmxvZyhmYWlsdXJlKTsKCQkJCQl9CgkJCQl9CgkJCQlyZXR1cm4gbW9uaXRvci5pc0NhbmNlbGVkKCkgPyBTdGF0dXMuQ0FOQ0VMX1NUQVRVUyA6IFN0YXR1cy5PS19TVEFUVVM7CgkJCX0gZmluYWxseSB7CgkJCQlpZiAoIWRpc3BsYXkuaXNEaXNwb3NlZCgpKSB7CgkJCQkJZGlzcGxheS5hc3luY0V4ZWMoKCkgLT4gewoJCQkJCQlpZiAoIWlzRGlzcG9zZWQoKSAmJiBmUmVsb2FkVGVzdFJ1bkpvYiA9PSB0aGlzKSB7CgkJCQkJCQlmUmVsb2FkVGVzdFJ1bkpvYj0gbnVsbDsKCQkJCQkJCXVwZGF0ZUltcG9ydGVkVGVzdFJ1bkFjdGlvbnMoKTsKCQkJCQkJfQoJCQkJCX0pOwoJCQkJfQoJCQl9CgkJfTsKCQlyZWxvYWRKb2Iuc2V0VXNlcihtYW51YWwpOwoJCWZSZWxvYWRUZXN0UnVuSm9iPSByZWxvYWRKb2I7CgkJdXBkYXRlSW1wb3J0ZWRUZXN0UnVuQWN0aW9ucygpOwoJCXJlbG9hZEpvYi5zY2hlZHVsZSgpOwoJfQoKCSBwcml2YXRlIGNsYXNzIFJlbG9hZFRlc3RSdW5BY3Rpb24gZXh0ZW5kcyBBY3Rpb24gewoJCVJlbG9hZFRlc3RSdW5BY3Rpb24oKSB7CgkJCXNldFRleHQoSlVuaXRNZXNzYWdlcy5UZXN0UnVubmVyVmlld1BhcnRfcmVsb2FkX2FjdGlvbl9sYWJlbCk7CgkJCXNldFRvb2xUaXBUZXh0KEpVbml0TWVzc2FnZXMuVGVzdFJ1bm5lclZpZXdQYXJ0X3JlbG9hZF9hY3Rpb25fdG9vbHRpcCk7CgkJCXNldEltYWdlRGVzY3JpcHRvcihQbGF0Zm9ybVVJLmdldFdvcmtiZW5jaCgpLmdldFNoYXJlZEltYWdlcygpCgkJCQkJLmdldEltYWdlRGVzY3JpcHRvcihJU2hhcmVkSW1hZ2VzLklNR19FTENMX1NZTkNFRCkpOwoJCQlzZXREaXNhYmxlZEltYWdlRGVzY3JpcHRvcihQbGF0Zm9ybVVJLmdldFdvcmtiZW5jaCgpLmdldFNoYXJlZEltYWdlcygpCgkJCQkJLmdldEltYWdlRGVzY3JpcHRvcihJU2hhcmVkSW1hZ2VzLklNR19FTENMX1NZTkNFRF9ESVNBQkxFRCkpOwoJCQlzZXRFbmFibGVkKGZhbHNlKTsKCQl9CgoJCUBPdmVycmlkZQoJCXB1YmxpYyB2b2lkIHJ1bigpIHsKCQkJcmVsb2FkSW1wb3J0ZWRUZXN0UnVuU2Vzc2lvbih0cnVlKTsKCQl9Cgl9CgogCXByaXZhdGUgY2xhc3MgQXV0b1JlbG9hZFRlc3RSdW5BY3Rpb24gZXh0ZW5kcyBBY3Rpb24gewoJCUF1dG9SZWxvYWRUZXN0UnVuQWN0aW9uKCkgewoJCQlzdXBlcihKVW5pdE1lc3NhZ2VzLlRlc3RSdW5uZXJWaWV3UGFydF9hdXRvX3JlbG9hZF9hY3Rpb25fbGFiZWwsIEFTX0NIRUNLX0JPWCk7CgkJCXNldFRvb2xUaXBUZXh0KEpVbml0TWVzc2FnZXMuVGVzdFJ1bm5lclZpZXdQYXJ0X2F1dG9fcmVsb2FkX2FjdGlvbl90b29sdGlwKTsKCQkJc2V0RW5hYmxlZChmYWxzZSk7CgkJfQoKCQlAT3ZlcnJpZGUKCQlwdWJsaWMgdm9pZCBydW4oKSB7CgkJCXVwZGF0ZUltcG9ydGVkVGVzdFJ1bkFjdGlvbnMoKTsKCQl9Cgl9CgogCXByaXZhdGUgY2xhc3MgU3RvcEFjdGlvbiBleHRlbmRzIEFjdGlvbiB7Cg==").decode("utf-8"),
+          )
+
+          messages = Path("org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/JUnitMessages.java")
+          replace_once(messages, "Copyright (c) 2000, 2025 IBM Corporation and others.",
+                       "Copyright (c) 2000, 2026 IBM Corporation and others.")
+          replace_once(
+              messages,
+              "\tpublic static String TestRunnerViewPart_ImportTestRunSessionAction_title;\n"
+              "\tpublic static String TestRunnerViewPart_ImportTestRunSessionFromURLAction_import_from_url;\n",
+              "\tpublic static String TestRunnerViewPart_ImportTestRunSessionAction_title;\n"
+              "\tpublic static String TestRunnerViewPart_reload_action_label;\n"
+              "\tpublic static String TestRunnerViewPart_reload_action_tooltip;\n"
+              "\tpublic static String TestRunnerViewPart_auto_reload_action_label;\n"
+              "\tpublic static String TestRunnerViewPart_auto_reload_action_tooltip;\n"
+              "\tpublic static String TestRunnerViewPart_reload_job_name;\n"
+              "\tpublic static String TestRunnerViewPart_reload_success;\n"
+              "\tpublic static String TestRunnerViewPart_reload_error_title;\n"
+              "\tpublic static String TestRunnerViewPart_auto_reload_error;\n"
+              "\tpublic static String TestRunnerViewPart_ImportTestRunSessionFromURLAction_import_from_url;\n",
+          )
+
+          properties = Path("org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/JUnitMessages.properties")
+          replace_once(properties, "Copyright (c) 2000, 2025 IBM Corporation and others.",
+                       "Copyright (c) 2000, 2026 IBM Corporation and others.")
+          replace_once(
+              properties,
+              "TestRunnerViewPart_ImportTestRunSessionAction_error_title=Import Test Run\n"
+              "TestRunnerViewPart_ImportTestRunSessionFromURLAction_import_from_url=Import from &URL...\n",
+              "TestRunnerViewPart_ImportTestRunSessionAction_error_title=Import Test Run\n"
+              "TestRunnerViewPart_reload_action_label=&Reload Test Run\n"
+              "TestRunnerViewPart_reload_action_tooltip=Reload the imported test results from their source file\n"
+              "TestRunnerViewPart_auto_reload_action_label=Reload Automatically When Source Changes\n"
+              "TestRunnerViewPart_auto_reload_action_tooltip=Watch the imported test result file and reload it after changes\n"
+              "TestRunnerViewPart_reload_job_name=Reloading imported JUnit test results\n"
+              "TestRunnerViewPart_reload_success=Reloaded test results from {0}\n"
+              "TestRunnerViewPart_reload_error_title=Reload Test Run\n"
+              "TestRunnerViewPart_auto_reload_error=Could not watch test result file ''{0}'' for changes.\n"
+              "TestRunnerViewPart_ImportTestRunSessionFromURLAction_import_from_url=Import from &URL...\n",
+          )
+
+          reload_test = Path("org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/ImportedTestRunReloadTest.java")
+          reload_test.write_bytes(base64.b64decode("LyoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKi8KICogQ29weXJpZ2h0IChjKSAyMDI2IENhcnN0ZW4gSGFtbWVyIGFuZCBvdGhlcnMuCiAqCiAqIFRoaXMgcHJvZ3JhbSBhbmQgdGhlIGFjY29tcGFueWluZyBtYXRlcmlhbHMKICogYXJlIG1hZGUgYXZhaWxhYmxlIHVuZGVyIHRoZSB0ZXJtcyBvZiB0aGUgRWNsaXBzZSBQdWJsaWMgTGljZW5zZSAyLjAKICogd2hpY2ggYWNjb21wYW5pZXMgdGhpcyBkaXN0cmlidXRpb24sIGFuZCBpcyBhdmFpbGFibGUgYXQKICogaHR0cHM6Ly93d3cuZWNsaXBzZS5vcmcvbGVnYWwvZXBsLTIuMC8KICoKICogU1BEWC1MaWNlbnNlLUlkZW50aWZpZXI6IEVQTC0yLjAKICoKICogQ29udHJpYnV0b3JzOgogKiAgICAgQ2Fyc3RlbiBIYW1tZXIgLSBpbml0aWFsIHRlc3RzCiAqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqLwpwYWNrYWdlIG9yZy5lY2xpcHNlLmpkdC5qdW5pdC50ZXN0czsKCmltcG9ydCBzdGF0aWMgb3JnLmp1bml0LkFzc2VydC5hc3NlcnRFcXVhbHM7CmltcG9ydCBzdGF0aWMgb3JnLmp1bml0LkFzc2VydC5hc3NlcnRGYWxzZTsKaW1wb3J0IHN0YXRpYyBvcmcuanVuaXQuQXNzZXJ0LmFzc2VydE5vdE51bGw7CmltcG9ydCBzdGF0aWMgb3JnLmp1bml0LkFzc2VydC5hc3NlcnROb3RTYW1lOwppbXBvcnQgc3RhdGljIG9yZy5qdW5pdC5Bc3NlcnQuYXNzZXJ0VHJ1ZTsKaW1wb3J0IHN0YXRpYyBvcmcuanVuaXQuQXNzZXJ0LmZhaWw7CgppbXBvcnQgamF2YS5uaW8uY2hhcnNldC5TdGFuZGFyZENoYXJzZXRzOwppbXBvcnQgamF2YS5uaW8uZmlsZS5GaWxlczsKaW1wb3J0IGphdmEubmlvLmZpbGUuUGF0aDsKaW1wb3J0IGphdmEubmlvLmZpbGUuU3RhbmRhcmRPcGVuT3B0aW9uOwppbXBvcnQgamF2YS51dGlsLkFycmF5TGlzdDsKaW1wb3J0IGphdmEudXRpbC5Db21wYXJhdG9yOwppbXBvcnQgamF2YS51dGlsLkxpc3Q7CmltcG9ydCBqYXZhLnV0aWwuY29uY3VycmVudC5Db3VudERvd25MYXRjaDsKaW1wb3J0IGphdmEudXRpbC5jb25jdXJyZW50LlRpbWVVbml0OwppbXBvcnQgamF2YS51dGlsLmNvbmN1cnJlbnQuYXRvbWljLkF0b21pY1JlZmVyZW5jZTsKCmltcG9ydCBvcmcuanVuaXQuQWZ0ZXI7CmltcG9ydCBvcmcuanVuaXQuQmVmb3JlOwppbXBvcnQgb3JnLmp1bml0LlRlc3Q7CgppbXBvcnQgb3JnLmVjbGlwc2UuY29yZS5ydW50aW1lLkNvcmVFeGNlcHRpb247CgppbXBvcnQgb3JnLmVjbGlwc2UuamR0LmludGVybmFsLmp1bml0LkpVbml0Q29yZVBsdWdpbjsKaW1wb3J0IG9yZy5lY2xpcHNlLmpkdC5pbnRlcm5hbC5qdW5pdC5tb2RlbC5KVW5pdE1vZGVsOwppbXBvcnQgb3JnLmVjbGlwc2UuamR0LmludGVybmFsLmp1bml0Lm1vZGVsLlRlc3RSdW5TZXNzaW9uOwppbXBvcnQgb3JnLmVjbGlwc2UuamR0LmludGVybmFsLmp1bml0LnVpLkltcG9ydGVkVGVzdFJ1bkZpbGVXYXRjaGVyOwoKcHVibGljIGNsYXNzIEltcG9ydGVkVGVzdFJ1blJlbG9hZFRlc3QgewoKCXByaXZhdGUgUGF0aCBmVGVtcG9yYXJ5RGlyZWN0b3J5OwoJcHJpdmF0ZSBmaW5hbCBMaXN0PFRlc3RSdW5TZXNzaW9uPiBmU2Vzc2lvbnNUb1JlbW92ZT0gbmV3IEFycmF5TGlzdDw+KCk7CgoJQEJlZm9yZQoJcHVibGljIHZvaWQgc2V0VXAoKSB0aHJvd3MgRXhjZXB0aW9uIHsKCQlmVGVtcG9yYXJ5RGlyZWN0b3J5PSBGaWxlcy5jcmVhdGVUZW1wRGlyZWN0b3J5KCJqdW5pdC1yZWxvYWQtdGVzdCIpOyAvLyROT04tTFMxJAkKCX0KCiAJQEFmdGVyCglwdWJsaWMgdm9pZCB0ZWFyRG93bigpIHRocm93cyBFeGNlcHRpb24gewoJCU1Vbml0TW9kZWwgbW9kZWw9IEpVbml0Q29yZVBsdWdpbi5nZXRNb2RlbCgpOwoJCWZvciAoVGVzdFJ1blNlc3Npb24gc2Vzc2lvbiA6IGZTZXNzaW9uc1RvUmVtb3ZlKSB7CgkJCWlmIChtb2RlbC5nZXRUZXN0UnVuU2Vzc2lvbnMoKS5jb250YWlucyhzZXNzaW9uKSkgewoJCQkJbW9kZWwucmVtb3ZlVGVzdFJ1blNlc3Npb24oc2Vzc2lvbik7CgkJCX0KCQl9CgkJaWYgKGZUZW1wb3JhcnlEaXJlY3RvcnkgIT0gbnVsbCkgewoJCQl0cnkgKHZhciBwYXRocz0gRmlsZXMud2FsayhmVGVtcG9yYXJ5RGlyZWN0b3J5KSkgewoJCQkJcGF0aHMuc29ydGVkKENvbXBhcmF0b3IucmV2ZXJzZU9yZGVyKCkpLmZvckVhY2gocGF0aCAtPiB7CgkJCQkJdHJ5IHsKCQkJCQkJRmlsZXMuZGVsZXRlSWZFeGlzdHMocGF0aCk7CgkJCQl9IGNhdGNoIChFeGNlcHRpb24gZSkgewoJCQkJCQkvLyBCZXN0LWVmZm9ydCBjbGVhbnVwLgoJCQkJfQoJCQl9KTsKCQl9CgkJfQoJfQoKCUtUZXN0CglwdWJsaWMgdm9pZCB0ZXN0UmVsb2FkUmVwbGFjZXNTZXNzaW9uQW5kUmV0YWluc1NvdXJjZUZpbGUoKSB0aHJvd3MgRXhjZXB0aW9uIHsKCQlQYXRoIHJlc3VsdEZpbGU9IGZUZW1wb3JhcnlEaXJlY3RvcnkucmVzb2x2ZSgicmVzdWx0cy54bWwiKTsgLy8kTk9OLUxTMSQKCQl3cml0ZVRlc3RSdW4ocmVzdWx0RmlsZSwgImZpcnN0IHJ1biIsICJmaXJzdFRlc3QiKTsgLy8kTk9OLUxTMSQgLy8kTk9OLUxTMiQKCgkJSFVuaXRNb2RlbCBtb2RlbD0gSlVuaXRDb3JlUGx1Z2luLmdldE1vZGVsKCk7CgkJVGVzdFJ1blNlc3Npb24gaW1wb3J0ZWQ9IEpVbml0TW9kZWwuaW1wb3J0VGVzdFJ1blNlc3Npb24ocmVzdWx0RmlsZS50b0ZpbGUoKSk7CgkJZlNlc3Npb25zVG9SZW1vdmUuYWRkKGltcG9ydGVkKTsKCgkJYXNzZXJ0RXF1YWxzKHJlc3VsdEZpbGUudG9BYnNvbHV0ZVBhdGgoKS5ub3JtYWxpemUoKSwgaW1wb3J0ZWQuZ2V0SW1wb3J0ZWRGcm9tRmlsZSgpKTsKCQlhc3NlcnRFcXVhbHMoImZpcnN0IHJ1biIsIGltcG9ydGVkLmdldFRlc3RSdW5OYW1lKCkpOyAvLyROT04tTFMxJAkKCgkJd3JpdGVUZXN0UnVuKHJlc3VsdEZpbGUsICJzZWNvbmQgcnVuIiwgInNlY29uZFRlc3QiKTsgLy8kTk9OLUxTMSQgLy8kTk9OLUxTMiQKCQlUZXN0UnVuU2Vzc2lvbiByZWxvYWRlZD0gSlVuaXRNb2RlbC5yZWxvYWRUZXN0UnVuU2Vzc2lvbihpbXBvcnRlZCk7CgkJYXNzZXJ0Tm90TnVsbChyZWxvYWRlZCk7CgkJZlNlc3Npb25zVG9SZW1vdmUuYWRkKHJlbG9hZGVkKTsKCgkJYXNzZXJ0Tm90U2FtZShpbXBvcnRlZCwgcmVsb2FkZWQpOwoJCWFzc2VydEVxdWFscyhyZXN1bHRGaWxlLnRvQWJzb2x1dGVQYXRoKCkubm9ybWFsaXplKCksIHJlbG9hZGVkLmdldEltcG9ydGVkRnJvbUZpbGUoKSk7CgkJYXNzZXJ0RXF1YWxzKCJzZWNvbmQgcnVuIiwgcmVsb2FkZWQuZ2V0VGVzdFJ1bk5hbWUoKSk7IC8vJE5PTi1MUzEkCQoJCWFzc2VydEZhbHNlKG1vZGVsLmdldFRlc3RSdW5TZXNzaW9ucygpLmNvbnRhaW5zKGltcG9ydGVkKSk7CgkJYXNzZXJ0VHJ1ZShtb2RlbC5nZXRUZXN0UnVuU2Vzc2lvbnMoKS5jb250YWlucyhyZWxvYWRlZCkpOwoJfQoKCUtUZXN0CglwdWJsaWMgdm9pZCB0ZXN0RmFpbGVkUmVsb2FkS2VlcHNQcmV2aW91c2x5SW1wb3J0ZWRTZXNzaW9uKCkgdGhyb3dzIEV4Y2VwdGlvbiB7CgkJUGF0aCByZXN1bHRGaWxlPSBmVGVtcG9yYXJ5RGlyZWN0b3J5LnJlc29sdmUoInJlc3VsdHMueG1sIik7IC8vJE5PTi1MUzEkCQoJCXdyaXRlVGVzdFJ1bihyZXN1bHRGaWxlLCAidmFsaWQgcnVuIiwgInRlc3QiKTsgLy8kTk9OLUxTMSQgLy8kTk9OLUxTMiQKCgkJSFVuaXRNb2RlbCBtb2RlbD0gSlVuaXRDb3JlUGx1Z2luLmdldE1vZGVsKCk7CgkJVGVzdFJ1blNlc3Npb24gaW1wb3J0ZWQ9IEpVbml0TW9kZWwuaW1wb3J0VGVzdFJ1blNlc3Npb24ocmVzdWx0RmlsZS50b0ZpbGUoKSk7CgkJZlNlc3Npb25zVG9SZW1vdmUuYWRkKGltcG9ydGVkKTsKCgkJRmlsZXMud3JpdGVTdHJpbmcocmVzdWx0RmlsZSwgIjx0ZXN0cnVuIiwgU3RhbmRhcmRDaGFyc2V0cy5VVEYtOCwgLy8kTk9OLUxTMSQKCQkJU3RhbmRhcmRPcGVuT3B0aW9uLlRSVU5DQVRFX0VYSVNUSU5HKTsKCQl0cnkgewoJCQlKVW5pdE1vZGVsLnJlbG9hZFRlc3RSdW5TZXNzaW9uKGltcG9ydGVkKTsKCQkJZmFpbCgiRXhwZWN0ZWQgaW52YWxpZCBYTUwgdG8gZmFpbCIpOyAvLyROT04tTFMxJAkKCQl9IGNhdGNoIChDb3JlRXhjZXB0aW9uIGV4cGVjdGVkKSB7CgkJCS8vIEV4cGVjdGVkLgoJCX0KCgkJYXNzZXJ0VHJ1ZShtb2RlbC5nZXRUZXN0UnVuU2Vzc2lvbnMoKS5jb250YWlucy ppbXBvcnRlZCkpOwoJCWFzc2VydEVxdWFscygidmFsaWQgcnVuIiwgaW1wb3J0ZWQuZ2V0VGVzdFJ1bk5hbWUoKSk7IC8vJE5PTi1MUzEkCQoJfQoKCUtUZXN0CglwdWJsaWMgdm9pZCB0ZXN0RmlsZVdhdGNoZXJSZXBvcnRzRXh0ZXJuYWxNb2RpZmljYXRpb24oKSB0aHJvd3MgRXhjZXB0aW9uIHsKCQlQYXRoIHJlc3VsdEZpbGU9IGZUZW1wb3JhcnlEaXJlY3RvcnkucmVzb2x2ZSgicmVzdWx0cy54bWwiKTsgLy8kTk9OLUxTMSQKCQl3cml0ZVRlc3RSdW4ocmVzdWx0RmlsZSwgImZpcnN0IHJ1biIsICJ0ZXN0Iik7IC8vJE5PTi1MUzEkIC8vJE5PTi1MUzIkCQoKCQlDb3VudERvd25MYXRjaCBjaGFuZ2VkPSBuZXcgQ291bnREb3duTGF0Y2goMSk7CgkJQXRvbWljUmVmZXJlbmNlPFBhdGg+IGNoYW5nZWRGaWxlPSBuZXcgQXRvbWljUmVmZXJlbmNlPD4oKTsKCQl0cnkgKEltcG9ydGVkVGVzdFJ1bkZpbGVXYXRjaGVyIHdhdGNoZXI9IG5ldyBJbXBvcnRlZFRlc3RSdW5GaWxlV2F0Y2hlcihwYXRoIC0+IHsKCQkJY2hhbmdlZEZpbGUuc2V0KHBhdGgpOwoJCQljaGFuZ2VkLmNvdW50RG93bigpOwoJCX0pKSB7CgkJCXdhdGNoZXIud2F0Y2gocmVzdWx0RmlsZSk7CgkJCXdyaXRlVGVzdFJ1bihyZXN1bHRGaWxlLCAic2Vjb25kIHJ1biIsICJ0ZXN0Iik7IC8vJE5PTi1MUzEkIC8vJE5PTi1MUzIkCQoKCQkJYXNzZXJ0VHJ1ZSgiRXhwZWN0ZWQgYSBXYXRjaFNlcnZpY2Ugbm90aWZpY2F0aW9uIiwgY2hhbmdlZC5hd2FpdCgxMCwgVGltZVVuaXQuU0VDT05EUykpOyAvLyROT04tTFMxJAkKCQkJYXNzZXJ0RXF1YWxzKHJlc3VsdEZpbGUudG9BYnNvbHV0ZVBhdGgoKS5ub3JtYWxpemUoKSwgY2hhbmdlZEZpbGUuZ2V0KCkpOwoJCX0KCX0KCiAJcHJpdmF0ZSBzdGF0aWMgdm9pZCB3cml0ZVRlc3RSdW4oUGF0aCBmaWxlLCBTdHJpbmcgcnVuTmFtZSwgU3RyaW5nIHRlc3ROYW1lKSB0aHJvd3MgRXhjZXB0aW9uIHsKCQlTdHJpbmcgeG1sPSAiPD94bWwgdmVyc2lvbj1cIjEuMFwiIGVuY29kaW5nPVwiVVRGLThcIj9cblwiIC8vJE5PTi1MUzEkCgkJCQkrICI8dGVzdHJ1biBuYW1lPVwiIiArIHJ1bk5hbWUgLy8kTk9OLUxTMSQKCQkJCQkrICJcIiB0ZXN0cz1cIjFcIiBzdGFydGVkPVwiMVwiIGZhaWx1cmVzPVwiMFwiIGVycm9ycz1cIjBcIiBpZ25vcmVkPVwiMFwiPlxuIiAvLyROT04tTFMxJAkKCQkJCQkrICIgIDx0ZXN0c3VpdGUgbmFtZT1cImV4YW1wbGUuVGVzdHNcIiB0aW1lPVwiMC4wXCI+XG4iIC8vJE5PTi1MUzEkCgkJCQkrICIgICAgPHRlc3RjYXNlIG5hbWU9XCIiICsgdGVzdE5hbWUgLy8kTk9OLUxTMSQKCQkJCQkrICJcIiBjbGFzc25hbWU9XCJleGFtcGxlLlRlc3RzXCIgdGltZT1cIjAuMFwiLz5cbiIgLy8kTk9OLUxTMSQKCQkJCQkrICIgIDwvdGVzdHN1aXRlPlxuIiAvLyROT04tTFMxJAkKCQkJCQkrICI8L3Rlc3RydW4+XG4iOyAvLyROT04tTFMxJAkKCQlGaWxlcy53cml0ZVN0cmluZyhmaWxlLCB4bWwsIFN0YW5kYXJkQ2hhcnNldHMuVVRGLTgpOwoJfQp9Cg=="))
+
+          suite = Path("org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/JUnitJUnitTests.java")
+          replace_once(
+              suite,
+              "TestRunSessionSerializationTests3.class,\n"
+              "TestRunSessionSerializationTests4.class,\n",
+              "TestRunSessionSerializationTests3.class,\n"
+              "TestRunSessionSerializationTests4.class,\n"
+              "ImportedTestRunReloadTest.class,\n",
+          )
+          PY
+
+          git diff --check
+
+      - name: Build affected reactor
+        run: >-
+          mvn -B -ntp -U
+          -Pbuild-individual-bundles
+          -DskipTests=true
+          -Dcompare-version-with-baselines.skip=true
+          -pl org.eclipse.jdt.ui.tests
+          -am install
+
+      - name: Run affected JUnit tests
+        run: >-
+          xvfb-run --auto-servernum
+          mvn -B -ntp
+          -Pbuild-individual-bundles
+          -Dcompare-version-with-baselines.skip=true
+          -pl org.eclipse.jdt.ui.tests
+          -Dtest=org.eclipse.jdt.junit.tests.ImportedTestRunReloadTest,org.eclipse.jdt.junit.tests.TestRunSessionSerializationTests3,org.eclipse.jdt.junit.tests.TestRunSessionSerializationTests4
+          test
+
+      - name: Commit verified implementation to feature branch
+        shell: bash
+        run: |
+          git switch -C issue-3128-reload-imported-test-results 254e0a12c522f33432e91108d63257a71a42117b
+          git diff --check
+          git config user.name "Carsten Hammer"
+          git config user.email "carsten.hammer@t-online.de"
+          git add \
+            org.eclipse.jdt.junit.core/META-INF/MANIFEST.MF \
+            org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/JUnitModel.java \
+            org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunSession.java \
+            org.eclipse.jdt.junit/META-INF/MANIFEST.MF \
+            org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/ImportedTestRunFileWatcher.java \
+            org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/JUnitMessages.java \
+            org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/JUnitMessages.properties \
+            org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java \
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/ImportedTestRunReloadTest.java \
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/JUnitJUnitTests.java
+          git commit -m "Reload imported JUnit test results"
+          git push --force-with-lease=refs/heads/issue-3128-reload-imported-test-results:254e0a12c522f33432e91108d63257a71a42117b \
+            origin HEAD:issue-3128-reload-imported-test-results
