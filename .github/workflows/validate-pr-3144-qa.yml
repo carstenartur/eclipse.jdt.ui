@@ -1,0 +1,137 @@
+name: Validate PR 3144 QA recommendations
+
+on:
+  push:
+    branches:
+      - workbench-pr-3144-qa
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr-3144-qa
+  cancel-in-progress: true
+
+jobs:
+  validate-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      TARGET_BRANCH: fix-53-disabled-parameterized-test
+      TARGET_HEAD: 9fe9cbb4b0687ff64b3f4a64307537486b01007d
+    steps:
+      - name: Check out workbench branch
+        uses: actions/checkout@v4
+        with:
+          ref: workbench-pr-3144-qa
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Set up Maven 3.9.9
+        uses: stCarolas/setup-maven@d6af6abeda15e98926a57b5aa970a96bb37f97d1
+        with:
+          maven-version: 3.9.9
+
+      - name: Apply QA changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply --check --recount workbench/pr3144-qa.patch
+          git apply --recount workbench/pr3144-qa.patch
+          mv workbench/DisabledParameterizedTestViewTest.java \
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/DisabledParameterizedTestViewTest.java
+          rm workbench/pr3144-qa.patch
+          rmdir workbench
+          rm .github/workflows/validate-pr-3144-qa.yml
+          git diff --check
+          if git diff --name-only "$TARGET_HEAD" -- .github | grep -q .; then
+            echo "Unexpected .github changes in final tree"
+            git diff --name-status "$TARGET_HEAD" -- .github
+            exit 1
+          fi
+          if git diff --name-only "$TARGET_HEAD" -- workbench | grep -q .; then
+            echo "Unexpected workbench files in final tree"
+            git diff --name-status "$TARGET_HEAD" -- workbench
+            exit 1
+          fi
+
+      - name: Verify final file set
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/expected-files <<'EOF'
+          org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/ITestSessionListener.java
+          org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunSession.java
+          org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestRunSessionSerializer.java
+          org.eclipse.jdt.junit.core/src/org/eclipse/jdt/internal/junit/model/TestSuiteElement.java
+          org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java
+          org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestSessionLabelProvider.java
+          org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/DisabledParameterizedTestViewTest.java
+          org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/JUnitJUnitTests.java
+          EOF
+          git diff --name-only "$TARGET_HEAD" | sort > /tmp/actual-files
+          sort -o /tmp/expected-files /tmp/expected-files
+          diff -u /tmp/expected-files /tmp/actual-files
+
+      - name: Compile affected reactor
+        run: >-
+          mvn -B -ntp
+          -Pbuild-individual-bundles
+          -Dcompare-version-with-baselines.skip=true
+          -DskipTests=true
+          -pl org.eclipse.jdt.ui.tests
+          -am
+          install
+
+      - name: Run targeted issue 53 and QA tests
+        run: >-
+          xvfb-run -a
+          mvn -B -ntp
+          -Pbuild-individual-bundles
+          -Dcompare-version-with-baselines.skip=true
+          -Dtest=org.eclipse.jdt.junit.tests.DisabledParameterizedTestRunTest5,org.eclipse.jdt.junit.tests.DisabledParameterizedTestRunTest6,org.eclipse.jdt.junit.tests.DisabledParameterizedTestViewTest,org.eclipse.jdt.junit.tests.TestRunSessionSerializationTests3,org.eclipse.jdt.junit.tests.TestRunSessionSerializationTests4
+          -pl org.eclipse.jdt.ui.tests
+          test
+
+      - name: Run complete JUnit UI suite
+        run: >-
+          xvfb-run -a
+          mvn -B -ntp
+          -Pbuild-individual-bundles
+          -Dcompare-version-with-baselines.skip=true
+          -Dtest=org.eclipse.jdt.junit.tests.JUnitJUnitTests
+          -pl org.eclipse.jdt.ui.tests
+          test
+
+      - name: Publish one clean commit to PR branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Carsten Hammer"
+          git config user.email "carsten.hammer@t-online.de"
+          git add -A
+          git diff --cached --check
+          tree_sha=$(git write-tree)
+          commit_message=$(cat <<'MSG'
+          Address QA findings for disabled parameterized tests
+
+          Notify the JUnit UI when a skipped method container changes state,
+          refresh hierarchical and flat views, and keep failures visible when
+          imported data marks a suite as both ignored and failed.
+
+          Add UI, ignored-filter, counter, class-level and XML round-trip
+          regression coverage for eclipse-jdt/eclipse.jdt.ui#53.
+
+          Assisted-by: OpenAI ChatGPT
+          MSG
+          )
+          commit_sha=$(printf '%s\n' "$commit_message" | git commit-tree "$tree_sha" -p "$TARGET_HEAD")
+          git push --force-with-lease="refs/heads/$TARGET_BRANCH:$TARGET_HEAD" \
+            origin "$commit_sha:refs/heads/$TARGET_BRANCH"
+          echo "Published clean commit: $commit_sha"
