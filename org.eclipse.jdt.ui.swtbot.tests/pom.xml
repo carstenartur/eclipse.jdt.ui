@@ -28,7 +28,7 @@
 
   <properties>
     <testSuite>${project.artifactId}</testSuite>
-    <testClass>org.eclipse.jdt.ui.swtbot.tests.UndoRedoHistorySWTBotTest</testClass>
+    <testClass>org.eclipse.jdt.ui.swtbot.tests.UndoRedoHistorySWTBotCITest</testClass>
     <issue454.keyboard.strategy>org.eclipse.swtbot.swt.finder.keyboard.AWTKeyboardStrategy</issue454.keyboard.strategy>
   </properties>
 
