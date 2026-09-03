@@ -851,6 +851,11 @@ public class TestRunnerViewPart extends ViewPart {
 		}
 
 		@Override
+		public void testChanged(TestElement testElement) {
+			fTestViewer.registerViewersRefresh();
+		}
+
+		@Override
 		public void testReran(TestCaseElement testCaseElement, TestElement.Status status, String trace, String expectedResult, String actualResult) {
 			fTestViewer.registerViewerUpdate(testCaseElement); //TODO: autoExpand?
 			postSyncProcessChanges();
