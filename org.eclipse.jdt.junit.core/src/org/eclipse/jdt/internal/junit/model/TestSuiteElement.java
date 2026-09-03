@@ -25,6 +25,7 @@ public class TestSuiteElement extends TestElement implements ITestSuiteElement {
 
 	private List<TestElement> fChildren;
 	private Status fChildrenStatus;
+	private boolean fIgnored;
 
 	public TestSuiteElement(TestSuiteElement parent, String id, String testName, int childrenCount, String displayName, String[] parameterTypes, String uniqueId) {
 		super(parent, id, testName, displayName, parameterTypes, uniqueId);
@@ -33,11 +34,22 @@ public class TestSuiteElement extends TestElement implements ITestSuiteElement {
 
 	@Override
 	public Result getTestResult(boolean includeChildren) {
+		if (fIgnored) {
+			return Result.IGNORED;
+		}
 		if (includeChildren) {
 			return getStatus().convertToResult();
 		} else {
 			return super.getStatus().convertToResult();
 		}
+	}
+
+	public void setIgnored(boolean ignored) {
+		fIgnored= ignored;
+	}
+
+	public boolean isIgnored() {
+		return fIgnored;
 	}
 
 	@Override

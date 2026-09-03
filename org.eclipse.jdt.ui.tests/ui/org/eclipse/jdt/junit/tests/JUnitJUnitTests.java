@@ -32,6 +32,8 @@ TestRunListenerTest3.class,
 TestRunListenerTest4.class,
 TestRunListenerTest5.class,
 TestRunListenerTest6.class,
+DisabledParameterizedTestRunTest5.class,
+DisabledParameterizedTestRunTest6.class,
 
 TestRunFilteredStandardRunnerTest4.class,
 TestRunFilteredParameterizedRunnerTest4.class,
