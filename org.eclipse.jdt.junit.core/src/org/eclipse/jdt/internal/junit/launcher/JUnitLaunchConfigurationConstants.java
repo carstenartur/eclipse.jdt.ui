@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2018 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -19,6 +19,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.resources.ResourcesPlugin;
 
 import org.eclipse.debug.core.ILaunchConfiguration;
+import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
@@ -70,6 +71,8 @@ public class JUnitLaunchConfigurationConstants {
 
 	public static final String ATTR_FAILURES_NAMES= JUnitCorePlugin.PLUGIN_ID+".FAILURENAMES"; //$NON-NLS-1$
 
+	public static final String ATTR_RERUN_LAUNCH_CONFIG_MEMENTO= JUnitCorePlugin.PLUGIN_ID + ".RERUN_LAUNCH_CONFIG_MEMENTO"; //$NON-NLS-1$
+
 	public static final String ATTR_TEST_RUNNER_KIND= JUnitCorePlugin.PLUGIN_ID+".TEST_KIND"; //$NON-NLS-1$
 
 	public static final String ATTR_TEST_HAS_INCLUDE_TAGS= JUnitCorePlugin.PLUGIN_ID + ".HAS_INCLUDE_TAGS"; //$NON-NLS-1$
@@ -84,6 +87,44 @@ public class JUnitLaunchConfigurationConstants {
 	 * The unique ID of test to run or "" if not available (applicable to JUnit 5 and above).
 	 */
 	public static final String ATTR_TEST_UNIQUE_ID= JUnitCorePlugin.PLUGIN_ID + ".TEST_UNIQUE_ID"; //$NON-NLS-1$
+
+	/**
+	 * Creates a detached working copy for a rerun and remembers the persistent
+	 * launch configuration from which it was derived.
+	 *
+	 * @param launchConfiguration the configuration to copy
+	 * @param name the name of the temporary configuration
+	 * @return the temporary rerun configuration
+	 * @throws CoreException if the configuration cannot be copied or inspected
+	 */
+	public static ILaunchConfigurationWorkingCopy createRerunLaunchConfiguration(
+			ILaunchConfiguration launchConfiguration, String name) throws CoreException {
+		ILaunchConfigurationWorkingCopy rerunConfiguration= launchConfiguration.copy(name);
+		String memento= getRerunLaunchConfigurationMemento(launchConfiguration);
+		if (memento != null)
+			rerunConfiguration.setAttribute(ATTR_RERUN_LAUNCH_CONFIG_MEMENTO, memento);
+		return rerunConfiguration;
+	}
+
+	/**
+	 * Returns the memento of the persistent configuration from which the given
+	 * configuration ultimately originated.
+	 *
+	 * @param launchConfiguration a saved configuration or temporary working copy
+	 * @return the persistent configuration memento, or <code>null</code>
+	 * @throws CoreException if the configuration cannot be inspected
+	 */
+	public static String getRerunLaunchConfigurationMemento(ILaunchConfiguration launchConfiguration) throws CoreException {
+		String memento= launchConfiguration.getAttribute(ATTR_RERUN_LAUNCH_CONFIG_MEMENTO, (String) null);
+		if (memento != null && !memento.isEmpty())
+			return memento;
+		if (launchConfiguration instanceof ILaunchConfigurationWorkingCopy workingCopy) {
+			ILaunchConfiguration original= workingCopy.getOriginal();
+			if (original != null && original.exists())
+				return original.getMemento();
+		}
+		return launchConfiguration.exists() ? launchConfiguration.getMemento() : null;
+	}
 
 	public static ITestKind getTestRunnerKind(ILaunchConfiguration launchConfiguration) {
 		try {

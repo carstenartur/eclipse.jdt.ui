@@ -564,9 +564,10 @@ public final class TestRunSessionHistory {
 			String launchConfigurationMemento= null;
 			String launchMode= null;
 			ILaunchConfiguration launchConfiguration= session.getRerunLaunchConfiguration();
-			if (launchConfiguration != null && launchConfiguration.exists()) {
+			if (launchConfiguration != null) {
 				try {
-					launchConfigurationMemento= launchConfiguration.getMemento();
+					launchConfigurationMemento=
+							JUnitLaunchConfigurationConstants.getRerunLaunchConfigurationMemento(launchConfiguration);
 					launchMode= session.getRerunLaunchMode();
 				} catch (CoreException e) {
 					LOG.log(e.getStatus());

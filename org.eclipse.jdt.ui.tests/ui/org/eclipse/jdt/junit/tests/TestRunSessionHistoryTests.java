@@ -169,6 +169,37 @@ public class TestRunSessionHistoryTests {
 	}
 
 	@Test
+	public void persistsOriginalConfigurationForTemporaryRelaunch() throws Exception {
+		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
+		ILaunchManager launchManager= DebugPlugin.getDefault().getLaunchManager();
+		ILaunchConfiguration configuration= createLaunchConfiguration();
+		try {
+			ILaunchConfigurationWorkingCopy temporaryConfiguration=
+					JUnitLaunchConfigurationConstants.createRerunLaunchConfiguration(configuration,
+							launchManager.generateLaunchConfigurationName("JUnit failures first")); //$NON-NLS-1$
+			temporaryConfiguration.setAttribute(JUnitLaunchConfigurationConstants.ATTR_FAILURES_NAMES,
+					"failures.txt"); //$NON-NLS-1$
+			TestRunSession session= relaunchableSession("temporary relaunch", temporaryConfiguration, //$NON-NLS-1$
+					ILaunchManager.DEBUG_MODE);
+
+			assertTrue(temporaryConfiguration.isWorkingCopy());
+			assertTrue(session.canRerun());
+			assertEquals(configuration.getMemento(),
+					JUnitLaunchConfigurationConstants.getRerunLaunchConfigurationMemento(temporaryConfiguration));
+
+			TestRunSessionHistory.store(List.of(session), historyDirectory, 10);
+			TestRunSession restored= TestRunSessionHistory.load(historyDirectory, 10).get(0);
+
+			assertTrue(restored.canRerun());
+			assertEquals(configuration.getMemento(), restored.getRerunLaunchConfiguration().getMemento());
+			assertEquals(ILaunchManager.DEBUG_MODE, restored.getRerunLaunchMode());
+		} finally {
+			if (configuration.exists())
+				configuration.delete();
+		}
+	}
+
+	@Test
 	public void missingLaunchConfigurationDisablesRelaunchWithoutLosingHistory() throws Exception {
 		File historyDirectory= fTemporaryFolder.newFolder("history"); //$NON-NLS-1$
 		ILaunchConfiguration configuration= createLaunchConfiguration();

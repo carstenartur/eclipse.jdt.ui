@@ -333,12 +333,12 @@ public class TestRunSession implements ITestRunSession {
 	}
 
 	/**
-	 * @return <code>true</code> if this session has an existing launch
-	 *         configuration and a launch mode for rerunning it
+	 * @return <code>true</code> if this session has a usable launch configuration
+	 *         and a launch mode for rerunning it
 	 */
 	public boolean canRerun() {
 		ILaunchConfiguration configuration= getRerunLaunchConfiguration();
-		return configuration != null && configuration.exists() && getRerunLaunchMode() != null;
+		return configuration != null && (configuration.exists() || configuration.isWorkingCopy()) && getRerunLaunchMode() != null;
 	}
 
 	@Override
