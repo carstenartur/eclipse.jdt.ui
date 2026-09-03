@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright (c) 2026 Contributors to the Eclipse Foundation
+
+  This program and the accompanying materials
+  are made available under the terms of the Eclipse Distribution License v1.0
+  which accompanies this distribution, and is available at
+  http://www.eclipse.org/org/documents/edl-v10.php
+
+  SPDX-License-Identifier: BSD-3-Clause
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <artifactId>tests-pom</artifactId>
+    <groupId>eclipse.jdt.ui</groupId>
+    <version>4.42.0-SNAPSHOT</version>
+    <relativePath>../tests-pom/</relativePath>
+  </parent>
+
+  <groupId>org.eclipse.jdt</groupId>
+  <artifactId>org.eclipse.jdt.ui.swtbot.tests</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>eclipse-test-plugin</packaging>
+
+  <properties>
+    <testSuite>${project.artifactId}</testSuite>
+    <testClass>org.eclipse.jdt.ui.swtbot.tests.UndoRedoHistorySWTBotTest</testClass>
+    <issue454.keyboard.strategy>org.eclipse.swtbot.swt.finder.keyboard.AWTKeyboardStrategy</issue454.keyboard.strategy>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>swtbot-4.3.0</id>
+      <layout>p2</layout>
+      <url>https://download.eclipse.org/technology/swtbot/releases/4.3.0/</url>
+    </repository>
+  </repositories>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId>
+        <artifactId>tycho-surefire-plugin</artifactId>
+        <version>${tycho.version}</version>
+        <configuration>
+          <useUIHarness>true</useUIHarness>
+          <useUIThread>false</useUIThread>
+          <appArgLine>-nl en_US -consoleLog</appArgLine>
+          <showEclipseLog>true</showEclipseLog>
+          <dependencies>
+            <dependency>
+              <type>eclipse-plugin</type>
+              <artifactId>org.eclipse.osgi.compatibility.state</artifactId>
+              <version>0.0.0</version>
+            </dependency>
+            <dependency>
+              <type>eclipse-plugin</type>
+              <artifactId>org.eclipse.equinox.event</artifactId>
+              <version>0.0.0</version>
+            </dependency>
+          </dependencies>
+          <systemProperties>
+            <DetectVMInstallationsJob.disabled>true</DetectVMInstallationsJob.disabled>
+            <eclipse.jdt.ui.issue454.trace>true</eclipse.jdt.ui.issue454.trace>
+            <org.eclipse.swtbot.keyboard.strategy>${issue454.keyboard.strategy}</org.eclipse.swtbot.keyboard.strategy>
+            <org.eclipse.swtbot.keyboard.layout>EN_US</org.eclipse.swtbot.keyboard.layout>
+            <org.eclipse.swtbot.keyboard.interval>20</org.eclipse.swtbot.keyboard.interval>
+          </systemProperties>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
