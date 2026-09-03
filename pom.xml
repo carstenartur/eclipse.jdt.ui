@@ -53,6 +53,7 @@
 
   <modules>
     <module>org.eclipse.jdt.text.tests</module>
+    <module>org.eclipse.jdt.ui.swtbot.tests</module>
     <module>org.eclipse.jdt.ui.tests</module>
     <module>org.eclipse.jdt.ui.tests.refactoring</module>
 	<module>org.eclipse.jdt.ui.junit.sampleproject</module>
