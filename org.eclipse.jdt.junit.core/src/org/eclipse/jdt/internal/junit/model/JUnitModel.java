@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2016 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -261,33 +261,10 @@ public final class JUnitModel {
 		ILaunchManager launchManager= DebugPlugin.getDefault().getLaunchManager();
 		launchManager.addLaunchListener(fLaunchListener);
 
-/*
- * TODO: restore on restart:
- * - only import headers!
- * - only import last n sessions; remove all other files in historyDirectory
- */
-//		File historyDirectory= JUnitPlugin.getHistoryDirectory();
-//		File[] swapFiles= historyDirectory.listFiles();
-//		if (swapFiles != null) {
-//			Arrays.sort(swapFiles, new Comparator() {
-//				public int compare(Object o1, Object o2) {
-//					String name1= ((File) o1).getName();
-//					String name2= ((File) o2).getName();
-//					return name1.compareTo(name2);
-//				}
-//			});
-//			for (int i= 0; i < swapFiles.length; i++) {
-//				final File file= swapFiles[i];
-//				SafeRunner.run(new ISafeRunnable() {
-//					public void run() throws Exception {
-//						importTestRunSession(file );
-//					}
-//					public void handleException(Throwable exception) {
-//						JUnitPlugin.log(exception);
-//					}
-//				});
-//			}
-//		}
+		List<TestRunSession> restoredSessions= TestRunSessionHistory.load(JUnitCorePlugin.getHistoryDirectory(), getMaxTestRunCount());
+		for (int i= restoredSessions.size() - 1; i >= 0; i--) {
+			addTestRunSession(restoredSessions.get(i));
+		}
 
 		addTestRunSessionListener(new LegacyTestRunSessionListener());
 	}
@@ -299,25 +276,7 @@ public final class JUnitModel {
 		ILaunchManager launchManager= DebugPlugin.getDefault().getLaunchManager();
 		launchManager.removeLaunchListener(fLaunchListener);
 
-		File historyDirectory= JUnitCorePlugin.getHistoryDirectory();
-		File[] swapFiles= historyDirectory.listFiles();
-		if (swapFiles != null) {
-			for (File swapFile : swapFiles) {
-				swapFile.delete();
-			}
-		}
-
-//		for (Iterator iter= fTestRunSessions.iterator(); iter.hasNext();) {
-//			final TestRunSession session= (TestRunSession) iter.next();
-//			SafeRunner.run(new ISafeRunnable() {
-//				public void run() throws Exception {
-//					session.swapOut();
-//				}
-//				public void handleException(Throwable exception) {
-//					JUnitPlugin.log(exception);
-//				}
-//			});
-//		}
+		TestRunSessionHistory.store(getTestRunSessions(), JUnitCorePlugin.getHistoryDirectory(), getMaxTestRunCount());
 	}
 
 
@@ -339,6 +298,10 @@ public final class JUnitModel {
 		return new ArrayList<>(fTestRunSessions);
 	}
 
+	private static int getMaxTestRunCount() {
+		return Math.max(0, Platform.getPreferencesService().getInt(JUnitCorePlugin.CORE_PLUGIN_ID, JUnitPreferencesConstants.MAX_TEST_RUNS, 10, null));
+	}
+
 	/**
 	 * Adds the given {@link TestRunSession} and notifies all registered
 	 * {@link ITestRunSessionListener}s.
@@ -353,7 +316,7 @@ public final class JUnitModel {
 			Assert.isLegal(! fTestRunSessions.contains(testRunSession));
 			fTestRunSessions.addFirst(testRunSession);
 
-			int maxCount = Platform.getPreferencesService().getInt(JUnitCorePlugin.CORE_PLUGIN_ID, JUnitPreferencesConstants.MAX_TEST_RUNS, 10, null);
+			int maxCount= getMaxTestRunCount();
 			int size= fTestRunSessions.size();
 			if (size > maxCount) {
 				List<TestRunSession> excess= fTestRunSessions.subList(maxCount, size);
@@ -369,6 +332,7 @@ public final class JUnitModel {
 
 		for (TestRunSession oldSession : toRemove) {
 			notifyTestRunSessionRemoved(oldSession);
+			oldSession.removeSwapFile();
 		}
 		notifyTestRunSessionAdded(testRunSession);
 	}

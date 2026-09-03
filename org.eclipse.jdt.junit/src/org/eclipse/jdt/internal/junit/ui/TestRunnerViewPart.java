@@ -126,7 +126,6 @@ import org.eclipse.ui.progress.IWorkbenchSiteProgressService;
 import org.eclipse.ui.progress.UIJob;
 import org.eclipse.ui.statushandlers.StatusManager;
 
-import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 
@@ -739,7 +738,7 @@ public class TestRunnerViewPart extends ViewPart {
 			startUpdateJobs();
 
 			fStopAction.setEnabled(true);
-			fRerunLastTestAction.setEnabled(true);
+			fRerunLastTestAction.setEnabled(fTestRunSession.canRerun());
 
 			// While tests are running, always use the execution order
 			getDisplay().asyncExec(new Runnable() {
@@ -765,6 +764,7 @@ public class TestRunnerViewPart extends ViewPart {
 					return;
 				fStopAction.setEnabled(lastLaunchIsKeptAlive());
 				updateRerunFailedFirstAction();
+				fRerunLastTestAction.setEnabled(fTestRunSession.canRerun());
 				processChangesInUI();
 				if (hasErrorsOrFailures()) {
 					selectFirstFailure();
@@ -1403,7 +1403,6 @@ public class TestRunnerViewPart extends ViewPart {
 	 */
 	public void rerunTestRun() {
 		if (lastLaunchIsKeptAlive()) {
-			// prompt for terminating the existing run
 			if (MessageDialog.openQuestion(getSite().getShell(), JUnitMessages.TestRunnerViewPart_terminate_title, JUnitMessages.TestRunnerViewPart_terminate_message)) {
 				stopTest(); // TODO: wait for termination
 			}
@@ -1411,15 +1410,14 @@ public class TestRunnerViewPart extends ViewPart {
 
 		if (fTestRunSession == null)
 			return;
-		ILaunch launch= fTestRunSession.getLaunch();
-		if (launch == null)
-			return;
-		ILaunchConfiguration launchConfiguration= launch.getLaunchConfiguration();
-		if (launchConfiguration == null)
+		ILaunchConfiguration launchConfiguration= fTestRunSession.getRerunLaunchConfiguration();
+		String launchMode= fTestRunSession.getRerunLaunchMode();
+		if (launchConfiguration == null || (!launchConfiguration.exists() && !launchConfiguration.isWorkingCopy())
+				|| launchMode == null)
 			return;
 
 		ILaunchConfiguration configuration= prepareLaunchConfigForRelaunch(launchConfiguration);
-		relaunch(configuration, launch.getLaunchMode());
+		relaunch(configuration, launchMode);
 	}
 
 	private ILaunchConfiguration prepareLaunchConfigForRelaunch(ILaunchConfiguration configuration) {
@@ -1430,7 +1428,8 @@ public class TestRunnerViewPart extends ViewPart {
 				if (configName.endsWith(JUnitMessages.TestRunnerViewPart_failures_first_suffix)) {
 					configName= configName.substring(0, configName.length() - JUnitMessages.TestRunnerViewPart_failures_first_suffix.length());
 				}
-				ILaunchConfigurationWorkingCopy tmp= configuration.copy(configName);
+				ILaunchConfigurationWorkingCopy tmp=
+						JUnitLaunchConfigurationConstants.createRerunLaunchConfiguration(configuration, configName);
 				tmp.setAttribute(JUnitLaunchConfigurationConstants.ATTR_FAILURES_NAMES, (String)null);
 				return tmp;
 			}
@@ -1442,40 +1441,41 @@ public class TestRunnerViewPart extends ViewPart {
 
 	public void rerunTestFailedFirst() {
 		if (lastLaunchIsKeptAlive()) {
-			// prompt for terminating the existing run
 			if (MessageDialog.openQuestion(getSite().getShell(), JUnitMessages.TestRunnerViewPart_terminate_title, JUnitMessages.TestRunnerViewPart_terminate_message)) {
 				if (fTestRunSession != null)
 					fTestRunSession.stopTestRun();
 			}
 		}
-		ILaunch launch= fTestRunSession.getLaunch();
-		if (launch != null && launch.getLaunchConfiguration() != null) {
-				ILaunchConfiguration launchConfiguration= launch.getLaunchConfiguration();
-				if (launchConfiguration != null) {
-					try {
-						String oldName= launchConfiguration.getName();
-						String oldFailuresFilename= launchConfiguration.getAttribute(JUnitLaunchConfigurationConstants.ATTR_FAILURES_NAMES, (String) null);
-						String configName;
-						if (oldFailuresFilename != null) {
-							configName= oldName;
-						} else {
-							configName= Messages.format(JUnitMessages.TestRunnerViewPart_rerunFailedFirstLaunchConfigName, oldName);
-						}
-						ILaunchConfigurationWorkingCopy tmp= launchConfiguration.copy(configName);
-						tmp.setAttribute(JUnitLaunchConfigurationConstants.ATTR_FAILURES_NAMES, createFailureNamesFile());
-						relaunch(tmp, launch.getLaunchMode());
-						return;
-					} catch (CoreException e) {
-						ErrorDialog.openError(getSite().getShell(),
-							JUnitMessages.TestRunnerViewPart_error_cannotrerun, e.getMessage(), e.getStatus()
-						);
-					}
-				}
-				MessageDialog.openInformation(getSite().getShell(),
-					JUnitMessages.TestRunnerViewPart_cannotrerun_title,
-					JUnitMessages.TestRunnerViewPart_cannotrerurn_message
-				);
+		if (fTestRunSession == null)
+			return;
+		ILaunchConfiguration launchConfiguration= fTestRunSession.getRerunLaunchConfiguration();
+		String launchMode= fTestRunSession.getRerunLaunchMode();
+		if (launchConfiguration == null || (!launchConfiguration.exists() && !launchConfiguration.isWorkingCopy())
+				|| launchMode == null)
+			return;
+		try {
+			String oldName= launchConfiguration.getName();
+			String oldFailuresFilename= launchConfiguration.getAttribute(JUnitLaunchConfigurationConstants.ATTR_FAILURES_NAMES, (String) null);
+			String configName;
+			if (oldFailuresFilename != null) {
+				configName= oldName;
+			} else {
+				configName= Messages.format(JUnitMessages.TestRunnerViewPart_rerunFailedFirstLaunchConfigName, oldName);
+			}
+			ILaunchConfigurationWorkingCopy tmp=
+					JUnitLaunchConfigurationConstants.createRerunLaunchConfiguration(launchConfiguration, configName);
+			tmp.setAttribute(JUnitLaunchConfigurationConstants.ATTR_FAILURES_NAMES, createFailureNamesFile());
+			relaunch(tmp, launchMode);
+			return;
+		} catch (CoreException e) {
+			ErrorDialog.openError(getSite().getShell(),
+					JUnitMessages.TestRunnerViewPart_error_cannotrerun, e.getMessage(), e.getStatus()
+			);
 		}
+		MessageDialog.openInformation(getSite().getShell(),
+				JUnitMessages.TestRunnerViewPart_cannotrerun_title,
+				JUnitMessages.TestRunnerViewPart_cannotrerurn_message
+		);
 	}
 
 	private void relaunch(ILaunchConfiguration configuration, String launchMode) {
@@ -1541,6 +1541,7 @@ public class TestRunnerViewPart extends ViewPart {
 			resetViewIcon();
 			fStopAction.setEnabled(false);
 			updateRerunFailedFirstAction();
+			fRerunLastTestAction.setEnabled(fTestRunSession.canRerun());
 		});
 		stopUpdateJobs();
 		logMessageIfNoTests();
@@ -1657,7 +1658,7 @@ action enablement
 			registerInfoMessage(BasicElementLabels.getJavaElementName(fTestRunSession.getTestRunName()));
 
 			updateRerunFailedFirstAction();
-			fRerunLastTestAction.setEnabled(fTestRunSession.getLaunch() != null);
+			fRerunLastTestAction.setEnabled(fTestRunSession.canRerun());
 
 			if (fTestRunSession.isRunning()) {
 				startUpdateJobs();
@@ -1684,7 +1685,7 @@ action enablement
 	}
 
 	private void updateRerunFailedFirstAction() {
-		boolean state= hasErrorsOrFailures() && fTestRunSession.getLaunch() != null;
+		boolean state= hasErrorsOrFailures() && fTestRunSession.canRerun();
 		fRerunFailedFirstAction.setEnabled(state);
 	}
 
@@ -2245,36 +2246,31 @@ action enablement
 		}
 
 		if (fTestRunSession != null) {
-			ILaunch launch= fTestRunSession.getLaunch();
-			if (launch != null) {
-				// run the selected test using the previous launch configuration
-				ILaunchConfiguration launchConfiguration= launch.getLaunchConfiguration();
-				if (launchConfiguration != null) {
-					try {
-						String name;
-						if (testDisplayName != null) {
-							name= testDisplayName;
-						} else {
-							name= className;
-							if (testName != null)
-								name+= "."+testName; //$NON-NLS-1$
-						}
-						String configName= Messages.format(JUnitMessages.TestRunnerViewPart_configName, name);
-						ILaunchConfigurationWorkingCopy tmp = launchConfiguration.copy(configName);
-						// fix for bug: 64838  junit view run single test does not use correct class [JUnit]
-						tmp.setAttribute(IJavaLaunchConfigurationConstants.ATTR_MAIN_TYPE_NAME, className);
-						// reset the container
-						tmp.setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_CONTAINER, ""); //$NON-NLS-1$
-						tmp.setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_NAME, testName);
-						tmp.setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_UNIQUE_ID, uniqueId);
-						relaunch(tmp, launchMode);
-						return;
-						} catch (CoreException e) {
-							ErrorDialog.openError(getSite().getShell(),
-									JUnitMessages.TestRunnerViewPart_error_cannotrerun, e.getMessage(), e.getStatus()
-								);
-							return;
-						}
+			ILaunchConfiguration launchConfiguration= fTestRunSession.getRerunLaunchConfiguration();
+			if (launchConfiguration != null && (launchConfiguration.exists() || launchConfiguration.isWorkingCopy())) {
+				try {
+					String name;
+					if (testDisplayName != null) {
+						name= testDisplayName;
+					} else {
+						name= className;
+						if (testName != null)
+							name+= "."+testName; //$NON-NLS-1$
+					}
+					String configName= Messages.format(JUnitMessages.TestRunnerViewPart_configName, name);
+					ILaunchConfigurationWorkingCopy tmp=
+							JUnitLaunchConfigurationConstants.createRerunLaunchConfiguration(launchConfiguration, configName);
+					tmp.setAttribute(IJavaLaunchConfigurationConstants.ATTR_MAIN_TYPE_NAME, className);
+					tmp.setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_CONTAINER, ""); //$NON-NLS-1$
+					tmp.setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_NAME, testName);
+					tmp.setAttribute(JUnitLaunchConfigurationConstants.ATTR_TEST_UNIQUE_ID, uniqueId);
+					relaunch(tmp, launchMode);
+					return;
+				} catch (CoreException e) {
+					ErrorDialog.openError(getSite().getShell(),
+							JUnitMessages.TestRunnerViewPart_error_cannotrerun, e.getMessage(), e.getStatus()
+					);
+					return;
 				}
 			}
 		}
