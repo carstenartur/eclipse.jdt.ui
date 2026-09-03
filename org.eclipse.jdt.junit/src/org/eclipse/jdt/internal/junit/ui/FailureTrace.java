@@ -128,9 +128,12 @@ public class FailureTrace implements IMenuListener {
 	@Override
 	public void menuAboutToShow(IMenuManager manager) {
 		if (fTable.getSelectionCount() > 0) {
-			Action a= createOpenEditorAction(getSelectedText());
+			String selectedText= getSelectedText();
+			Action a= createOpenEditorAction(selectedText);
 			if (a != null)
 				manager.add(a);
+			manager.add(new JUnitCopyAction(FailureTrace.this, fClipboard,
+					JFaceResources.getString("copy"), selectedText)); //$NON-NLS-1$
 			manager.add(new JUnitCopyAction(FailureTrace.this, fClipboard));
 		}
 		// fix for bug 68058

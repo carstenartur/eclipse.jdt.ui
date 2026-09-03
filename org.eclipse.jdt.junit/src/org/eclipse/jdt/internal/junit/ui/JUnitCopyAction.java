@@ -44,16 +44,23 @@ public class JUnitCopyAction extends SelectionListenerAction {
 
 	private final Clipboard fClipboard;
 
+	private final String fTextToCopy;
+
 	private TestElement fTestElement;
 
 	public JUnitCopyAction(FailureTrace view, Clipboard clipboard) {
-		super(JUnitMessages.CopyTrace_action_label);
+		this(view, clipboard, JUnitMessages.CopyTrace_action_label, null);
+	}
+
+	JUnitCopyAction(FailureTrace view, Clipboard clipboard, String actionLabel, String textToCopy) {
+		super(actionLabel);
 		Assert.isNotNull(clipboard);
 		IWorkbench workbench= PlatformUI.getWorkbench();
 		workbench.getHelpSystem().setHelp(this, IJUnitHelpContextIds.COPYTRACE_ACTION);
 		setImageDescriptor(workbench.getSharedImages().getImageDescriptor(ISharedImages.IMG_TOOL_COPY));
 		fView= view;
 		fClipboard= clipboard;
+		fTextToCopy= textToCopy;
 	}
 
 	/*
@@ -61,20 +68,24 @@ public class JUnitCopyAction extends SelectionListenerAction {
 	 */
 	@Override
 	public void run() {
-		String trace= fView.getTrace();
-		String source= null;
-		if (trace != null) {
-			source= convertLineTerminators(trace);
-		} else if (fTestElement != null) {
-			source= fTestElement.getTestName();
+		String source= fTextToCopy;
+		if (source == null) {
+			String trace= fView.getTrace();
+			if (trace != null) {
+				source= trace;
+			} else if (fTestElement != null) {
+				source= fTestElement.getTestName();
+			}
 		}
 		if (source == null || source.length() == 0)
 			return;
+		if (fTextToCopy == null)
+			source= convertLineTerminators(source);
 
 		TextTransfer plainTextTransfer = TextTransfer.getInstance();
 		try{
 			fClipboard.setContents(
-				new String[]{ convertLineTerminators(source) },
+				new String[]{ source },
 				new Transfer[]{ plainTextTransfer });
 		}  catch (SWTError e){
 			if (e.code != DND.ERROR_CANNOT_SET_CLIPBOARD)
