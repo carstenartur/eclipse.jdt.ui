@@ -1,0 +1,59 @@
+name: Diagnose save participant 1445
+on:
+  push:
+    branches: [diagnostic/save-participant-1445]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  headless-junit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Obtain pinned Eclipse SDK from the failing-build generation
+        run: |
+          set -euo pipefail
+          base=https://download.eclipse.org/eclipse/downloads/drops4/I20260826-2300
+          curl --fail --location --retry 2 "$base/eclipse-SDK-I20260826-2300-linux-gtk-x86_64.tar.gz" -o "$RUNNER_TEMP/eclipse-sdk.tar.gz"
+          sha256sum "$RUNNER_TEMP/eclipse-sdk.tar.gz"
+          tar xzf "$RUNNER_TEMP/eclipse-sdk.tar.gz" -C "$RUNNER_TEMP"
+      - name: Compare runtime source with inspected upstream implementation
+        run: |
+          curl --fail --location --retry 2 https://raw.githubusercontent.com/eclipse-jdt/eclipse.jdt.core/8c40c7d2ae12c0a32ab3cca1ab31b53956c65d51/org.eclipse.jdt.core/model/org/eclipse/jdt/internal/core/JavaModelManager.java -o "$RUNNER_TEMP/JavaModelManager.upstream.java"
+          python3 - <<'PY'
+          import glob, os, re, zipfile, hashlib
+          root=os.environ['RUNNER_TEMP']
+          jars=glob.glob(root+'/eclipse/plugins/org.eclipse.jdt.core.source_*.jar')
+          if len(jars) != 1:
+              raise SystemExit('Expected one JDT Core source bundle: '+repr(jars))
+          with zipfile.ZipFile(jars[0]) as z:
+              source=z.read('org/eclipse/jdt/internal/core/JavaModelManager.java').decode('utf-8')
+          upstream=open(root+'/JavaModelManager.upstream.java').read()
+          for signature in ['public Hashtable<String, String> getOptions()', 'public void setOptions(Hashtable<String, String> newOptions)']:
+              def method(s):
+                  start=s.index(signature)
+                  end=s.index('\n\t}',start)+3
+                  return re.sub(r'\s+',' ',s[start:end]).strip()
+              actual,expected=method(source),method(upstream)
+              same=actual==expected
+              print('SOURCE_MATCH',signature,same,'runtime_sha256',hashlib.sha256(actual.encode()).hexdigest())
+              if not same:
+                  raise SystemExit('Runtime implementation differs from inspected upstream; do not claim current-master reproduction')
+          PY
+      - name: Compile and execute real Eclipse JUnit tests
+        run: |
+          set -o pipefail
+          bash diagnostics/jdt1445/run.sh "$RUNNER_TEMP/eclipse" 2>&1 | tee diagnostics/jdt1445/test-output.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jdt1445-diagnostic-evidence
+          path: |
+            diagnostics/jdt1445/test-output.txt
+            diagnostics/jdt1445/out/workspace/.metadata/.log
+          if-no-files-found: warn
