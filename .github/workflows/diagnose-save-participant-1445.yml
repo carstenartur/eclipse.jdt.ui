@@ -6,12 +6,12 @@ on:
 permissions:
   contents: read
 jobs:
-  headless-junit:
+  eclipse-junit:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
@@ -45,15 +45,29 @@ jobs:
               if not same:
                   raise SystemExit('Runtime implementation differs from inspected upstream; do not claim current-master reproduction')
           PY
-      - name: Compile and execute real Eclipse JUnit tests
+      - name: Compile and execute headless JUnit tests
+        id: headless
+        continue-on-error: true
         run: |
           set -o pipefail
           bash diagnostics/jdt1445/run.sh "$RUNNER_TEMP/eclipse" 2>&1 | tee diagnostics/jdt1445/test-output.txt
+      - name: Execute real editor-save integration tests
+        id: ui
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          xvfb-run -a bash diagnostics/jdt1445/run.sh "$RUNNER_TEMP/eclipse" jdt1445.diagnostics.ui 2>&1 | tee diagnostics/jdt1445/ui-test-output.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: jdt1445-diagnostic-evidence
           path: |
-            diagnostics/jdt1445/test-output.txt
-            diagnostics/jdt1445/out/workspace/.metadata/.log
+            diagnostics/jdt1445/*test-output.txt
+            diagnostics/jdt1445/out/workspace-*/.metadata/.log
+          include-hidden-files: true
           if-no-files-found: warn
+      - name: Preserve failed diagnostic assertions in the run status
+        if: always()
+        run: |
+          test '${{ steps.headless.outcome }}' = success
+          test '${{ steps.ui.outcome }}' = success

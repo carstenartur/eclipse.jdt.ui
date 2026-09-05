@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-SDK=${1:?Usage: run.sh /path/to/eclipse-sdk}
+SDK=${1:?Usage: run.sh /path/to/eclipse-sdk [application-id]}
 SDK=$(cd "$SDK" && pwd)
+APP=${2:-jdt1445.diagnostics.run}
 OUT="$HERE/out"
 mkdir -p "$OUT/classes"
 # Never implicitly recompile SDK/JUnit sources against the host JDK.
@@ -16,4 +17,4 @@ sed -i '/^jdt1445.diagnostics,/d' "$INFO"
 echo 'jdt1445.diagnostics,1.0.0,plugins/jdt1445.diagnostics_1.0.0.jar,4,false' >> "$INFO"
 LAUNCHER=$(find "$SDK/plugins" -maxdepth 1 -name 'org.eclipse.equinox.launcher_*.jar' -print -quit)
 java -jar "$LAUNCHER" -configuration "$SDK/configuration" -clean -nosplash -consolelog \
-  -application jdt1445.diagnostics.run -data "$OUT/workspace"
+  -application "$APP" -data "$OUT/workspace-${APP##*.}"

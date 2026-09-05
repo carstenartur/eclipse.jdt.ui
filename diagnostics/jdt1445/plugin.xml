@@ -5,4 +5,9 @@
       <run class="diagnostics.Application"/>
     </application>
   </extension>
+  <extension point="org.eclipse.core.runtime.applications" id="ui">
+    <application cardinality="singleton-global" thread="main" visible="true">
+      <run class="diagnostics.UIApp"/>
+    </application>
+  </extension>
 </plugin>
