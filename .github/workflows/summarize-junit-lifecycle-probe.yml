@@ -22,9 +22,17 @@ jobs:
         shell: python
         run: |
           import io, os, re, urllib.request, zipfile
+          class SafeRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+                  if redirected is not None:
+                      redirected.remove_header('Authorization')
+                      redirected.remove_header('Accept')
+                  return redirected
+          opener = urllib.request.build_opener(SafeRedirect())
           url = 'https://api.github.com/repos/carstenartur/eclipse.jdt.ui/actions/jobs/101316260516/logs'
           request = urllib.request.Request(url, headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json', 'User-Agent': 'jdt-lifecycle-regression-summary'})
-          with urllib.request.urlopen(request, timeout=60) as response:
+          with opener.open(request, timeout=60) as response:
               data = response.read()
           if data.startswith(b'PK'):
               with zipfile.ZipFile(io.BytesIO(data)) as archive:
@@ -35,9 +43,9 @@ jobs:
           wanted = set()
           pattern = re.compile(r'ACTUAL PDE TEST RESULT|LIFECYCLE_PROBE|PDE_PROBE_EXECUTED|Tests run:|<<< FAILURE|<<< ERROR|BUILD FAILURE|BUILD SUCCESS|A retired session|NoSuchMethod|NoSuchField|The notification must complete|The regression probe requires')
           for i, line in enumerate(lines):
-              if pattern.search(line):
-                  wanted.update(range(max(0, i-2), min(len(lines), i+10)))
-          output = '\n'.join(f'{i+1}: {lines[i]}' for i in sorted(wanted))[:24000]
+              if '\x1b[' not in line and pattern.search(line):
+                  wanted.update(range(max(0, i-1), min(len(lines), i+8)))
+          output = '\n'.join(f'{i+1}: {lines[i]}' for i in sorted(wanted))[:20000]
           print('BASELINE_SOURCE_JOB 101316260516')
           print('TOTAL_LOG_LINES', len(lines))
           print(output)
