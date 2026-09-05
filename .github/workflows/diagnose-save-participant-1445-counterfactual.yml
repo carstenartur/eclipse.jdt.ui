@@ -1,0 +1,60 @@
+name: Save participant 1445 causal controls
+on:
+  push:
+    branches: [diagnostic/save-participant-1445]
+    paths:
+      - 'diagnostics/jdt1445/**'
+      - '.github/workflows/diagnose-save-participant-1445-counterfactual.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  causal-control:
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [stock, rebuilt, uncached]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MODE: ${{ matrix.mode }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Obtain and verify the same SDK in every arm
+        run: |
+          set -euo pipefail
+          base=https://download.eclipse.org/eclipse/downloads/drops4/I20260826-2300
+          curl --fail --location --retry 2 "$base/eclipse-SDK-I20260826-2300-linux-gtk-x86_64.tar.gz" -o "$RUNNER_TEMP/eclipse-sdk.tar.gz"
+          echo "1a81564c817ba6016557f6b75e3c3a31e3d4532f42e8ab8883b74ebcc68ddbce  $RUNNER_TEMP/eclipse-sdk.tar.gz" | sha256sum -c -
+          tar xzf "$RUNNER_TEMP/eclipse-sdk.tar.gz" -C "$RUNNER_TEMP"
+      - name: Apply only the designated Core intervention
+        run: python3 diagnostics/jdt1445/counterfactual.py prepare "$MODE" "$RUNNER_TEMP/eclipse" "diagnostics/jdt1445/evidence-$MODE"
+      - name: Run unchanged headless and actual-editor JUnit tests
+        run: |
+          set +e
+          set -o pipefail
+          out="diagnostics/jdt1445/evidence-$MODE"
+          bash diagnostics/jdt1445/run.sh "$RUNNER_TEMP/eclipse" 2>&1 | tee "$out/headless-test-output.txt"
+          echo "${PIPESTATUS[0]}" > "$out/headless-exit-status.txt"
+          xvfb-run -a bash diagnostics/jdt1445/run.sh "$RUNNER_TEMP/eclipse" jdt1445.diagnostics.ui 2>&1 | tee "$out/ui-test-output.txt"
+          echo "${PIPESTATUS[0]}" > "$out/ui-exit-status.txt"
+          exit 0
+      - name: Assert exact expected failure signatures or complete recovery
+        run: python3 diagnostics/jdt1445/counterfactual.py verify "$MODE" "$RUNNER_TEMP/eclipse" "diagnostics/jdt1445/evidence-$MODE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jdt1445-causal-${{ matrix.mode }}
+          path: |
+            diagnostics/jdt1445/evidence-${{ matrix.mode }}/*.txt
+            diagnostics/jdt1445/evidence-${{ matrix.mode }}/*.md
+            diagnostics/jdt1445/evidence-${{ matrix.mode }}/*.patch
+            diagnostics/jdt1445/out/workspace-*/.metadata/.log
+          include-hidden-files: true
+          if-no-files-found: warn
