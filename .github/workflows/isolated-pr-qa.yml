@@ -1,0 +1,128 @@
+name: Isolated PR 3152 and 3154 QA
+on:
+  push:
+    branches: [ci/3152-3154-isolated-qa]
+    paths: [.github/workflows/isolated-pr-qa.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sources:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Export reviewed source snapshots
+        run: |
+          mkdir -p evidence
+          for entry in '3152 af8e9e9bd1162a87538a9fd7e6ea2d85a808de6c' '3154 b52d3f8e49df81d7d0c205fc539c508ce603488b'; do
+            read -r pr sha <<< "$entry"
+            git archive "$sha" org.eclipse.jdt.junit org.eclipse.jdt.junit.core org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/JavaEditor.java org.eclipse.jdt.text.tests/src/org/eclipse/jdt/text/tests/MarkOccurrenceTest.java pom.xml tests-pom/pom.xml org.eclipse.jdt.ui.tests/pom.xml org.eclipse.jdt.text.tests/pom.xml | gzip > "evidence/pr-$pr-sources.tar.gz"
+            git diff 6312a1cc907ad0a5ac5dd42e998eb0cbac686205 "$sha" > "evidence/pr-$pr.diff"
+            git diff --check 6312a1cc907ad0a5ac5dd42e998eb0cbac686205 "$sha"
+            git log --oneline 6312a1cc907ad0a5ac5dd42e998eb0cbac686205.."$sha" > "evidence/pr-$pr-commits.txt"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: isolated-reviewed-sources
+          path: evidence/
+  tests:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [occurrence, occurrence-negative, junit, junit-negative, junit-original]
+    env:
+      MODE: ${{ matrix.mode }}
+      BASE: 6312a1cc907ad0a5ac5dd42e998eb0cbac686205
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Prepare isolated test variant
+        run: |
+          if [[ "$MODE" == occurrence* ]]; then
+            git checkout --detach af8e9e9bd1162a87538a9fd7e6ea2d85a808de6c
+            product=org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/JavaEditor.java
+          else
+            git checkout --detach b52d3f8e49df81d7d0c205fc539c508ce603488b
+            product=org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java
+          fi
+          if [[ "$MODE" == *-negative ]]; then git show "$BASE:$product" > "$product"; fi
+          if [[ "$MODE" == junit-original ]]; then
+            path=org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/TestRunListenerTest5.java
+            git show "$BASE:$path" > "$path"
+          fi
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/head.txt
+          git diff > evidence/negative-control.diff
+          git diff --check
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2
+      - name: Execute and verify three independent Eclipse launches
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$MODE" == occurrence* ]]; then
+            module=org.eclipse.jdt.text.tests; tests=MarkOccurrenceTest
+          else
+            module=org.eclipse.jdt.ui.tests; tests=TestRunListenerTest5,TestRunListenerTest6
+          fi
+          for repetition in 1 2 3; do
+            export REPETITION="$repetition"
+            mkdir -p "evidence/run-$repetition"
+            set +e
+            xvfb-run -a mvn -B -ntp clean verify -Pbuild-individual-bundles -pl "$module" -am -DskipTests=false -Dmaven.test.skip=false -Dtest="$tests" -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false 2>&1 | tee "evidence/run-$repetition/maven.log"
+            export MAVEN_RESULT=${PIPESTATUS[0]}
+            set -e
+            if [[ -d "$module/target/surefire-reports" ]]; then cp -r "$module/target/surefire-reports" "evidence/run-$repetition/reports"; fi
+            if [[ -f "$module/target/work/data/.metadata/.log" ]]; then cp "$module/target/work/data/.metadata/.log" "evidence/run-$repetition/eclipse.log"; fi
+            python3 - <<'PY'
+          import os, pathlib, xml.etree.ElementTree as ET
+          mode = os.environ['MODE']
+          root = pathlib.Path('evidence') / ('run-' + os.environ['REPETITION'])
+          cases = {}
+          for report in root.rglob('TEST-*.xml'):
+              for case in ET.parse(report).getroot().iter('testcase'):
+                  key = (case.get('classname'), case.get('name'))
+                  assert key not in cases, f'Duplicate result: {key}'
+                  cases[key] = case
+          if mode.startswith('occurrence'):
+              cls = 'org.eclipse.jdt.text.tests.MarkOccurrenceTest'
+              expected_count = 15
+              names = ['markOccurrencesAfterCanceledUpdate', 'markOccurrencesAfterCanceledUpdateWithExistingAnnotations', 'markOccurrencesAfterConcurrentRemoval', 'markOccurrencesAfterConcurrentRemovalWithExistingAnnotations']
+              required = {(cls, name) for name in names}
+          else:
+              cls = 'org.eclipse.jdt.junit.tests.TestRunListenerTest5'
+              expected_count = 16 if mode == 'junit-original' else 20
+              names = ['testRetiredSessionTerminationDoesNotStopActiveSession', 'testRetiredSessionStopDoesNotStopActiveSession', 'testRetiredSessionEndDoesNotStopActiveSession']
+              required = {(cls, 'testTerminateLaunch'), ('org.eclipse.jdt.junit.tests.TestRunListenerTest6', 'testTerminateLaunch')}
+              if mode != 'junit-original':
+                  required.update((cls, name) for name in names + ['testActiveSessionTerminationStopsUpdateJobs'])
+          assert len(cases) == expected_count, (len(cases), expected_count)
+          assert required.issubset(cases), f'Missing tests: {required - cases.keys()}'
+          skipped = {key for key, case in cases.items() if case.find('skipped') is not None}
+          failed = {key for key, case in cases.items() if case.find('failure') is not None or case.find('error') is not None}
+          assert not skipped, f'Skipped tests: {skipped}'
+          expected = {(cls, name) for name in names} if mode.endswith('-negative') else set()
+          assert failed == expected, f'Expected {expected}, observed {failed}'
+          assert (int(os.environ['MAVEN_RESULT']) == 0) == (not expected), 'Unexpected Maven result'
+          text = f'{mode} run {os.environ["REPETITION"]}: {len(cases)} executed, {len(failed)} expected failures, no skips; verified.\n'
+          (root / 'summary.txt').write_text(text)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out: out.write(text)
+          print(text)
+          PY
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: isolated-${{ matrix.mode }}
+          if-no-files-found: error
+          path: evidence/
