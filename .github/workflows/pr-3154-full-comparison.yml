@@ -38,7 +38,7 @@ jobs:
       - name: Install VNC display and native dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y tigervnc-standalone-server libgtk-3-0 libasound2
+          sudo apt-get install -y tigervnc-standalone-server x11-utils libgtk-3-0 libasound2
       - name: Record exact source and environment
         run: |
           mkdir -p evidence
