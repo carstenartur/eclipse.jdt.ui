@@ -1,0 +1,243 @@
+name: PR 3154 session readiness QA
+on:
+  push:
+    branches: [diagnostic/pr-3154-session-readiness]
+    paths: [.github/workflows/pr-3154-session-readiness.yml, .github/qa/pr3154_session_readiness.py]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    if: github.repository == 'carstenartur/eclipse.jdt.ui'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    env:
+      PR: c482a9a8d17df6ff9fa3c44b3b604a94015b53f3
+      BASE: 6312a1cc907ad0a5ac5dd42e998eb0cbac686205
+      TEST_FILE: org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/TestRunListenerTest5.java
+      PRODUCT_FILE: org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Preserve diagnostic script and select immutable PR source
+        run: |
+          cp .github/qa/pr3154_session_readiness.py "$RUNNER_TEMP/readiness.py"
+          git checkout --detach "$PR"
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/parent.txt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install display and prepare delayed-start agent
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2
+          mkdir -p "$RUNNER_TEMP/delay-agent"
+          cat > "$RUNNER_TEMP/delay-agent/DelayAgent.java" <<'JAVA'
+          public class DelayAgent {
+              public static void premain(String options) throws InterruptedException {
+                  Thread.sleep(8000);
+              }
+          }
+          JAVA
+          javac --release 8 "$RUNNER_TEMP/delay-agent/DelayAgent.java"
+          printf 'Premain-Class: DelayAgent\n\n' > "$RUNNER_TEMP/delay-agent/MANIFEST.MF"
+          jar cfm "$RUNNER_TEMP/delay-agent.jar" "$RUNNER_TEMP/delay-agent/MANIFEST.MF" -C "$RUNNER_TEMP/delay-agent" DelayAgent.class
+          java -version 2> evidence/java.txt
+          mvn -version > evidence/maven.txt
+      - name: Positive suite, deterministic startup controls and product negative control
+        shell: bash
+        run: |
+          set -euo pipefail
+          for phase in positive-suite delayed-original delayed-fixed negative-product positive-repeat; do
+            export PHASE="$phase"
+            git restore --source="$PR" -- "$TEST_FILE" "$PRODUCT_FILE"
+            args=()
+            tests=TestRunListenerTest5,TestRunListenerTest6
+            if [[ "$phase" == positive-suite ]]; then tests=JUnitJUnitTests; fi
+            if [[ "$phase" == delayed-original ]]; then args+=(--original); fi
+            if [[ "$phase" == delayed-* ]]; then args+=(--delay-agent "$RUNNER_TEMP/delay-agent.jar"); fi
+            python3 "$RUNNER_TEMP/readiness.py" "${args[@]}"
+            if [[ "$phase" == negative-product ]]; then git show "$BASE:$PRODUCT_FILE" > "$PRODUCT_FILE"; fi
+            mkdir -p "evidence/$phase"
+            git diff --check
+            git diff > "evidence/$phase/source.diff"
+            git hash-object "$TEST_FILE" > "evidence/$phase/test-blob.txt"
+            git hash-object "$PRODUCT_FILE" > "evidence/$phase/product-blob.txt"
+            set +e
+            xvfb-run -a mvn -B -ntp clean verify -Pbuild-individual-bundles \
+              -pl org.eclipse.jdt.ui.tests -am -DskipTests=false -Dmaven.test.skip=false \
+              -Dtest="$tests" -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+              -Dmaven.test.failure.ignore=false 2>&1 | tee "evidence/$phase/maven.log"
+            export MAVEN_RESULT=${PIPESTATUS[0]}
+            set -e
+            if [[ -d org.eclipse.jdt.ui.tests/target/surefire-reports ]]; then cp -r org.eclipse.jdt.ui.tests/target/surefire-reports "evidence/$phase/reports"; fi
+            if [[ -f org.eclipse.jdt.ui.tests/target/work/data/.metadata/.log ]]; then cp org.eclipse.jdt.ui.tests/target/work/data/.metadata/.log "evidence/$phase/eclipse.log"; fi
+            python3 - <<'PY'
+          import json, os, pathlib, xml.etree.ElementTree as ET
+          phase = os.environ['PHASE']
+          root = pathlib.Path('evidence') / phase
+          cases = {}
+          for report in root.rglob('TEST-*.xml'):
+              for case in ET.parse(report).getroot().iter('testcase'):
+                  key = (case.get('classname'), case.get('name'))
+                  assert key not in cases, f'Duplicate test case: {key}'
+                  cases[key] = case
+          cls = 'org.eclipse.jdt.junit.tests.TestRunListenerTest5'
+          regressions = {(cls, name) for name in ['testRetiredSessionTerminationDoesNotStopActiveSession', 'testRetiredSessionStopDoesNotStopActiveSession', 'testRetiredSessionEndDoesNotStopActiveSession']}
+          termination = {(cls, 'testTerminateLaunch'), ('org.eclipse.jdt.junit.tests.TestRunListenerTest6', 'testTerminateLaunch')}
+          controls = {(cls, name) for name in ['testActiveSessionTerminationStopsUpdateJobs', 'testActiveSessionStopStopsUpdateJobs', 'testActiveSessionEndStopsUpdateJobs']}
+          required = regressions | termination | controls
+          failed = {key for key, case in cases.items() if case.find('failure') is not None or case.find('error') is not None}
+          skipped = {key for key, case in cases.items() if case.find('skipped') is not None}
+          expected = termination if phase == 'delayed-original' else regressions if phase == 'negative-product' else set()
+          summary = {'phase': phase, 'tests': len(cases), 'failures': sorted(failed), 'skipped': sorted(skipped), 'missing': sorted(required - cases.keys()), 'maven_exit': int(os.environ['MAVEN_RESULT'])}
+          (root / 'summary.json').write_text(json.dumps(summary, indent=2))
+          print(json.dumps(summary, indent=2), flush=True)
+          for key in failed:
+              print(key, ET.tostring(cases[key], encoding='unicode'), flush=True)
+          assert required.issubset(cases), 'Required tests absent; an empty or partial run is not success'
+          assert not (required & skipped), 'Required tests skipped'
+          assert len(cases) >= 100 if phase == 'positive-suite' else len(cases) == 22, f'Unexpected inventory: {len(cases)}'
+          assert failed == expected, f'Expected {expected}, got {failed}'
+          assert (int(os.environ['MAVEN_RESULT']) == 0) == (not expected), 'Unexpected Maven exit'
+          if phase == 'delayed-original':
+              for key in termination:
+                  assert 'Expected JUnit update jobs to be scheduled' in ET.tostring(cases[key], encoding='unicode'), 'Startup control failed for the wrong reason'
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write(f'{phase}: {len(cases)} tests, {len(failed)} expected failures, {len(skipped)} skips; verified.\n')
+          PY
+          done
+      - name: Stage exactly the tested correction, without the delay agent
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git restore --source="$PR" -- "$TEST_FILE" "$PRODUCT_FILE"
+          python3 "$RUNNER_TEMP/readiness.py"
+          git diff --check
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess, urllib.request
+          def git(*args): return subprocess.check_output(['git', *args], text=True).strip()
+          path = os.environ['TEST_FILE']
+          assert git('diff', '--name-only') == path
+          blob_sha = git('hash-object', path)
+          assert blob_sha == pathlib.Path('evidence/positive-suite/test-blob.txt').read_text().strip()
+          assert blob_sha == pathlib.Path('evidence/positive-repeat/test-blob.txt').read_text().strip()
+          content = pathlib.Path(path).read_text()
+          assert 'DelayAgent' not in content and '-javaagent:' not in content
+          request = urllib.request.Request(os.environ['GITHUB_API_URL'] + '/repos/' + os.environ['GITHUB_REPOSITORY'] + '/git/blobs', data=json.dumps({'content': content, 'encoding': 'utf-8'}).encode(), headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json'}, method='POST')
+          with urllib.request.urlopen(request, timeout=30) as response: blob = json.load(response)
+          assert blob['sha'] == blob_sha
+          result = {'parent': os.environ['PR'], 'path': path, 'blob_sha': blob_sha}
+          pathlib.Path('evidence/tested-blob.json').write_text(json.dumps(result, indent=2))
+          pathlib.Path('evidence/TestRunListenerTest5.java').write_text(content)
+          print('TESTED_CORRECTION:', json.dumps(result), flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-3154-readiness-controls
+          if-no-files-found: error
+          include-hidden-files: true
+          path: evidence/
+  full:
+    if: github.repository == 'carstenartur/eclipse.jdt.ui'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 80
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [base, candidate]
+    env:
+      VARIANT: ${{ matrix.variant }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select source
+        run: |
+          cp .github/qa/pr3154_session_readiness.py "$RUNNER_TEMP/readiness.py"
+          if [[ "$VARIANT" == base ]]; then
+            git checkout --detach 6312a1cc907ad0a5ac5dd42e998eb0cbac686205
+          else
+            git checkout --detach c482a9a8d17df6ff9fa3c44b3b604a94015b53f3
+            python3 "$RUNNER_TEMP/readiness.py"
+          fi
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/source-sha.txt
+          git diff --check
+          git diff > evidence/source.diff
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install VNC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tigervnc-standalone-server x11-utils libgtk-3-0 libasound2
+      - name: Full upstream command
+        run: |
+          set -euo pipefail
+          export DISPLAY=:99
+          Xvnc "$DISPLAY" -geometry 1280x1024 -depth 24 -SecurityTypes None -localhost -nolisten tcp -ac > evidence/vnc.log 2>&1 &
+          vnc_pid=$!
+          trap 'kill "$vnc_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 50); do
+            if xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then break; fi
+            kill -0 "$vnc_pid"
+            sleep 0.2
+          done
+          xdpyinfo -display "$DISPLAY" > evidence/display.txt
+          java -version 2> evidence/java.txt
+          mvn -version > evidence/maven.txt
+          set +e
+          mvn -U -e -DskipTests=false -Dmaven.repo.local="$RUNNER_TEMP/m2-full" \
+            clean verify --batch-mode --fail-at-end \
+            -Pbree-libs -Papi-check -Pjavadoc -Pbuild-individual-bundles \
+            -Dmaven.test.failure.ignore=true -Dcompare-version-with-baselines.skip=false \
+            2>&1 | tee evidence/maven.log
+          result=${PIPESTATUS[0]}
+          set -e
+          printf '%s\n' "$result" > evidence/maven-exit.txt
+          exit "$result"
+      - name: Require actual complete test results
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, xml.etree.ElementTree as ET
+          evidence = pathlib.Path('evidence')
+          evidence.mkdir(exist_ok=True)
+          cases = [case for report in pathlib.Path('.').glob('**/target/surefire-reports/TEST-*.xml') for case in ET.parse(report).getroot().iter('testcase')]
+          failures = [(case.get('classname'), case.get('name')) for case in cases if case.find('failure') is not None or case.find('error') is not None]
+          executed = {(case.get('classname'), case.get('name')) for case in cases if case.find('skipped') is None}
+          required = {('org.eclipse.jdt.junit.tests.TestRunListenerTest5', 'testTerminateLaunch'), ('org.eclipse.jdt.junit.tests.TestRunListenerTest6', 'testTerminateLaunch')}
+          if os.environ['VARIANT'] == 'candidate':
+              required.update(('org.eclipse.jdt.junit.tests.TestRunListenerTest5', name) for name in ['testRetiredSessionTerminationDoesNotStopActiveSession', 'testRetiredSessionStopDoesNotStopActiveSession', 'testRetiredSessionEndDoesNotStopActiveSession', 'testActiveSessionTerminationStopsUpdateJobs', 'testActiveSessionStopStopsUpdateJobs', 'testActiveSessionEndStopsUpdateJobs'])
+          result = {'variant': os.environ['VARIANT'], 'tests': len(cases), 'executed': len(executed), 'failures': failures, 'missing': sorted(required - executed)}
+          (evidence / 'summary.json').write_text(json.dumps(result, indent=2))
+          print(json.dumps(result, indent=2), flush=True)
+          for case in cases:
+              if case.find('failure') is not None or case.find('error') is not None: print(ET.tostring(case, encoding='unicode'))
+          assert (evidence / 'maven-exit.txt').read_text().strip() == '0', 'Maven failed before completing'
+          assert len(cases) >= 9000, 'Full suite inventory missing'
+          assert not (required - executed), 'Required tests did not execute'
+          assert not failures, 'Actual tests failed despite the Maven ignore flag'
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-3154-readiness-full-${{ matrix.variant }}
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            evidence/
+            **/target/surefire-reports/**
+            **/target/work/data/.metadata/*.log
