@@ -255,11 +255,17 @@ public class MarkOccurrenceTest {
 			IRegion match= fFindReplaceDocumentAdapter.find(0, "TestResult", true, true, true, false);
 			assertNotNull(match);
 			ITextSelection selection= new TextSelection(fDocument, match.getOffset(), match.getLength());
+			Object previousAnnotations= editorAccessor.get("fOccurrenceAnnotations");
+			Object previousTargetRegion= editorAccessor.get("fMarkOccurrenceTargetRegion");
+			Object previousModificationStamp= editorAccessor.get("fMarkOccurrenceModificationStamp");
 			// The AST callback arrives before the selection validator has seen this
 			// selection object. The finder must discard this update without caching it.
 			assertFalse(validator.isValid(selection));
 			editorAccessor.invoke("updateOccurrenceAnnotations", parameterTypes, new Object[] { selection, ast });
 			assertEquals(withExistingAnnotations ? 9 : 0, countOccurrenceAnnotations());
+			assertSame(previousAnnotations, editorAccessor.get("fOccurrenceAnnotations"), "Cancellation must preserve the installed annotations");
+			assertSame(previousTargetRegion, editorAccessor.get("fMarkOccurrenceTargetRegion"), "Cancellation must preserve the last successful target region");
+			assertEquals(previousModificationStamp, editorAccessor.get("fMarkOccurrenceModificationStamp"), "Cancellation must preserve the last successful modification stamp");
 
 			selectionListener.selectionChanged(new SelectionChangedEvent(fEditor.getSelectionProvider(), selection));
 			assertTrue(validator.isValid(selection));
