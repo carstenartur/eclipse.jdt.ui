@@ -1,0 +1,92 @@
+name: Collect PR 3154 Jenkins evidence
+
+on:
+  push:
+    branches: [diagnostic/pr-3154-jenkins-evidence]
+    paths: [.github/workflows/pr-3154-jenkins-evidence.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    if: github.repository == 'carstenartur/eclipse.jdt.ui'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Read public Jenkins build and test reports
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import re
+          import urllib.request
+
+          out = pathlib.Path('jenkins-evidence')
+          out.mkdir()
+          jobs = {
+              'pr3154': 'https://ci.eclipse.org/jdt/job/eclipse.jdt.ui-github/job/PR-3154/1/',
+              'pr3152': 'https://ci.eclipse.org/jdt/job/eclipse.jdt.ui-github/job/PR-3152/lastCompletedBuild/',
+              'master': 'https://ci.eclipse.org/jdt/job/eclipse.jdt.ui-github/job/master/lastCompletedBuild/',
+          }
+          errors = []
+          def fetch(label, base, suffix, filename):
+              url = base + suffix
+              print('\n=== SOURCE', label, url, '===', flush=True)
+              try:
+                  req = urllib.request.Request(url, headers={'User-Agent': 'JDT-public-CI-diagnostics'})
+                  with urllib.request.urlopen(req, timeout=45) as response:
+                      data = response.read(40 * 1024 * 1024 + 1)
+                  if len(data) > 40 * 1024 * 1024:
+                      raise ValueError('Response exceeds the collection limit')
+                  (out / (label + '-' + filename)).write_bytes(data)
+                  return data.decode('utf-8', errors='replace')
+              except Exception as exc:
+                  message = f'{label} {url}: {exc}'
+                  errors.append(message)
+                  print('FETCH ERROR:', message, flush=True)
+                  return None
+
+          for label, base in jobs.items():
+              text = fetch(label, base, 'api/json', 'build.json')
+              if text:
+                  build = json.loads(text)
+                  print('BUILD METADATA:', json.dumps({k: build.get(k) for k in ('number', 'url', 'result', 'building', 'timestamp', 'duration', 'description', 'builtOn')}, indent=2), flush=True)
+                  for action in build.get('actions', []):
+                      if any(k in action for k in ('lastBuiltRevision', 'parameters', 'failCount', 'totalCount')):
+                          print('BUILD ACTION:', json.dumps(action)[:15000], flush=True)
+              text = fetch(label, base, 'testReport/api/json', 'tests.json')
+              if text:
+                  report = json.loads(text)
+                  print('TEST TOTALS:', json.dumps({k: report.get(k) for k in ('failCount', 'skipCount', 'passCount', 'totalCount', 'duration')}), flush=True)
+                  for suite in report.get('suites', []):
+                      cases = suite.get('cases', [])
+                      for case in cases:
+                          if case.get('status') in ('FAILED', 'REGRESSION'):
+                              print('FAILED TEST:', json.dumps(case, ensure_ascii=False), flush=True)
+                      if label == 'pr3154':
+                          for case in cases:
+                              if 'TestRunListenerTest' in case.get('className', ''):
+                                  print('FOCUSED TEST:', json.dumps({k: case.get(k) for k in ('className', 'name', 'status', 'duration')}), flush=True)
+              text = fetch(label, base, 'consoleText', 'console.txt')
+              if text:
+                  lines = text.splitlines()
+                  print('CONSOLE HEAD:\n' + '\n'.join(lines[:100]), flush=True)
+                  pattern = re.compile(r'JAVA_HOME|java\.version|java-version|openjdk version|java version|maven-version|Apache Maven|mvn |mvnw|target-platform|\[ERROR\]|Tests run:|Failed tests:|Tests in error:|BUILD FAILURE|BUILD SUCCESS')
+                  selected = [(i + 1, line) for i, line in enumerate(lines) if pattern.search(line)]
+                  print('CONSOLE DIAGNOSTICS:\n' + '\n'.join(f'{i}: {line}' for i, line in selected[-250:]), flush=True)
+                  print('CONSOLE TAIL:\n' + '\n'.join(lines[-100:]), flush=True)
+          (out / 'fetch-errors.json').write_text(json.dumps(errors, indent=2))
+          if not (out / 'pr3154-tests.json').exists():
+              raise SystemExit('PR 3154 test report could not be collected; do not infer a test diagnosis.')
+          PY
+      - name: Preserve unmodified public evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-3154-public-jenkins-evidence
+          path: jenkins-evidence/
+          if-no-files-found: error
+          retention-days: 14
