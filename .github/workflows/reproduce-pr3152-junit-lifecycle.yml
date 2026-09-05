@@ -1,0 +1,122 @@
+name: Reproduce JUnit session lifecycle
+
+on:
+  push:
+    branches:
+      - diagnose/3152-junit-launch
+    paths:
+      - .github/workflows/reproduce-pr3152-junit-lifecycle.yml
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out the exact failing PR revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init source
+          cd source
+          git remote add origin https://github.com/carstenartur/eclipse.jdt.ui.git
+          git fetch --depth=1 origin af8e9e9bd1162a87538a9fd7e6ea2d85a808de6c
+          git checkout --detach FETCH_HEAD
+          echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
+      - name: Add deterministic late-session-event regression probe
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('source/org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/TestRunListenerTest5.java')
+          source = p.read_text()
+          probe = r'''
+          @org.junit.Test
+          public void testRetiredSessionMustNotStopActiveSession() throws Exception {
+              org.eclipse.jdt.internal.junit.ui.TestRunnerViewPart view = org.eclipse.jdt.internal.junit.ui.JUnitPlugin.showTestRunnerViewPartInActivePage();
+              org.junit.Assert.assertNotNull("The regression probe requires a real JUnit view", view);
+              org.eclipse.jdt.testplugin.util.DisplayHelper.driveEventQueue(org.eclipse.swt.widgets.Display.getCurrent());
+              Class<?> viewClass = org.eclipse.jdt.internal.junit.ui.TestRunnerViewPart.class;
+              Class<?> sessionClass = org.eclipse.jdt.internal.junit.model.TestRunSession.class;
+              java.lang.reflect.Field activeSessionField = viewClass.getDeclaredField("fTestRunSession");
+              java.lang.reflect.Field listenerField = viewClass.getDeclaredField("fTestSessionListener");
+              java.lang.reflect.Field jobField = viewClass.getDeclaredField("fUpdateJob");
+              java.lang.reflect.Field runningField = sessionClass.getDeclaredField("fIsRunning");
+              activeSessionField.setAccessible(true);
+              listenerField.setAccessible(true);
+              jobField.setAccessible(true);
+              runningField.setAccessible(true);
+              java.lang.reflect.Method activate = viewClass.getDeclaredMethod("setActiveTestRunSession", sessionClass);
+              activate.setAccessible(true);
+              Object previous = activeSessionField.get(view);
+              org.eclipse.jdt.internal.junit.model.TestRunSession oldSession = new org.eclipse.jdt.internal.junit.model.TestRunSession("retired-session", fProject);
+              org.eclipse.jdt.internal.junit.model.TestRunSession currentSession = new org.eclipse.jdt.internal.junit.model.TestRunSession("active-session", fProject);
+              runningField.setBoolean(oldSession, true);
+              runningField.setBoolean(currentSession, true);
+              try {
+                  activate.invoke(view, oldSession);
+                  org.eclipse.jdt.internal.junit.model.ITestSessionListener retiredListener = (org.eclipse.jdt.internal.junit.model.ITestSessionListener) listenerField.get(view);
+                  org.junit.Assert.assertNotNull(retiredListener);
+                  activate.invoke(view, currentSession);
+                  Object currentListener = listenerField.get(view);
+                  Object currentJob = jobField.get(view);
+                  org.junit.Assert.assertNotNull(currentListener);
+                  org.junit.Assert.assertNotNull(currentJob);
+                  org.junit.Assert.assertNotSame(retiredListener, currentListener);
+                  // A notifier may already hold an old ListenerList snapshot when the
+                  // UI switches sessions. Deliver that old event from a worker thread.
+                  java.util.concurrent.CompletableFuture<Void> notification = java.util.concurrent.CompletableFuture.runAsync(retiredListener::sessionTerminated);
+                  org.junit.Assert.assertTrue("The notification must complete", waitForCondition(notification::isDone, 10000, 10));
+                  notification.get();
+                  System.out.println("LIFECYCLE_PROBE activeSession=" + activeSessionField.get(view)
+                          + " expectedListener=" + currentListener + " actualListener=" + listenerField.get(view)
+                          + " expectedJob=" + currentJob + " actualJob=" + jobField.get(view));
+                  org.junit.Assert.assertSame("A retired session must not detach the active session listener", currentListener, listenerField.get(view));
+                  org.junit.Assert.assertSame("A retired session must not stop the active session's update job", currentJob, jobField.get(view));
+              } finally {
+                  runningField.setBoolean(oldSession, false);
+                  runningField.setBoolean(currentSession, false);
+                  activate.invoke(view, previous);
+              }
+          }
+          '''
+          end = source.rfind('}')
+          assert end >= 0
+          p.write_text(source[:end] + probe + source[end:])
+      - name: Run the real Eclipse UI regression probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source
+          java -version
+          mvn -version
+          xvfb-run -a mvn -B -ntp -e -Pbuild-individual-bundles -pl org.eclipse.jdt.ui.tests -am verify \
+            -DskipTests=false -Dtest=TestRunListenerTest5#testRetiredSessionMustNotStopActiveSession \
+            -DfailIfNoTests=false -Dmaven.test.failure.ignore=true \
+            -Dcompare-version-with-baselines.skip=true 2>&1 | tee ../lifecycle-baseline.log
+      - name: Report exact test outcome and workspace errors
+        if: always()
+        shell: python
+        run: |
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          import re
+          found = False
+          for p in Path('source').glob('**/target/surefire-reports/*.xml'):
+              try:
+                  root = ET.parse(p).getroot()
+              except ET.ParseError:
+                  continue
+              for case in root.iter('testcase'):
+                  if 'testRetiredSessionMustNotStopActiveSession' in case.get('name', ''):
+                      found = True
+                      print('ACTUAL PDE TEST RESULT', p, ET.tostring(case, encoding='unicode'), flush=True)
+          for p in Path('source').glob('**/target/work/data/.metadata/*.log'):
+              print('WORKSPACE LOG', p)
+              text = p.read_text(errors='replace')
+              print(text[-60000:])
+          print('PDE_PROBE_EXECUTED', found)
+          if not found:
+              raise SystemExit('The PDE probe did not execute; do not interpret build failures as a reproduced race.')
