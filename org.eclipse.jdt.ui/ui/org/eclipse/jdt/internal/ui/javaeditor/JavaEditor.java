@@ -1472,7 +1472,6 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 			fInvalidSelection= new TextSelection(0, 0);
 
 			SelectionChangedEvent event= new SelectionChangedEvent(this, fInvalidSelection);
-
 			for (ISelectionChangedListener listener : fSelectionListeners) {
 				listener.selectionChanged(event);
 			}
@@ -3469,18 +3468,22 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 	}
 
 	void removeOccurrenceAnnotations() {
-		fMarkOccurrenceModificationStamp= IDocumentExtension4.UNKNOWN_MODIFICATION_STAMP;
-		fMarkOccurrenceTargetRegion= null;
-
 		IDocumentProvider documentProvider= getDocumentProvider();
-		if (documentProvider == null)
+		IAnnotationModel annotationModel= documentProvider == null ? null : documentProvider.getAnnotationModel(getEditorInput());
+		if (annotationModel == null) {
+			fMarkOccurrenceModificationStamp= IDocumentExtension4.UNKNOWN_MODIFICATION_STAMP;
+			fMarkOccurrenceTargetRegion= null;
 			return;
-
-		IAnnotationModel annotationModel= documentProvider.getAnnotationModel(getEditorInput());
-		if (annotationModel == null || fOccurrenceAnnotations == null)
-			return;
+		}
 
 		synchronized (getLockObject(annotationModel)) {
+			// Invalidate the cache under the same lock used to install annotations.
+			// Otherwise a concurrent update can republish the cache before removal.
+			fMarkOccurrenceModificationStamp= IDocumentExtension4.UNKNOWN_MODIFICATION_STAMP;
+			fMarkOccurrenceTargetRegion= null;
+			if (fOccurrenceAnnotations == null)
+				return;
+
 			if (annotationModel instanceof IAnnotationModelExtension) {
 				((IAnnotationModelExtension)annotationModel).replaceAnnotations(fOccurrenceAnnotations, null);
 			} else {
@@ -4227,7 +4230,6 @@ public abstract class JavaEditor extends AbstractDecoratedTextEditor implements 
 		// use this as the preferred class for comparing objects.
 		return new NonLocalUndoUserApprover(undoContext, this, new Object [] { getInputJavaElement() }, IResource.class);
 	}
-
 	/**
 	 * Resets the foldings structure according to the folding
 	 * preferences.
