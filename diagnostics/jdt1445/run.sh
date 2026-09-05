@@ -5,9 +5,10 @@ SDK=${1:?Usage: run.sh /path/to/eclipse-sdk}
 SDK=$(cd "$SDK" && pwd)
 OUT="$HERE/out"
 mkdir -p "$OUT/classes"
-CP=$(find "$SDK/plugins" -name '*.jar' -printf '%p:' | sed 's/:$//')
+# Never implicitly recompile SDK/JUnit sources against the host JDK.
+CP=$(find "$SDK/plugins" -name '*.jar' ! -name '*.source_*.jar' -printf '%p:' | sed 's/:$//')
 find "$HERE/src" -name '*.java' -print > "$OUT/sources.txt"
-javac --release 21 -cp "$CP" -d "$OUT/classes" @"$OUT/sources.txt"
+javac --release 21 -sourcepath "$HERE/src" -implicit:none -cp "$CP" -d "$OUT/classes" @"$OUT/sources.txt"
 cp "$HERE/plugin.xml" "$OUT/classes/"
 jar cfm "$SDK/plugins/jdt1445.diagnostics_1.0.0.jar" "$HERE/META-INF/MANIFEST.MF" -C "$OUT/classes" .
 INFO="$SDK/configuration/org.eclipse.equinox.simpleconfigurator/bundles.info"
