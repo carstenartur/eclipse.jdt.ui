@@ -1,0 +1,110 @@
+name: Verify JUnit lifecycle fix
+
+on:
+  push:
+    branches:
+      - diagnose/3152-junit-launch
+    paths:
+      - .github/workflows/verify-junit-lifecycle-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Prepare the isolated upstream-based candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init source
+          cd source
+          git remote add origin https://github.com/carstenartur/eclipse.jdt.ui.git
+          git fetch --depth=1 origin 6312a1cc907ad0a5ac5dd42e998eb0cbac686205
+          git checkout --detach FETCH_HEAD
+          echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_21_X64/bin" >> "$GITHUB_PATH"
+          for script in patch_junit_lifecycle.py add_junit_lifecycle_tests.py; do
+            curl --fail --silent --show-error --location "https://raw.githubusercontent.com/carstenartur/eclipse.jdt.ui/17627633bd3d176a6f1698239f89c41c23651d26/.github/diagnostics/$script" -o "../$script"
+          done
+          python ../patch_junit_lifecycle.py org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java
+          python ../add_junit_lifecycle_tests.py org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/TestRunListenerTest5.java
+          git diff --check
+          git diff --stat
+      - name: Run both complete JUnit listener test classes
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source
+          java -version
+          mvn -version
+          xvfb-run -a mvn -B -ntp -e -Pbuild-individual-bundles -pl org.eclipse.jdt.ui.tests -am verify \
+            -DskipTests=false -Dtest=TestRunListenerTest5,TestRunListenerTest6 \
+            -DfailIfNoTests=false -Dcompare-version-with-baselines.skip=true \
+            > ../lifecycle-fixed.log 2>&1
+      - name: Check every regression and original failing test actually passed
+        if: always()
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+          import xml.etree.ElementTree as ET
+          import re
+          cases = []
+          for p in Path('source/org.eclipse.jdt.ui.tests/target/surefire-reports').glob('*.xml'):
+              root = ET.parse(p).getroot()
+              for c in root.iter('testcase'):
+                  result = {'class': c.get('classname'), 'test': c.get('name'), 'time': c.get('time'), 'status': 'passed'}
+                  for kind in ('failure', 'error', 'skipped'):
+                      found = c.find(kind)
+                      if found is not None:
+                          result['status'] = kind
+                          result['message'] = found.get('message', '')
+                          result['trace'] = (found.text or '')[:2500]
+                  cases.append(result)
+          print('ACTUAL_TEST_RESULTS', json.dumps(cases, indent=2))
+          expected = {
+              ('org.eclipse.jdt.junit.tests.TestRunListenerTest5', 'testRetiredSessionTerminationDoesNotStopActiveSession'),
+              ('org.eclipse.jdt.junit.tests.TestRunListenerTest5', 'testRetiredSessionStopDoesNotStopActiveSession'),
+              ('org.eclipse.jdt.junit.tests.TestRunListenerTest5', 'testRetiredSessionEndDoesNotStopActiveSession'),
+              ('org.eclipse.jdt.junit.tests.TestRunListenerTest5', 'testActiveSessionTerminationStopsUpdateJobs'),
+              ('org.eclipse.jdt.junit.tests.TestRunListenerTest5', 'testTerminateLaunch'),
+              ('org.eclipse.jdt.junit.tests.TestRunListenerTest6', 'testTerminateLaunch'),
+          }
+          passed = {(c['class'], c['test']) for c in cases if c['status'] == 'passed'}
+          bad = [c for c in cases if c['status'] != 'passed']
+          print('REQUIRED_TESTS_MISSING', sorted(expected-passed))
+          print('TEST_COUNTS', {'total': len(cases), 'passed': len(passed), 'failed_or_skipped': len(bad)})
+          log = Path('lifecycle-fixed.log')
+          if log.exists():
+              lines = log.read_text(errors='replace').splitlines()
+              matches = [line for line in lines if re.search(r'BUILD SUCCESS|BUILD FAILURE|\[ERROR\]|Tests run:', line)]
+              print('BUILD_RESULT', '\n'.join(matches[-60:])[:10000])
+          if expected-passed or bad or not cases:
+              raise SystemExit('Verification failed; the candidate will not be published')
+      - name: Publish the verified two-file change on a new branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source
+          branch=fix/junit-retired-session-events
+          if test -n "$(git ls-remote --heads origin "refs/heads/$branch")"; then
+            echo "Refusing to replace an existing branch"
+            exit 1
+          fi
+          git diff --check
+          git config user.name 'Carsten Hammer'
+          git config user.email 'carsten.hammer@t-online.de'
+          git add org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/TestRunListenerTest5.java
+          git commit -s -m 'Ignore lifecycle notifications from retired JUnit sessions' \
+            -m 'Serialize lifecycle callbacks with UI session switches and validate the listener identity on the UI thread. An already dispatched notification from a previous session must not detach the current listener or stop its update job.' \
+            -m 'Cover late ended, stopped and terminated notifications, and verify that an active session still stops its own update job. Existing launch tests and their timeouts are unchanged.'
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c "http.extraheader=AUTHORIZATION: basic $auth" push origin "HEAD:refs/heads/$branch"
+          echo "VERIFIED_FIX_BRANCH=$branch"
+          echo "VERIFIED_FIX_COMMIT=$(git rev-parse HEAD)"
+          git show --stat --oneline HEAD
