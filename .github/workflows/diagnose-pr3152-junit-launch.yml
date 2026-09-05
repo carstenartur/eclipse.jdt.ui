@@ -1,0 +1,86 @@
+name: Diagnose PR 3152 JUnit launch
+
+on:
+  push:
+    branches:
+      - diagnose/3152-junit-launch
+    paths:
+      - .github/workflows/diagnose-pr3152-junit-launch.yml
+
+permissions:
+  contents: read
+
+jobs:
+  collect-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Read original Jenkins logs and test reports
+        shell: python
+        run: |
+          import json
+          import re
+          import urllib.request
+          import urllib.parse
+
+          root = 'https://ci.eclipse.org/jdt/job/eclipse.jdt.ui-github/job/'
+          pattern = re.compile(r'Exception|ERROR|FAILED|testTerminateLaunch|ATestCaseTerminate|deadlock|Invalid thread|Update JUnit|JUnit Starter|RemoteTestRunner', re.I)
+
+          def get(url):
+              print('FETCH', url, flush=True)
+              request = urllib.request.Request(url, headers={'User-Agent': 'JDT-PR3152-diagnostics', 'Accept': '*/*'})
+              with urllib.request.urlopen(request, timeout=60) as response:
+                  return response.read().decode('utf-8', errors='replace')
+
+          def excerpts(text, context=5, max_lines=800):
+              lines = text.splitlines()
+              indexes = set()
+              for i, line in enumerate(lines):
+                  if pattern.search(line):
+                      indexes.update(range(max(0, i-context), min(len(lines), i+context+1)))
+              selected = sorted(indexes)
+              for i in selected[:max_lines]:
+                  print(f'{i+1}: {lines[i]}')
+              if len(selected) > max_lines:
+                  print('TRUNCATED matched lines:', len(selected))
+              print('TOTAL LOG LINES', len(lines))
+
+          def failing_cases(value, parent=''):
+              if isinstance(value, dict):
+                  name = value.get('name', parent)
+                  if value.get('status') in ('FAILED', 'REGRESSION') or 'testTerminateLaunch' in str(value.get('name', '')):
+                      print('TEST RESULT', json.dumps(value, ensure_ascii=False))
+                  for key in ('suites', 'cases', 'children', 'childReports'):
+                      for child in value.get(key, []):
+                          failing_cases(child, name)
+              elif isinstance(value, list):
+                  for child in value:
+                      failing_cases(child, parent)
+
+          for build in ('PR-3152/2', 'PR-3152/1', 'master/781'):
+              base = root + build + '/'
+              print('\n========== BUILD', build, '==========', flush=True)
+              for suffix in ('api/json', 'testReport/api/json', 'consoleText'):
+                  try:
+                      text = get(base + suffix)
+                      if suffix == 'consoleText':
+                          excerpts(text)
+                      elif suffix == 'testReport/api/json':
+                          report = json.loads(text)
+                          print('TEST COUNTS', {k: report.get(k) for k in ('failCount', 'passCount', 'skipCount', 'duration')})
+                          failing_cases(report)
+                      else:
+                          data = json.loads(text)
+                          print('BUILD', {k: data.get(k) for k in ('result', 'timestamp', 'duration', 'builtOn')})
+                          artifacts = data.get('artifacts', [])
+                          print('ARTIFACTS', json.dumps(artifacts, ensure_ascii=False))
+                          if build == 'PR-3152/2':
+                              for artifact in artifacts:
+                                  path = artifact.get('relativePath', '')
+                                  if path.endswith('.log') and ('jdt.ui.tests' in path or 'junit' in path.lower()):
+                                      try:
+                                          excerpts(get(base + 'artifact/' + urllib.parse.quote(path, safe='/')), context=10)
+                                      except Exception as e:
+                                          print('ARTIFACT FETCH FAILED', path, repr(e))
+                  except Exception as e:
+                      print('FETCH FAILED', base + suffix, repr(e), flush=True)
