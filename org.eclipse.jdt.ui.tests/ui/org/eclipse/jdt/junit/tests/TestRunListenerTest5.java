@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2006, 2020 IBM Corporation and others.
+ * Copyright (c) 2006, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -15,12 +15,20 @@
 package org.eclipse.jdt.junit.tests;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -31,6 +39,9 @@ import org.eclipse.jdt.junit.model.ITestElement.FailureTrace;
 import org.eclipse.jdt.junit.model.ITestElement.ProgressState;
 import org.eclipse.jdt.junit.model.ITestElement.Result;
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
+import org.eclipse.jdt.testplugin.util.DisplayHelper;
+
+import org.eclipse.swt.widgets.Display;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -65,6 +76,8 @@ import org.eclipse.jdt.internal.junit.model.TestElement;
 import org.eclipse.jdt.internal.junit.model.TestElement.Status;
 import org.eclipse.jdt.internal.junit.model.TestRunSession;
 import org.eclipse.jdt.internal.junit.ui.JUnitMessages;
+import org.eclipse.jdt.internal.junit.ui.JUnitPlugin;
+import org.eclipse.jdt.internal.junit.ui.TestRunnerViewPart;
 
 public class TestRunListenerTest5 extends AbstractTestRunListenerTest {
 
@@ -451,5 +464,78 @@ public class TestRunListenerTest5 extends AbstractTestRunListenerTest {
 		public boolean acceptsSwapToDisk() {
 			return false;
 		}
+	}
+
+	@Test
+	public void testRetiredSessionTerminationDoesNotStopActiveSession() throws Exception {
+		assertSessionNotification(ITestSessionListener::sessionTerminated, true);
+	}
+
+	@Test
+	public void testRetiredSessionStopDoesNotStopActiveSession() throws Exception {
+		assertSessionNotification(listener -> listener.sessionStopped(0), true);
+	}
+
+	@Test
+	public void testRetiredSessionEndDoesNotStopActiveSession() throws Exception {
+		assertSessionNotification(listener -> listener.sessionEnded(0), true);
+	}
+
+	@Test
+	public void testActiveSessionTerminationStopsUpdateJobs() throws Exception {
+		assertSessionNotification(ITestSessionListener::sessionTerminated, false);
+	}
+
+	private void assertSessionNotification(Consumer<ITestSessionListener> notification, boolean retired) throws Exception {
+		TestRunnerViewPart view= JUnitPlugin.showTestRunnerViewPartInActivePage();
+		assertNotNull(view);
+		DisplayHelper.driveEventQueue(Display.getCurrent());
+		Field activeSessionField= accessibleField(TestRunnerViewPart.class, "fTestRunSession");
+		Field listenerField= accessibleField(TestRunnerViewPart.class, "fTestSessionListener");
+		Field jobField= accessibleField(TestRunnerViewPart.class, "fUpdateJob");
+		Field runningField= accessibleField(TestRunSession.class, "fIsRunning");
+		Method activate= TestRunnerViewPart.class.getDeclaredMethod("setActiveTestRunSession", TestRunSession.class);
+		activate.setAccessible(true);
+		Object previous= activeSessionField.get(view);
+		TestRunSession oldSession= new TestRunSession("retired-session", fProject);
+		TestRunSession currentSession= new TestRunSession("active-session", fProject);
+		runningField.setBoolean(oldSession, true);
+		runningField.setBoolean(currentSession, true);
+		try {
+			activate.invoke(view, oldSession);
+			ITestSessionListener oldListener= (ITestSessionListener) listenerField.get(view);
+			assertNotNull(oldListener);
+			activate.invoke(view, currentSession);
+			ITestSessionListener currentListener= (ITestSessionListener) listenerField.get(view);
+			Object currentJob= jobField.get(view);
+			assertNotNull(currentListener);
+			assertNotNull(currentJob);
+			assertNotSame(oldListener, currentListener);
+
+			// A notifier may retain an old ListenerList snapshot while the UI
+			// switches sessions. Deliver that event on a notification thread.
+			ITestSessionListener recipient= retired ? oldListener : currentListener;
+			CompletableFuture<Void> delivered= CompletableFuture.runAsync(() -> notification.accept(recipient));
+			assertTrue("The session notification must complete", waitForCondition(delivered::isDone, 10000, 10));
+			delivered.get();
+			assertSame(currentSession, activeSessionField.get(view));
+			if (retired) {
+				assertSame("A retired session must not detach the active session listener", currentListener, listenerField.get(view));
+				assertSame("A retired session must not stop the active session's update job", currentJob, jobField.get(view));
+			} else {
+				assertNull("The active session must still detach its own listener", listenerField.get(view));
+				assertNull("The active session must still stop its own update job", jobField.get(view));
+			}
+		} finally {
+			runningField.setBoolean(oldSession, false);
+			runningField.setBoolean(currentSession, false);
+			activate.invoke(view, previous);
+		}
+	}
+
+	private static Field accessibleField(Class<?> declaringClass, String name) throws ReflectiveOperationException {
+		Field field= declaringClass.getDeclaredField(name);
+		field.setAccessible(true);
+		return field;
 	}
 }
