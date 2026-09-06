@@ -1,0 +1,105 @@
+name: PR 3154 annotation source repeat probe
+on:
+  push:
+    branches: [diagnostic/pr-3154-session-readiness]
+    paths:
+      - .github/workflows/pr-3154-annotation-probe.yml
+      - .github/qa/pr3154_annotation_probe.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    if: github.repository == 'carstenartur/eclipse.jdt.ui'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: base
+            source: 6312a1cc907ad0a5ac5dd42e998eb0cbac686205
+          - variant: pr
+            source: bfb7050bd9935da6c4abcf10879edf0be1db0d55
+    env:
+      VARIANT: ${{ matrix.variant }}
+      SOURCE: ${{ matrix.source }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select immutable source and add only the repeat wrapper
+        run: |
+          cp .github/qa/pr3154_annotation_probe.py "$RUNNER_TEMP/probe.py"
+          python3 -m py_compile "$RUNNER_TEMP/probe.py"
+          git checkout --detach "$SOURCE"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/source-sha.txt
+          python3 "$RUNNER_TEMP/probe.py"
+          cp org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/AnnotateAssistRepeatProbe.java evidence/
+          git diff --check
+          git diff --exit-code
+          git hash-object org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/AbstractAnnotateAssistTests.java > evidence/helper-blob.txt
+          git hash-object org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/AnnotateAssistTest1d8.java > evidence/test-blob.txt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install the same native UI prerequisites as the successful full comparison
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2 libwebkit2gtk-4.0-37
+          java -version 2> evidence/java.txt
+          mvn -version > evidence/maven.txt
+      - name: Run unchanged inherited tests fifty times in one Eclipse VM
+        shell: bash
+        run: |
+          set -uo pipefail
+          xvfb-run -a mvn -B -ntp clean verify -Pbuild-individual-bundles \
+            -pl org.eclipse.jdt.ui.tests -am -DskipTests=false -Dmaven.test.skip=false \
+            -Dtest=AnnotateAssistRepeatProbe -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dmaven.test.failure.ignore=false 2>&1 | tee evidence/maven.log
+          result=${PIPESTATUS[0]}
+          printf '%s\n' "$result" > evidence/maven-exit.txt
+          exit "$result"
+      - name: Check executed methods, repetitions, failures and skips
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          source = Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/AnnotateAssistTest1d8.java').read_text()
+          methods = re.findall(r'@Test\s+public void (test\w+)\(', source)
+          assert methods, 'Could not identify inherited tests'
+          cases = []
+          for path in Path('org.eclipse.jdt.ui.tests/target/surefire-reports').glob('TEST-*.xml'):
+              cases.extend(ET.parse(path).getroot().iter('testcase'))
+          counts = {method: sum(case.get('name', '').split('[')[0] == method for case in cases) for method in methods}
+          failed = [case.get('name') for case in cases if case.find('failure') is not None or case.find('error') is not None]
+          skipped = [case.get('name') for case in cases if case.find('skipped') is not None]
+          result = {'variant': os.environ['VARIANT'], 'source': os.environ['SOURCE'], 'tests': len(cases), 'methods': counts,
+                    'failed': failed, 'skipped': skipped, 'expected': len(methods) * 50,
+                    'maven_exit': Path('evidence/maven-exit.txt').read_text().strip()}
+          Path('evidence/summary.json').write_text(json.dumps(result, indent=2))
+          print(json.dumps(result, indent=2))
+          for case in cases:
+              if case.find('failure') is not None or case.find('error') is not None:
+                  print(ET.tostring(case, encoding='unicode'))
+          assert result['maven_exit'] == '0', 'Maven failed'
+          assert len(cases) == len(methods) * 50 and all(count == 50 for count in counts.values()), 'Incomplete or unexpected test inventory'
+          assert not failed and not skipped, 'Repeated tests did not all pass'
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-3154-annotation-probe-${{ matrix.variant }}
+          include-hidden-files: true
+          if-no-files-found: error
+          path: |
+            evidence/
+            org.eclipse.jdt.ui.tests/target/surefire-reports/**
+            org.eclipse.jdt.ui.tests/target/work/data/.metadata/*.log
