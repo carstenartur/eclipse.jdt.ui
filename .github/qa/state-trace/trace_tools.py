@@ -19,29 +19,53 @@ PREDECESSORS = ['NullAnnotationsQuickFixTest', 'NullAnnotationsQuickFixTest1d8',
                 'AnnotateAssistTest1d5', 'AnnotateAssistTest1d8']
 
 
+SERVICE = MODULE / 'META-INF/services/org.junit.platform.launcher.TestExecutionListener'
+MANIFEST = MODULE / 'META-INF/MANIFEST.MF'
+PROVIDER = 'org.eclipse.jdt.ui.tests.StateTraceListener'
+
+
+def append_provider(data: bytes) -> bytes:
+    providers = [line.split('#', 1)[0].strip() for line in data.decode('utf-8').splitlines()]
+    assert PROVIDER not in providers, 'Observer already registered'
+    separator = b'\n' if data and not data.endswith((b'\n', b'\r')) else b''
+    return data + separator + PROVIDER.encode() + b'\n'
+
+
+def preference_import(text: str) -> str:
+    old = ' org.junit.platform.suite.engine;status=INTERNAL;version="[1.14.0,2.0.0)"\n'
+    assert text.count(old) == 1, 'Unexpected manifest import list'
+    assert 'org.osgi.service.prefs' not in text
+    return text.replace(old, old.rstrip('\n') + ',\n org.osgi.service.prefs\n', 1)
+
+
 def install():
     here = Path(__file__).resolve().parent
+    # Validate all original inputs before writing any diagnostic file.
+    data = HELPER.read_bytes()
+    actual = hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
+    assert actual == '6e2e3d4a782ffef35858406dec86696b66de89f4', f'Unreviewed helper blob: {actual}'
+    original_service = SERVICE.read_bytes()
+    assert 'org.eclipse.jdt.ui.tests.LogTestListener' in original_service.decode().splitlines(), 'Original log listener missing'
+    modified_service = append_provider(original_service)
+    manifest = preference_import(MANIFEST.read_text())
+    old = '\t\t\tif (proposals==null) {\n'
+    new = old + '\t\t\t\torg.eclipse.jdt.ui.tests.StateTraceListener.missingSource(((IClassFileEditorInput) javaEditor.getEditorInput()).getClassFile());\n'
+    text = data.decode()
+    assert text.count(old) == 1
+    for name in ('StateTraceListener.java', 'StateTraceSmokeSuite.java', 'StatePredecessorSuite.java'):
+        assert not (JAVA / name).exists(), f'Diagnostic source already exists: {name}'
     for name in ('StateTraceListener.java', 'StateTraceSmokeSuite.java'):
-        dest = JAVA / name
-        assert not dest.exists(), f'Diagnostic source already exists: {dest}'
-        dest.write_bytes((here / name).read_bytes())
-    service = MODULE / 'META-INF/services/org.junit.platform.launcher.TestExecutionListener'
-    assert not service.exists(), 'Do not replace an existing service registration'
-    service.parent.mkdir(parents=True, exist_ok=True)
-    service.write_text('org.eclipse.jdt.ui.tests.StateTraceListener\n')
+        (JAVA / name).write_bytes((here / name).read_bytes())
     (JAVA / 'StatePredecessorSuite.java').write_text(
         '// SPDX-License-Identifier: EPL-2.0\npackage org.eclipse.jdt.ui.tests;\n'
         'import org.junit.platform.suite.api.SelectClasses;\nimport org.junit.platform.suite.api.Suite;\n'
         '@Suite\n@SelectClasses({' + ','.join('org.eclipse.jdt.ui.tests.quickfix.' + c + '.class' for c in PREDECESSORS)
         + '})\npublic class StatePredecessorSuite {}\n')
-    data = HELPER.read_bytes()
-    actual = hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
-    assert actual == '6e2e3d4a782ffef35858406dec86696b66de89f4', f'Unreviewed helper blob: {actual}'
-    old = '\t\t\tif (proposals==null) {\n'
-    new = old + '\t\t\t\torg.eclipse.jdt.ui.tests.StateTraceListener.missingSource(((IClassFileEditorInput) javaEditor.getEditorInput()).getClassFile());\n'
-    text = data.decode()
-    assert text.count(old) == 1
+    SERVICE.write_bytes(modified_service)
+    MANIFEST.write_text(manifest)
     HELPER.write_text(text.replace(old, new, 1))
+    assert SERVICE.read_bytes().startswith(original_service), 'Existing provider bytes changed'
+    print('Preserved LogTestListener and appended StateTraceListener; diagnostic preference import added.')
 
 
 def read_events(folder):
@@ -99,7 +123,9 @@ def analyze(folder, reports, phase, exit_code):
     assert cases, 'No original Surefire XML reports'
     skipped = sum(c.find('skipped') is not None for c in cases)
     failures = [c.attrib for c in cases if c.find('failure') is not None or c.find('error') is not None]
-    assert len(finished) == len(cases) - skipped, f'Trace/XML inventory mismatch: {len(finished)} vs {len(cases)} minus {skipped}'
+    aborted = sum(e['status'] == 'ABORTED' for e in finished)
+    assert skipped >= aborted, 'Aborted tests must appear as skipped in XML'
+    assert len(finished) - aborted == len(cases) - skipped, f'Trace/XML inventory mismatch: {len(finished)} finishes minus {aborted} aborts vs {len(cases)} cases minus {skipped} skips'
     failed_events = [e for e in finished if e['status'] == 'FAILED']
     assert len(failed_events) == len(failures), 'Trace/XML failure mismatch'
     def covered(text):
@@ -137,7 +163,7 @@ def analyze(folder, reports, phase, exit_code):
             if stable:
                 boundaries.append({'id': row['id'], 'seq': row['seq'], 'changes': stable})
     summary = {'phase': phase, 'maven_exit': exit_code, 'xml_cases': len(cases), 'skipped': skipped,
-               'executed': len(finished), 'failures': failures, 'test_overlap_count': len(overlaps),
+               'executed': len(finished), 'aborted': aborted, 'failures': failures, 'test_overlap_count': len(overlaps),
                'state_boundary_changes': len(boundaries), 'missing_source_events': sum(e['event'] == 'MISSING_SOURCE' for e in all_events),
                'listener_streams': {str(k): sum(e['event'] == 'FINISH' and e.get('isTest', False) for e in v) for k, v in streams.items()},
                'evidence_valid': True, 'tests_passed': exit_code == 0 and not failures}
@@ -181,7 +207,26 @@ def selftest():
             pass
         else:
             raise AssertionError('Truncated trace accepted')
-    print('8 trace-validator checks passed')
+    original = b'org.eclipse.jdt.ui.tests.LogTestListener'
+    assert append_provider(original).startswith(original + b'\n')
+    assert append_provider(original + b'\n') == append_provider(original)
+    commented = b'# preserve comment\n' + original + b'\r\n'
+    assert append_provider(commented).startswith(commented)
+    try:
+        append_provider(PROVIDER.encode())
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError('Duplicate listener accepted')
+    line = ' org.junit.platform.suite.engine;status=INTERNAL;version="[1.14.0,2.0.0)"\n'
+    assert preference_import(line) == line.rstrip('\n') + ',\n org.osgi.service.prefs\n'
+    try:
+        preference_import('wrong input')
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError('Unexpected manifest accepted')
+    print('14 trace-validator and installer checks passed')
 
 
 if __name__ == '__main__':
