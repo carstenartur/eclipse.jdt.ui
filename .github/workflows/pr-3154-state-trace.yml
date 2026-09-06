@@ -1,0 +1,118 @@
+name: PR 3154 state and execution-order trace
+on:
+  push:
+    branches: [diagnostic/pr-3154-session-readiness]
+    paths:
+      - .github/workflows/pr-3154-state-trace.yml
+      - .github/qa/state-trace/**
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pr-3154-state-trace-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  trace:
+    if: github.repository == 'carstenartur/eclipse.jdt.ui'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: base
+            source: 6312a1cc907ad0a5ac5dd42e998eb0cbac686205
+          - variant: pr
+            source: 1bb8b73d4306b9b6a316c862a8cf815500f163dc
+    env:
+      VARIANT: ${{ matrix.variant }}
+      SOURCE: ${{ matrix.source }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Preserve diagnostics and select immutable tested source
+        run: |
+          cp -r .github/qa/state-trace "$RUNNER_TEMP/state-trace"
+          python3 "$RUNNER_TEMP/state-trace/trace_tools.py" selftest
+          git checkout --detach "$SOURCE"
+          test "$(git rev-parse HEAD)" = "$SOURCE"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          mkdir -p evidence
+          cp -r "$RUNNER_TEMP/state-trace" evidence/probe-source
+          git rev-parse HEAD > evidence/source-sha.txt
+          python3 "$RUNNER_TEMP/state-trace/trace_tools.py" install
+          git diff --check
+          git diff > evidence/diagnostic-only.diff
+          git diff --name-only > evidence/changed-original-files.txt
+          test "$(git diff --name-only)" = 'org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/AbstractAnnotateAssistTests.java'
+          git hash-object org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java > evidence/product-blob.txt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install native UI prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2 libwebkit2gtk-4.0-37
+          java -version 2> evidence/java.txt
+          mvn -version > evidence/maven.txt
+      - name: Require listener acceptance before measuring real predecessor and full-suite runs
+        shell: bash
+        run: |
+          set -euo pipefail
+          phases=(smoke predecessors-order predecessors-state full-state)
+          if [[ "$VARIANT" == base ]]; then phases[3]=full-base; fi
+          for phase in "${phases[@]}"; do
+            export JDT_STATE_TRACE_DIR="$PWD/evidence/$phase"
+            export JDT_STATE_TRACE_MODE=state
+            tests=StatePredecessorSuite
+            if [[ "$phase" == smoke ]]; then tests=StateTraceSmokeSuite; fi
+            if [[ "$phase" == predecessors-order ]]; then export JDT_STATE_TRACE_MODE=order; fi
+            if [[ "$phase" == full-* ]]; then tests=AutomatedSuite; fi
+            mkdir -p "$JDT_STATE_TRACE_DIR"
+            set +e
+            xvfb-run -a mvn -B -ntp clean verify -Pbuild-individual-bundles \
+              -pl org.eclipse.jdt.ui.tests -am -DskipTests=false -Dmaven.test.skip=false \
+              -Dtest="$tests" -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+              -Dmaven.test.failure.ignore=false 2>&1 | tee "$JDT_STATE_TRACE_DIR/maven.log"
+            codes=("${PIPESTATUS[@]}")
+            set -e
+            result=${codes[0]}
+            if [[ "$result" == 0 && "${codes[1]}" != 0 ]]; then result=${codes[1]}; fi
+            printf '%s\n' "$result" > "$JDT_STATE_TRACE_DIR/maven-exit.txt"
+            if [[ -d org.eclipse.jdt.ui.tests/target/surefire-reports ]]; then
+              cp -r org.eclipse.jdt.ui.tests/target/surefire-reports "$JDT_STATE_TRACE_DIR/reports"
+            fi
+            if [[ -f org.eclipse.jdt.ui.tests/target/work/data/.metadata/.log ]]; then
+              cp org.eclipse.jdt.ui.tests/target/work/data/.metadata/.log "$JDT_STATE_TRACE_DIR/eclipse.log"
+            fi
+            python3 "$RUNNER_TEMP/state-trace/trace_tools.py" analyze \
+              --folder "$JDT_STATE_TRACE_DIR" --phase "$phase" --exit-code "$result"
+          done
+      - name: Gate on actual evidence and test results, not merely Maven exit
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          phases = ['smoke', 'predecessors-order', 'predecessors-state', 'full-base' if os.environ['VARIANT'] == 'base' else 'full-state']
+          results = [json.loads((Path('evidence') / phase / 'summary.json').read_text()) for phase in phases]
+          assert results[-1]['executed'] >= 3000, 'Original AutomatedSuite inventory absent'
+          for result in results:
+              print(json.dumps(result, indent=2))
+              assert result['evidence_valid'] and result['tests_passed'], 'Missing evidence or real test failure'
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write('| Phase | Executed | Skipped | State boundary deltas |\n|---|---:|---:|---:|\n')
+              for result in results:
+                  out.write(f"| {result['phase']} | {result['executed']} | {result['skipped']} | {result['state_boundary_changes']} |\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-3154-state-trace-${{ matrix.variant }}
+          include-hidden-files: true
+          if-no-files-found: error
+          path: evidence/
