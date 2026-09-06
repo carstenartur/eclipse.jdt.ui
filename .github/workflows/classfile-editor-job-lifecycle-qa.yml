@@ -17,7 +17,7 @@ jobs:
       matrix:
         variant: [fixed, old-product]
     env:
-      SOURCE: 9430d30bd4c713ea6b556d7b1e584091572b1b28
+      SOURCE: 141d4e9ca5ebf2930db2e4f233fda3b6f0aad2de
       BASE: 6312a1cc907ad0a5ac5dd42e998eb0cbac686205
       VARIANT: ${{ matrix.variant }}
     steps:
