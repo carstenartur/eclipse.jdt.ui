@@ -20,6 +20,7 @@ jobs:
       SOURCE: 141d4e9ca5ebf2930db2e4f233fda3b6f0aad2de
       BASE: 6312a1cc907ad0a5ac5dd42e998eb0cbac686205
       VARIANT: ${{ matrix.variant }}
+      TARGET_TEST: testClosingEditorCancelsPendingOverrideIndicatorInstallationJob
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,14 +54,14 @@ jobs:
           java -version 2> evidence/java.txt
           mvn -version > evidence/maven.txt
 
-      - name: Run ClassFileEditor tests
+      - name: Run lifecycle regression test only
         shell: bash
         run: |
           set -uo pipefail
           xvfb-run -a mvn -B -ntp clean verify -Pbuild-individual-bundles \
             -pl org.eclipse.jdt.ui.tests -am \
             -DskipTests=false -Dmaven.test.skip=false \
-            -Dtest=ClassFileEditorTests \
+            -Dtest="ClassFileEditorTests#$TARGET_TEST" \
             -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
             -Dmaven.test.failure.ignore=true 2>&1 | tee evidence/maven.log
           printf '%s\n' "${PIPESTATUS[0]}" > evidence/maven-exit.txt
@@ -79,26 +80,30 @@ jobs:
               except ET.ParseError:
                   pass
           selected = [c for c in cases if c.get('classname', '').endswith('ClassFileEditorTests')]
-          target_name = 'testClosingEditorCancelsPendingOverrideIndicatorInstallationJob'
+          target_name = os.environ['TARGET_TEST']
           target = [c for c in selected if c.get('name', '').split('[')[0] == target_name]
-          failures = [c for c in selected if c.find('failure') is not None or c.find('error') is not None]
+          failures = [c for c in selected if c.find('failure') is not None]
+          errors = [c for c in selected if c.find('error') is not None]
           skipped = [c for c in selected if c.find('skipped') is not None]
           result = {
               'variant': os.environ['VARIANT'],
               'classfile_editor_tests': len(selected),
               'target_count': len(target),
               'failures': [c.get('name') for c in failures],
+              'errors': [c.get('name') for c in errors],
               'skipped': [c.get('name') for c in skipped],
               'maven_exit': Path('evidence/maven-exit.txt').read_text().strip(),
           }
           Path('evidence/summary.json').write_text(json.dumps(result, indent=2))
           print(json.dumps(result, indent=2))
+          assert len(selected) == 1, f'Expected only the lifecycle test, got {len(selected)} ClassFileEditorTests cases'
           assert len(target) == 1, 'Lifecycle regression test was not executed exactly once'
-          assert not skipped, 'ClassFileEditorTests unexpectedly skipped tests'
+          assert not errors, f'Lifecycle run has unexpected errors: {result["errors"]}'
+          assert not skipped, 'Lifecycle regression test was unexpectedly skipped'
           if os.environ['VARIANT'] == 'fixed':
               assert not failures, f'Candidate has failures: {result["failures"]}'
           else:
-              assert len(failures) == 1 and failures[0].split('[')[0] == target_name, f'Negative control did not isolate lifecycle test: {result["failures"]}'
+              assert len(failures) == 1 and failures[0].get('name', '').split('[')[0] == target_name, f'Negative control did not fail only the lifecycle test: {result["failures"]}'
           PY
 
       - uses: actions/upload-artifact@v4
