@@ -1,0 +1,188 @@
+name: PR 3154 WildcardBound identity isolation
+on:
+  push:
+    branches: [diagnostic/pr-3154-name-isolation]
+    paths:
+      - .github/workflows/pr-3154-name-isolation.yml
+      - .github/qa/pr3154_name_isolation.py
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pr-3154-name-isolation-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  isolate:
+    if: github.repository == 'carstenartur/eclipse.jdt.ui'
+    name: ${{ matrix.variant }} identity
+    runs-on: ubuntu-22.04
+    timeout-minutes: 80
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [control, class, archive, project, all]
+    env:
+      SOURCE: 1bb8b73d4306b9b6a316c862a8cf815500f163dc
+      VARIANT: ${{ matrix.variant }}
+      REPEATS: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Preserve diagnostics and patch only WildcardBound
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          cp .github/qa/pr3154_name_isolation.py "$RUNNER_TEMP/name_isolation.py"
+          cp -r .github/qa/state-trace "$RUNNER_TEMP/state-trace"
+          python3 "$RUNNER_TEMP/state-trace/trace_tools.py" selftest
+          git checkout --detach "$SOURCE"
+          test "$(git rev-parse HEAD)" = "$SOURCE"
+          test -z "$(git status --porcelain --untracked-files=no)"
+          git rev-parse HEAD > evidence/source-sha.txt
+          target=org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/AnnotateAssistTest1d8.java
+          git hash-object "$target" > evidence/original-target-blob.txt
+          python3 "$RUNNER_TEMP/state-trace/trace_tools.py" install
+          # trace_tools deliberately changes only its observer inputs; apply the identity experiment afterwards.
+          python3 "$RUNNER_TEMP/name_isolation.py" "$VARIANT" | tee evidence/isolation.txt
+          git diff --check
+          git diff > evidence/diagnostic-only.diff
+          git hash-object "$target" > evidence/variant-target-blob.txt
+          cp "$RUNNER_TEMP/name_isolation.py" evidence/
+          cp -r "$RUNNER_TEMP/state-trace" evidence/state-trace-source
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          diff = Path('evidence/diagnostic-only.diff').read_text()
+          target = 'org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/AnnotateAssistTest1d8.java'
+          if os.environ['VARIANT'] == 'control':
+              assert 'XWildcard' not in diff and 'wildcard-lib.jar' not in diff and 'TestSetupProject1d8Wildcard' not in diff
+          else:
+              assert f'diff --git a/{target} b/{target}' in diff
+          # Production JUnit lifecycle implementation must remain byte-identical to the PR source.
+          product = Path('org.eclipse.jdt.junit/src/org/eclipse/jdt/internal/junit/ui/TestRunnerViewPart.java')
+          assert os.popen(f'git hash-object {product}').read().strip() == os.popen(f'git rev-parse HEAD:{product}').read().strip()
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install native UI prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2 libwebkit2gtk-4.0-37
+          java -version 2> evidence/java.txt
+          mvn -version > evidence/maven.txt
+      - name: Repeat the real predecessor sequence
+        shell: bash
+        run: |
+          set -u -o pipefail
+          any_infra_failure=0
+          for run in $(seq 1 "$REPEATS"); do
+            folder="$PWD/evidence/run-$run"
+            mkdir -p "$folder"
+            export JDT_STATE_TRACE_DIR="$folder"
+            export JDT_STATE_TRACE_MODE=state
+            goals=(verify)
+            if [[ "$run" == 1 ]]; then goals=(clean verify); fi
+            set +e
+            xvfb-run -a mvn -B -ntp "${goals[@]}" -Pbuild-individual-bundles \
+              -pl org.eclipse.jdt.ui.tests -am -DskipTests=false -Dmaven.test.skip=false \
+              -Dtest=StatePredecessorSuite -DfailIfNoTests=false \
+              -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.test.failure.ignore=false \
+              2>&1 | tee "$folder/maven.log"
+            codes=("${PIPESTATUS[@]}")
+            set -e
+            result=${codes[0]}
+            if [[ "$result" == 0 && "${codes[1]}" != 0 ]]; then result=${codes[1]}; fi
+            printf '%s\n' "$result" > "$folder/maven-exit.txt"
+            if [[ -d org.eclipse.jdt.ui.tests/target/surefire-reports ]]; then
+              cp -r org.eclipse.jdt.ui.tests/target/surefire-reports "$folder/reports"
+            fi
+            if [[ -f org.eclipse.jdt.ui.tests/target/work/data/.metadata/.log ]]; then
+              cp org.eclipse.jdt.ui.tests/target/work/data/.metadata/.log "$folder/eclipse.log"
+            fi
+            set +e
+            python3 "$RUNNER_TEMP/state-trace/trace_tools.py" analyze \
+              --folder "$folder" --phase "identity-$VARIANT-$run" --exit-code "$result" \
+              2>&1 | tee "$folder/analyze.log"
+            analyze_result=${PIPESTATUS[0]}
+            set -e
+            if [[ "$analyze_result" != 0 ]]; then any_infra_failure=1; fi
+          done
+          printf '%s\n' "$any_infra_failure" > evidence/infrastructure-failure.txt
+      - name: Classify target failures and isolation result
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          variant = os.environ['VARIANT']
+          repeats = int(os.environ['REPEATS'])
+          target = 'testAnnotateParameter_WildcardBound'
+          runs = []
+          for n in range(1, repeats + 1):
+              folder = Path('evidence') / f'run-{n}'
+              summary_path = folder / 'summary.json'
+              if not summary_path.exists():
+                  runs.append({'run': n, 'valid': False, 'reason': 'no summary'})
+                  continue
+              summary = json.loads(summary_path.read_text())
+              reports = folder / 'reports'
+              cases = []
+              if reports.exists():
+                  for report in reports.glob('TEST-*.xml'):
+                      for case in ET.parse(report).getroot().iter('testcase'):
+                          cases.append(case)
+              target_cases = [c for c in cases if c.get('name') == target]
+              target_failures = []
+              other_failures = []
+              for case in cases:
+                  node = case.find('failure')
+                  if node is None:
+                      node = case.find('error')
+                  if node is not None:
+                      item = {'class': case.get('classname'), 'name': case.get('name'), 'message': node.get('message'), 'text': (node.text or '')[:4000]}
+                      (target_failures if case.get('name') == target else other_failures).append(item)
+              runs.append({
+                  'run': n,
+                  'valid': summary.get('evidence_valid', False),
+                  'maven_exit': summary.get('maven_exit'),
+                  'executed': summary.get('executed'),
+                  'missing_source_events': summary.get('missing_source_events'),
+                  'target_cases': len(target_cases),
+                  'target_failures': target_failures,
+                  'other_failures': other_failures,
+              })
+          result = {
+              'variant': variant,
+              'repeats': repeats,
+              'valid_runs': sum(bool(r.get('valid')) for r in runs),
+              'target_executions': sum(r.get('target_cases', 0) for r in runs),
+              'target_failure_runs': sum(bool(r.get('target_failures')) for r in runs),
+              'missing_source_events': sum(r.get('missing_source_events', 0) or 0 for r in runs),
+              'other_failure_runs': sum(bool(r.get('other_failures')) for r in runs),
+              'runs': runs,
+          }
+          Path('evidence/isolation-result.json').write_text(json.dumps(result, indent=2))
+          print(json.dumps(result, indent=2))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write(f"### {variant}\n\n")
+              out.write(f"Valid sequences: {result['valid_runs']}/{repeats}; target executions: {result['target_executions']}; target failure runs: {result['target_failure_runs']}; missing-source events: {result['missing_source_events']}; other failure runs: {result['other_failure_runs']}.\n")
+          assert Path('evidence/infrastructure-failure.txt').read_text().strip() == '0', 'At least one trace could not be validated'
+          assert result['valid_runs'] == repeats, 'Not all predecessor sequences produced valid evidence'
+          assert result['target_executions'] >= repeats, 'WildcardBound did not execute in every sequence'
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-3154-name-isolation-${{ matrix.variant }}
+          include-hidden-files: true
+          if-no-files-found: error
+          path: evidence/
