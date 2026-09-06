@@ -1,0 +1,129 @@
+name: PR 3154 baseline toolchain A-B probe
+on:
+  push:
+    branches: [diagnostic/pr-3154-session-readiness]
+    paths: [.github/workflows/pr-3154-baseline-probe.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    if: github.repository == 'carstenartur/eclipse.jdt.ui'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select the unchanged upstream base
+        run: |
+          cp .github/qa/pr3154_full_qa.py "$RUNNER_TEMP/full_qa.py"
+          git checkout --detach 6312a1cc907ad0a5ac5dd42e998eb0cbac686205
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/source-sha.txt
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+      - run: echo "JDK8=$JAVA_HOME" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: echo "JDK17=$JAVA_HOME" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - run: echo "JDK25=$JAVA_HOME" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Change only availability of a Java 25 toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          export JDK21="$JAVA_HOME"
+          export PROBE_M2="$RUNNER_TEMP/m2-probe"
+          java -version 2> evidence/java.txt
+          mvn -version > evidence/maven.txt
+          for phase in without-25 with-25; do
+            export PHASE="$phase"
+            mkdir -p "evidence/$phase"
+            python3 "$RUNNER_TEMP/full_qa.py" toolchains
+            if [[ "$phase" == with-25 ]]; then
+              python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          path = Path.home() / '.m2/toolchains.xml'
+          tree = ET.parse(path)
+          entry = ET.SubElement(tree.getroot(), 'toolchain')
+          ET.SubElement(entry, 'type').text = 'jdk'
+          provides = ET.SubElement(entry, 'provides')
+          ET.SubElement(provides, 'id').text = 'JavaSE-25'
+          ET.SubElement(provides, 'version').text = '25'
+          ET.SubElement(provides, 'vendor').text = 'temurin'
+          ET.SubElement(ET.SubElement(entry, 'configuration'), 'jdkHome').text = os.environ['JDK25']
+          ET.indent(tree.getroot())
+          tree.write(path, encoding='utf-8', xml_declaration=True)
+          PY
+            fi
+            cp "$HOME/.m2/toolchains.xml" "evidence/$phase/toolchains.xml"
+            set +e
+            mvn -U -e -ntp -DskipTests=false -Dmaven.repo.local="$PROBE_M2" \
+              clean verify --batch-mode --fail-at-end \
+              -pl org.eclipse.jdt.core.manipulation -am \
+              -Pbree-libs -Papi-check -Pjavadoc -Pbuild-individual-bundles \
+              -Dmaven.test.failure.ignore=true -Dcompare-version-with-baselines.skip=false \
+              2>&1 | tee "evidence/$phase/maven.log"
+            result=${PIPESTATUS[0]}
+            set -e
+            echo "$result" > "evidence/$phase/maven-exit.txt"
+            python3 - <<'PY'
+          import hashlib, json, os, shutil
+          from pathlib import Path
+          root = Path(os.environ['PROBE_M2']) / 'org/eclipse'
+          dest = Path('evidence') / os.environ['PHASE'] / 'resolved-inputs'
+          dest.mkdir(parents=True)
+          hashes = {}
+          for pattern in ('eclipse-platform-parent/*/*.pom', 'eclipse-sdk-prereqs/*/*.target'):
+              for path in root.glob(pattern):
+                  data = path.read_bytes()
+                  hashes[str(path.relative_to(root))] = hashlib.sha256(data).hexdigest()
+                  shutil.copy2(path, dest / path.name)
+                  if path.suffix == '.target':
+                      print(path.name, [line.strip() for line in data.decode().splitlines() if 'targetJRE' in line])
+          (dest.parent / 'input-hashes.json').write_text(json.dumps(hashes, indent=2))
+          PY
+          done
+          test -z "$(git status --porcelain --untracked-files=no)"
+      - name: Verify the negative control, fixed comparison and identical resolved inputs
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          a, b = Path('evidence/without-25'), Path('evidence/with-25')
+          signature = 'Cannot set full specification for a custom profile more than once'
+          result = {
+              'without_25_exit': int((a / 'maven-exit.txt').read_text()),
+              'with_25_exit': int((b / 'maven-exit.txt').read_text()),
+              'without_25_profile_error': signature in (a / 'maven.log').read_text(),
+              'with_25_profile_error': signature in (b / 'maven.log').read_text(),
+              'resolved_inputs_identical': json.loads((a / 'input-hashes.json').read_text()) == json.loads((b / 'input-hashes.json').read_text()),
+          }
+          Path('evidence/summary.json').write_text(json.dumps(result, indent=2))
+          print(json.dumps(result, indent=2))
+          assert result['without_25_exit'] != 0 and result['without_25_profile_error'], 'Negative control did not reproduce the specific error'
+          assert result['with_25_exit'] == 0 and not result['with_25_profile_error'], 'Adding the toolchain did not make the baseline probe pass'
+          assert result['resolved_inputs_identical'], 'Inputs changed between phases; comparison is inconclusive'
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-3154-baseline-toolchain-probe
+          path: evidence/
+          if-no-files-found: error
