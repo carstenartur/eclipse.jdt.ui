@@ -1,0 +1,113 @@
+name: ClassFileEditor job lifecycle QA
+
+on:
+  push:
+    branches:
+      - diagnostic/classfile-editor-job-lifecycle
+
+permissions:
+  contents: read
+
+jobs:
+  lifecycle:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [fixed, old-product]
+    env:
+      SOURCE: 9430d30bd4c713ea6b556d7b1e584091572b1b28
+      BASE: 6312a1cc907ad0a5ac5dd42e998eb0cbac686205
+      VARIANT: ${{ matrix.variant }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select immutable candidate and prepare control
+        run: |
+          set -euxo pipefail
+          git checkout --detach "$SOURCE"
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/candidate-sha.txt
+          if [ "$VARIANT" = old-product ]; then
+            git checkout "$BASE" -- org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/ClassFileEditor.java
+          fi
+          git hash-object org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/ClassFileEditor.java > evidence/product-blob.txt
+          git hash-object org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/editor/ClassFileEditorTests.java > evidence/test-blob.txt
+          git diff --check
+          git diff > evidence/source-diff.patch
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Install native UI prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2 libwebkit2gtk-4.0-37
+          java -version 2> evidence/java.txt
+          mvn -version > evidence/maven.txt
+
+      - name: Run ClassFileEditor tests
+        shell: bash
+        run: |
+          set -uo pipefail
+          xvfb-run -a mvn -B -ntp clean verify -Pbuild-individual-bundles \
+            -pl org.eclipse.jdt.ui.tests -am \
+            -DskipTests=false -Dmaven.test.skip=false \
+            -Dtest=ClassFileEditorTests \
+            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dmaven.test.failure.ignore=true 2>&1 | tee evidence/maven.log
+          printf '%s\n' "${PIPESTATUS[0]}" > evidence/maven-exit.txt
+
+      - name: Verify positive run and negative control
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          cases = []
+          for path in Path('org.eclipse.jdt.ui.tests/target/surefire-reports').glob('TEST-*.xml'):
+              try:
+                  cases.extend(ET.parse(path).getroot().iter('testcase'))
+              except ET.ParseError:
+                  pass
+          selected = [c for c in cases if c.get('classname', '').endswith('ClassFileEditorTests')]
+          target_name = 'testClosingEditorCancelsPendingOverrideIndicatorInstallationJob'
+          target = [c for c in selected if c.get('name', '').split('[')[0] == target_name]
+          failures = [c for c in selected if c.find('failure') is not None or c.find('error') is not None]
+          skipped = [c for c in selected if c.find('skipped') is not None]
+          result = {
+              'variant': os.environ['VARIANT'],
+              'classfile_editor_tests': len(selected),
+              'target_count': len(target),
+              'failures': [c.get('name') for c in failures],
+              'skipped': [c.get('name') for c in skipped],
+              'maven_exit': Path('evidence/maven-exit.txt').read_text().strip(),
+          }
+          Path('evidence/summary.json').write_text(json.dumps(result, indent=2))
+          print(json.dumps(result, indent=2))
+          assert len(target) == 1, 'Lifecycle regression test was not executed exactly once'
+          assert not skipped, 'ClassFileEditorTests unexpectedly skipped tests'
+          if os.environ['VARIANT'] == 'fixed':
+              assert not failures, f'Candidate has failures: {result["failures"]}'
+          else:
+              assert len(failures) == 1 and failures[0].split('[')[0] == target_name, f'Negative control did not isolate lifecycle test: {result["failures"]}'
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: classfile-editor-job-lifecycle-${{ matrix.variant }}
+          if-no-files-found: error
+          include-hidden-files: true
+          path: |
+            evidence/
+            org.eclipse.jdt.ui.tests/target/surefire-reports/**
+            org.eclipse.jdt.ui.tests/target/work/data/.metadata/*.log
