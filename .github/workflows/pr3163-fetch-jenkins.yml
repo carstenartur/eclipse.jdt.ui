@@ -9,18 +9,17 @@ jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch build summary
+      - name: Fetch public Jenkins pages
+        shell: bash
         run: |
-          python - <<'PY'
-          import json, urllib.request
+          set +e
           base='https://ci.eclipse.org/jdt/job/eclipse.jdt.ui-github/job/PR-3163/13'
-          for suffix in ('/api/json?tree=result,description,actions[failCount,skipCount,totalCount]', '/testReport/api/json?tree=failCount,skipCount,totalCount,suites[cases[className,name,status,errorDetails,errorStackTrace]]'):
-              url=base+suffix
-              print('\n===', url, '===')
-              try:
-                  with urllib.request.urlopen(url, timeout=30) as r:
-                      data=json.load(r)
-                  print(json.dumps(data, indent=2)[:120000])
-              except Exception as e:
-                  print(type(e).__name__, e)
-          PY
+          for suffix in consoleText testReport/; do
+            echo "=== $suffix ==="
+            curl -L --fail-with-body -A 'Mozilla/5.0' "$base/$suffix" -o out.txt
+            rc=$?
+            echo "curl rc=$rc bytes=$(wc -c < out.txt 2>/dev/null || echo 0)"
+            if [ -s out.txt ]; then
+              grep -E -i -C 4 'failure|error|failed|Tests run:|TestRunSessionHistory|timing|AssertionError|BUILD ' out.txt | tail -n 2000 || true
+            fi
+          done
