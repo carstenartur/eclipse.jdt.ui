@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2007, 2020 IBM Corporation and others.
+ * Copyright (c) 2007, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -57,6 +57,7 @@ import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.IType;
 
 import org.eclipse.jdt.internal.junit.model.JUnitModel;
+import org.eclipse.jdt.internal.junit.model.TestElement;
 import org.eclipse.jdt.internal.junit.model.TestRunSession;
 import org.eclipse.jdt.internal.junit.model.TestSuiteElement;
 
@@ -142,9 +143,16 @@ public class AbstractTestRunSessionSerializationTests {
 		 * Strips running times
 		 */
 		Pattern regex3= Pattern.compile("(?<=time=\\\")\\d+\\.\\d+(?=\\\")");
+		/*
+		 * CPU diagnostics are optional and VM-dependent. Their round-trip is verified below
+		 * against the imported model rather than against static XML fixtures.
+		 */
+		Pattern timingDetails= Pattern.compile("\\s+(?:cpuTime|userTime)=\\\"[^\\\"]*\\\"");
 		String replacement= "";
 		expected= regex3.matcher(regex2.matcher(regex.matcher(regex0.matcher(expected).replaceAll(replacement)).replaceAll(replacement)).replaceAll(replacement)).replaceAll(replacement);
 		actual= regex3.matcher(regex2.matcher(regex.matcher(regex0.matcher(actual).replaceAll(replacement)).replaceAll(replacement)).replaceAll(replacement)).replaceAll(replacement);
+		expected= timingDetails.matcher(expected).replaceAll(replacement);
+		actual= timingDetails.matcher(actual).replaceAll(replacement);
 		int ibmJava6BugOffset= actual.indexOf("><");
 		if (ibmJava6BugOffset > 0) // https://bugs.eclipse.org/bugs/show_bug.cgi?id=197842
 			actual= new StringBuffer(actual).insert(ibmJava6BugOffset + 1, " ").toString();
@@ -216,6 +224,10 @@ public class AbstractTestRunSessionSerializationTests {
 		assertEquals(expected.getTestClassName(), actual.getTestClassName());
 		assertEquals(expected.getTestMethodName(), actual.getTestMethodName());
 		assertEquals(expected.getTestResult(false), actual.getTestResult(false));
+		TestElement expectedInternal= (TestElement) expected;
+		TestElement actualInternal= (TestElement) actual;
+		assertEquals(expectedInternal.getCpuTimeInSeconds(), actualInternal.getCpuTimeInSeconds(), 0.001d);
+		assertEquals(expectedInternal.getUserCpuTimeInSeconds(), actualInternal.getUserCpuTimeInSeconds(), 0.001d);
 		FailureTrace expFailure= expected.getFailureTrace();
 		FailureTrace actFailure= actual.getFailureTrace();
 		if (expFailure == null) {
