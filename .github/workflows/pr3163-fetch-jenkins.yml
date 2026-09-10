@@ -1,0 +1,26 @@
+name: Fetch PR 3163 Jenkins failure
+
+on:
+  push:
+    branches:
+      - debug/pr3163-jenkins
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch build summary
+        run: |
+          python - <<'PY'
+          import json, urllib.request
+          base='https://ci.eclipse.org/jdt/job/eclipse.jdt.ui-github/job/PR-3163/13'
+          for suffix in ('/api/json?tree=result,description,actions[failCount,skipCount,totalCount]', '/testReport/api/json?tree=failCount,skipCount,totalCount,suites[cases[className,name,status,errorDetails,errorStackTrace]]'):
+              url=base+suffix
+              print('\n===', url, '===')
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as r:
+                      data=json.load(r)
+                  print(json.dumps(data, indent=2)[:120000])
+              except Exception as e:
+                  print(type(e).__name__, e)
+          PY
