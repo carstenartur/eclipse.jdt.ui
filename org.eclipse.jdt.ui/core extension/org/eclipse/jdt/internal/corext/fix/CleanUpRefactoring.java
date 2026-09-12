@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -10,15 +10,22 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Carsten Hammer - cleanup target scope expansion
  *******************************************************************************/
 package org.eclipse.jdt.internal.corext.fix;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.eclipse.swt.widgets.Display;
 
@@ -49,8 +56,6 @@ import org.eclipse.ltk.core.refactoring.CategorizedTextEditGroup;
 import org.eclipse.ltk.core.refactoring.Change;
 import org.eclipse.ltk.core.refactoring.CompositeChange;
 import org.eclipse.ltk.core.refactoring.ContentStamp;
-import org.eclipse.ltk.core.refactoring.GroupCategory;
-import org.eclipse.ltk.core.refactoring.GroupCategorySet;
 import org.eclipse.ltk.core.refactoring.NullChange;
 import org.eclipse.ltk.core.refactoring.Refactoring;
 import org.eclipse.ltk.core.refactoring.RefactoringStatus;
@@ -95,6 +100,43 @@ import org.eclipse.jdt.internal.ui.refactoring.IScheduledRefactoring;
 import org.eclipse.jdt.internal.ui.util.Progress;
 
 public class CleanUpRefactoring extends Refactoring implements IScheduledRefactoring {
+
+	private static final String EXPAND_CLEAN_UP_SCOPE_METHOD= "expandCleanUpScope"; //$NON-NLS-1$
+
+	private static final String COORDINATED_CLEAN_UP_PREVIEW_METHOD= "getCoordinatedCleanUpPreview"; //$NON-NLS-1$
+	private static final String PREVIEW_ID= "id"; //$NON-NLS-1$
+	private static final String PREVIEW_NAME= "name"; //$NON-NLS-1$
+	private static final String PREVIEW_DESCRIPTION= "description"; //$NON-NLS-1$
+	private static final String PREVIEW_COMPILATION_UNITS= "compilationUnits"; //$NON-NLS-1$
+	private static final String PREVIEW_DETAILS= "details"; //$NON-NLS-1$
+
+	private record CoordinatedCleanUpPreview(String id, String name, String description,
+			List<ICompilationUnit> compilationUnits, List<String> details) {
+	}
+
+	private static final class CoordinatedPreviewComponent {
+		private final List<CoordinatedCleanUpPreview> previews= new ArrayList<>();
+		private final Set<ICompilationUnit> compilationUnits= new LinkedHashSet<>();
+
+		void add(CoordinatedCleanUpPreview preview) {
+			previews.add(preview);
+			compilationUnits.addAll(preview.compilationUnits());
+		}
+
+		void merge(CoordinatedPreviewComponent other) {
+			previews.addAll(other.previews);
+			compilationUnits.addAll(other.compilationUnits);
+		}
+
+		boolean overlaps(CoordinatedCleanUpPreview preview) {
+			for (ICompilationUnit unit : preview.compilationUnits()) {
+				if (compilationUnits.contains(unit)) {
+					return true;
+				}
+			}
+			return false;
+		}
+	}
 
 	public static class CleanUpTarget {
 
@@ -647,23 +689,32 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 		RefactoringStatus result= new RefactoringStatus();
 
 		ICleanUp[] cleanUps= getCleanUps();
-		pm.beginTask("", cuCount * 2 * fCleanUps.size() + 4 * cleanUps.length); //$NON-NLS-1$
+		boolean expandsScope= supportsScopeExpansion(cleanUps);
+		pm.beginTask("", expandsScope ? IProgressMonitor.UNKNOWN : cuCount * 2 * fCleanUps.size() + 4 * cleanUps.length); //$NON-NLS-1$
 		try {
 			DynamicValidationStateChange change= new DynamicValidationStateChange(getName());
 			change.setSchedulingRule(getSchedulingRule());
 			for (Entry<IJavaProject, List<CleanUpTarget>> entry : fProjects.entrySet()) {
 				IJavaProject project= entry.getKey();
 				List<CleanUpTarget> targetsList= entry.getValue();
-				CleanUpTarget[] targets= targetsList.toArray(new CleanUpTarget[targetsList.size()]);
 				if (fUseOptionsFromProfile) {
 					result.merge(setOptionsFromProfile(project, cleanUps));
 					if (result.hasFatalError())
 						return result;
 				}
+				CleanUpTarget[] targets= targetsList.toArray(new CleanUpTarget[targetsList.size()]);
+				if (expandsScope) {
+					targets= expandCleanUpTargets(project, targets, cleanUps, Progress.subMonitor(pm, cleanUps.length));
+					targetsList.clear();
+					for (CleanUpTarget target : targets) {
+						targetsList.add(target);
+					}
+				}
 				result.merge(checkPreConditions(project, targets, Progress.subMonitor(pm, 3 * cleanUps.length)));
 				if (result.hasFatalError())
 					return result;
 				Change[] changes= cleanUpProject(project, targets, cleanUps, pm);
+				changes= groupCoordinatedChanges(changes, getCoordinatedCleanUpPreviews(project, cleanUps));
 				result.merge(checkPostConditions(Progress.subMonitor(pm, cleanUps.length)));
 				if (result.hasFatalError())
 					return result;
@@ -683,15 +734,396 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 		return result;
 	}
 
-	private void findFilesToBeModified(CompositeChange change, List<IResource> result) throws JavaModelException {
-		for (Change child : change.getChildren()) {
-			if (child instanceof CompositeChange) {
-				findFilesToBeModified((CompositeChange)child, result);
-			} else if (child instanceof MultiStateCompilationUnitChange) {
-				result.add(((MultiStateCompilationUnitChange)child).getCompilationUnit().getCorrespondingResource());
-			} else if (child instanceof CompilationUnitChange) {
-				result.add(((CompilationUnitChange)child).getCompilationUnit().getCorrespondingResource());
+	private static boolean supportsScopeExpansion(ICleanUp[] cleanUps) {
+		for (ICleanUp cleanUp : cleanUps) {
+			if (findScopeExpansionMethod(cleanUp) != null) {
+				return true;
 			}
+		}
+		return false;
+	}
+
+	private CleanUpTarget[] expandCleanUpTargets(IJavaProject project, CleanUpTarget[] initialTargets,
+			ICleanUp[] cleanUps, IProgressMonitor monitor) throws CoreException {
+		Map<ICompilationUnit, CleanUpTarget> targetsByUnit= new LinkedHashMap<>();
+		for (CleanUpTarget target : initialTargets) {
+			targetsByUnit.put(target.getCompilationUnit().getPrimary(), target);
+		}
+
+		boolean changed;
+		do {
+			changed= false;
+			List<ICompilationUnit> currentScope= targetsByUnit.keySet().stream().toList();
+			for (ICleanUp cleanUp : cleanUps) {
+				Collection<?> discovered= invokeScopeExpansion(cleanUp, project, currentScope, monitor);
+				for (Object candidate : discovered) {
+					if (!(candidate instanceof ICompilationUnit unit)) {
+						throw invalidScopeProvider(cleanUp, "returned an element that is not an ICompilationUnit", null); //$NON-NLS-1$
+					}
+					ICompilationUnit primary= unit.getPrimary();
+					if (!project.equals(primary.getJavaProject())) {
+						throw invalidScopeProvider(cleanUp, "returned a compilation unit from another Java project", null); //$NON-NLS-1$
+					}
+					if (!primary.exists()) {
+						throw invalidScopeProvider(cleanUp, "returned a compilation unit that does not exist", null); //$NON-NLS-1$
+					}
+					if (!targetsByUnit.containsKey(primary)) {
+						targetsByUnit.put(primary, new CleanUpTarget(primary));
+						changed= true;
+					}
+				}
+				if (monitor.isCanceled()) {
+					throw new OperationCanceledException();
+				}
+				monitor.worked(1);
+			}
+		} while (changed);
+
+		return targetsByUnit.values().toArray(new CleanUpTarget[targetsByUnit.size()]);
+	}
+
+	private static Collection<?> invokeScopeExpansion(ICleanUp cleanUp, IJavaProject project,
+			Collection<ICompilationUnit> currentScope, IProgressMonitor monitor) throws CoreException {
+		Method method= findScopeExpansionMethod(cleanUp);
+		if (method == null) {
+			return List.of();
+		}
+		try {
+			Object result= method.invoke(cleanUp, project, List.copyOf(currentScope), monitor);
+			if (result == null) {
+				return List.of();
+			}
+			if (result instanceof Collection<?> collection) {
+				return collection;
+			}
+			throw invalidScopeProvider(cleanUp, "did not return a Collection", null); //$NON-NLS-1$
+		} catch (IllegalAccessException | IllegalArgumentException e) {
+			throw invalidScopeProvider(cleanUp, "could not be invoked", e); //$NON-NLS-1$
+		} catch (InvocationTargetException e) {
+			Throwable cause= e.getCause();
+			if (cause instanceof CoreException coreException) {
+				throw coreException;
+			}
+			if (cause instanceof OperationCanceledException canceledException) {
+				throw canceledException;
+			}
+			throw invalidScopeProvider(cleanUp, "failed while expanding the cleanup scope", cause); //$NON-NLS-1$
+		}
+	}
+
+	private static Method findScopeExpansionMethod(ICleanUp cleanUp) {
+		try {
+			return cleanUp.getClass().getMethod(EXPAND_CLEAN_UP_SCOPE_METHOD, IJavaProject.class,
+					Collection.class, IProgressMonitor.class);
+		} catch (NoSuchMethodException e) {
+			return null;
+		}
+	}
+
+	private static CoreException invalidScopeProvider(ICleanUp cleanUp, String detail, Throwable cause) {
+		String message= "Invalid multi-file cleanup scope provider " + cleanUp.getClass().getName() + ": " + detail; //$NON-NLS-1$ //$NON-NLS-2$
+		return new CoreException(new Status(IStatus.ERROR, JavaPlugin.getPluginId(),
+				IJavaStatusConstants.INTERNAL_ERROR, message, cause));
+	}
+
+	private static List<CoordinatedCleanUpPreview> getCoordinatedCleanUpPreviews(IJavaProject project,
+			ICleanUp[] cleanUps) throws CoreException {
+		List<CoordinatedCleanUpPreview> result= new ArrayList<>();
+		Set<String> ids= new HashSet<>();
+		for (ICleanUp cleanUp : cleanUps) {
+			for (CoordinatedCleanUpPreview preview : invokeCoordinatedCleanUpPreviews(cleanUp, project)) {
+				if (!ids.add(preview.id())) {
+					throw invalidCoordinatedPreview(cleanUp,
+							"returned the duplicate candidate id " + preview.id(), null); //$NON-NLS-1$
+				}
+				result.add(preview);
+			}
+		}
+		result.sort((left, right) -> left.id().compareTo(right.id()));
+		return result;
+	}
+
+	private static List<CoordinatedCleanUpPreview> invokeCoordinatedCleanUpPreviews(ICleanUp cleanUp,
+			IJavaProject project) throws CoreException {
+		Method method= findCoordinatedCleanUpPreviewMethod(cleanUp);
+		if (method == null) {
+			return List.of();
+		}
+		try {
+			Object value= method.invoke(cleanUp, project);
+			if (value == null) {
+				return List.of();
+			}
+			if (value instanceof Map<?, ?> map) {
+				CoordinatedCleanUpPreview preview= parseCoordinatedCleanUpPreview(cleanUp, project, map);
+				return preview == null ? List.of() : List.of(preview);
+			}
+			if (value instanceof Collection<?> collection) {
+				List<CoordinatedCleanUpPreview> previews= new ArrayList<>();
+				for (Object element : collection) {
+					if (!(element instanceof Map<?, ?> map)) {
+						throw invalidCoordinatedPreview(cleanUp,
+								"contains an element that is not a Map", null); //$NON-NLS-1$
+					}
+					CoordinatedCleanUpPreview preview= parseCoordinatedCleanUpPreview(cleanUp, project, map);
+					if (preview != null) {
+						previews.add(preview);
+					}
+				}
+				return List.copyOf(previews);
+			}
+			throw invalidCoordinatedPreview(cleanUp,
+					"did not return a Map or a Collection of Maps", null); //$NON-NLS-1$
+		} catch (IllegalAccessException | IllegalArgumentException e) {
+			throw invalidCoordinatedPreview(cleanUp, "could not be invoked", e); //$NON-NLS-1$
+		} catch (InvocationTargetException e) {
+			Throwable cause= e.getCause();
+			if (cause instanceof CoreException coreException) {
+				throw coreException;
+			}
+			if (cause instanceof OperationCanceledException canceledException) {
+				throw canceledException;
+			}
+			throw invalidCoordinatedPreview(cleanUp, "failed while describing coordinated changes", cause); //$NON-NLS-1$
+		}
+	}
+
+	private static CoordinatedCleanUpPreview parseCoordinatedCleanUpPreview(ICleanUp cleanUp,
+			IJavaProject project, Map<?, ?> map) throws CoreException {
+		String id= requiredPreviewString(cleanUp, map, PREVIEW_ID);
+		String name= optionalPreviewString(cleanUp, map, PREVIEW_NAME, id);
+		String description= optionalPreviewString(cleanUp, map, PREVIEW_DESCRIPTION, ""); //$NON-NLS-1$
+		List<ICompilationUnit> units= previewCompilationUnits(cleanUp, project,
+				map.get(PREVIEW_COMPILATION_UNITS));
+		List<String> details= previewDetails(cleanUp, map.get(PREVIEW_DETAILS));
+		if (units.isEmpty()) {
+			return null;
+		}
+		return new CoordinatedCleanUpPreview(id, name, description, units, details);
+	}
+
+	private static Method findCoordinatedCleanUpPreviewMethod(ICleanUp cleanUp) {
+		try {
+			return cleanUp.getClass().getMethod(COORDINATED_CLEAN_UP_PREVIEW_METHOD, IJavaProject.class);
+		} catch (NoSuchMethodException e) {
+			return null;
+		}
+	}
+
+	private static String requiredPreviewString(ICleanUp cleanUp, Map<?, ?> map, String key)
+			throws CoreException {
+		Object value= map.get(key);
+		if (value instanceof String string && !string.isBlank()) {
+			return string;
+		}
+		throw invalidCoordinatedPreview(cleanUp,
+				"requires a non-blank String value for " + key, null); //$NON-NLS-1$
+	}
+
+	private static String optionalPreviewString(ICleanUp cleanUp, Map<?, ?> map, String key,
+			String defaultValue) throws CoreException {
+		Object value= map.get(key);
+		if (value == null) {
+			return defaultValue;
+		}
+		if (value instanceof String string) {
+			return string;
+		}
+		throw invalidCoordinatedPreview(cleanUp, "requires a String value for " + key, null); //$NON-NLS-1$
+	}
+
+	private static List<ICompilationUnit> previewCompilationUnits(ICleanUp cleanUp, IJavaProject project,
+			Object value) throws CoreException {
+		if (!(value instanceof Collection<?> collection)) {
+			throw invalidCoordinatedPreview(cleanUp,
+					"requires a Collection value for " + PREVIEW_COMPILATION_UNITS, null); //$NON-NLS-1$
+		}
+		Set<ICompilationUnit> result= new LinkedHashSet<>();
+		for (Object element : collection) {
+			if (!(element instanceof ICompilationUnit unit)) {
+				throw invalidCoordinatedPreview(cleanUp,
+						"contains an element that is not an ICompilationUnit", null); //$NON-NLS-1$
+			}
+			ICompilationUnit primary= unit.getPrimary();
+			if (!project.equals(primary.getJavaProject())) {
+				throw invalidCoordinatedPreview(cleanUp,
+						"contains a compilation unit from another Java project", null); //$NON-NLS-1$
+			}
+			if (!primary.exists()) {
+				throw invalidCoordinatedPreview(cleanUp,
+						"contains a compilation unit that does not exist", null); //$NON-NLS-1$
+			}
+			result.add(primary);
+		}
+		return List.copyOf(result);
+	}
+
+	private static List<String> previewDetails(ICleanUp cleanUp, Object value) throws CoreException {
+		if (value == null) {
+			return List.of();
+		}
+		if (!(value instanceof Collection<?> collection)) {
+			throw invalidCoordinatedPreview(cleanUp,
+					"requires a Collection value for " + PREVIEW_DETAILS, null); //$NON-NLS-1$
+		}
+		List<String> result= new ArrayList<>();
+		for (Object element : collection) {
+			if (!(element instanceof String detail) || detail.isBlank()) {
+				throw invalidCoordinatedPreview(cleanUp,
+						"contains a detail that is not a non-blank String", null); //$NON-NLS-1$
+			}
+			result.add(detail);
+		}
+		return List.copyOf(result);
+	}
+
+	private static CoreException invalidCoordinatedPreview(ICleanUp cleanUp, String detail,
+			Throwable cause) {
+		String message= "Invalid coordinated cleanup preview provider " + cleanUp.getClass().getName() //$NON-NLS-1$
+				+ ": " + detail; //$NON-NLS-1$
+		return new CoreException(new Status(IStatus.ERROR, JavaPlugin.getPluginId(),
+				IJavaStatusConstants.INTERNAL_ERROR, message, cause));
+	}
+
+	private static Change[] groupCoordinatedChanges(Change[] changes,
+			List<CoordinatedCleanUpPreview> previews) {
+		if (changes.length == 0 || previews.isEmpty()) {
+			return changes;
+		}
+
+		List<CoordinatedPreviewComponent> components= new ArrayList<>();
+		for (CoordinatedCleanUpPreview preview : previews) {
+			List<CoordinatedPreviewComponent> overlaps= new ArrayList<>();
+			for (CoordinatedPreviewComponent component : components) {
+				if (component.overlaps(preview)) {
+					overlaps.add(component);
+				}
+			}
+			if (overlaps.isEmpty()) {
+				CoordinatedPreviewComponent component= new CoordinatedPreviewComponent();
+				component.add(preview);
+				components.add(component);
+			} else {
+				CoordinatedPreviewComponent target= overlaps.get(0);
+				target.add(preview);
+				for (int i= 1; i < overlaps.size(); i++) {
+					CoordinatedPreviewComponent other= overlaps.get(i);
+					target.merge(other);
+					components.remove(other);
+				}
+			}
+		}
+
+		Map<CoordinatedPreviewComponent, List<Change>> changesByComponent= new LinkedHashMap<>();
+		Map<Change, CoordinatedPreviewComponent> componentByChange= new LinkedHashMap<>();
+		Map<CoordinatedPreviewComponent, Integer> firstChangeIndex= new LinkedHashMap<>();
+		for (int changeIndex= 0; changeIndex < changes.length; changeIndex++) {
+			Change change= changes[changeIndex];
+			ICompilationUnit unit= getChangedCompilationUnit(change);
+			if (unit == null) {
+				continue;
+			}
+			for (CoordinatedPreviewComponent component : components) {
+				if (component.compilationUnits.contains(unit)) {
+					changesByComponent.computeIfAbsent(component, ignored -> new ArrayList<>()).add(change);
+					componentByChange.put(change, component);
+					firstChangeIndex.putIfAbsent(component, Integer.valueOf(changeIndex));
+					break;
+				}
+			}
+		}
+
+		List<Integer> coordinatedSlots= firstChangeIndex.values().stream().sorted().toList();
+		List<CoordinatedPreviewComponent> orderedComponents= components.stream()
+				.filter(changesByComponent::containsKey)
+				.toList();
+		Map<Integer, Change> coordinatedBySlot= new LinkedHashMap<>();
+		for (int index= 0; index < orderedComponents.size(); index++) {
+			CoordinatedPreviewComponent component= orderedComponents.get(index);
+			coordinatedBySlot.put(coordinatedSlots.get(index),
+					createCoordinatedChange(component, changesByComponent.get(component)));
+		}
+
+		List<Change> result= new ArrayList<>(changes.length);
+		for (int changeIndex= 0; changeIndex < changes.length; changeIndex++) {
+			Change change= changes[changeIndex];
+			CoordinatedPreviewComponent component= componentByChange.get(change);
+			if (component == null) {
+				result.add(change);
+			} else {
+				Change coordinated= coordinatedBySlot.get(Integer.valueOf(changeIndex));
+				if (coordinated != null) {
+					result.add(coordinated);
+				}
+			}
+		}
+		return result.toArray(new Change[result.size()]);
+	}
+
+	private static CoordinatedCleanUpChange createCoordinatedChange(
+			CoordinatedPreviewComponent component, List<Change> changes) {
+		List<String> candidateIds= component.previews.stream()
+				.map(CoordinatedCleanUpPreview::id)
+				.toList();
+		String name;
+		if (component.previews.size() == 1) {
+			name= component.previews.get(0).name();
+		} else {
+			name= "Coordinated cleanup changes: " + component.previews.stream() //$NON-NLS-1$
+					.map(CoordinatedCleanUpPreview::name)
+					.distinct()
+					.reduce((left, right) -> left + ", " + right) //$NON-NLS-1$
+					.orElse("coordinated migration"); //$NON-NLS-1$
+		}
+		String description= component.previews.stream()
+				.map(CoordinatedCleanUpPreview::description)
+				.filter(value -> !value.isBlank())
+				.distinct()
+				.reduce((left, right) -> left + System.lineSeparator() + right)
+				.orElse(""); //$NON-NLS-1$
+		List<String> details= component.previews.stream()
+				.flatMap(preview -> preview.details().stream())
+				.distinct()
+				.toList();
+		List<ICompilationUnit> units= List.copyOf(component.compilationUnits);
+		List<Change> orderedChanges= new ArrayList<>(changes);
+		orderedChanges.sort((left, right) -> {
+			int leftIndex= units.indexOf(getChangedCompilationUnit(left));
+			int rightIndex= units.indexOf(getChangedCompilationUnit(right));
+			int unitOrder= Integer.compare(leftIndex, rightIndex);
+			if (unitOrder != 0) {
+				return unitOrder;
+			}
+			return left.getName().compareTo(right.getName());
+		});
+		return new CoordinatedCleanUpChange(name, description, candidateIds, details, units,
+				orderedChanges.toArray(new Change[orderedChanges.size()]));
+	}
+
+	private static ICompilationUnit getChangedCompilationUnit(Change change) {
+		if (change instanceof CompilationUnitChange compilationUnitChange) {
+			return compilationUnitChange.getCompilationUnit().getPrimary();
+		}
+		if (change instanceof MultiStateCompilationUnitChange multiState) {
+			return multiState.getCompilationUnit().getPrimary();
+		}
+		ICompilationUnit unit= change.getAdapter(ICompilationUnit.class);
+		return unit == null ? null : unit.getPrimary();
+	}
+
+	private void findFilesToBeModified(Change change, List<IResource> result) throws JavaModelException {
+		if (change instanceof CompositeChange composite) {
+			for (Change child : composite.getChildren()) {
+				findFilesToBeModified(child, result);
+			}
+		} else if (change instanceof CoordinatedCleanUpChange coordinated) {
+			for (Change child : coordinated.getChanges()) {
+				findFilesToBeModified(child, result);
+			}
+		} else if (change instanceof MultiStateCompilationUnitChange multiState) {
+			result.add(multiState.getCompilationUnit().getCorrespondingResource());
+		} else if (change instanceof CompilationUnitChange compilationUnitChange) {
+			result.add(compilationUnitChange.getCompilationUnit().getCorrespondingResource());
 		}
 	}
 
@@ -833,7 +1265,7 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 			TextEditGroup newGroup;
 			if (textEditGroup instanceof CategorizedTextEditGroup) {
 				String label= textEditGroup.getName();
-				newGroup= new CategorizedTextEditGroup(label, new GroupCategorySet(new GroupCategory(label, label, label)));
+				newGroup= new CategorizedTextEditGroup(label, changeGroup.getGroupCategorySet());
 			} else {
 				newGroup= new TextEditGroup(textEditGroup.getName());
 			}
