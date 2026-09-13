@@ -1,0 +1,49 @@
+name: JUnit N&N SWTBot Screenshots
+
+on:
+  push:
+    branches: [screenshots/junit-nn-swtbot]
+    paths:
+      - 'org.eclipse.jdt.ui.tests.screenshots/**'
+      - '.github/workflows/junit-nn-screenshots.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    if: github.repository == 'carstenartur/eclipse.jdt.ui'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Install graphical test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb openbox dbus-x11 libgtk-3-0t64 libxtst6 fonts-dejavu-core
+      - name: Run the single SWTBot documentation test
+        env:
+          GTK_THEME: Adwaita
+          GDK_BACKEND: x11
+        run: |
+          xvfb-run -a -s '-screen 0 1360x900x24' dbus-run-session -- bash -eu -o pipefail -c '
+            openbox > /tmp/junit-nn-openbox.log 2>&1 &
+            mvn -B --no-transfer-progress -f org.eclipse.jdt.ui.tests.screenshots/pom.xml clean verify
+          '
+      - name: Upload screenshots and diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-nn-swtbot-screenshots
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            org.eclipse.jdt.ui.tests.screenshots/target/screenshots/
+            org.eclipse.jdt.ui.tests.screenshots/target/surefire-reports/
+            org.eclipse.jdt.ui.tests.screenshots/target/work/.metadata/.log
+            org.eclipse.jdt.ui.tests.screenshots/target/*.log

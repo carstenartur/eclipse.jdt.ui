@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <!-- Standalone, opt-in documentation test: not part of the production reactor. -->
+  <groupId>org.eclipse.jdt</groupId>
+  <artifactId>org.eclipse.jdt.ui.tests.screenshots</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>eclipse-test-plugin</packaging>
+  <properties>
+    <tycho.version>4.0.13</tycho.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <eclipse.repository>https://download.eclipse.org/eclipse/updates/4.42-I-builds</eclipse.repository>
+  </properties>
+  <repositories>
+    <repository><id>eclipse</id><layout>p2</layout><url>${eclipse.repository}</url></repository>
+    <repository><id>swtbot</id><layout>p2</layout><url>https://download.eclipse.org/technology/swtbot/releases/4.3.0</url></repository>
+    <repository><id>simrel</id><layout>p2</layout><url>https://download.eclipse.org/releases/2026-09</url></repository>
+  </repositories>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId><artifactId>tycho-maven-plugin</artifactId>
+        <version>${tycho.version}</version><extensions>true</extensions>
+      </plugin>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId><artifactId>target-platform-configuration</artifactId>
+        <version>${tycho.version}</version>
+        <configuration>
+          <executionEnvironment>JavaSE-21</executionEnvironment>
+          <environments><environment><os>linux</os><ws>gtk</ws><arch>x86_64</arch></environment></environments>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.eclipse.tycho</groupId><artifactId>tycho-surefire-plugin</artifactId>
+        <version>${tycho.version}</version>
+        <configuration>
+          <useUIHarness>true</useUIHarness><useUIThread>false</useUIThread>
+          <application>org.eclipse.ui.ide.workbench</application>
+          <providerHint>junit4</providerHint>
+          <testClass>org.eclipse.jdt.ui.tests.screenshots.JUnitNewAndNoteworthyScreenshotTest</testClass>
+          <testFailureIgnore>false</testFailureIgnore>
+          <forkedProcessTimeoutInSeconds>480</forkedProcessTimeoutInSeconds>
+          <osgiDataDirectory>${project.build.directory}/work</osgiDataDirectory>
+          <argLine>-Xmx1536m -Duser.language=en -Duser.country=US -Dorg.eclipse.swt.internal.gtk.cairoGraphics=true</argLine>
+          <systemProperties>
+            <screenshots.dir>${project.build.directory}/screenshots</screenshots.dir>
+            <org.eclipse.swtbot.search.timeout>60000</org.eclipse.swtbot.search.timeout>
+          </systemProperties>
+          <dependencies>
+            <dependency><type>eclipse-plugin</type><artifactId>org.eclipse.equinox.event</artifactId><version>0.0.0</version></dependency>
+            <dependency><type>eclipse-plugin</type><artifactId>org.eclipse.jdt.junit4.runtime</artifactId><version>0.0.0</version></dependency>
+          </dependencies>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
