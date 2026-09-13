@@ -7,7 +7,7 @@ not against locally rebuilt JDT UI bundles. The installed bundle versions are re
 
 ## Run
 
-With JDK 21, Maven, GTK 3 and a graphical display:
+With JDK 25, Maven, GTK 3 and a graphical display:
 
 ```sh
 mvn -B -f org.eclipse.jdt.ui.tests.screenshots/pom.xml clean verify

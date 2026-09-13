@@ -17,10 +17,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
           cache: maven
       - name: Install graphical test dependencies
         run: |
@@ -42,6 +42,7 @@ jobs:
           name: junit-nn-swtbot-screenshots
           if-no-files-found: warn
           retention-days: 14
+          include-hidden-files: true
           path: |
             org.eclipse.jdt.ui.tests.screenshots/target/screenshots/
             org.eclipse.jdt.ui.tests.screenshots/target/surefire-reports/

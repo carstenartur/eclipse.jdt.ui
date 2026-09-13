@@ -8,7 +8,7 @@
   <version>1.0.0-SNAPSHOT</version>
   <packaging>eclipse-test-plugin</packaging>
   <properties>
-    <tycho.version>4.0.13</tycho.version>
+    <tycho.version>5.0.4</tycho.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <eclipse.repository>https://download.eclipse.org/eclipse/updates/4.42-I-builds</eclipse.repository>
   </properties>
@@ -27,7 +27,7 @@
         <groupId>org.eclipse.tycho</groupId><artifactId>target-platform-configuration</artifactId>
         <version>${tycho.version}</version>
         <configuration>
-          <executionEnvironment>JavaSE-21</executionEnvironment>
+          <executionEnvironment>JavaSE-25</executionEnvironment>
           <environments><environment><os>linux</os><ws>gtk</ws><arch>x86_64</arch></environment></environments>
         </configuration>
       </plugin>
