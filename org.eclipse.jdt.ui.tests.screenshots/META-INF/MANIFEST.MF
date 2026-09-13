@@ -18,5 +18,5 @@ Require-Bundle: org.junit;bundle-version="[4.13.0,5.0.0)",
  org.eclipse.swt,
  org.eclipse.swtbot.swt.finder;bundle-version="[4.3.0,5.0.0)",
  org.eclipse.swtbot.eclipse.finder;bundle-version="[4.3.0,5.0.0)",
- org.eclipse.swtbot.junit4;bundle-version="[4.3.0,5.0.0)"
+ org.eclipse.swtbot.junit4_x;bundle-version="[4.3.0,5.0.0)"
 
