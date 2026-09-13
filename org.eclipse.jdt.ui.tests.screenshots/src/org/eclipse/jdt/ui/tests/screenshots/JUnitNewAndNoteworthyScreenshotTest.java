@@ -85,6 +85,7 @@ import org.eclipse.ui.PlatformUI;
  */
 @RunWith(SWTBotJunit4ClassRunner.class)
 public class JUnitNewAndNoteworthyScreenshotTest {
+	private static final String RELOAD_TOOLTIP = "Reload the imported test results from their source file";
 	private final SWTWorkbenchBot bot = new SWTWorkbenchBot();
 	private final List<TestRunSession> sessions = new ArrayList<>();
 	private final List<ILaunchConfiguration> configurations = new ArrayList<>();
@@ -113,6 +114,7 @@ public class JUnitNewAndNoteworthyScreenshotTest {
 			assertTrue(treeText().contains("cpuBoundWork"));
 			assertTrue(treeText().contains("waitingForResponse"));
 			capture("junit-execution-time-details.png");
+			captureTimingMenu();
 
 			// Exercise the independent presentation switches, rather than changing data.
 			view.viewMenu("Show Execution Time").click();
@@ -139,15 +141,16 @@ public class JUnitNewAndNoteworthyScreenshotTest {
 			expandTests();
 			selectTest("addsNumbers");
 			await("Reload Test Run enabled for the local-file import", () ->
-					view.toolbarButton("Reload the imported test results from their source file").isEnabled());
+					view.toolbarButton(RELOAD_TOOLTIP).isEnabled());
 			capture("junit-imported-results-before-reload.png");
+			captureReloadTooltip();
 
 			List<TestRunSession> before = JUnitCorePlugin.getModel().getTestRunSessions();
 			int position = before.indexOf(imported);
 			assertTrue(position >= 0);
 			Files.copy(updated.toPath(), source.toPath(), StandardCopyOption.REPLACE_EXISTING);
 			assertSame("Updating the file must not automatically replace the run", imported, activeSession());
-			view.toolbarButton("Reload the imported test results from their source file").click();
+			view.toolbarButton(RELOAD_TOOLTIP).click();
 			await("the reloaded report at the original history position", () -> {
 				List<TestRunSession> current = JUnitCorePlugin.getModel().getTestRunSessions();
 				return current.size() == before.size() && current.get(position) != imported
@@ -167,6 +170,8 @@ public class JUnitNewAndNoteworthyScreenshotTest {
 			Files.writeString(output.resolve("verification.txt"),
 					"One SWTBot test completed. Three real JUnit launches.\n"
 					+ "Timing details displayed from the test JVM; display options are independent.\n"
+					+ "Native view menu opened with both timing display options selected.\n"
+					+ "Hovered the enabled reload tool item using its actual tooltip text.\n"
 					+ "Reload invoked through the toolbar: failures 1 -> 0; tests 2.\n"
 					+ "History size and replacement position unchanged; source file retained.\n");
 		} catch (Throwable failure) {
@@ -183,8 +188,9 @@ public class JUnitNewAndNoteworthyScreenshotTest {
 				workbench.getIntroManager().closeIntro(intro);
 			var window = workbench.getActiveWorkbenchWindow();
 			window.getShell().setMaximized(false);
-			// Fit the examples without cropping toolbar actions, counters or the failure trace.
-			window.getShell().setBounds(20, 20, 760, 470);
+			// Right-align the compact window so native popups fit inside the capture.
+			var area = window.getShell().getDisplay().getClientArea();
+			window.getShell().setBounds(area.x + area.width - 780, area.y + 20, 760, 470);
 			try {
 				window.getActivePage().showView("org.eclipse.jdt.junit.ResultView");
 			} catch (Exception e) {
@@ -337,15 +343,22 @@ public class JUnitNewAndNoteworthyScreenshotTest {
 		}
 	}
 
-	private void capture(String filename) throws Exception {
+	private Control viewPane() {
 		Control tree = view.bot().tree().widget;
-		Control pane = uiValue(() -> {
+		return uiValue(() -> {
 			Control current = tree;
 			while (current.getParent() != null && !(current instanceof CTabFolder))
 				current = current.getParent();
-			current.getShell().forceActive();
-			current.getDisplay().update();
 			return current;
+		});
+	}
+
+	private void capture(String filename) throws Exception {
+		Control tree = view.bot().tree().widget;
+		Control pane = viewPane();
+		ui(() -> {
+			pane.getShell().forceActive();
+			pane.getDisplay().update();
 		});
 		// Logical tree labels can change before GTK paints the new native frame.
 		// Observe a repaint, then allow a frame-clock turn before reading pixels.
@@ -367,6 +380,69 @@ public class JUnitNewAndNoteworthyScreenshotTest {
 		}));
 		assertTrue("The native frame did not settle", frameReady.await(10, TimeUnit.SECONDS));
 		Files.writeString(output.resolve(filename.replace(".png", ".txt")), treeText());
+		savePixels(filename, pane);
+	}
+
+	private void captureTimingMenu() throws Exception {
+		Control pane = viewPane();
+		// SWTBot obtains and populates the real menu, but hides it for widget lookup.
+		// Reopen that same menu at its native view-menu position for the screenshot.
+		var menu = view.viewMenu().widget;
+		String labels = uiValue(() -> {
+			StringBuilder text = new StringBuilder();
+			int selectedTimingOptions = 0;
+			for (var item : menu.getItems()) {
+				String label = item.getText().replace("&", "");
+				text.append(item.getSelection() ? "[x] " : "[ ] ").append(label).append('\n');
+				if (label.equals("Show Execution Time") || label.equals("Show Execution Time Details")) {
+					assertTrue("Timing presentation option must be selected: " + label, item.getSelection());
+					selectedTimingOptions++;
+				}
+			}
+			assertEquals(2, selectedTimingOptions);
+			return text.toString();
+		});
+		try {
+			ui(() -> menu.setVisible(true));
+			await("the native timing view menu", () -> uiValue(menu::isVisible));
+			SWTUtils.sleep(400);
+			Files.writeString(output.resolve("junit-execution-time-menu.txt"), labels);
+			savePixels("junit-execution-time-menu.png", pane);
+			assertTrue(SWTUtils.captureScreenshot(output.resolve("junit-execution-time-menu-desktop.png").toString()));
+		} finally {
+			ui(() -> menu.setVisible(false));
+		}
+	}
+
+	private void captureReloadTooltip() throws Exception {
+		Control pane = viewPane();
+		var button = view.toolbarButton(RELOAD_TOOLTIP);
+		assertTrue(button.isEnabled());
+		assertEquals(RELOAD_TOOLTIP, button.getToolTipText());
+		var point = uiValue(() -> {
+			var item = button.widget;
+			var bounds = item.getBounds();
+			return item.getParent().toDisplay(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+		});
+		var previous = uiValue(() -> pane.getDisplay().getCursorLocation());
+		try {
+			// Move the actual X11 pointer, not just a synthetic SWT MouseHover event:
+			// the tooltip is owned and painted by GTK, not by an SWT Shell.
+			ui(() -> pane.getDisplay().setCursorLocation(5, 5));
+			SWTUtils.sleep(200);
+			ui(() -> pane.getDisplay().setCursorLocation(point));
+			SWTUtils.sleep(1500);
+			assertEquals(point, uiValue(() -> pane.getDisplay().getCursorLocation()));
+			Files.writeString(output.resolve("junit-reload-tooltip.txt"), RELOAD_TOOLTIP + "\nPointer: " + point + "\n");
+			// Do not focus/reactivate the view here: doing so would hide the tooltip.
+			savePixels("junit-imported-results-before-reload.png", pane);
+			assertTrue(SWTUtils.captureScreenshot(output.resolve("junit-reload-tooltip-desktop.png").toString()));
+		} finally {
+			ui(() -> pane.getDisplay().setCursorLocation(previous));
+		}
+	}
+
+	private void savePixels(String filename, Control pane) throws Exception {
 		Path file = output.resolve(filename);
 		assertTrue("Cannot capture " + file, SWTUtils.captureScreenshot(file.toString(), pane));
 		assertTrue("Empty screenshot: " + file, Files.size(file) > 1000);
