@@ -35,6 +35,10 @@ jobs:
             openbox > /tmp/junit-nn-openbox.log 2>&1 &
             mvn -B --no-transfer-progress -f org.eclipse.jdt.ui.tests.screenshots/pom.xml clean verify
           '
+      - name: Print Eclipse startup diagnostics
+        if: failure()
+        run: |
+          find org.eclipse.jdt.ui.tests.screenshots/target -type f \( -name '*.log' -o -name '*.dumpstream' \) -print -exec cat {} \;
       - name: Upload screenshots and diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -48,3 +52,5 @@ jobs:
             org.eclipse.jdt.ui.tests.screenshots/target/surefire-reports/
             org.eclipse.jdt.ui.tests.screenshots/target/work/.metadata/.log
             org.eclipse.jdt.ui.tests.screenshots/target/*.log
+            org.eclipse.jdt.ui.tests.screenshots/target/work/configuration/*.log
+            org.eclipse.jdt.ui.tests.screenshots/target/work/configuration/config.ini
