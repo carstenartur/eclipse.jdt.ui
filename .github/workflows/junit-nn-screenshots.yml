@@ -50,7 +50,7 @@ jobs:
           path: |
             org.eclipse.jdt.ui.tests.screenshots/target/screenshots/
             org.eclipse.jdt.ui.tests.screenshots/target/surefire-reports/
-            org.eclipse.jdt.ui.tests.screenshots/target/work/.metadata/.log
+            org.eclipse.jdt.ui.tests.screenshots/target/workspace/.metadata/.log
             org.eclipse.jdt.ui.tests.screenshots/target/*.log
             org.eclipse.jdt.ui.tests.screenshots/target/work/configuration/*.log
             org.eclipse.jdt.ui.tests.screenshots/target/work/configuration/config.ini

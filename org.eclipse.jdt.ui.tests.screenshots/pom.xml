@@ -41,7 +41,7 @@
           <testClass>org.eclipse.jdt.ui.tests.screenshots.JUnitNewAndNoteworthyScreenshotTest</testClass>
           <testFailureIgnore>false</testFailureIgnore>
           <forkedProcessTimeoutInSeconds>480</forkedProcessTimeoutInSeconds>
-          <osgiDataDirectory>${project.build.directory}/work</osgiDataDirectory>
+          <osgiDataDirectory>${project.build.directory}/workspace</osgiDataDirectory>
           <argLine>-Xmx1536m -Duser.language=en -Duser.country=US -Dorg.eclipse.swt.internal.gtk.cairoGraphics=true</argLine>
           <systemProperties>
             <screenshots.dir>${project.build.directory}/screenshots</screenshots.dir>
