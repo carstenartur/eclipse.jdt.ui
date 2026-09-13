@@ -183,7 +183,8 @@ public class JUnitNewAndNoteworthyScreenshotTest {
 				workbench.getIntroManager().closeIntro(intro);
 			var window = workbench.getActiveWorkbenchWindow();
 			window.getShell().setMaximized(false);
-			window.getShell().setBounds(20, 20, 1180, 520);
+			// Fit the examples without cropping toolbar actions, counters or the failure trace.
+			window.getShell().setBounds(20, 20, 760, 470);
 			try {
 				window.getActivePage().showView("org.eclipse.jdt.junit.ResultView");
 			} catch (Exception e) {
