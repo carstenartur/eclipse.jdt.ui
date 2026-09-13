@@ -64,9 +64,11 @@ import org.eclipse.jdt.internal.junit.JUnitCorePlugin;
 import org.eclipse.jdt.internal.junit.launcher.JUnitLaunchConfigurationConstants;
 import org.eclipse.jdt.internal.junit.model.TestRunSession;
 import org.eclipse.jdt.internal.junit.ui.TestRunnerViewPart;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.swtbot.eclipse.finder.SWTWorkbenchBot;
 import org.eclipse.swtbot.eclipse.finder.widgets.SWTBotView;
@@ -344,6 +346,26 @@ public class JUnitNewAndNoteworthyScreenshotTest {
 			current.getDisplay().update();
 			return current;
 		});
+		// Logical tree labels can change before GTK paints the new native frame.
+		// Observe a repaint, then allow a frame-clock turn before reading pixels.
+		CountDownLatch painted = new CountDownLatch(1);
+		Listener paintListener = event -> painted.countDown();
+		ui(() -> {
+			tree.addListener(SWT.Paint, paintListener);
+			tree.redraw();
+		});
+		try {
+			assertTrue("The JUnit tree did not repaint", painted.await(10, TimeUnit.SECONDS));
+		} finally {
+			ui(() -> tree.removeListener(SWT.Paint, paintListener));
+		}
+		CountDownLatch frameReady = new CountDownLatch(1);
+		ui(() -> pane.getDisplay().timerExec(250, () -> {
+			pane.getDisplay().update();
+			frameReady.countDown();
+		}));
+		assertTrue("The native frame did not settle", frameReady.await(10, TimeUnit.SECONDS));
+		Files.writeString(output.resolve(filename.replace(".png", ".txt")), treeText());
 		Path file = output.resolve(filename);
 		assertTrue("Cannot capture " + file, SWTUtils.captureScreenshot(file.toString(), pane));
 		assertTrue("Empty screenshot: " + file, Files.size(file) > 1000);
