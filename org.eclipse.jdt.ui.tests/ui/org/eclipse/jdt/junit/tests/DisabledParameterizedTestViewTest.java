@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,6 +37,15 @@ import org.eclipse.jdt.junit.model.ITestElement.Result;
 import org.eclipse.jdt.junit.model.ITestRunSession;
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.ImageLoader;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Table;
 
 import org.eclipse.jface.viewers.TableViewer;
@@ -231,6 +241,88 @@ public class DisabledParameterizedTestViewTest extends AbstractTestRunListenerTe
 			}
 			Files.deleteIfExists(file.toPath());
 		}
+	}
+
+	@Test
+	public void testNewAndNoteworthyScreenshot() throws Exception {
+		String source=
+				"""
+				package pack;
+				import org.junit.jupiter.api.Disabled;
+				import org.junit.jupiter.api.Test;
+				import org.junit.jupiter.params.ParameterizedTest;
+				import org.junit.jupiter.params.provider.ValueSource;
+				public class ATestCase {
+				    @Test
+				    public void enabledTest() {
+				    }
+				    @Disabled("Not applicable on this platform")
+				    @ParameterizedTest
+				    @ValueSource(strings = { "one", "two" })
+				    public void disabledParameterizedTest(String value) {
+				    }
+				}""";
+
+		IWorkbenchPage activePage= JUnitPlugin.getActivePage();
+		TestRunnerViewPart testRunnerViewPart= (TestRunnerViewPart) activePage.showView(TestRunnerViewPart.NAME);
+		testRunnerViewPart.setLayoutMode(TestRunnerViewPart.LAYOUT_FLAT);
+
+		TestRunSession session= runTest(source, new ChangeRecordingListener());
+		assertSession(session, 2, 1);
+		testRunnerViewPart.getTestViewer().processChangesInUI();
+
+		Table table= ((TableViewer) testRunnerViewPart.getTestViewer().getActiveViewer()).getTable();
+		assertEquals(2, table.getItemCount());
+		assertTrue(List.of(table.getItems()).stream()
+				.anyMatch(item -> item.getData() instanceof TestSuiteElement
+						&& ((TestSuiteElement) item.getData()).isIgnored()));
+
+		Path output= Path.of(System.getProperty("screenshots.dir", "target/screenshots")).toAbsolutePath();
+		Files.createDirectories(output);
+		Path screenshot= output.resolve("junit-disabled-parameterized-test.png");
+		captureJUnitView(activePage, testRunnerViewPart, table, screenshot);
+		assertTrue(Files.size(screenshot) > 1000);
+	}
+
+	private static void captureJUnitView(IWorkbenchPage page, TestRunnerViewPart part, Table table, Path file) throws Exception {
+		ui(() -> {
+			part.getSite().getShell().setMaximized(false);
+			part.getSite().getShell().setBounds(20, 20, 760, 470);
+			var reference= page.findViewReference(TestRunnerViewPart.NAME);
+			if (reference != null && page.getPartState(reference) != IWorkbenchPage.STATE_MAXIMIZED)
+				page.toggleZoom(reference);
+			part.getSite().getShell().forceActive();
+			table.redraw();
+			table.getDisplay().update();
+		});
+		Thread.sleep(350);
+		ui(() -> {
+			Control pane= table;
+			while (pane.getParent() != null && !(pane instanceof CTabFolder))
+				pane= pane.getParent();
+			Display display= pane.getDisplay();
+			Rectangle bounds= pane.getBounds();
+			Rectangle displayBounds= display.map(pane.getParent(), null, bounds);
+			Image image= new Image(display, displayBounds.width, displayBounds.height);
+			GC gc= new GC(display);
+			try {
+				gc.copyArea(image, displayBounds.x, displayBounds.y);
+				ImageLoader loader= new ImageLoader();
+				loader.data= new ImageData[] { image.getImageData() };
+				loader.save(file.toString(), SWT.IMAGE_PNG);
+			} finally {
+				gc.dispose();
+				image.dispose();
+			}
+		});
+	}
+
+	private static void ui(Runnable runnable) {
+		Display display= Display.getDefault();
+		if (Display.getCurrent() == display)
+			runnable.run();
+		else
+			display.syncExec(runnable);
 	}
 
 	private TestRunSession runTest(String source, ChangeRecordingListener changeListener) throws Exception {
