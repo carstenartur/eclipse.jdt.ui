@@ -295,26 +295,32 @@ public class DisabledParameterizedTestViewTest extends AbstractTestRunListenerTe
 			table.redraw();
 			table.getDisplay().update();
 		});
-		Thread.sleep(350);
 		ui(() -> {
 			Control pane= table;
 			while (pane.getParent() != null && !(pane instanceof CTabFolder))
 				pane= pane.getParent();
-			Display display= pane.getDisplay();
-			Rectangle bounds= pane.getBounds();
-			Rectangle displayBounds= display.map(pane.getParent(), null, bounds);
-			Image image= new Image(display, displayBounds.width, displayBounds.height);
-			GC gc= new GC(display);
-			try {
-				gc.copyArea(image, displayBounds.x, displayBounds.y);
-				ImageLoader loader= new ImageLoader();
-				loader.data= new ImageData[] { image.getImageData() };
-				loader.save(file.toString(), SWT.IMAGE_PNG);
-			} finally {
-				gc.dispose();
-				image.dispose();
-			}
+			captureControl(pane, file);
+			captureControl(table, file.resolveSibling("junit-disabled-parameterized-test-table.png"));
 		});
+		Files.writeString(file.resolveSibling("junit-disabled-parameterized-test.txt"),
+				"items=" + table.getItemCount() + System.lineSeparator()
+				+ String.join(System.lineSeparator(),
+						List.of(table.getItems()).stream().map(item -> item.getText()).toList()));
+	}
+
+	private static void captureControl(Control control, Path file) {
+		Rectangle area= control.getClientArea();
+		Image image= new Image(control.getDisplay(), Math.max(1, area.width), Math.max(1, area.height));
+		GC gc= new GC(image);
+		try {
+			assertTrue("Cannot render " + control, control.print(gc));
+			ImageLoader loader= new ImageLoader();
+			loader.data= new ImageData[] { image.getImageData() };
+			loader.save(file.toString(), SWT.IMAGE_PNG);
+		} finally {
+			gc.dispose();
+			image.dispose();
+		}
 	}
 
 	private static void ui(Runnable runnable) {
