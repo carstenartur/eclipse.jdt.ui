@@ -55,9 +55,7 @@
           <useUIHarness>true</useUIHarness>
           <useUIThread>true</useUIThread>
           <includes>
-            <include>org/eclipse/jdt/ui/tests/AutomatedSuite.class</include>
-            <include>org/eclipse/jdt/internal/common/JUnit5TestSuite.class</include>
-            <!-- <include>org/eclipse/jdt/ui/tests/LeakTestSuite.class</include> -->
+            <include>org/eclipse/jdt/junit/tests/DisabledParameterizedTestViewTest.class</include>
           </includes>
           <dependencies>
             <dependency>
