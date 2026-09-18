@@ -4,7 +4,7 @@ on:
   push:
     branches: [screenshots/junit-disabled-parameterized-3144]
     paths:
-      - 'org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/DisabledParameterizedTestViewTest.java'
+      - 'org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/junit/tests/**'
       - '.github/workflows/junit-disabled-parameterized-nn.yml'
 
 permissions:
@@ -26,24 +26,71 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb openbox dbus-x11 libgtk-3-0t64 libxtst6 fonts-dejavu-core
-      - name: Run focused JUnit UI test
+      - name: Configure documentation-only perspective and test selection
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          bundle = Path('org.eclipse.jdt.ui.tests')
+          plugin = bundle / 'plugin.xml'
+          content = plugin.read_text()
+          assert content.count('</plugin>') == 1
+          extension = '''
+             <extension point="org.eclipse.ui.perspectives">
+                <perspective id="org.eclipse.jdt.ui.tests.junitCodeScreenshot"
+                      name="JUnit Code and Results"
+                      class="org.eclipse.jdt.junit.tests.DisabledParameterizedCodeScreenshotTest$CodeAndResultsPerspective"/>
+             </extension>
+          '''
+          plugin.write_text(content.replace('</plugin>', extension + '</plugin>'))
+          pom = bundle / 'pom.xml'
+          content = pom.read_text()
+          old = 'org/eclipse/jdt/junit/tests/DisabledParameterizedTestViewTest.class'
+          assert content.count(old) == 1
+          pom.write_text(content.replace(old, 'org/eclipse/jdt/junit/tests/DisabledParameterizedCodeScreenshotTest.class'))
+          PY
+      - name: Run the screenshot fixture and inherited UI regressions
         env:
           GTK_THEME: Adwaita
           GDK_BACKEND: x11
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/org.eclipse.jdt.ui.tests/target/screenshots"
           xvfb-run -a -s '-screen 0 1360x900x24' dbus-run-session -- bash -eu -o pipefail -c '
             openbox > /tmp/junit-disabled-nn-openbox.log 2>&1 &
-            mvn -B -ntp               -Pbuild-individual-bundles               -Dcompare-version-with-baselines.skip=true               -Dscreenshots.dir="$GITHUB_WORKSPACE/org.eclipse.jdt.ui.tests/target/screenshots"               -Dtest=org.eclipse.jdt.junit.tests.DisabledParameterizedTestViewTest               -pl org.eclipse.jdt.ui.tests               test
+            mvn -B -ntp \
+              -Pbuild-individual-bundles \
+              -Dcompare-version-with-baselines.skip=true \
+              -Dscreenshots.dir="$GITHUB_WORKSPACE/org.eclipse.jdt.ui.tests/target/screenshots" \
+              -pl org.eclipse.jdt.ui.tests -am verify
           '
-      - name: Upload screenshot and diagnostics
+      - name: Require executed tests and source-and-results evidence
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          target = Path('org.eclipse.jdt.ui.tests/target')
+          reports = list((target / 'surefire-reports').glob('TEST-*.xml'))
+          suites = [ET.parse(p).getroot() for p in reports]
+          suites = [s for s in suites if s.get('name', '').endswith('DisabledParameterizedCodeScreenshotTest')]
+          assert len(suites) == 1
+          suite = suites[0]
+          assert int(suite.get('tests')) == 6, suite.attrib
+          assert all(int(suite.get(k, 0)) == 0 for k in ('failures', 'errors', 'skipped')), suite.attrib
+          folder = target / 'screenshots'
+          assert (folder / 'junit-disabled-parameterized-test-with-code.png').stat().st_size > 1000
+          evidence = (folder / 'code-and-results-evidence.txt').read_text()
+          assert 'total=2\nstarted=2\nskipped=1' in evidence
+          assert 'visibleAnnotations=3' in evidence
+          print(suite.attrib)
+          print(evidence)
+          PY
+          git rev-parse HEAD > org.eclipse.jdt.ui.tests/target/screenshots/capture-source-commit.txt
+      - name: Upload screenshots, source and test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: junit-disabled-parameterized-nn
+          name: junit-disabled-code-and-results
           retention-days: 14
           include-hidden-files: true
-          if-no-files-found: warn
+          if-no-files-found: error
           path: |
             org.eclipse.jdt.ui.tests/target/screenshots/
             org.eclipse.jdt.ui.tests/target/surefire-reports/
