@@ -309,8 +309,8 @@ public class DisabledParameterizedTestViewTest extends AbstractTestRunListenerTe
 	}
 
 	private static void captureControl(Control control, Path file) {
-		Rectangle area= control.getClientArea();
-		Image image= new Image(control.getDisplay(), Math.max(1, area.width), Math.max(1, area.height));
+		var size= control.getSize();
+		Image image= new Image(control.getDisplay(), Math.max(1, size.x), Math.max(1, size.y));
 		GC gc= new GC(image);
 		try {
 			assertTrue("Cannot render " + control, control.print(gc));
