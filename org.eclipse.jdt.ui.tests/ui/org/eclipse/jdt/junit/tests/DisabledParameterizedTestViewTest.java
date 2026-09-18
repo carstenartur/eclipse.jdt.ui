@@ -286,7 +286,7 @@ public class DisabledParameterizedTestViewTest extends AbstractTestRunListenerTe
 	private static void captureJUnitView(IWorkbenchPage page, TestRunnerViewPart part, Table table, Path file) throws Exception {
 		ui(() -> {
 			part.getSite().getShell().setMaximized(false);
-			part.getSite().getShell().setBounds(20, 20, 760, 470);
+			part.getSite().getShell().setBounds(20, 20, 760, 760);
 			var reference= page.findViewReference(TestRunnerViewPart.NAME);
 			if (reference != null && page.getPartState(reference) != IWorkbenchPage.STATE_MAXIMIZED)
 				page.toggleZoom(reference);
