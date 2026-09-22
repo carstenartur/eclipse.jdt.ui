@@ -1,0 +1,201 @@
+name: Verify and publish the quickfix test repair
+on:
+  push:
+    branches: [qa/fix-sdk-ci-20260922]
+    paths: [.github/workflows/publish-quickfix-repair.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  mutation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 660e48c54e9035cb386743bd1bbbbd645c6bfc1a
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 35738718145
+          name: sdk-ci-quickfix-fixed
+          path: ${{ runner.temp }}/verified
+      - name: Verify the green test evidence and disable only the production guard
+        run: |
+          set -euo pipefail
+          mkdir evidence
+          python3 - <<'PY'
+          import hashlib,json,os,shutil
+          from pathlib import Path
+          v=Path(os.environ['RUNNER_TEMP'])/'verified'
+          proof=json.loads((v/'evidence/summary.json').read_text())
+          assert proof=={'mode':'fixed','tests':'27','failures':[],'exit_code':'0'},proof
+          p=Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/ReorgQuickFixTest.java')
+          data=(v/p).read_bytes()
+          assert hashlib.sha256(data).hexdigest()=='8425b0e554cabc0227b697649132cd1d17baff74a5c87e72bb3acea0124d5060'
+          p.write_bytes(data)
+          c=Path('org.eclipse.jdt.core.manipulation/core extension/org/eclipse/jdt/internal/corext/fix/CorrectPackageDeclarationFixCore.java')
+          text=c.read_text();old='if(cu.getTypes()[0].isImplicitlyDeclared()) {'
+          assert text.count(old)==1
+          c.write_text(text.replace(old,'if(cu.getTypes()[0].isImplicitlyDeclared() && cu.getElementName().isEmpty()) {'))
+          PY
+          git diff --check
+          git diff > evidence/mutation.patch
+          git config user.name 'SDK regression validation'
+          git config user.email 'sdk-regression-validation@example.invalid'
+          git add org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/ReorgQuickFixTest.java 'org.eclipse.jdt.core.manipulation/core extension/org/eclipse/jdt/internal/corext/fix/CorrectPackageDeclarationFixCore.java'
+          git commit -m 'Isolated negative control: give the mutated bundle its own reproducible qualifier'
+      - name: Execute all 27 quickfix tests against the actual mutated bundle
+        run: |
+          set +e
+          xvfb-run -a mvn -B -ntp -Pbuild-individual-bundles -DtestClass=org.eclipse.jdt.ui.tests.quickfix.ReorgQuickFixTest -DfailIfNoTests=false -pl org.eclipse.jdt.ui.tests -am verify > evidence/mutation.log 2>&1
+          echo "$?" > evidence/exit-code.txt
+          tail -65 evidence/mutation.log
+          exit 0
+      - name: Require the intended assertion failure, not a build failure
+        run: |
+          python3 - <<'PY'
+          import json,xml.etree.ElementTree as ET
+          from pathlib import Path
+          reports=list(Path('org.eclipse.jdt.ui.tests/target/surefire-reports').glob('TEST-*ReorgQuickFixTest.xml'))
+          assert len(reports)==1,reports
+          r=ET.parse(reports[0]).getroot()
+          failures=[(t.get('name'),e.get('message')) for t in r.iter('testcase') for tag in ['failure','error'] for e in t.findall(tag)]
+          result={'tests':r.get('tests'),'skipped':r.get('skipped'),'failures':failures,'exit_code':Path('evidence/exit-code.txt').read_text().strip()}
+          Path('evidence/mutation-summary.json').write_text(json.dumps(result,indent=2));print(result)
+          assert int(r.get('tests'))==27 and int(r.get('skipped','0'))==0,result
+          assert result['exit_code']!='0' and len(failures)==1,result
+          assert failures[0][0]=='testWrongPackageStatementImplicitClass' and 'must not be offered' in failures[0][1],result
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quickfix-guard-mutation-proof
+          include-hidden-files: true
+          path: |
+            evidence
+            org.eclipse.jdt.ui.tests/target/surefire-reports
+            org.eclipse.jdt.ui.tests/target/work/data/.metadata/.log
+          retention-days: 14
+  publish:
+    needs: mutation
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-template-registry-binary-compatibility
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 35738718145
+          name: sdk-ci-quickfix-fixed
+          path: ${{ runner.temp }}/verified
+      - name: Publish the source file already tested; never publish the mutation
+        id: commit
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = '660e48c54e9035cb386743bd1bbbbd645c6bfc1a'
+          python3 - <<'PY'
+          import hashlib,json,os
+          from pathlib import Path
+          v=Path(os.environ['RUNNER_TEMP'])/'verified'
+          proof=json.loads((v/'evidence/summary.json').read_text())
+          assert proof=={'mode':'fixed','tests':'27','failures':[],'exit_code':'0'},proof
+          p=Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/ReorgQuickFixTest.java')
+          data=(v/p).read_bytes()
+          assert hashlib.sha256(data).hexdigest()=='8425b0e554cabc0227b697649132cd1d17baff74a5c87e72bb3acea0124d5060'
+          p.write_bytes(data)
+          PY
+          test "$(git diff --name-only)" = 'org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/ReorgQuickFixTest.java'
+          git diff --check
+          git config user.name 'Carsten Hammer'
+          git config user.email 'carsten.hammer@t-online.de'
+          git add org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/ReorgQuickFixTest.java
+          git commit -m 'Test compact-unit package correction without assuming a compiler diagnostic' -m 'Exercise the package correction provider explicitly and verify that the fixture is implicitly declared. Keep the assertion excluding package-declaration fixes. The 27-test class passes; removing the production guard causes the intended assertion to fail.' -m 'Assisted-by: OpenAI ChatGPT' -m 'Signed-off-by: Carsten Hammer <carsten.hammer@t-online.de>'
+          git push origin HEAD:refs/heads/fix-template-registry-binary-compatibility
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git show --stat --oneline HEAD
+  full-build:
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      MAVEN_OPTS: -Xmx4g
+      GDK_BACKEND: x11
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.publish.outputs.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+            25
+          cache: maven
+      - name: Provide the native browser and the BREE toolchains
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libwebkit2gtk-4.1-0
+          python3 - <<'PY'
+          import os,pathlib,xml.etree.ElementTree as ET
+          root=ET.Element('toolchains')
+          for v,ident in [('8','JavaSE-1.8'),('17','JavaSE-17'),('21','JavaSE-21'),('25','JavaSE-25')]:
+              tool=ET.SubElement(root,'toolchain');ET.SubElement(tool,'type').text='jdk'
+              p=ET.SubElement(tool,'provides');ET.SubElement(p,'id').text=ident;ET.SubElement(p,'version').text=v
+              c=ET.SubElement(tool,'configuration');ET.SubElement(c,'jdkHome').text=os.environ['JAVA_HOME_'+v+'_X64']
+          ET.ElementTree(root).write(pathlib.Path.home()/'.m2/toolchains.xml')
+          PY
+      - name: Run the full repository build with Jenkins quality profiles
+        run: |
+          mkdir evidence
+          git rev-parse HEAD > evidence/source-sha.txt
+          set +e
+          xvfb-run -a mvn -U -e -B -ntp -DskipTests=false clean verify --fail-at-end -Pbree-libs -Papi-check -Pjavadoc -Pbuild-individual-bundles -Dmaven.test.failure.ignore=true -Dcompare-version-with-baselines.skip=false -Dtycho.localArtifacts=ignore > evidence/full-build.log 2>&1
+          echo "$?" > evidence/exit-code.txt
+          tail -100 evidence/full-build.log
+          exit 0
+      - name: Check every test report and the Maven result
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,xml.etree.ElementTree as ET
+          counts={'tests':0,'skipped':0};failures=[];reports=[]
+          for p in Path('.').glob('**/target/surefire-reports/TEST-*.xml'):
+              r=ET.parse(p).getroot();reports.append(str(p))
+              for t in r.iter('testcase'):
+                  counts['tests']+=1
+                  if t.find('skipped') is not None: counts['skipped']+=1
+                  for tag in ['failure','error']:
+                      for e in t.findall(tag): failures.append([t.get('classname'),t.get('name'),tag,e.get('message'),e.text])
+          result={'counts':counts,'failures':failures,'reports':reports,'exit_code':Path('evidence/exit-code.txt').read_text().strip()}
+          Path('evidence/full-results.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
+          assert counts['tests']>9000,result
+          assert result['exit_code']=='0' and not failures,result
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jdt-ui-full-ci-repair
+          include-hidden-files: true
+          path: |
+            evidence
+            **/target/surefire-reports/TEST-*.xml
+            **/target/apianalysis/*.xml
+            **/target/work/data/.metadata/.log
+          retention-days: 14
