@@ -29,7 +29,7 @@ jobs:
           root="$RUNNER_TEMP/sdk"
           mkdir -p "$root/.mvn"
           git worktree add --detach "$root/jdt-ui" 660e48c54e9035cb386743bd1bbbbd645c6bfc1a
-          for item in 'carstenartur/eclipse.jdt.debug debug c37a60078154eb9d98c071dad720fdbefffdf31c' 'carstenartur/eclipse.pde pde eea6eee8744211332de8e8bf8ef627c58bede125' 'eclipse-jdt/eclipse.jdt jdt-feature 36db39a9a02496f1feb6f7d5d7a589c6a7280f03'; do
+          for item in 'carstenartur/eclipse.jdt.debug debug c37a60078154eb9d98c071dad720fdbefffdf31c' 'carstenartur/eclipse.pde pde ff9dbd96c7a068fd62a0af2e03acd6f94f9026bd' 'eclipse-jdt/eclipse.jdt jdt-feature 36db39a9a02496f1feb6f7d5d7a589c6a7280f03'; do
             read -r repo name sha <<< "$item"
             git clone -q --filter=blob:none --no-checkout "https://github.com/$repo.git" "$root/$name"
             git -C "$root/$name" checkout -q --detach "$sha"
