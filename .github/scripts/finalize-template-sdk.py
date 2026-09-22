@@ -12,7 +12,12 @@ text = text.replace('<component id="org.eclipse.jdt.ui" version="2">', '''<compo
          this service version as their minimum dependency. Remove this exception
          once the API baseline includes 3.40.100. -->
     <resource path="META-INF/MANIFEST.MF">
-        <filter id="931135546"/>
+        <filter id="931135546">
+            <message_arguments>
+                <message_argument value="3.40.100"/>
+                <message_argument value="3.39.0"/>
+            </message_arguments>
+        </filter>
     </resource>''')
 file.write_text(text)
 file = root / 'debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/AutomatedSuite.java'
