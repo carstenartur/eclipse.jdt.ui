@@ -17,11 +17,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: 660e48c54e9035cb386743bd1bbbbd645c6bfc1a
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '25'
           cache: maven
       - name: Prepare the regression test and negative control
         env:
@@ -70,6 +70,7 @@ jobs:
           xvfb-run -a mvn -B -ntp -Pbuild-individual-bundles -DtestClass=org.eclipse.jdt.ui.tests.quickfix.ReorgQuickFixTest -DfailIfNoTests=false -pl org.eclipse.jdt.ui.tests -am verify > evidence/quickfix.log 2>&1
           echo "$?" > evidence/exit-code.txt
           tail -55 evidence/quickfix.log
+          find org.eclipse.jdt.ui.tests/target -path '*/.metadata/.log' -exec cat {} \;
           exit 0
       - name: Verify the fix and regression sensitivity
         env:
@@ -99,8 +100,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sdk-ci-quickfix-${{ matrix.mode }}
+          include-hidden-files: true
           path: |
             evidence
             org.eclipse.jdt.ui.tests/target/surefire-reports
+            org.eclipse.jdt.ui.tests/target/work/data/.metadata/.log
+            org.eclipse.jdt.ui.tests/target/work/configuration/config.ini
             org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/ReorgQuickFixTest.java
           retention-days: 14
