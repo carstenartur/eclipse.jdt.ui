@@ -1,0 +1,143 @@
+name: SDK CI repair evidence
+on:
+  push:
+    branches: [qa/fix-sdk-ci-20260922]
+    paths: [.github/workflows/sdk-ci-repair.yml]
+permissions:
+  contents: read
+jobs:
+  quickfix:
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [original, fixed, mutation]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 660e48c54e9035cb386743bd1bbbbd645c6bfc1a
+          fetch-depth: 2
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Prepare the regression test and its negative control
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/source-sha.txt
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          mode = os.environ['MODE']
+          p = Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/ReorgQuickFixTest.java')
+          if mode != 'original':
+              s = p.read_text()
+              anchor = 'import org.eclipse.jdt.internal.ui.text.correction.ProblemLocation;'
+              assert s.count(anchor) == 1
+              s = s.replace(anchor, anchor + '\nimport org.eclipse.jdt.internal.ui.text.correction.ReorgCorrectionsSubProcessor;')
+              start = s.index('\tpublic void testWrongPackageStatementImplicitClass()')
+              head, method = s[:start], s[start:]
+              before = '\t\tCompilationUnit astRoot= getASTRoot(cu);\n\t\tArrayList<IJavaCompletionProposal> proposals= collectCorrections(cu, astRoot);'
+              after = '''\t\tassertEquals(1, cu.getTypes().length);
+          \t\tassertTrue(cu.getTypes()[0].isImplicitlyDeclared());
+          
+          \t\t// A compact compilation unit no longer necessarily produces a package
+          \t\t// mismatch diagnostic. Exercise the correction provider explicitly so
+          \t\t// the regression still verifies that it never inserts a package declaration.
+          \t\tProblemLocation problem= new ProblemLocation(0, 0, IProblem.PackageIsNotExpectedPackage,
+          \t\t\t\tnew String[] { "", pack1.getElementName() }, true, IJavaModelMarker.JAVA_MODEL_PROBLEM_MARKER);
+          \t\tArrayList<IJavaCompletionProposal> proposals= new ArrayList<>();
+          \t\tReorgCorrectionsSubProcessor.getWrongPackageDeclNameProposals(getCorrectionContext(cu, 0, 0), problem, proposals);'''
+              assert method.count(before) == 1
+              p.write_text(head + method.replace(before, after))
+          if mode == 'mutation':
+              p = Path('org.eclipse.jdt.core.manipulation/core extension/org/eclipse/jdt/internal/corext/fix/CorrectPackageDeclarationFixCore.java')
+              s = p.read_text()
+              before = 'if(cu.getTypes()[0].isImplicitlyDeclared()) {'
+              assert s.count(before) == 1
+              p.write_text(s.replace(before, 'if(false) {'))
+          PY
+          git diff --check
+          git diff > evidence/change.patch
+      - name: Execute the whole quickfix test class
+        run: |
+          set +e
+          xvfb-run -a mvn -B -ntp -Pbuild-individual-bundles -DtestClass=org.eclipse.jdt.ui.tests.quickfix.ReorgQuickFixTest -DfailIfNoTests=false -pl org.eclipse.jdt.ui.tests -am verify > evidence/quickfix.log 2>&1
+          result=$?
+          echo "$result" > evidence/exit-code.txt
+          tail -55 evidence/quickfix.log
+          exit 0
+      - name: Verify both the fix and the regression sensitivity
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, json, xml.etree.ElementTree as ET
+          reports = list(Path('org.eclipse.jdt.ui.tests/target/surefire-reports').glob('TEST-*ReorgQuickFixTest.xml'))
+          assert len(reports) == 1, reports
+          root = ET.parse(reports[0]).getroot()
+          failures = [(t.get('name'), e.get('message'), e.text or '') for t in root.iter('testcase') for tag in ['failure','error'] for e in t.findall(tag)]
+          result = {'mode':os.environ['MODE'], 'tests':root.get('tests'), 'failures':failures, 'exit_code':Path('evidence/exit-code.txt').read_text().strip()}
+          Path('evidence/summary.json').write_text(json.dumps(result, indent=2))
+          print(json.dumps(result, indent=2))
+          assert int(root.get('tests')) == 27, result
+          assert int(root.get('skipped', '0')) == 0, result
+          if os.environ['MODE'] == 'fixed':
+              assert result['exit_code'] == '0' and not failures, result
+          else:
+              assert result['exit_code'] != '0' and len(failures) == 1, result
+              assert failures[0][0] == 'testWrongPackageStatementImplicitClass', result
+              if os.environ['MODE'] == 'original':
+                  assert 'Unexpected number of problems' in failures[0][1], result
+              else:
+                  assert 'must not be offered' in failures[0][1], result
+          PY
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-ci-quickfix-${{ matrix.mode }}
+          path: |
+            evidence
+            org.eclipse.jdt.ui.tests/target/surefire-reports
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/quickfix/ReorgQuickFixTest.java
+          retention-days: 14
+  diagnostics:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Extract compact diagnostics from the upstream check results
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p evidence
+          python3 - <<'PY'
+          import json, os, urllib.request
+          from pathlib import Path
+          cases = [('eclipse-jdt/eclipse.jdt.debug','c37a60078154eb9d98c071dad720fdbefffdf31c','debug'),('eclipse-pde/eclipse.pde','ff9dbd96c7a068fd62a0af2e03acd6f94f9026bd','pde'),('eclipse-jdt/eclipse.jdt.ui','660e48c54e9035cb386743bd1bbbbd645c6bfc1a','ui')]
+          for repo, sha, name in cases:
+              req = urllib.request.Request(f'https://api.github.com/repos/{repo}/commits/{sha}/check-runs', headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'], 'Accept':'application/vnd.github+json'})
+              with urllib.request.urlopen(req,timeout=60) as response:
+                  checks = json.load(response)
+              Path(f'evidence/{name}-checks.json').write_text(json.dumps(checks,indent=2))
+              for check in checks['check_runs']:
+                  output = check.get('output') or {}
+                  text = '\n'.join(output.get(k) or '' for k in ['title','summary','text'])
+                  Path(f'evidence/{name}-{check["id"]}.log').write_text(text)
+                  lines = text.splitlines()
+                  errors = [l for l in lines if any(x in l for x in ['[ERROR]','Missing requirement:', 'Tests run:', 'FAILURE','BUILD FAILURE'])]
+                  print(name, check['name'],check['status'],check.get('conclusion'))
+                  print('\n'.join(errors[-65:]))
+                  Path(f'evidence/{name}-{check["id"]}-errors.txt').write_text('\n'.join(errors))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upstream-sdk-errors
+          path: evidence
+          retention-days: 14
