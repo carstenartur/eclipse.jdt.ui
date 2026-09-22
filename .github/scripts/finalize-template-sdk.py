@@ -17,8 +17,8 @@ text = text.replace('<component id="org.eclipse.jdt.ui" version="2">', '''<compo
 file.write_text(text)
 file = root / 'debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/AutomatedSuite.java'
 text = file.read_text().replace('import org.eclipse.jdt.debug.tests.ui.TemplateRegistryTests;\n', '')
-assert 'import org.eclipse.jdt.debug.tests.ui.ThreadViewTest;' in text
-text = text.replace('import org.eclipse.jdt.debug.tests.ui.ThreadViewTest;', 'import org.eclipse.jdt.debug.tests.ui.TemplateRegistryTests;\nimport org.eclipse.jdt.debug.tests.ui.ThreadViewTest;')
+assert 'import org.eclipse.jdt.debug.tests.ui.ViewManagementTests;' in text
+text = text.replace('import org.eclipse.jdt.debug.tests.ui.ViewManagementTests;', 'import org.eclipse.jdt.debug.tests.ui.TemplateRegistryTests;\nimport org.eclipse.jdt.debug.tests.ui.ViewManagementTests;')
 file.write_text(text)
 for name in ['jdt-ui', 'debug', 'pde']:
     subprocess.run(['git', '-C', str(root/name), 'diff', '--check'], check=True)
