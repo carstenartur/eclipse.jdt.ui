@@ -1,36 +1,119 @@
-name: SDK template integration diagnosis
+name: SDK template integration validation
 on:
   push:
     branches: [qa/template-sdk-integration-20260922]
+    paths:
+      - .github/workflows/template-sdk-integration.yml
+      - .github/scripts/prepare-template-sdk.py
 permissions:
   contents: read
 jobs:
-  diagnose:
+  validate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        phase: [red, green]
     steps:
       - uses: actions/checkout@v4
-      - name: Collect Jenkins evidence and source snapshots
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+            25
+          cache: maven
+      - name: Prepare isolated pinned source trees
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p evidence sources
-          curl --retry 2 -fLsS --max-time 90 'https://ci.eclipse.org/jdt/job/eclipse.jdt.ui-github/job/PR-3212/1/consoleText' -o evidence/pr3212-console.log || true
-          curl --retry 2 -fLsS --max-time 90 'https://ci.eclipse.org/jdt/job/eclipse.jdt.ui-github/job/PR-3212/1/testReport/api/json' -o evidence/pr3212-tests.json || true
-          git archive --format=tar.gz HEAD > sources/jdt-ui.tar.gz
-          for item in 'eclipse-jdt/eclipse.jdt.debug debug' 'eclipse-pde/eclipse.pde pde' 'eclipse-egit/egit egit'; do
-            read -r repo name <<< "$item"
-            git clone --depth 1 "https://github.com/$repo.git" "$RUNNER_TEMP/$name" >/dev/null 2>&1
-            git -C "$RUNNER_TEMP/$name" rev-parse HEAD | tee "evidence/$name-sha.txt"
-            git -C "$RUNNER_TEMP/$name" archive --format=tar.gz HEAD > "sources/$name.tar.gz"
-            find "$RUNNER_TEMP/$name" -name AGENTS.md -o -name CLAUDE.md | tee "evidence/$name-instructions.txt"
+          export SDK_ROOT="$RUNNER_TEMP/sdk"
+          mkdir -p "$SDK_ROOT/.mvn"
+          for item in 'carstenartur/eclipse.jdt.ui jdt-ui 7cf9c0a7d8c3090c4fd81470aed70dc3e1b2de6b' 'eclipse-jdt/eclipse.jdt.debug debug 4e7cd73a7bac28514212c3402adab6610336d4b2' 'eclipse-pde/eclipse.pde pde 576cdd88ea0631c3514fedb0d329fffca24d5ec0'; do
+            read -r repo name sha <<< "$item"
+            git init -q "$SDK_ROOT/$name"
+            git -C "$SDK_ROOT/$name" remote add origin "https://github.com/$repo.git"
+            git -C "$SDK_ROOT/$name" fetch -q --depth 1 origin "$sha"
+            git -C "$SDK_ROOT/$name" checkout -q --detach FETCH_HEAD
+            test "$(git -C "$SDK_ROOT/$name" rev-parse HEAD)" = "$sha"
           done
-          grep -n -E 'ERROR|FAILURE|Tests run:|NoSuchMethodError|Failed tests' evidence/pr3212-console.log | tail -100 || true
+          cp "$SDK_ROOT/jdt-ui/.mvn/extensions.xml" "$SDK_ROOT/.mvn/extensions.xml"
+          cat > "$SDK_ROOT/pom.xml" <<'XML'
+          <project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><groupId>qa</groupId><artifactId>template-sdk</artifactId><version>1</version><packaging>pom</packaging><modules><module>jdt-ui</module><module>debug</module><module>pde</module></modules></project>
+          XML
+          python3 .github/scripts/prepare-template-sdk.py
+          python3 - <<'PY'
+          import os, pathlib, xml.etree.ElementTree as ET
+          root=ET.Element('toolchains')
+          for version,ident in [('8','JavaSE-1.8'),('17','JavaSE-17'),('21','JavaSE-21'),('25','JavaSE-25')]:
+            tool=ET.SubElement(root,'toolchain');ET.SubElement(tool,'type').text='jdk'
+            p=ET.SubElement(tool,'provides');ET.SubElement(p,'id').text=ident;ET.SubElement(p,'version').text=version
+            c=ET.SubElement(tool,'configuration');ET.SubElement(c,'jdkHome').text=os.environ['JAVA_HOME_'+version+'_X64']
+          ET.ElementTree(root).write(pathlib.Path.home()/'.m2/toolchains.xml')
+          PY
+          if [ '${{ matrix.phase }}' = red ]; then
+            git -C "$SDK_ROOT/jdt-ui" restore --worktree -- org.eclipse.jdt.ui
+            git -C "$SDK_ROOT/debug" restore --worktree -- org.eclipse.jdt.debug.ui
+            git -C "$SDK_ROOT/pde" restore --worktree -- e4tools/bundles/org.eclipse.e4.tools.jdt.templates
+          fi
+      - name: Build all three repositories and execute targeted OSGi tests
+        shell: bash
+        env:
+          MAVEN_OPTS: -Xmx4g
+          GDK_BACKEND: x11
+        run: |
+          cd "$RUNNER_TEMP/sdk"
+          set +e
+          xvfb-run -a mvn -B -ntp -e -Pbuild-individual-bundles -Pbree-libs -Papi-check -Pjavadoc -DskipTests=false -Dtest=TemplateContributionTest,TemplateRegistryTests,E4TemplateCompletionTest -DfailIfNoTests=false -Dcompare-version-with-baselines.skip=false -pl :org.eclipse.jdt.text.tests,:org.eclipse.jdt.debug.tests,:org.eclipse.pde.ui.tests -am verify > "$RUNNER_TEMP/integration-${{ matrix.phase }}.log" 2>&1
+          result=$?
+          echo "$result" > "$RUNNER_TEMP/build-exit.txt"
+          tail -100 "$RUNNER_TEMP/integration-${{ matrix.phase }}.log"
+          exit 0
+      - name: Assert positive or negative test evidence
+        shell: bash
+        env:
+          PHASE: ${{ matrix.phase }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, xml.etree.ElementTree as ET
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'sdk'
+          expected={'org.eclipse.jdt.text.tests.templates.TemplateContributionTest','org.eclipse.jdt.debug.tests.ui.TemplateRegistryTests','org.eclipse.pde.ui.tests.runtime.E4TemplateCompletionTest'}
+          found=set();failures=[];count=0
+          for p in root.glob('**/target/surefire-reports/TEST-*.xml'):
+            r=ET.parse(p).getroot()
+            for t in r.iter('testcase'):
+              c=t.get('classname','')
+              if c in expected:
+                found.add(c);count+=1
+                for tag in ('error','failure','skipped'):
+                  e=t.find(tag)
+                  if e is not None: failures.append((c,t.get('name'),tag,e.get('message',''),e.text))
+          print('Test classes:',sorted(found),'Tests:',count,'Failures:',failures)
+          assert found==expected, ('Missing actual test executions',expected-found)
+          if os.environ['PHASE']=='green':
+            assert not failures, failures
+            assert (pathlib.Path(os.environ['RUNNER_TEMP'])/'build-exit.txt').read_text().strip()=='0'
+          else:
+            assert len(failures)==2, failures
+            assert all(f[2]=='failure' and 'reject' in f[3] for f in failures), failures
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sdk-template-diagnosis
+          name: sdk-template-${{ matrix.phase }}
+          include-hidden-files: true
           path: |
-            evidence
-            sources
+            ${{ runner.temp }}/integration-*.log
+            ${{ runner.temp }}/build-exit.txt
+            ${{ runner.temp }}/sdk/patches
+            ${{ runner.temp }}/sdk/**/target/surefire-reports/TEST-*.xml
+            ${{ runner.temp }}/sdk/**/target/apianalysis/*.xml
+            ${{ runner.temp }}/sdk/**/target/compilelogs/*.xml
+            ${{ runner.temp }}/sdk/**/target/work/data/.metadata/.log
+            ${{ runner.temp }}/sdk/jdt-ui/org.eclipse.jdt.ui/target/*.jar
+            ${{ runner.temp }}/sdk/debug/org.eclipse.jdt.debug.ui/target/*.jar
+            ${{ runner.temp }}/sdk/pde/e4tools/bundles/org.eclipse.e4.tools.jdt.templates/target/*.jar
           retention-days: 14
