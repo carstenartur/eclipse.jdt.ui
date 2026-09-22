@@ -1,0 +1,146 @@
+name: Template registry compatibility validation
+on:
+  push:
+    branches: [qa/template-registry-20260922]
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Prepare the isolated source fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RUNNER_TEMP/registry-fix" 643f7a065288d63b2b4b0e6b72d87c31a5ef88fe
+          export FIX_ROOT="$RUNNER_TEMP/registry-fix"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          root = Path(os.environ['FIX_ROOT'])
+          file = root / 'org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/JavaPlugin.java'
+          names = ['getTemplateContextRegistry', 'getCodeTemplateContextRegistry']
+          text = file.read_text()
+          for name in names:
+              assert text.count('public ContextTypeRegistry ' + name + '()') == 1
+              text = text.replace(name + '()', name + 'Core()')
+          for name in names:
+              core = name + 'Core'
+              signature = '\tpublic ContextTypeRegistry ' + core + '() {'
+              pos = text.index(signature)
+              doc_start = text.rfind('\n\t/**', 0, pos)
+              assert doc_start >= 0 and text[text.rfind('*/', 0, pos) + 2:pos].isspace()
+              start = doc_start + 1
+              field = 'fCodeTemplateContextTypeRegistry' if 'Code' in name else 'fContextTypeRegistry'
+              description = 'code generation templates' if 'Code' in name else 'Java editor templates'
+              api = ('\t * External clients should use {@link JavaManipulation#getCodeTemplateContextRegistry()}\n'
+                     '\t * after activating the JDT UI plug-in.\n') if 'Code' in name else ''
+              wrapper = f'''\t/**
+          \t * Returns the context type registry for the {description}.
+          \t *
+          \t * @return the template context type registry
+          \t * @since 3.0
+          \t * @deprecated Use {{@link #{core}()}}. This method retains its original
+          \t *             return type for binary compatibility with existing plug-ins.
+          {api}\t */
+          \t@Deprecated
+          \tpublic org.eclipse.jface.text.templates.ContextTypeRegistry {name}() {{
+          \t\t{core}();
+          \t\treturn {field};
+          \t}}
+          
+          \t/**
+          \t * Returns the context type registry for the {description} using the
+          \t * non-deprecated registry type.
+          \t *
+          \t * @return the template context type registry
+          \t */
+          '''
+              text = text[:start] + wrapper + text[pos:]
+          file.write_text(text)
+          for directory in ['org.eclipse.jdt.ui', 'org.eclipse.jdt.text.tests']:
+              for path in (root / directory).rglob('*.java'):
+                  if path == file:
+                      continue
+                  before = path.read_text()
+                  after = before
+                  for name in names:
+                      after = after.replace('JavaPlugin.getDefault().' + name + '()', 'JavaPlugin.getDefault().' + name + 'Core()')
+                  if after != before:
+                      path.write_text(after)
+          test = root / 'org.eclipse.jdt.text.tests/src/org/eclipse/jdt/text/tests/templates/TemplateContributionTest.java'
+          text = test.read_text()
+          text = text.replace('import static org.junit.jupiter.api.Assertions.assertTrue;', 'import static org.junit.jupiter.api.Assertions.assertFalse;\nimport static org.junit.jupiter.api.Assertions.assertNotNull;\nimport static org.junit.jupiter.api.Assertions.assertSame;\nimport static org.junit.jupiter.api.Assertions.assertTrue;')
+          text = text.replace('import java.util.Iterator;', 'import java.lang.invoke.MethodHandle;\nimport java.lang.invoke.MethodHandles;\nimport java.lang.invoke.MethodType;\nimport java.util.Iterator;')
+          text = text.replace('import org.eclipse.jdt.internal.corext.template.java.JavaContextType;', 'import org.eclipse.jdt.core.manipulation.JavaManipulation;\n\nimport org.eclipse.jdt.internal.corext.template.java.JavaContextType;')
+          assert text.endswith('}\n')
+          tests = '''
+          \t@Test
+          \tpublic void testLegacyTemplateRegistryBinaryCompatibility() throws Throwable {
+          \t\tJavaPlugin plugin= JavaPlugin.getDefault();
+          \t\tObject legacy= invokeRegistryGetter(plugin, "getTemplateContextRegistry",
+          \t\t\t\tClass.forName("org.eclipse.jface.text.templates.ContextTypeRegistry"));
+          \t\tassertSame(plugin.getContributionTemplateContextRegistry(), legacy);
+          \t\tassertSame(invokeRegistryGetter(plugin, "getTemplateContextRegistryCore", ContextTypeRegistry.class), legacy);
+          \t}
+          
+          \t@Test
+          \tpublic void testLegacyCodeTemplateRegistryBinaryCompatibility() throws Throwable {
+          \t\tJavaPlugin plugin= JavaPlugin.getDefault();
+          \t\tObject legacy= invokeRegistryGetter(plugin, "getCodeTemplateContextRegistry",
+          \t\t\t\tClass.forName("org.eclipse.jface.text.templates.ContextTypeRegistry"));
+          \t\tassertSame(JavaManipulation.getCodeTemplateContextRegistry(), legacy);
+          \t\tassertSame(invokeRegistryGetter(plugin, "getCodeTemplateContextRegistryCore", ContextTypeRegistry.class), legacy);
+          \t}
+          
+          \t@Test
+          \tpublic void testLegacyRegistryGettersAreDeprecatedButNotForRemoval() throws Exception {
+          \t\tfor (String name : new String[] { "getTemplateContextRegistry", "getCodeTemplateContextRegistry" }) {
+          \t\t\tDeprecated deprecated= JavaPlugin.class.getMethod(name).getAnnotation(Deprecated.class);
+          \t\t\tassertNotNull(deprecated, name);
+          \t\t\tassertFalse(deprecated.forRemoval(), name);
+          \t\t}
+          \t}
+          
+          \tprivate static Object invokeRegistryGetter(JavaPlugin plugin, String name, Class<?> returnType) throws Throwable {
+          \t\t// Resolve the exact JVM descriptor, including the old return type. Merely
+          \t\t// recompiling a direct call against the current JDT would miss this regression.
+          \t\tMethodHandle getter= MethodHandles.publicLookup().findVirtual(JavaPlugin.class, name, MethodType.methodType(returnType));
+          \t\treturn getter.invoke(plugin);
+          \t}
+          
+          '''
+          test.write_text(text[:-2] + tests + '}\n')
+          PY
+          cd "$FIX_ROOT"
+          git diff --check
+          git diff --stat
+          git diff > "$RUNNER_TEMP/registry-fix.patch"
+          git add org.eclipse.jdt.ui org.eclipse.jdt.text.tests
+          git -c user.name='Carsten Hammer' -c user.email='carsten.hammer@t-online.de' commit -s -m 'Restore template registry binary compatibility' -m 'Keep the original JFace return descriptors as deprecated compatibility bridges, expose non-deprecated Core accessors, and migrate internal consumers. Test exact JVM descriptors and shared registry identity.' -m 'Related: eclipse-egit/egit#210' -m 'Assisted-by: OpenAI ChatGPT'
+          git push origin HEAD:refs/heads/fix-template-registry-binary-compatibility
+          git rev-parse HEAD
+      - name: Build and run the template contribution regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/registry-fix"
+          xvfb-run -a mvn -B -ntp -Pbuild-individual-bundles -DskipTests=false -DtestClass=org.eclipse.jdt.text.tests.templates.TemplateContributionTest -DfailIfNoTests=false -pl org.eclipse.jdt.text.tests -am verify 2>&1 | tee "$RUNNER_TEMP/registry-tests.log"
+      - name: Preserve validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: template-registry-validation
+          path: |
+            ${{ runner.temp }}/registry-fix.patch
+            ${{ runner.temp }}/registry-tests.log
+            ${{ runner.temp }}/registry-fix/**/target/surefire-reports/**
+          if-no-files-found: warn
