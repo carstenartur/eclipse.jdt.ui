@@ -1,0 +1,133 @@
+name: SDK template validated integration
+on:
+  push:
+    branches: [qa/template-sdk-integration-20260922]
+    paths:
+      - .github/workflows/template-sdk-validation-v2.yml
+      - .github/scripts/finalize-template-sdk.py
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        phase: [baseline, red, green]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+            25
+          cache: maven
+      - name: Prepare pinned sources with complete qualifier history
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SDK_ROOT="$RUNNER_TEMP/sdk"
+          mkdir -p "$SDK_ROOT/.mvn" "$SDK_ROOT/patches"
+          git worktree add --detach "$SDK_ROOT/jdt-ui" 7cf9c0a7d8c3090c4fd81470aed70dc3e1b2de6b
+          if [ '${{ matrix.phase }}' != baseline ]; then
+            for item in 'eclipse-jdt/eclipse.jdt.debug debug 4e7cd73a7bac28514212c3402adab6610336d4b2' 'eclipse-pde/eclipse.pde pde 576cdd88ea0631c3514fedb0d329fffca24d5ec0'; do
+              read -r repo name sha <<< "$item"
+              git clone -q "https://github.com/$repo.git" "$SDK_ROOT/$name"
+              git -C "$SDK_ROOT/$name" checkout -q --detach "$sha"
+            done
+            cp "$SDK_ROOT/jdt-ui/.mvn/extensions.xml" "$SDK_ROOT/.mvn/extensions.xml"
+            echo '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><groupId>qa</groupId><artifactId>template-sdk</artifactId><version>1</version><packaging>pom</packaging><modules><module>jdt-ui</module><module>debug</module><module>pde</module></modules></project>' > "$SDK_ROOT/pom.xml"
+            python3 .github/scripts/prepare-template-sdk.py
+            python3 .github/scripts/finalize-template-sdk.py
+            if [ '${{ matrix.phase }}' = red ]; then
+              git -C "$SDK_ROOT/jdt-ui" restore --worktree -- org.eclipse.jdt.ui
+              git -C "$SDK_ROOT/debug" restore --worktree -- org.eclipse.jdt.debug.ui
+              git -C "$SDK_ROOT/pde" restore --worktree -- e4tools/bundles/org.eclipse.e4.tools.jdt.templates
+            fi
+            for name in jdt-ui debug pde; do
+              git -C "$SDK_ROOT/$name" add .
+              git -C "$SDK_ROOT/$name" -c user.name='Validation' -c user.email='validation@example.invalid' commit -qm 'Local validation snapshot' || test "$(git -C "$SDK_ROOT/$name" status --porcelain | wc -l)" = 0
+            done
+          fi
+          python3 - <<'PY'
+          import os,pathlib,xml.etree.ElementTree as ET
+          root=ET.Element('toolchains')
+          for v in ['8','17','21','25']:
+            t=ET.SubElement(root,'toolchain');ET.SubElement(t,'type').text='jdk'
+            p=ET.SubElement(t,'provides');ET.SubElement(p,'id').text='JavaSE-'+('1.8' if v=='8' else v);ET.SubElement(p,'version').text=v
+            c=ET.SubElement(t,'configuration');ET.SubElement(c,'jdkHome').text=os.environ['JAVA_HOME_'+v+'_X64']
+          ET.ElementTree(root).write(pathlib.Path.home()/'.m2/toolchains.xml')
+          PY
+      - name: Build with API and baseline validation enabled
+        shell: bash
+        env:
+          MAVEN_OPTS: -Xmx4g
+          GDK_BACKEND: x11
+        run: |
+          cd "$RUNNER_TEMP/sdk"
+          args=(-B -ntp -e --fail-at-end -Pbuild-individual-bundles -Pbree-libs -Papi-check -Pjavadoc -DskipTests=false -Dmaven.test.failure.ignore=true -Dcompare-version-with-baselines.skip=false)
+          if [ '${{ matrix.phase }}' = baseline ]; then
+            cd jdt-ui
+          else
+            args+=(-Dtest=TemplateContributionTest,TemplateRegistryTests,E4TemplateCompletionTest -DfailIfNoTests=false -pl :org.eclipse.jdt.text.tests,:org.eclipse.jdt.debug.tests,:org.eclipse.pde.ui.tests -am)
+          fi
+          set +e
+          xvfb-run -a mvn "${args[@]}" verify > "$RUNNER_TEMP/build-${{ matrix.phase }}.log" 2>&1
+          echo $? > "$RUNNER_TEMP/build-exit.txt"
+          tail -100 "$RUNNER_TEMP/build-${{ matrix.phase }}.log"
+      - name: Check actual test results
+        shell: bash
+        env:
+          PHASE: ${{ matrix.phase }}
+        run: |
+          python3 - <<'PY'
+          import os,pathlib,xml.etree.ElementTree as ET
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'sdk'
+          expected={'org.eclipse.jdt.text.tests.templates.TemplateContributionTest','org.eclipse.jdt.debug.tests.ui.TemplateRegistryTests','org.eclipse.pde.ui.tests.runtime.E4TemplateCompletionTest'}
+          found=set();failures=[];count=0;total=0
+          for p in root.glob('**/target/surefire-reports/TEST-*.xml'):
+            r=ET.parse(p).getroot()
+            for t in r.iter('testcase'):
+              c=t.get('classname','');total+=1
+              if c in expected: found.add(c);count+=1
+              for tag in ('error','failure','skipped'):
+                e=t.find(tag)
+                if e is not None and (c in expected or os.environ['PHASE']=='baseline'):
+                  failures.append((c,t.get('name'),tag,e.get('message',''),e.text))
+          summary=f'Total tests: {total}; targeted tests: {count}; classes: {sorted(found)}; failures: {failures}'
+          (root/'validation-summary.txt').write_text(summary)
+          print(summary[:30000])
+          if os.environ['PHASE']=='baseline':
+            assert total>0
+            assert not [f for f in failures if f[2]!='skipped']
+          else:
+            assert found==expected, ('Missing test classes',expected-found)
+            if os.environ['PHASE']=='red':
+              assert len(failures)==2 and all(f[2]=='failure' and 'reject' in f[3] for f in failures), failures
+            else: assert not failures,failures
+          assert (pathlib.Path(os.environ['RUNNER_TEMP'])/'build-exit.txt').read_text().strip()=='0'
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdk-template-v2-${{ matrix.phase }}
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/build-*.log
+            ${{ runner.temp }}/build-exit.txt
+            ${{ runner.temp }}/sdk/validation-summary.txt
+            ${{ runner.temp }}/sdk/patches
+            ${{ runner.temp }}/sdk/**/target/surefire-reports/TEST-*.xml
+            ${{ runner.temp }}/sdk/**/target/apianalysis/*.xml
+            ${{ runner.temp }}/sdk/**/target/compilelogs/*.xml
+            ${{ runner.temp }}/sdk/**/target/work/data/.metadata/.log
+            ${{ runner.temp }}/sdk/jdt-ui/org.eclipse.jdt.ui/target/*.jar
+            ${{ runner.temp }}/sdk/debug/org.eclipse.jdt.debug.ui/target/*.jar
+            ${{ runner.temp }}/sdk/pde/e4tools/bundles/org.eclipse.e4.tools.jdt.templates/target/*.jar
+          retention-days: 14
