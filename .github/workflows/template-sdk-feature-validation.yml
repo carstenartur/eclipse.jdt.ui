@@ -1,0 +1,90 @@
+name: SDK template compatibility with rebuilt feature
+on:
+  push:
+    branches: [qa/template-sdk-integration-20260922]
+    paths: [.github/workflows/template-sdk-feature-validation.yml]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.m2/repository
+          key: sdk-template-feature-${{ github.run_id }}
+          restore-keys: sdk-template-Linux-
+      - name: Assemble provider, consumers and the SDK's JDT feature
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/sdk"
+          mkdir -p "$root/.mvn"
+          git worktree add --detach "$root/jdt-ui" 660e48c54e9035cb386743bd1bbbbd645c6bfc1a
+          for item in 'carstenartur/eclipse.jdt.debug debug c37a60078154eb9d98c071dad720fdbefffdf31c' 'carstenartur/eclipse.pde pde eea6eee8744211332de8e8bf8ef627c58bede125' 'eclipse-jdt/eclipse.jdt jdt-feature 36db39a9a02496f1feb6f7d5d7a589c6a7280f03'; do
+            read -r repo name sha <<< "$item"
+            git clone -q --filter=blob:none --no-checkout "https://github.com/$repo.git" "$root/$name"
+            git -C "$root/$name" checkout -q --detach "$sha"
+            test "$(git -C "$root/$name" rev-parse HEAD)" = "$sha"
+          done
+          cp "$root/jdt-ui/.mvn/extensions.xml" "$root/.mvn/extensions.xml"
+          echo '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><groupId>qa</groupId><artifactId>template-sdk</artifactId><version>1</version><packaging>pom</packaging><modules><module>jdt-ui</module><module>debug</module><module>pde</module><module>jdt-feature</module></modules></project>' > "$root/pom.xml"
+          for name in jdt-ui debug pde jdt-feature; do echo "$name $(git -C "$root/$name" rev-parse HEAD)"; done | tee "$root/source-shas.txt"
+      - name: Build the feature and execute the actual consumer tests
+        shell: bash
+        env:
+          MAVEN_OPTS: -Xmx4g
+          GDK_BACKEND: x11
+        run: |
+          cd "$RUNNER_TEMP/sdk"
+          set +e
+          xvfb-run -a mvn -B -ntp -e --fail-at-end -Pbuild-individual-bundles -DskipTests=false -Dmaven.test.failure.ignore=true -Dcompare-version-with-baselines.skip=false -Dtest=TemplateContributionTest,TemplateRegistryTests,E4TemplateCompletionTest -DfailIfNoTests=false -pl jdt-feature/org.eclipse.jdt-feature,:org.eclipse.jdt.text.tests,:org.eclipse.jdt.debug.tests,:org.eclipse.pde.ui.tests -am verify > "$RUNNER_TEMP/feature-build.log" 2>&1
+          echo $? > "$RUNNER_TEMP/build-exit.txt"
+          tail -100 "$RUNNER_TEMP/feature-build.log"
+      - name: Require all eleven real test executions without errors
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os,pathlib,xml.etree.ElementTree as ET
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'sdk'
+          expected={'org.eclipse.jdt.text.tests.templates.TemplateContributionTest':6,'org.eclipse.jdt.debug.tests.ui.TemplateRegistryTests':3,'org.eclipse.pde.ui.tests.runtime.E4TemplateCompletionTest':2}
+          counts={};failures=[]
+          for p in root.glob('**/target/surefire-reports/TEST-*.xml'):
+            for t in ET.parse(p).getroot().iter('testcase'):
+              c=t.get('classname','')
+              if c not in expected: continue
+              counts[c]=counts.get(c,0)+1
+              for tag in ('error','failure','skipped'):
+                e=t.find(tag)
+                if e is not None: failures.append((c,t.get('name'),tag,e.get('message',''),e.text))
+          summary=f'Test counts: {counts}\nFailures: {failures}\n'
+          (root/'validation-summary.txt').write_text(summary);print(summary)
+          assert counts==expected, ('Missing actual tests',counts)
+          assert not failures,failures
+          assert (root.parent/'build-exit.txt').read_text().strip()=='0'
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdk-template-feature-validation
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/feature-build.log
+            ${{ runner.temp }}/build-exit.txt
+            ${{ runner.temp }}/sdk/source-shas.txt
+            ${{ runner.temp }}/sdk/validation-summary.txt
+            ${{ runner.temp }}/sdk/**/target/surefire-reports/TEST-*.xml
+            ${{ runner.temp }}/sdk/**/target/work/data/.metadata/.log
+            ${{ runner.temp }}/sdk/jdt-ui/org.eclipse.jdt.ui/target/*.jar
+            ${{ runner.temp }}/sdk/debug/org.eclipse.jdt.debug.ui/target/*.jar
+            ${{ runner.temp }}/sdk/pde/e4tools/bundles/org.eclipse.e4.tools.jdt.templates/target/*.jar
+            ${{ runner.temp }}/sdk/jdt-feature/org.eclipse.jdt-feature/target/feature.xml
+          retention-days: 14
