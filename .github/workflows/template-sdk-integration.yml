@@ -1,0 +1,36 @@
+name: SDK template integration diagnosis
+on:
+  push:
+    branches: [qa/template-sdk-integration-20260922]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect Jenkins evidence and source snapshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence sources
+          curl --retry 2 -fLsS --max-time 90 'https://ci.eclipse.org/jdt/job/eclipse.jdt.ui-github/job/PR-3212/1/consoleText' -o evidence/pr3212-console.log || true
+          curl --retry 2 -fLsS --max-time 90 'https://ci.eclipse.org/jdt/job/eclipse.jdt.ui-github/job/PR-3212/1/testReport/api/json' -o evidence/pr3212-tests.json || true
+          git archive --format=tar.gz HEAD > sources/jdt-ui.tar.gz
+          for item in 'eclipse-jdt/eclipse.jdt.debug debug' 'eclipse-pde/eclipse.pde pde' 'eclipse-egit/egit egit'; do
+            read -r repo name <<< "$item"
+            git clone --depth 1 "https://github.com/$repo.git" "$RUNNER_TEMP/$name" >/dev/null 2>&1
+            git -C "$RUNNER_TEMP/$name" rev-parse HEAD | tee "evidence/$name-sha.txt"
+            git -C "$RUNNER_TEMP/$name" archive --format=tar.gz HEAD > "sources/$name.tar.gz"
+            find "$RUNNER_TEMP/$name" -name AGENTS.md -o -name CLAUDE.md | tee "evidence/$name-instructions.txt"
+          done
+          grep -n -E 'ERROR|FAILURE|Tests run:|NoSuchMethodError|Failed tests' evidence/pr3212-console.log | tail -100 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdk-template-diagnosis
+          path: |
+            evidence
+            sources
+          retention-days: 14
