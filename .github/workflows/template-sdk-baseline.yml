@@ -1,0 +1,61 @@
+name: Template SDK Jenkins-profile baseline
+on:
+  push:
+    branches: [qa/template-sdk-integration-20260922]
+    paths: [.github/workflows/template-sdk-baseline.yml]
+permissions:
+  contents: read
+jobs:
+  baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7cf9c0a7d8c3090c4fd81470aed70dc3e1b2de6b
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Reproduce Jenkins profiles without changing product sources
+        shell: bash
+        env:
+          MAVEN_OPTS: -Xmx4g
+          GDK_BACKEND: x11
+        run: |
+          set -o pipefail
+          xvfb-run -a mvn -U -e -B -ntp -DskipTests=false clean verify --fail-at-end -Pbree-libs -Papi-check -Pjavadoc -Pbuild-individual-bundles -Dmaven.test.failure.ignore=true -Dcompare-version-with-baselines.skip=false > "$RUNNER_TEMP/baseline.log" 2>&1
+      - name: Summarize failures
+        if: always()
+        shell: bash
+        run: |
+          tail -100 "$RUNNER_TEMP/baseline.log"
+          python3 - <<'PY'
+          import pathlib, xml.etree.ElementTree as ET
+          failures=[]
+          for p in pathlib.Path('.').glob('**/target/surefire-reports/TEST-*.xml'):
+            r=ET.parse(p).getroot()
+            print(p, {k:r.get(k) for k in ('tests','failures','errors','skipped')})
+            for t in r.iter('testcase'):
+              for tag in ('error','failure'):
+                e=t.find(tag)
+                if e is not None:
+                  failures.append(f"{t.get('classname')}.{t.get('name')}\n{e.get('message')}\n{e.text}")
+          pathlib.Path('baseline-failures.txt').write_text('\n\n'.join(failures))
+          print('\n\n'.join(failures)[:16000])
+          if failures: raise SystemExit(1)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: template-sdk-baseline
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/baseline.log
+            baseline-failures.txt
+            **/target/surefire-reports/TEST-*.xml
+            **/target/apianalysis/*.xml
+            **/target/compilelogs/*.xml
+            **/target/work/data/.metadata/.log
+          retention-days: 14
