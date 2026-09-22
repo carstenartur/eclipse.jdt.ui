@@ -16,8 +16,24 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '25'
+          java-version: |
+            8
+            17
+            21
+            25
           cache: maven
+      - name: Configure BREE toolchain identifiers
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, xml.etree.ElementTree as ET
+          root=ET.Element('toolchains')
+          for version,ident in [('8','JavaSE-1.8'),('17','JavaSE-17'),('21','JavaSE-21'),('25','JavaSE-25')]:
+            home=os.environ['JAVA_HOME_'+version+'_X64']
+            tool=ET.SubElement(root,'toolchain');ET.SubElement(tool,'type').text='jdk'
+            p=ET.SubElement(tool,'provides');ET.SubElement(p,'id').text=ident;ET.SubElement(p,'version').text=version
+            c=ET.SubElement(tool,'configuration');ET.SubElement(c,'jdkHome').text=home
+          ET.ElementTree(root).write(pathlib.Path.home()/'.m2/toolchains.xml')
+          PY
       - name: Reproduce Jenkins profiles without changing product sources
         shell: bash
         env:
