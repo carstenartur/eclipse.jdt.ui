@@ -1,0 +1,91 @@
+name: Standalone SDK template consumers
+on:
+  push:
+    branches: [qa/fix-sdk-ci-20260922]
+    paths: [.github/workflows/sdk-standalone-validation.yml]
+permissions:
+  contents: read
+jobs:
+  standalone:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      MAVEN_OPTS: -Xmx4g
+      GDK_BACKEND: x11
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 660e48c54e9035cb386743bd1bbbbd645c6bfc1a
+          fetch-depth: 0
+          path: jdt-ui
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Check out the unchanged published companion commits
+        run: |
+          set -euo pipefail
+          mkdir evidence
+          for item in 'carstenartur/eclipse.jdt.debug debug c37a60078154eb9d98c071dad720fdbefffdf31c' 'carstenartur/eclipse.pde pde ff9dbd96c7a068fd62a0af2e03acd6f94f9026bd' 'eclipse-jdt/eclipse.jdt jdt-feature 36db39a9a02496f1feb6f7d5d7a589c6a7280f03'; do
+            read -r repo name sha <<< "$item"
+            git clone -q --filter=blob:none --no-checkout "https://github.com/$repo.git" "$name"
+            git -C "$name" checkout -q --detach "$sha"
+            test "$(git -C "$name" rev-parse HEAD)" = "$sha"
+          done
+          for name in jdt-ui debug pde jdt-feature; do echo "$name $(git -C "$name" rev-parse HEAD)"; done | tee evidence/source-shas.txt
+      - name: Stage and test the provider in the local Tycho repository
+        run: |
+          set -euo pipefail
+          cd jdt-ui
+          xvfb-run -a mvn -B -ntp -Pbuild-individual-bundles -Dcompare-version-with-baselines.skip=false -DtestClass=org.eclipse.jdt.text.tests.templates.TemplateContributionTest -DfailIfNoTests=false -pl org.eclipse.jdt.text.tests -am install > ../evidence/provider.log 2>&1
+          tail -30 ../evidence/provider.log
+      - name: Build Debug independently, without the provider in its reactor
+        run: |
+          set -euo pipefail
+          cd debug
+          xvfb-run -a mvn -B -ntp -Pbuild-individual-bundles -Dcompare-version-with-baselines.skip=false -DtestClass=org.eclipse.jdt.debug.tests.ui.TemplateRegistryTests -DfailIfNoTests=false -pl org.eclipse.jdt.debug.tests -am install > ../evidence/debug.log 2>&1
+          tail -30 ../evidence/debug.log
+      - name: Stage the JDT feature matching the staged SDK bundles
+        run: |
+          set -euo pipefail
+          cd jdt-feature
+          mvn -B -ntp -Pbuild-individual-bundles -DskipTests -Dcompare-version-with-baselines.skip=false install > ../evidence/jdt-feature.log 2>&1
+          tail -30 ../evidence/jdt-feature.log
+      - name: Build PDE independently, without JDT sources in its reactor
+        run: |
+          set -euo pipefail
+          cd pde
+          xvfb-run -a mvn -B -ntp -Pbuild-individual-bundles -Dcompare-version-with-baselines.skip=false -DtestClass=org.eclipse.pde.ui.tests.runtime.E4TemplateCompletionTest -DfailIfNoTests=false -pl ui/org.eclipse.pde.ui.tests -am verify > ../evidence/pde.log 2>&1
+          tail -30 ../evidence/pde.log
+      - name: Require real test results from all three separate builds
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,xml.etree.ElementTree as ET
+          expected={'org.eclipse.jdt.text.tests.templates.TemplateContributionTest':6,'org.eclipse.jdt.debug.tests.ui.TemplateRegistryTests':3,'org.eclipse.pde.ui.tests.runtime.E4TemplateCompletionTest':2}
+          counts={};failures=[]
+          for directory in ['jdt-ui','debug','pde']:
+              for p in Path(directory).glob('**/target/surefire-reports/TEST-*.xml'):
+                  for t in ET.parse(p).getroot().iter('testcase'):
+                      c=t.get('classname','')
+                      if c not in expected: continue
+                      counts[c]=counts.get(c,0)+1
+                      for tag in ['failure','error','skipped']:
+                          e=t.find(tag)
+                          if e is not None: failures.append([c,t.get('name'),tag,e.get('message'),e.text])
+          result={'tests':counts,'failures':failures,'mode':'separate Maven invocations; provider and matching JDT feature staged through install'}
+          Path('evidence/summary.json').write_text(json.dumps(result,indent=2))
+          print(json.dumps(result,indent=2))
+          assert counts==expected and not failures,result
+          PY
+      - name: Preserve logs and exact test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standalone-sdk-builds
+          include-hidden-files: true
+          path: |
+            evidence
+            **/target/surefire-reports/TEST-*.xml
+            **/target/work/data/.metadata/.log
+          retention-days: 14
