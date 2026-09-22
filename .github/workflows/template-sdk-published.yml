@@ -1,0 +1,127 @@
+name: Published SDK template compatibility
+on:
+  push:
+    branches: [qa/template-sdk-integration-20260922]
+    paths: [.github/workflows/template-sdk-published.yml]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: [compatibility, dependency-negative, full-quality]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+            25
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.m2/repository
+          key: sdk-template-${{ runner.os }}-${{ matrix.kind }}-${{ github.run_id }}
+          restore-keys: sdk-template-${{ runner.os }}-
+      - name: Assemble the exact published commits
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SDK_ROOT="$RUNNER_TEMP/sdk"
+          mkdir -p "$SDK_ROOT/.mvn"
+          git worktree add --detach "$SDK_ROOT/jdt-ui" 660e48c54e9035cb386743bd1bbbbd645c6bfc1a
+          for item in 'carstenartur/eclipse.jdt.debug debug c37a60078154eb9d98c071dad720fdbefffdf31c' 'carstenartur/eclipse.pde pde eea6eee8744211332de8e8bf8ef627c58bede125'; do
+            read -r repo name sha <<< "$item"
+            git clone -q --filter=blob:none --no-checkout "https://github.com/$repo.git" "$SDK_ROOT/$name"
+            git -C "$SDK_ROOT/$name" checkout -q --detach "$sha"
+            test "$(git -C "$SDK_ROOT/$name" rev-parse HEAD)" = "$sha"
+          done
+          cp "$SDK_ROOT/jdt-ui/.mvn/extensions.xml" "$SDK_ROOT/.mvn/extensions.xml"
+          echo '<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><groupId>qa</groupId><artifactId>template-sdk</artifactId><version>1</version><packaging>pom</packaging><modules><module>jdt-ui</module><module>debug</module><module>pde</module></modules></project>' > "$SDK_ROOT/pom.xml"
+          for name in jdt-ui debug pde; do echo "$name $(git -C "$SDK_ROOT/$name" rev-parse HEAD)"; done | tee "$SDK_ROOT/source-shas.txt"
+          python3 - <<'PY'
+          import os,pathlib,xml.etree.ElementTree as ET
+          root=ET.Element('toolchains')
+          for v in ['8','17','21','25']:
+            t=ET.SubElement(root,'toolchain');ET.SubElement(t,'type').text='jdk'
+            p=ET.SubElement(t,'provides');ET.SubElement(p,'id').text='JavaSE-'+('1.8' if v=='8' else v);ET.SubElement(p,'version').text=v
+            c=ET.SubElement(t,'configuration');ET.SubElement(c,'jdkHome').text=os.environ['JAVA_HOME_'+v+'_X64']
+          ET.ElementTree(root).write(pathlib.Path.home()/'.m2/toolchains.xml')
+          PY
+          if [ '${{ matrix.kind }}' = dependency-negative ]; then
+            sed -i 's/\[3.40.100,4.0.0)/[3.33.0,4.0.0)/' "$SDK_ROOT/debug/org.eclipse.jdt.debug.ui/META-INF/MANIFEST.MF"
+            sed -i 's/\[3.40.100,4.0.0)/[3.20.0,4.0.0)/' "$SDK_ROOT/pde/e4tools/bundles/org.eclipse.e4.tools.jdt.templates/META-INF/MANIFEST.MF"
+            for name in debug pde; do
+              git -C "$SDK_ROOT/$name" add .
+              git -C "$SDK_ROOT/$name" -c user.name='Validation' -c user.email='validation@example.invalid' commit -qm 'Negative control: permit an incompatible provider'
+            done
+          fi
+      - name: Build and execute the actual plug-in tests
+        shell: bash
+        env:
+          MAVEN_OPTS: -Xmx4g
+          GDK_BACKEND: x11
+        run: |
+          cd "$RUNNER_TEMP/sdk"
+          args=(-B -ntp -e --fail-at-end -Pbuild-individual-bundles -DskipTests=false -Dmaven.test.failure.ignore=true -Dcompare-version-with-baselines.skip=false -Dtest=TemplateContributionTest,TemplateRegistryTests,E4TemplateCompletionTest -DfailIfNoTests=false -pl :org.eclipse.jdt.text.tests,:org.eclipse.jdt.debug.tests,:org.eclipse.pde.ui.tests -am)
+          if [ '${{ matrix.kind }}' = full-quality ]; then args+=(-Pbree-libs -Papi-check -Pjavadoc); fi
+          set +e
+          xvfb-run -a mvn "${args[@]}" verify > "$RUNNER_TEMP/build.log" 2>&1
+          echo $? > "$RUNNER_TEMP/build-exit.txt"
+          tail -80 "$RUNNER_TEMP/build.log"
+      - name: Require test execution and check the expected outcomes
+        shell: bash
+        env:
+          KIND: ${{ matrix.kind }}
+        run: |
+          python3 - <<'PY'
+          import os,pathlib,xml.etree.ElementTree as ET
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'sdk'
+          expected={'org.eclipse.jdt.text.tests.templates.TemplateContributionTest':6,'org.eclipse.jdt.debug.tests.ui.TemplateRegistryTests':3,'org.eclipse.pde.ui.tests.runtime.E4TemplateCompletionTest':2}
+          counts={};failures=[]
+          for p in root.glob('**/target/surefire-reports/TEST-*.xml'):
+            for t in ET.parse(p).getroot().iter('testcase'):
+              c=t.get('classname','')
+              if c not in expected: continue
+              counts[c]=counts.get(c,0)+1
+              for tag in ('error','failure','skipped'):
+                e=t.find(tag)
+                if e is not None: failures.append((c,t.get('name'),tag,e.get('message',''),e.text))
+          summary=f'Test counts: {counts}\nFailures: {failures}\n'
+          (root/'validation-summary.txt').write_text(summary);print(summary[:30000])
+          assert counts==expected, ('Missing test executions', counts)
+          if os.environ['KIND']=='dependency-negative':
+            assert len(failures)==2 and all(f[2]=='failure' and 'reject' in f[3] for f in failures), failures
+          else: assert not failures, failures
+          assert (pathlib.Path(os.environ['RUNNER_TEMP'])/'build-exit.txt').read_text().strip()=='0'
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: published-sdk-${{ matrix.kind }}
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/build.log
+            ${{ runner.temp }}/build-exit.txt
+            ${{ runner.temp }}/sdk/source-shas.txt
+            ${{ runner.temp }}/sdk/validation-summary.txt
+            ${{ runner.temp }}/sdk/**/target/surefire-reports/TEST-*.xml
+            ${{ runner.temp }}/sdk/**/target/apianalysis/*.xml
+            ${{ runner.temp }}/sdk/**/target/compilelogs/*.xml
+            ${{ runner.temp }}/sdk/**/target/work/data/.metadata/.log
+            ${{ runner.temp }}/sdk/jdt-ui/org.eclipse.jdt.ui/target/*.jar
+            ${{ runner.temp }}/sdk/debug/org.eclipse.jdt.debug.ui/target/*.jar
+            ${{ runner.temp }}/sdk/pde/e4tools/bundles/org.eclipse.e4.tools.jdt.templates/target/*.jar
+          retention-days: 14
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ~/.m2/repository
+          key: sdk-template-${{ runner.os }}-${{ matrix.kind }}-${{ github.run_id }}
