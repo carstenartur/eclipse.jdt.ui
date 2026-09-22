@@ -59,7 +59,7 @@ jobs:
               s = p.read_text()
               before = 'if(cu.getTypes()[0].isImplicitlyDeclared()) {'
               assert s.count(before) == 1
-              p.write_text(s.replace(before, 'if(false) {'))
+              p.write_text(s.replace(before, 'if(cu.getTypes()[0].isImplicitlyDeclared() && cu.getElementName().isEmpty()) {'))
           PY
           git diff --check
           git diff > evidence/change.patch
@@ -93,7 +93,7 @@ jobs:
               assert result['exit_code'] != '0' and len(failures) == 1, result
               assert failures[0][0] == 'testWrongPackageStatementImplicitClass', result
               if os.environ['MODE'] == 'original':
-                  assert 'Unexpected number of problems' in failures[0][1], result
+                  assert 'Wrong number of problems' in failures[0][1], result
               else:
                   assert 'must not be offered' in failures[0][1], result
           PY
