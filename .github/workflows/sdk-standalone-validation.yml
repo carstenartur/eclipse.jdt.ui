@@ -51,12 +51,45 @@ jobs:
           cd jdt-feature
           mvn -B -ntp -Pbuild-individual-bundles -DskipTests -Dcompare-version-with-baselines.skip=false install > ../evidence/jdt-feature.log 2>&1
           tail -30 ../evidence/jdt-feature.log
-      - name: Build PDE independently, without JDT sources in its reactor
+      - name: Publish a local p2 candidate without relaxing PDE's cache policy
+        run: |
+          python3 - <<'PY'
+          import shutil,zipfile
+          from pathlib import Path
+          dest=Path('candidate-publisher/target/source')
+          (dest/'plugins').mkdir(parents=True)
+          (dest/'features').mkdir()
+          copied=[]
+          for repo in ['jdt-ui','debug','jdt-feature']:
+              for jar in Path(repo).glob('*/target/*.jar'):
+                  with zipfile.ZipFile(jar) as z:
+                      names=z.namelist()
+                      if 'feature.xml' in names:
+                          folder='features'
+                      elif 'META-INF/MANIFEST.MF' in names and b'Bundle-SymbolicName:' in z.read('META-INF/MANIFEST.MF'):
+                          folder='plugins'
+                      else:
+                          continue
+                  target=dest/folder/jar.name
+                  assert not target.exists(),target
+                  shutil.copy2(jar,target)
+                  copied.append(str(jar))
+          assert any('org.eclipse.jdt.ui-3.40.100' in x for x in copied),copied
+          Path('evidence/p2-candidate-inputs.txt').write_text('\n'.join(copied))
+          Path('candidate-publisher/pom.xml').write_text('<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion><groupId>qa</groupId><artifactId>sdk-candidate</artifactId><version>1</version></project>')
+          url=Path('candidate-publisher/target/repository').resolve().as_uri()
+          Path('candidate-settings.xml').write_text('<settings><profiles><profile><id>sdk-candidate</id><repositories><repository><id>sdk-candidate</id><layout>p2</layout><url>'+url+'</url></repository></repositories></profile></profiles><activeProfiles><activeProfile>sdk-candidate</activeProfile></activeProfiles></settings>')
+          PY
+          mvn -f candidate-publisher/pom.xml -B -ntp org.eclipse.tycho.extras:tycho-p2-extras-plugin:5.0.4:publish-features-and-bundles > evidence/publisher.log 2>&1
+          test -f candidate-publisher/target/repository/content.jar
+          grep -- '-Dtycho.localArtifacts=ignore' pde/.mvn/maven.config
+      - name: Build PDE independently against the explicit candidate p2 repository
         run: |
           set -euo pipefail
           cd pde
-          xvfb-run -a mvn -B -ntp -Pbuild-individual-bundles -Dcompare-version-with-baselines.skip=false -DtestClass=org.eclipse.pde.ui.tests.runtime.E4TemplateCompletionTest -DfailIfNoTests=false -pl ui/org.eclipse.pde.ui.tests -am verify > ../evidence/pde.log 2>&1
+          xvfb-run -a mvn -s "$GITHUB_WORKSPACE/candidate-settings.xml" -B -ntp -Pbuild-individual-bundles -Dcompare-version-with-baselines.skip=false -DtestClass=org.eclipse.pde.ui.tests.runtime.E4TemplateCompletionTest -DfailIfNoTests=false -pl ui/org.eclipse.pde.ui.tests -am verify > ../evidence/pde.log 2>&1
           tail -30 ../evidence/pde.log
+          test -z "$(git status --porcelain --untracked-files=no)"
       - name: Require real test results from all three separate builds
         run: |
           python3 - <<'PY'
@@ -73,7 +106,7 @@ jobs:
                       for tag in ['failure','error','skipped']:
                           e=t.find(tag)
                           if e is not None: failures.append([c,t.get('name'),tag,e.get('message'),e.text])
-          result={'tests':counts,'failures':failures,'mode':'separate Maven invocations; provider and matching JDT feature staged through install'}
+          result={'tests':counts,'failures':failures,'mode':'separate Maven invocations; PDE localArtifacts=ignore unchanged; provider and matching feature supplied by explicit candidate p2 repository'}
           Path('evidence/summary.json').write_text(json.dumps(result,indent=2))
           print(json.dumps(result,indent=2))
           assert counts==expected and not failures,result
@@ -86,6 +119,8 @@ jobs:
           include-hidden-files: true
           path: |
             evidence
+            candidate-settings.xml
+            candidate-publisher/target/repository/content.jar
             **/target/surefire-reports/TEST-*.xml
             **/target/work/data/.metadata/.log
           retention-days: 14
