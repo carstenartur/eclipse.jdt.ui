@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply regression tests only
         run: |
-          git apply .github/qa-regressions.patch
+          git apply --recount .github/qa-regressions.patch
           git diff --check
       - uses: actions/setup-java@v4
         with:
