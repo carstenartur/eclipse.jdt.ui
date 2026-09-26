@@ -1,121 +1,83 @@
-name: PR 3231 QA
+name: Publish verified PR 3231 QA
 on:
   push:
     branches: [verify/startup-1860-qa]
 permissions:
-  contents: read
+  contents: write
+  actions: read
 concurrency:
-  group: startup-1860-qa
-  cancel-in-progress: true
+  group: startup-1860-qa-publish
+  cancel-in-progress: false
 jobs:
-  verify:
-    strategy:
-      fail-fast: false
-      matrix:
-        phase: [baseline, fixed]
+  publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Apply identical regression tests
+      - name: Check exact successful verification run
         env:
-          PHASE: ${{ matrix.phase }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git apply --recount .github/qa-regressions.patch
-          if [ "$PHASE" = fixed ]; then git apply --recount .github/qa-production.patch; fi
+          gh api repos/carstenartur/eclipse.jdt.ui/actions/runs/36229743807 > /tmp/verified-run.json
+          python - <<'PY'
+          import json
+          with open('/tmp/verified-run.json') as f:
+              r = json.load(f)
+          assert r['head_sha'] == 'd2c3b0064a9bb6ddc7abc72a1e48289ddbeb3f0c', r['head_sha']
+          assert r['status'] == 'completed' and r['conclusion'] == 'success', (r['status'], r['conclusion'])
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          name: pr3231-qa-fixed
+          run-id: 36229743807
+          github-token: ${{ github.token }}
+          path: verified
+      - name: Validate reports and tested patch
+        run: |
+          echo '692203d7a87ae0f9f0efe2ec522b0088c9e43957ce3f49deddc1e269aaeb7800  verified/qa-candidate.patch' | sha256sum -c -
           python - <<'PY'
           from pathlib import Path
-          p = Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java')
-          s = p.read_text().replace('import java.lang.reflect.Field;', 'import java.lang.reflect.Field;\nimport java.util.Arrays;')
-          s = s.replace('import org.eclipse.ui.part.FileEditorInput;', 'import org.eclipse.ui.part.FileEditorInput;\nimport org.eclipse.ui.progress.UIJob;')
-          s = s.replace('Job[] jobs= Job.getJobManager().find(breadcrumb);', 'Job[] jobs= Arrays.stream(Job.getJobManager().find(breadcrumb)).filter(job -> !(job instanceof UIJob)).toArray(Job[]::new);')
-          p.write_text(s)
-          PY
-          python .github/qa-refine-tests.py
-          git diff --check
-          git diff > qa-candidate.patch
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '25'
-          cache: maven
-      - name: Install SWT browser runtime
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y libwebkit2gtk-4.1-0
-      - name: Verify focused regressions
-        env:
-          PHASE: ${{ matrix.phase }}
-        run: |
-          set +e
-          set -o pipefail
-          xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
-            -pl org.eclipse.jdt.ui.tests -am -Dtest=BreadcrumbStartupTests \
-            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dcompare-version-with-baselines.skip=true -DskipTests=false | tee qa-focused.log
-          rc=$?
-          set -e
-          echo "$rc" > qa-exit-code.txt
-          if [ "$PHASE" = fixed ]; then test "$rc" = 0; else
-            test "$rc" != 0
-            python - <<'PY'
-          from pathlib import Path
           import xml.etree.ElementTree as E
-          reports = list(Path('org.eclipse.jdt.ui.tests/target/surefire-reports').glob('TEST-*.xml'))
-          assert reports, 'No test reports; infrastructure failure is not a red test'
-          failed = []
-          for p in reports:
-              root = E.parse(p).getroot()
-              assert int(root.get('errors', 0)) == 0, p
-              failed += [c.get('name') for c in root.iter('testcase') if c.find('failure') is not None]
-          print('Confirmed failing regressions:', failed)
-          assert 'classpathChangeBeforeFirstPublicationInvalidatesCompletedWorker' in failed
+          for phase in ('focused', 'package', 'repeat-1', 'repeat-2', 'repeat-3', 'full'):
+              reports = list(Path('verified/verified-reports', phase).glob('TEST-*.xml'))
+              assert reports, phase
+              for p in reports:
+                  r = E.parse(p).getroot()
+                  assert int(r.get('failures', 0)) == 0 and int(r.get('errors', 0)) == 0, (phase, p, r.attrib)
           PY
-          fi
-          mkdir -p verified-reports/focused
-          cp org.eclipse.jdt.ui.tests/target/surefire-reports/* verified-reports/focused/
-      - name: Run package-view suite
-        if: matrix.phase == 'fixed'
+      - name: Apply only tested changes to unchanged PR head
         run: |
-          set -o pipefail
-          xvfb-run -a mvn -B -e verify -Pbuild-individual-bundles \
-            -pl org.eclipse.jdt.ui.tests -am -Dtest=PackageExplorerTests \
-            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dcompare-version-with-baselines.skip=true -DskipTests=false | tee qa-package.log
-          mkdir -p verified-reports/package
-          cp org.eclipse.jdt.ui.tests/target/surefire-reports/* verified-reports/package/
-      - name: Repeat concurrency scenarios
-        if: matrix.phase == 'fixed'
-        run: |
-          set -o pipefail
-          for attempt in 1 2 3; do
-            xvfb-run -a mvn -B -e verify -Pbuild-individual-bundles \
-              -pl org.eclipse.jdt.ui.tests -am -Dtest=BreadcrumbStartupTests \
-              -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
-              -Dcompare-version-with-baselines.skip=true -DskipTests=false | tee "qa-repeat-${attempt}.log"
-            mkdir -p "verified-reports/repeat-${attempt}"
-            cp org.eclipse.jdt.ui.tests/target/surefire-reports/* "verified-reports/repeat-${attempt}/"
-          done
-      - name: Run unfiltered JDT UI module suites
-        if: matrix.phase == 'fixed'
-        run: |
-          set -o pipefail
-          xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
-            -pl org.eclipse.jdt.ui.tests -am \
-            -Dcompare-version-with-baselines.skip=true -DskipTests=false | tee qa-full.log
-          mkdir -p verified-reports/full
-          cp org.eclipse.jdt.ui.tests/target/surefire-reports/* verified-reports/full/
-      - name: Collect reports
-        if: always()
-        uses: actions/upload-artifact@v4
+          git fetch --depth=1 origin refs/heads/fix/startup-1860
+          test "$(git rev-parse FETCH_HEAD)" = '8caf1b6dd1f27c909bdb8318feec76be0d8af136'
+          git checkout --detach FETCH_HEAD
+          git apply --check verified/qa-candidate.patch
+          git apply verified/qa-candidate.patch
+          git diff --check
+          python - <<'PY'
+          import subprocess
+          expected = {
+              'org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/JavaEditorBreadcrumb.java': '20963cd3780c612482b2f9cc82962550963422a2',
+              'org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java': '31d4b5f1d98bb918c5af4ae49ea8fb2d14c7bd5d',
+          }
+          paths = set(subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines())
+          assert paths == set(expected), paths
+          for path, sha in expected.items():
+              assert subprocess.check_output(['git', 'hash-object', path], text=True).strip() == sha, path
+          PY
+          git config user.name 'Carsten Hammer'
+          git config user.email 'carsten.hammer@t-online.de'
+          git add org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/JavaEditorBreadcrumb.java \
+            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java
+          git commit -m 'Handle breadcrumb classpath invalidation without UI-thread model access' \
+            -m 'Version readiness across coalesced model notifications and queued initialization completions. Defer selection resolution until the model is ready and keep model listeners independent of viewer state.' \
+            -m 'Add worker-thread regressions and negative controls. Verified with the package-view suite, repeated lifecycle tests and unfiltered JDT UI module suites; see QA run 36229743807.' \
+            -m 'Assisted-by: OpenAI ChatGPT' \
+            -m 'Signed-off-by: Carsten Hammer <carsten.hammer@t-online.de>'
+          git push origin HEAD:refs/heads/fix/startup-1860
+          git log -1 --format=fuller > qa-publish.txt
+          git diff --stat HEAD^ HEAD >> qa-publish.txt
+      - uses: actions/upload-artifact@v4
         with:
-          name: pr3231-qa-${{ matrix.phase }}
-          include-hidden-files: true
-          path: |
-            qa-*.log
-            qa-exit-code.txt
-            qa-candidate.patch
-            verified-reports/**
-            **/target/surefire-reports/**
-            **/target/work/data/.metadata/*.log
+          name: pr3231-qa-published
+          path: qa-publish.txt
           retention-days: 7
