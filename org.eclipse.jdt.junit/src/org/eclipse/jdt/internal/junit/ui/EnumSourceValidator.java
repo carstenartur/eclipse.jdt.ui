@@ -449,7 +449,8 @@ public final class EnumSourceValidator {
 
 		String from= getStringMember(enumSourceBinding, MEMBER_FROM);
 		String to= getStringMember(enumSourceBinding, MEMBER_TO);
-		List<String> effectiveValues= computeEffectiveValues(enumConstants, from, to, mode, names);
+		// Use set membership for filtering; retain the original names for source edits.
+		List<String> effectiveValues= computeEffectiveValues(enumConstants, from, to, mode, new HashSet<>(names));
 		if (effectiveValues == null) {
 			return null;
 		}
@@ -575,11 +576,7 @@ public final class EnumSourceValidator {
 		}
 
 		IJavaElement javaElement= enumType.getJavaElement();
-		if (!(javaElement instanceof IType)) {
-			return result;
-		}
-		IType javaType= (IType) javaElement;
-		if (!javaType.isEnum()) {
+		if (!(javaElement instanceof IType javaType) || !javaType.isEnum()) {
 			return result;
 		}
 
@@ -594,9 +591,7 @@ public final class EnumSourceValidator {
 	private static String getMode(IAnnotationBinding binding) {
 		for (IMemberValuePairBinding pair : binding.getDeclaredMemberValuePairs()) {
 			if (MEMBER_MODE.equals(pair.getName())) {
-				return pair.getValue() instanceof IVariableBinding
-						? ((IVariableBinding) pair.getValue()).getName()
-						: null;
+				return pair.getValue() instanceof IVariableBinding value ? value.getName() : null;
 			}
 		}
 		return MODE_INCLUDE;
@@ -637,7 +632,7 @@ public final class EnumSourceValidator {
 	}
 
 	private static List<String> computeEffectiveValues(List<String> enumConstants, String from,
-			String to, String mode, List<String> names) {
+			String to, String mode, Set<String> names) {
 		int first= from == null || from.isEmpty() ? 0 : enumConstants.indexOf(from);
 		int last= to == null || to.isEmpty() ? enumConstants.size() - 1 : enumConstants.indexOf(to);
 		if (first < 0 || last < first) {

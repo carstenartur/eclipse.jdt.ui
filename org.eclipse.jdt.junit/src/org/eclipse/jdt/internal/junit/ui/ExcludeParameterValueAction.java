@@ -14,6 +14,9 @@
 package org.eclipse.jdt.internal.junit.ui;
 
 import org.eclipse.jface.action.Action;
+
+import org.eclipse.ui.PartInitException;
+
 import org.eclipse.jdt.core.JavaModelException;
 
 import org.eclipse.jdt.ui.JavaUI;
@@ -59,9 +62,7 @@ public final class ExcludeParameterValueAction extends Action {
 			} else {
 				setEnabled(false);
 			}
-		} catch (JavaModelException ex) {
-			JUnitPlugin.log(ex);
-		} catch (Exception ex) {
+		} catch (JavaModelException | PartInitException ex) {
 			JUnitPlugin.log(ex);
 		}
 	}

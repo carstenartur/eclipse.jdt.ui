@@ -48,7 +48,7 @@ public final class TestMethodFinder {
 		String testName= testSuiteElement.getTestName();
 		int index= testName.indexOf(PARAM_START);
 		if (index < 0) {
-			return null;
+			return null; // Not a parameterized test method signature
 		}
 
 		String className= testSuiteElement.getSuiteTypeName();
@@ -56,6 +56,7 @@ public final class TestMethodFinder {
 			return null;
 		}
 
+		String methodName= testName.substring(0, index);
 		IJavaProject javaProject= testSuiteElement.getTestRunSession().getLaunchedProject();
 		if (javaProject == null) {
 			return null;
@@ -66,7 +67,7 @@ public final class TestMethodFinder {
 			if (type == null) {
 				return null;
 			}
-			return findMethod(type, testName.substring(0, index), testSuiteElement.getParameterTypes());
+			return findMethod(type, methodName, testSuiteElement.getParameterTypes());
 		} catch (JavaModelException | IllegalArgumentException e) {
 			JUnitPlugin.log(e);
 			return null;
@@ -87,9 +88,11 @@ public final class TestMethodFinder {
 		IMethod result= null;
 		for (IMethod method : type.getMethods()) {
 			if (!methodName.equals(method.getElementName())
-					|| parameterTypes != null && !hasParameterTypes(method, parameterTypes)) {
+					|| (parameterTypes != null && !hasParameterTypes(method, parameterTypes))) {
 				continue;
 			}
+			// Only accept a unique match. Without parameter metadata, another overload
+			// may match later; a second matching method makes the selection ambiguous.
 			if (result != null) {
 				return null;
 			}

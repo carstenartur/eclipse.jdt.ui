@@ -13,6 +13,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -38,7 +39,7 @@ final class EnumSourceTestSupport {
 		String[] parameterTypes= new String[signatures.length];
 		for (int i= 0; i < signatures.length; i++) {
 			parameterTypes[i]= JavaModelUtil.getResolvedTypeName(signatures[i], method.getDeclaringType(), '$');
-			assertNotNull(parameterTypes[i]);
+			assertNotNull("Expected resolved parameter type at index " + i + " for " + method.getElementName(), parameterTypes[i]); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 		String className= method.getDeclaringType().getFullyQualifiedName('$');
 		String methodName= method.getElementName() + '(' + String.join(",", parameterTypes) + ')'; //$NON-NLS-1$
@@ -56,17 +57,27 @@ final class EnumSourceTestSupport {
 		return target == null ? null : target.enumConstantName();
 	}
 
+	static void assertEnumConstantForInvocation(IMethod method, int index, String expected) throws JavaModelException {
+		assertEquals("Expected enum constant at invocation index " + index + " for " + method.getElementName(), //$NON-NLS-1$ //$NON-NLS-2$
+				expected, enumConstantForInvocation(method, index));
+	}
+
+	static void assertNoEnumConstantForInvocation(IMethod method, int index) throws JavaModelException {
+		assertNull("Expected no editable enum constant at invocation index " + index + " for " + method.getElementName(), //$NON-NLS-1$ //$NON-NLS-2$
+				enumConstantForInvocation(method, index));
+	}
+
 	static void assertExcludeMode(IMethod method) throws JavaModelException {
 		IMemberValuePair mode= member(method, "mode"); //$NON-NLS-1$
-		assertNotNull(mode);
-		assertTrue(mode.getValue() instanceof String);
+		assertNotNull("Expected an explicit EnumSource mode on " + method.getElementName(), mode); //$NON-NLS-1$
 		String value= (String) mode.getValue();
-		assertTrue(value.equals("EXCLUDE") || value.endsWith(".EXCLUDE")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue("Expected EXCLUDE mode but found: " + value, //$NON-NLS-1$
+				"EXCLUDE".equals(value) || (value != null && value.endsWith(".EXCLUDE"))); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	static void assertFilterRemoved(IMethod method) throws JavaModelException {
-		assertNull(member(method, "mode")); //$NON-NLS-1$
-		assertNull(member(method, "names")); //$NON-NLS-1$
+		assertNull("Expected the mode attribute to be removed from " + method.getElementName(), member(method, "mode")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertNull("Expected the names attribute to be removed from " + method.getElementName(), member(method, "names")); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	private static IMemberValuePair member(IMethod method, String name) throws JavaModelException {

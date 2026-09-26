@@ -13,7 +13,8 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
-import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.enumConstantForInvocation;
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.assertEnumConstantForInvocation;
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.assertNoEnumConstantForInvocation;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -40,6 +41,7 @@ import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.Signature;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.AST;
@@ -108,10 +110,9 @@ public class EnumSourceSafetyTest {
 				""");
 		IMethod method= getMethod(cu, "testWithEnum", "QColor;"); //$NON-NLS-1$ //$NON-NLS-2$
 
-		assertEquals("ZETA", enumConstantForInvocation(method, 1)); //$NON-NLS-1$
-		assertEquals("ALPHA", enumConstantForInvocation(method, 2)); //$NON-NLS-1$
-		assertEquals("MIDDLE", enumConstantForInvocation(method, 3)); //$NON-NLS-1$
-		assertCompiles(cu);
+		assertEnumConstantForInvocation(method, 1, "ZETA"); //$NON-NLS-1$
+		assertEnumConstantForInvocation(method, 2, "ALPHA"); //$NON-NLS-1$
+		assertEnumConstantForInvocation(method, 3, "MIDDLE"); //$NON-NLS-1$
 	}
 
 	@Test
@@ -132,10 +133,9 @@ public class EnumSourceSafetyTest {
 				""");
 		IMethod method= getMethod(cu, "testWithEnum", "QMode;"); //$NON-NLS-1$ //$NON-NLS-2$
 
-		assertEquals("INCLUDE", enumConstantForInvocation(method, 1)); //$NON-NLS-1$
-		assertEquals("MATCH_NONE", enumConstantForInvocation(method, 5)); //$NON-NLS-1$
-		assertNull(enumConstantForInvocation(method, 6));
-		assertCompiles(cu);
+		assertEnumConstantForInvocation(method, 1, "INCLUDE"); //$NON-NLS-1$
+		assertEnumConstantForInvocation(method, 5, "MATCH_NONE"); //$NON-NLS-1$
+		assertNoEnumConstantForInvocation(method, 6);
 	}
 
 	@Test
@@ -166,13 +166,13 @@ public class EnumSourceSafetyTest {
 		IMethod second= TestMethodFinder.findMethod(
 				type, "overloaded", new String[] { "second.Color" }); //$NON-NLS-1$ //$NON-NLS-2$
 
-		assertNotNull(first);
-		assertNotNull(second);
-		assertNotEquals(first, second);
+		assertNotNull("Expected the first.Color overload to be resolved", first); //$NON-NLS-1$
+		assertNotNull("Expected the second.Color overload to be resolved", second); //$NON-NLS-1$
+		assertNotEquals("Expected distinct methods for the two qualified parameter types", first, second); //$NON-NLS-1$
 		assertEquals("first.Color", Signature.toString(first.getParameterTypes()[0])); //$NON-NLS-1$
 		assertEquals("second.Color", Signature.toString(second.getParameterTypes()[0])); //$NON-NLS-1$
-		assertNull(TestMethodFinder.findMethod(type, "overloaded", new String[] { "Color" })); //$NON-NLS-1$ //$NON-NLS-2$
-		assertCompiles(cu);
+		assertNull("Expected an unqualified parameter type to be rejected", //$NON-NLS-1$
+				TestMethodFinder.findMethod(type, "overloaded", new String[] { "Color" })); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	@Test
@@ -203,15 +203,19 @@ public class EnumSourceSafetyTest {
 		IMethod nested= TestMethodFinder.findMethod(
 				type, "values", new String[] { "[Ltest1.MyTest$Value;" }); //$NON-NLS-1$ //$NON-NLS-2$
 
-		assertNotNull(strings);
-		assertNotNull(primitives);
-		assertNotNull(nested);
+		assertNotNull("Expected the String[] overload to be resolved", strings); //$NON-NLS-1$
+		assertNotNull("Expected the int[][] overload to be resolved", primitives); //$NON-NLS-1$
+		assertNotNull("Expected the nested Value[] overload to be resolved", nested); //$NON-NLS-1$
 		assertEquals("String[]", Signature.toString(strings.getParameterTypes()[0])); //$NON-NLS-1$
 		assertEquals("int[][]", Signature.toString(primitives.getParameterTypes()[0])); //$NON-NLS-1$
 		assertEquals("Value[]", Signature.toString(nested.getParameterTypes()[0])); //$NON-NLS-1$
-		assertCompiles(cu);
 	}
 
+	/**
+	 * A ValueSource hidden behind five levels of meta-annotations is still an additional
+	 * argument source. Together with EnumSource it makes invocation-index mapping
+	 * ambiguous, so exclusion must be unavailable rather than guess an enum constant.
+	 */
 	@Test
 	public void testDeepComposedArgumentSourceIsRejected() throws Exception {
 		ICompilationUnit cu= createCompilationUnit("test1", "MyTest.java", """
@@ -268,8 +272,7 @@ public class EnumSourceSafetyTest {
 				""");
 		IMethod method= getMethod(cu, "mixed", "QObject;"); //$NON-NLS-1$ //$NON-NLS-2$
 
-		assertNull(enumConstantForInvocation(method, 1));
-		assertCompiles(cu);
+		assertNoEnumConstantForInvocation(method, 1);
 	}
 
 	@Test
@@ -290,7 +293,7 @@ public class EnumSourceSafetyTest {
 				}
 				""");
 		IMethod method= getMethod(cu, "testWithEnum", "QColor;"); //$NON-NLS-1$ //$NON-NLS-2$
-		assertEquals("BLUE", enumConstantForInvocation(method, 2)); //$NON-NLS-1$
+		assertEnumConstantForInvocation(method, 2, "BLUE"); //$NON-NLS-1$
 
 		TestRunSession session= new TestRunSession("EnumSource include run", fJProject); //$NON-NLS-1$
 		TestSuiteElement suite= createParameterizedSuite(session, "include-suite", 2); //$NON-NLS-1$
@@ -302,13 +305,12 @@ public class EnumSourceSafetyTest {
 
 		ExcludeParameterValueAction action= new ExcludeParameterValueAction();
 		action.update(blueCase);
-		assertTrue(action.isEnabled());
-		assertCompiles(cu);
+		assertTrue("Expected exclusion for the INCLUDE invocation " + blueCase.getUniqueId(), action.isEnabled()); //$NON-NLS-1$
 	}
 
 	@Test
 	public void testInvocationMappingRequiresUniqueId() throws Exception {
-		ICompilationUnit cu= createCompilationUnit("test1", "MyTest.java", """
+		createCompilationUnit("test1", "MyTest.java", """
 				package test1;
 
 				import org.junit.jupiter.params.ParameterizedTest;
@@ -334,7 +336,7 @@ public class EnumSourceSafetyTest {
 
 		ExcludeParameterValueAction action= new ExcludeParameterValueAction();
 		action.update(validCase);
-		assertTrue(action.isEnabled());
+		assertTrue("Expected exclusion for the valid invocation " + validCase.getUniqueId(), action.isEnabled()); //$NON-NLS-1$
 
 		TestSuiteElement fallbackSuite= createParameterizedSuite(session, "fallback-suite", 3); //$NON-NLS-1$
 		TestCaseElement withoutUniqueId= new TestCaseElement(fallbackSuite, "fallback-case-1", //$NON-NLS-1$
@@ -345,15 +347,49 @@ public class EnumSourceSafetyTest {
 				"third(test1.MyTest)", "third", true, null, null); //$NON-NLS-1$ //$NON-NLS-2$
 
 		action.update(withoutUniqueId);
-		assertFalse(action.isEnabled());
+		assertFalse("Expected exclusion to be disabled without a unique ID", action.isEnabled()); //$NON-NLS-1$
 
 		TestSuiteElement invalidSuite= createParameterizedSuite(session, "invalid-suite", 1); //$NON-NLS-1$
 		TestCaseElement invalidCase= new TestCaseElement(invalidSuite, "invalid-case", //$NON-NLS-1$
 				"invalid(test1.MyTest)", "invalid", true, null, //$NON-NLS-1$ //$NON-NLS-2$
 				"[test-template-invocation:#99]"); //$NON-NLS-1$
 		action.update(invalidCase);
-		assertFalse(action.isEnabled());
-		assertCompiles(cu);
+		assertFalse("Expected exclusion to be disabled for " + invalidCase.getUniqueId(), action.isEnabled()); //$NON-NLS-1$
+	}
+
+	@Test
+	public void testMethodFinderRejectsNonAdjacentOverloadsWithoutMetadata() throws Exception {
+		ICompilationUnit cu= createCompilationUnit("test1", "MyTest.java", """
+				package test1;
+				public class MyTest {
+				    public void overloaded(String value) {}
+				    public void unrelated() {}
+				    public void overloaded(int value) {}
+				}
+				""");
+		IType type= cu.getType("MyTest"); //$NON-NLS-1$
+
+		assertNull("Expected non-adjacent overloads to remain ambiguous without parameter metadata", //$NON-NLS-1$
+				TestMethodFinder.findMethod(type, "overloaded", null)); //$NON-NLS-1$
+		assertEquals("Expected parameter metadata to select the String overload", //$NON-NLS-1$
+				type.getMethod("overloaded", new String[] { "QString;" }), //$NON-NLS-1$ //$NON-NLS-2$
+				TestMethodFinder.findMethod(type, "overloaded", new String[] { "java.lang.String" })); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Test
+	public void testMethodFinderKeepsUniqueMatchAcrossUnrelatedMethods() throws Exception {
+		ICompilationUnit cu= createCompilationUnit("test1", "MyTest.java", """
+				package test1;
+				public class MyTest {
+				    public void unique(String value) {}
+				    public void unrelated(int value) {}
+				}
+				""");
+		IType type= cu.getType("MyTest"); //$NON-NLS-1$
+
+		assertEquals("Expected an unrelated later method not to invalidate the unique match", //$NON-NLS-1$
+				type.getMethod("unique", new String[] { "QString;" }), //$NON-NLS-1$ //$NON-NLS-2$
+				TestMethodFinder.findMethod(type, "unique", null)); //$NON-NLS-1$
 	}
 
 	private TestSuiteElement createParameterizedSuite(TestRunSession session, String id, int childCount) {
@@ -367,14 +403,16 @@ public class EnumSourceSafetyTest {
 	private ICompilationUnit createCompilationUnit(String packageName, String unitName, String source)
 			throws Exception {
 		IPackageFragment pack= fSourceFolder.createPackageFragment(packageName, false, null);
-		return pack.createCompilationUnit(unitName, source, false, null);
+		ICompilationUnit cu= pack.createCompilationUnit(unitName, source, false, null);
+		assertCompiles(cu);
+		return cu;
 	}
 
 	private static IMethod getMethod(ICompilationUnit cu, String name, String parameterSignature) {
 		return cu.getType("MyTest").getMethod(name, new String[] { parameterSignature }); //$NON-NLS-1$
 	}
 
-	private static void assertCompiles(ICompilationUnit cu) {
+	private static void assertCompiles(ICompilationUnit cu) throws JavaModelException {
 		ASTParser parser= ASTParser.newParser(AST.getJLSLatest());
 		parser.setSource(cu);
 		parser.setResolveBindings(true);
@@ -384,6 +422,6 @@ public class EnumSourceSafetyTest {
 				.filter(IProblem::isError)
 				.map(IProblem::toString)
 				.collect(Collectors.joining(System.lineSeparator()));
-		assertEquals("", errors); //$NON-NLS-1$
+		assertEquals("Expected no compile errors for source:" + System.lineSeparator() + cu.getSource(), "", errors); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 }
