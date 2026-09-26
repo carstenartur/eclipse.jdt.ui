@@ -20,42 +20,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Prepare integration regression
+      - name: Prepare lifecycle regressions
         run: |
-          cp .github/apply-breadcrumb-defer.py /tmp/apply-breadcrumb-defer.py
           cp .github/*Startup*.java /tmp/
-          git fetch --depth=1 origin 3a834a6e72f6a4812f7f475ab469d90107c3d8b9
-          git checkout --detach 3a834a6e72f6a4812f7f475ab469d90107c3d8b9
-          python /tmp/apply-breadcrumb-defer.py
+          git fetch --depth=1 origin 14ebeffad1dc6b95d63b3c4f6df13cad31200eaa
+          git checkout --detach 14ebeffad1dc6b95d63b3c4f6df13cad31200eaa
           cp /tmp/*Startup*.java org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/
           python - <<'PY'
           from pathlib import Path
-          p = Path('org.eclipse.jdt.ui.tests/plugin.xml')
+          p = Path('org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/JavaEditorBreadcrumb.java')
           s = p.read_text()
-          assert s.count('</plugin>') == 1
-          extension = '''   <extension point="org.eclipse.jdt.core.classpathContainerInitializer">
-                <classpathContainerInitializer
-                      id="org.eclipse.jdt.ui.tests.startupContainer"
-                      class="org.eclipse.jdt.ui.tests.packageview.StartupClasspathContainerInitializer">
-                </classpathContainerInitializer>
-             </extension>
-          </plugin>'''
-          p.write_text(s.replace('</plugin>', extension))
-          p = Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/PackageExplorerTests.java')
-          s = p.read_text()
-          assert s.count('\tStartupContentProviderTests.class,') == 1
-          p.write_text(s.replace('\tStartupContentProviderTests.class,', '\tStartupContentProviderTests.class,\n\tBreadcrumbStartupTests.class,'))
+          old = 'return JavaUI.ID_PLUGIN.equals(family);'
+          assert s.count(old) == 1
+          p.write_text(s.replace(old, 'return family == JavaEditorBreadcrumb.this || JavaUI.ID_PLUGIN.equals(family);'))
           PY
-          git add -N org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java \
-            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/StartupClasspathContainerInitializer.java
           git diff --check
-          git diff > startup-integration-fix.patch
+          git diff > startup-lifecycle-fix.patch
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - name: Exercise cold editor and complete package-view suite
+      - name: Exercise lifecycle and complete package-view suite
         run: |
           set -o pipefail
           xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
@@ -64,17 +50,15 @@ jobs:
             -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
             -Dcompare-version-with-baselines.skip=true \
             -DskipTests=false | tee startup-verification.log
-      - name: Publish tested breadcrumb changes
+      - name: Publish tested lifecycle coverage
         run: |
           git config user.name 'Carsten Hammer'
           git config user.email 'carsten.hammer@t-online.de'
           git add org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/JavaEditorBreadcrumb.java \
-            org.eclipse.jdt.ui.tests/plugin.xml \
-            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/PackageExplorerTests.java \
             org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java \
             org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/StartupClasspathContainerInitializer.java
-          git commit -m 'Initialize breadcrumb models off the UI thread before rendering labels' \
-            -m 'Keep the latest input and discard cancelled or disposed-editor callbacks. Cover cold editor creation with an instrumented classpath container.' \
+          git commit -m 'Cover slow containers, cancellation, disposal and latest breadcrumb input' \
+            -m 'Allow initialization jobs to be identified by their owning breadcrumb.' \
             -m 'Assisted-by: OpenAI ChatGPT' \
             -m 'Signed-off-by: Carsten Hammer <carsten.hammer@t-online.de>'
           git push origin HEAD:refs/heads/fix/startup-1860
@@ -82,10 +66,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: startup-integration-reports
+          name: startup-lifecycle-reports
           path: |
             startup-verification.log
-            startup-integration-fix.patch
+            startup-lifecycle-fix.patch
             **/target/surefire-reports/**
             **/target/work/data/.metadata/*.log
           if-no-files-found: warn
