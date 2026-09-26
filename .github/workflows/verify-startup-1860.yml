@@ -28,6 +28,9 @@ jobs:
           cp /tmp/*Startup*.java org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/
           python - <<'PY'
           from pathlib import Path
+          p = Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java')
+          s = p.read_text()
+          p.write_text(s.replace('org.eclipse.jdt.internal.ui.javaeditor.IBreadcrumb;', 'org.eclipse.jdt.internal.ui.javaeditor.breadcrumb.IBreadcrumb;'))
           p = Path('org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/JavaEditorBreadcrumb.java')
           s = p.read_text()
           old = 'return JavaUI.ID_PLUGIN.equals(family);'
