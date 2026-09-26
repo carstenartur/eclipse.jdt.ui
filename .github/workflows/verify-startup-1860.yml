@@ -23,14 +23,13 @@ jobs:
       - name: Prepare lifecycle regressions
         run: |
           cp .github/*Startup*.java /tmp/
+          cp .github/refine-lifecycle-fixtures.py /tmp/
           git fetch --depth=1 origin 14ebeffad1dc6b95d63b3c4f6df13cad31200eaa
           git checkout --detach 14ebeffad1dc6b95d63b3c4f6df13cad31200eaa
           cp /tmp/*Startup*.java org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/
+          python /tmp/refine-lifecycle-fixtures.py
           python - <<'PY'
           from pathlib import Path
-          p = Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java')
-          s = p.read_text()
-          p.write_text(s.replace('org.eclipse.jdt.internal.ui.javaeditor.IBreadcrumb;', 'org.eclipse.jdt.internal.ui.javaeditor.breadcrumb.IBreadcrumb;'))
           p = Path('org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/JavaEditorBreadcrumb.java')
           s = p.read_text()
           old = 'return JavaUI.ID_PLUGIN.equals(family);'
@@ -53,6 +52,21 @@ jobs:
             -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
             -Dcompare-version-with-baselines.skip=true \
             -DskipTests=false | tee startup-verification.log
+          mkdir -p verified-reports/package-suite
+          cp org.eclipse.jdt.ui.tests/target/surefire-reports/* verified-reports/package-suite/
+      - name: Repeat lifecycle scenarios
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3; do
+            xvfb-run -a mvn -B -e verify -Pbuild-individual-bundles \
+              -pl org.eclipse.jdt.ui.tests -am \
+              -Dtest=BreadcrumbStartupTests \
+              -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+              -Dcompare-version-with-baselines.skip=true \
+              -DskipTests=false | tee "startup-repeat-${attempt}.log"
+            mkdir -p "verified-reports/repeat-${attempt}"
+            cp org.eclipse.jdt.ui.tests/target/surefire-reports/* "verified-reports/repeat-${attempt}/"
+          done
       - name: Publish tested lifecycle coverage
         run: |
           git config user.name 'Carsten Hammer'
@@ -72,7 +86,9 @@ jobs:
           name: startup-lifecycle-reports
           path: |
             startup-verification.log
+            startup-repeat-*.log
             startup-lifecycle-fix.patch
+            verified-reports/**
             **/target/surefire-reports/**
             **/target/work/data/.metadata/*.log
           if-no-files-found: warn
