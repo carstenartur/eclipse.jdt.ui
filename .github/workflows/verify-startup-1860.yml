@@ -1,4 +1,4 @@
-name: Verify complete JDT UI test suites
+name: Diagnose upstream bytecode-view smoke test
 
 on:
   push:
@@ -15,35 +15,44 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Check out verified implementation
+      - name: Check out unchanged upstream baseline
         run: |
-          git fetch --depth=1 origin 14ebeffad1dc6b95d63b3c4f6df13cad31200eaa
-          git checkout --detach 14ebeffad1dc6b95d63b3c4f6df13cad31200eaa
+          git fetch --depth=1 origin 9cd0c74a96e0344763194ccbb28339846e6d2a45
+          git checkout --detach 9cd0c74a96e0344763194ccbb28339846e6d2a45
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - name: Run unfiltered JDT UI suites and dependencies
+      - name: Run unchanged smoke tests
         run: |
           set -o pipefail
           xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
             -pl org.eclipse.jdt.ui.tests -am \
+            -Dtest=SmokeViewsTest \
+            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
             -Dcompare-version-with-baselines.skip=true \
-            -DskipTests=false | tee startup-full-verification.log
+            -DskipTests=false | tee startup-baseline-smoke.log
+      - name: Collect complete workbench log
+        if: always()
+        run: |
+          mkdir -p workbench-logs
+          find org.eclipse.jdt.ui.tests/target -type f -name .log -exec cp --parents '{}' workbench-logs/ \;
+          find workbench-logs -type f -exec tail -n 180 '{}' \;
       - name: Collect reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: startup-full-ui-reports
+          name: startup-baseline-smoke-reports
+          include-hidden-files: true
           path: |
-            startup-full-verification.log
+            startup-baseline-smoke.log
+            workbench-logs/**
             **/target/surefire-reports/**
-            **/target/work/data/.metadata/*.log
           if-no-files-found: warn
           retention-days: 7
