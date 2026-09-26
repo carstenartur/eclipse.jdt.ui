@@ -10,16 +10,13 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Archive inspected sources
-        run: git archive --format=tar.gz --output=pr3231-sources.tar.gz HEAD
-      - uses: actions/upload-artifact@v4
-        with:
-          name: pr3231-sources
-          path: pr3231-sources.tar.gz
-          retention-days: 7
+      - name: Apply regression tests only
+        run: |
+          git apply .github/qa-regressions.patch
+          git diff --check
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -29,13 +26,13 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y libwebkit2gtk-4.1-0
-      - name: Verify baseline
+      - name: Verify regressions against current PR
         run: |
           set -o pipefail
           xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
-            -pl org.eclipse.jdt.ui.tests -am -Dtest=PackageExplorerTests \
+            -pl org.eclipse.jdt.ui.tests -am -Dtest=BreadcrumbStartupTests \
             -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dcompare-version-with-baselines.skip=true -DskipTests=false | tee qa-baseline.log
+            -Dcompare-version-with-baselines.skip=true -DskipTests=false | tee qa-red.log
       - name: Collect reports
         if: always()
         uses: actions/upload-artifact@v4
