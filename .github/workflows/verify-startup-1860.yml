@@ -20,26 +20,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Archive inspected upstream sources
+      - name: Check out test-only candidate
         run: |
-          git fetch --depth=1 origin 9cd0c74a96e0344763194ccbb28339846e6d2a45
-          git archive --format=tar.gz --output=startup-sources.tar.gz 9cd0c74a96e0344763194ccbb28339846e6d2a45
-      - uses: actions/upload-artifact@v4
-        with:
-          name: startup-sources
-          path: startup-sources.tar.gz
-          retention-days: 7
+          git fetch --depth=1 origin 7ae190d97dcc2cbaec8d54d01d18a4b8a7b38f65
+          git checkout --detach 7ae190d97dcc2cbaec8d54d01d18a4b8a7b38f65
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - name: Verify baseline package-view tests
+      - name: Run startup regressions
         run: |
           set -o pipefail
           xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
             -pl org.eclipse.jdt.ui.tests -am \
-            -Dtest=ContentProviderTests7 \
+            -Dtest=StartupContentProviderTests,ContentProviderTests7 \
             -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
             -Dcompare-version-with-baselines.skip=true \
             -DskipTests=false | tee startup-verification.log
