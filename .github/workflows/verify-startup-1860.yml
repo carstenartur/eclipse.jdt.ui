@@ -1,0 +1,54 @@
+name: Verify startup issue 1860
+
+on:
+  push:
+    branches:
+      - verify/startup-1860
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-startup-1860
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Archive inspected upstream sources
+        run: git archive --format=tar.gz --output=startup-sources.tar.gz 9cd0c74a96e0344763194ccbb28339846e6d2a45
+      - uses: actions/upload-artifact@v4
+        with:
+          name: startup-sources
+          path: startup-sources.tar.gz
+          retention-days: 7
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Verify baseline package-view tests
+        run: |
+          set -o pipefail
+          xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
+            -pl org.eclipse.jdt.ui.tests -am \
+            -Dtest=ContentProviderTests7 \
+            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dcompare-version-with-baselines.skip=true \
+            -DskipTests=false | tee startup-verification.log
+      - name: Collect reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: startup-verification-reports
+          path: |
+            startup-verification.log
+            **/target/surefire-reports/**
+            **/target/work/data/.metadata/*.log
+          if-no-files-found: warn
+          retention-days: 7
