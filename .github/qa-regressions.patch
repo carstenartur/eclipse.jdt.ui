@@ -1,0 +1,191 @@
+diff --git a/org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java b/org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java
+index bf89b252..238932d1 100644
+--- a/org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java
++++ b/org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java
+@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+ import static org.junit.jupiter.api.Assertions.assertNotNull;
+ import static org.junit.jupiter.api.Assertions.assertTrue;
+ 
++import java.lang.reflect.Field;
+ import java.util.concurrent.CountDownLatch;
+ import java.util.concurrent.TimeUnit;
+ import java.util.concurrent.atomic.AtomicReference;
+@@ -40,7 +41,10 @@ import org.eclipse.ui.IViewPart;
+ import org.eclipse.ui.IWorkbenchPage;
+ import org.eclipse.ui.part.FileEditorInput;
+ 
++import org.eclipse.jdt.core.ElementChangedEvent;
+ import org.eclipse.jdt.core.ICompilationUnit;
++import org.eclipse.jdt.core.IElementChangedListener;
++import org.eclipse.jdt.core.IJavaElementDelta;
+ import org.eclipse.jdt.core.IJavaElement;
+ import org.eclipse.jdt.core.IJavaProject;
+ import org.eclipse.jdt.core.IPackageFragment;
+@@ -48,6 +52,7 @@ import org.eclipse.jdt.core.IPackageFragmentRoot;
+ import org.eclipse.jdt.core.IType;
+ import org.eclipse.jdt.core.JavaCore;
+ 
++import org.eclipse.jdt.internal.core.JavaElementDelta;
+ import org.eclipse.jdt.internal.core.JavaModelManager;
+ import org.eclipse.jdt.internal.core.JavaProject;
+@@ -56,11 +61,12 @@ import org.eclipse.jdt.ui.tests.util.TestUtils;
+ 
+ import org.eclipse.jdt.internal.ui.JavaPlugin;
+ import org.eclipse.jdt.internal.ui.javaeditor.JavaEditor;
++import org.eclipse.jdt.internal.ui.javaeditor.JavaEditorBreadcrumb;
+ import org.eclipse.jdt.internal.ui.javaeditor.breadcrumb.IBreadcrumb;
+ import org.eclipse.jdt.internal.ui.util.CoreUtility;
+ 
+ public class BreadcrumbStartupTests {
+-	private enum Scenario { NORMAL, SLOW, CLOSE, CANCEL, REPLACE }
++	private enum Scenario { NORMAL, SLOW, CLOSE, CANCEL, REPLACE, CLASSPATH, RESOLVED_CLASSPATH, COALESCED_CLASSPATH, NULL_COLD, PENDING_CLASSPATH }
+ 
+ 	@Test
+ 	public void coldEditorWithBreadcrumbDoesNotInitializeContainerOnUIThread() throws Exception {
+@@ -87,6 +93,63 @@ public class BreadcrumbStartupTests {
+ 		exercise(Scenario.REPLACE);
+ 	}
+ 
++	@Test
++	public void classpathChangeReinitializesWithoutUIThreadResolution() throws Exception {
++		exercise(Scenario.CLASSPATH);
++	}
++
++	@Test
++	public void resolvedClasspathChangeReinitializesWithoutUIThreadResolution() throws Exception {
++		exercise(Scenario.RESOLVED_CLASSPATH);
++	}
++
++	@Test
++	public void queuedContentRefreshDoesNotSwallowClasspathChange() throws Exception {
++		exercise(Scenario.COALESCED_CLASSPATH);
++	}
++
++	@Test
++	public void nullInputDoesNotResolveAClosedModelOnUIThread() throws Exception {
++		exercise(Scenario.NULL_COLD);
++	}
++
++	@Test
++	public void classpathChangeBeforeFirstPublicationInvalidatesCompletedWorker() throws Exception {
++		exercise(Scenario.PENDING_CLASSPATH);
++	}
++
++	private static IElementChangedListener modelListener(IBreadcrumb breadcrumb) throws Exception {
++		// Deliver only to this listener: other workbench listeners could warm up the
++		// deliberately invalidated model and hide the breadcrumb regression.
++		Field field= JavaEditorBreadcrumb.class.getDeclaredField("fElementChangeListener");
++		field.setAccessible(true);
++		return (IElementChangedListener) field.get(breadcrumb);
++	}
++
++	private static void invalidateContainer(IJavaProject project) throws Exception {
++		((JavaProject) project).resetResolvedClasspath();
++		JavaModelManager.getJavaModelManager().containerPut(project, StartupClasspathContainerInitializer.PATH, null);
++		StartupClasspathContainerInitializer.CALLS.set(0);
++		StartupClasspathContainerInitializer.UI_CALLS.clear();
++	}
++
++	private static void sendClasspathDelta(IBreadcrumb breadcrumb, IJavaProject project, int flags) throws Exception {
++		JavaElementDelta delta= new JavaElementDelta(project.getJavaModel());
++		delta.changed(project, flags);
++		modelListener(breadcrumb).elementChanged(new ElementChangedEvent(delta, ElementChangedEvent.POST_CHANGE));
++	}
++
++	private static void awaitContainerAndBreadcrumb(IBreadcrumb breadcrumb) throws Exception {
++		long deadline= System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
++		while (StartupClasspathContainerInitializer.CALLS.get() == 0) {
++			assertTrue(System.nanoTime() < deadline, "Classpath invalidation was not processed");
++			drainEvents();
++			Thread.sleep(10);
++		}
++		awaitInitialization(breadcrumb);
++		assertTrue(StartupClasspathContainerInitializer.UI_CALLS.isEmpty(), () -> String.join("\n", StartupClasspathContainerInitializer.UI_CALLS));
++	}
++
+ 	private static void drainEvents() {
+ 		while (Display.getCurrent().readAndDispatch()) {
+ 		}
+@@ -94,12 +157,13 @@ public class BreadcrumbStartupTests {
+ 
+ 	private static void awaitInitialization(IBreadcrumb breadcrumb) throws Exception {
+ 		long deadline= System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+-		while (Job.getJobManager().find(breadcrumb).length > 0) {
++		do {
+ 			assertTrue(System.nanoTime() < deadline, "Breadcrumb initialization did not finish");
+ 			drainEvents();
++			if (Job.getJobManager().find(breadcrumb).length == 0)
++				return;
+ 			Thread.sleep(10);
+-		}
+-		drainEvents();
++		} while (true);
+ 	}
+ 
+ 	private static void awaitInput(Viewer viewer, String expected) throws Exception {
+@@ -129,6 +193,7 @@ public class BreadcrumbStartupTests {
+ 		CountDownLatch release= new CountDownLatch(scenario == Scenario.NORMAL ? 0 : 1);
+ 		AtomicReference<IStatus> cancellation= new AtomicReference<>();
+ 		CountDownLatch cancelledDone= new CountDownLatch(1);
++		CountDownLatch initialDone= new CountDownLatch(1);
+ 		try {
+ 			CoreUtility.setAutoBuilding(false);
+ 			preferences.setValue(key, true);
+@@ -159,7 +224,16 @@ public class BreadcrumbStartupTests {
+ 			assertTrue(StartupClasspathContainerInitializer.UI_CALLS.isEmpty(), () -> String.join("\n", StartupClasspathContainerInitializer.UI_CALLS));
+ 			Viewer viewer= assertInstanceOf(Viewer.class, breadcrumb.getSelectionProvider());
+ 			Control control= viewer.getControl();
+-			if (scenario == Scenario.CLOSE) {
++			if (scenario == Scenario.PENDING_CLASSPATH) {
++				Job[] jobs= Job.getJobManager().find(breadcrumb);
++				assertEquals(1, jobs.length);
++				jobs[0].addJobChangeListener(new JobChangeAdapter() {
++					@Override
++					public void done(IJobChangeEvent event) {
++						initialDone.countDown();
++					}
++				});
++			} else if (scenario == Scenario.CLOSE) {
+ 				page.closeEditor(editor, false);
+ 				editor= null;
+ 			} else if (scenario == Scenario.CANCEL) {
+@@ -180,6 +254,12 @@ public class BreadcrumbStartupTests {
+ 				breadcrumb.setInput(second);
+ 			}
+ 			release.countDown();
++			if (scenario == Scenario.PENDING_CLASSPATH) {
++				assertTrue(initialDone.await(10, TimeUnit.SECONDS));
++				invalidateContainer(project);
++				sendClasspathDelta(breadcrumb, project, IJavaElementDelta.F_CLASSPATH_CHANGED);
++				awaitContainerAndBreadcrumb(breadcrumb);
++			}
+ 			if (scenario == Scenario.CANCEL) {
+ 				// Deliberately do not dispatch UI events before requesting the retry:
+ 				// the cancelled worker has finished, but its UI callback is still pending.
+@@ -191,6 +271,26 @@ public class BreadcrumbStartupTests {
+ 			awaitInitialization(breadcrumb);
+ 			if (scenario != Scenario.CLOSE)
+ 				awaitInput(viewer, scenario == Scenario.REPLACE ? "B" : "A");
++			if (scenario == Scenario.CLASSPATH || scenario == Scenario.RESOLVED_CLASSPATH
++					|| scenario == Scenario.COALESCED_CLASSPATH || scenario == Scenario.NULL_COLD) {
++				TestUtils.waitForEditorJobs(60_000, true);
++				awaitInitialization(breadcrumb);
++				if (scenario == Scenario.COALESCED_CLASSPATH) {
++					JavaElementDelta content= new JavaElementDelta(project.getJavaModel());
++					content.changed(first, IJavaElementDelta.F_CONTENT);
++					modelListener(breadcrumb).elementChanged(new ElementChangedEvent(content, ElementChangedEvent.POST_CHANGE));
++				}
++				if (scenario == Scenario.NULL_COLD)
++					project.close();
++				invalidateContainer(project);
++				if (scenario == Scenario.NULL_COLD)
++					breadcrumb.setInput(null);
++				else
++					sendClasspathDelta(breadcrumb, project, scenario == Scenario.RESOLVED_CLASSPATH
++							? IJavaElementDelta.F_RESOLVED_CLASSPATH_CHANGED : IJavaElementDelta.F_CLASSPATH_CHANGED);
++				awaitContainerAndBreadcrumb(breadcrumb);
++				awaitInput(viewer, "A");
++			}
+ 			assertTrue(StartupClasspathContainerInitializer.CALLS.get() > 0, "Test must actually initialize the cold container");
+ 			assertTrue(StartupClasspathContainerInitializer.UI_CALLS.isEmpty(), () -> String.join("\n", StartupClasspathContainerInitializer.UI_CALLS));
+ 			if (scenario == Scenario.CLOSE) {
