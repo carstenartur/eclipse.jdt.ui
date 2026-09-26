@@ -1,67 +1,62 @@
-name: Verify startup issue 1860
+name: Verify startup editor integration
 
 on:
   push:
     branches:
-      - verify/startup-1860
+      - verify/startup-1860-integration
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: verify-startup-1860
+  group: verify-startup-1860-integration
   cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Apply candidate to test-only baseline
+      - name: Prepare integration regression
         run: |
           cp .github/apply-startup-fix.py /tmp/apply-startup-fix.py
+          cp .github/*Startup*.java /tmp/
           git fetch --depth=1 origin 7ae190d97dcc2cbaec8d54d01d18a4b8a7b38f65
           git checkout --detach 7ae190d97dcc2cbaec8d54d01d18a4b8a7b38f65
           python /tmp/apply-startup-fix.py
+          cp /tmp/*Startup*.java org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('org.eclipse.jdt.ui.tests/plugin.xml')
+          s = p.read_text()
+          assert s.count('</plugin>') == 1
+          p.write_text(s.replace('</plugin>', '<extension point="org.eclipse.jdt.core.classpathContainerInitializer"><classpathContainerInitializer id="org.eclipse.jdt.ui.tests.startupContainer" class="org.eclipse.jdt.ui.tests.packageview.StartupClasspathContainerInitializer"/></extension>\n</plugin>'))
+          PY
           git diff --check
-          git diff > startup-fix.patch
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
-      - name: Run complete package-view suite
+      - name: Exercise cold editor creation
         run: |
           set -o pipefail
           xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
             -pl org.eclipse.jdt.ui.tests -am \
-            -Dtest=PackageExplorerTests \
+            -Dtest=BreadcrumbStartupTests \
             -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
             -Dcompare-version-with-baselines.skip=true \
             -DskipTests=false | tee startup-verification.log
-      - name: Publish tested changes to dedicated fix branch
-        run: |
-          git config user.name 'Carsten Hammer'
-          git config user.email 'carsten.hammer@t-online.de'
-          git add org.eclipse.jdt.ui/ui/org/eclipse/jdt/ui/StandardJavaElementContentProvider.java \
-            org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/packageview/PackageExplorerContentProvider.java \
-            org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/PackageExplorerTests.java
-          git commit -m 'Avoid classpath initialization for parent handles and working-copy deltas' \
-            -m 'Related to eclipse-jdt/eclipse.jdt.ui#1860 and eclipse-jdt/eclipse.jdt.core#3468.' \
-            -m 'Assisted-by: OpenAI ChatGPT' \
-            -m 'Signed-off-by: Carsten Hammer <carsten.hammer@t-online.de>'
-          git push origin HEAD:refs/heads/fix/startup-1860
       - name: Collect reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: startup-verification-reports
+          name: startup-integration-reports
           path: |
             startup-verification.log
-            startup-fix.patch
             **/target/surefire-reports/**
             **/target/work/data/.metadata/*.log
           if-no-files-found: warn
