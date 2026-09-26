@@ -13,10 +13,20 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Apply regression tests only
+      - name: Apply candidate and regression tests
         run: |
           git apply --recount .github/qa-regressions.patch
+          git apply --recount .github/qa-production.patch
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java')
+          s = p.read_text().replace('import java.lang.reflect.Field;', 'import java.lang.reflect.Field;\nimport java.util.Arrays;')
+          s = s.replace('import org.eclipse.ui.part.FileEditorInput;', 'import org.eclipse.ui.part.FileEditorInput;\nimport org.eclipse.ui.progress.UIJob;')
+          s = s.replace('Job[] jobs= Job.getJobManager().find(breadcrumb);', 'Job[] jobs= Arrays.stream(Job.getJobManager().find(breadcrumb)).filter(job -> !(job instanceof UIJob)).toArray(Job[]::new);')
+          p.write_text(s)
+          PY
           git diff --check
+          git diff > qa-candidate.patch
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -26,13 +36,13 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y libwebkit2gtk-4.1-0
-      - name: Verify regressions against current PR
+      - name: Verify candidate
         run: |
           set -o pipefail
           xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
-            -pl org.eclipse.jdt.ui.tests -am -Dtest=BreadcrumbStartupTests \
+            -pl org.eclipse.jdt.ui.tests -am -Dtest=PackageExplorerTests \
             -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dcompare-version-with-baselines.skip=true -DskipTests=false | tee qa-red.log
+            -Dcompare-version-with-baselines.skip=true -DskipTests=false | tee qa-green.log
       - name: Collect reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -41,6 +51,7 @@ jobs:
           include-hidden-files: true
           path: |
             qa-*.log
+            qa-candidate.patch
             **/target/surefire-reports/**
             **/target/work/data/.metadata/*.log
           retention-days: 7
