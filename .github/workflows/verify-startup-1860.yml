@@ -1,4 +1,4 @@
-name: Verify startup editor integration
+name: Verify startup fixes and JDT UI suites
 
 on:
   push:
@@ -15,19 +15,20 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Prepare lifecycle regressions
+      - name: Prepare lifecycle regressions and cancellation guard
         run: |
           cp .github/*Startup*.java /tmp/
-          cp .github/refine-lifecycle-fixtures.py /tmp/
+          cp .github/refine-lifecycle-fixtures.py .github/fix-cancelled-retry.py /tmp/
           git fetch --depth=1 origin 14ebeffad1dc6b95d63b3c4f6df13cad31200eaa
           git checkout --detach 14ebeffad1dc6b95d63b3c4f6df13cad31200eaa
           cp /tmp/*Startup*.java org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/
           python /tmp/refine-lifecycle-fixtures.py
+          python /tmp/fix-cancelled-retry.py
           python - <<'PY'
           from pathlib import Path
           p = Path('org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/JavaEditorBreadcrumb.java')
@@ -43,6 +44,10 @@ jobs:
           distribution: temurin
           java-version: '25'
           cache: maven
+      - name: Install SWT browser runtime required by existing smoke test
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libwebkit2gtk-4.1-0
       - name: Exercise lifecycle and complete package-view suite
         run: |
           set -o pipefail
@@ -67,29 +72,43 @@ jobs:
             mkdir -p "verified-reports/repeat-${attempt}"
             cp org.eclipse.jdt.ui.tests/target/surefire-reports/* "verified-reports/repeat-${attempt}/"
           done
-      - name: Publish tested lifecycle coverage
+      - name: Run unfiltered JDT UI suites
+        run: |
+          set -o pipefail
+          xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
+            -pl org.eclipse.jdt.ui.tests -am \
+            -Dcompare-version-with-baselines.skip=true \
+            -DskipTests=false | tee startup-full-verification.log
+          mkdir -p verified-reports/full-suite
+          cp org.eclipse.jdt.ui.tests/target/surefire-reports/* verified-reports/full-suite/
+      - name: Publish verified production changes and lifecycle tests
         run: |
           git config user.name 'Carsten Hammer'
           git config user.email 'carsten.hammer@t-online.de'
           git add org.eclipse.jdt.ui/ui/org/eclipse/jdt/internal/ui/javaeditor/JavaEditorBreadcrumb.java \
             org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/BreadcrumbStartupTests.java \
             org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/StartupClasspathContainerInitializer.java
-          git commit -m 'Cover slow containers, cancellation, disposal and latest breadcrumb input' \
-            -m 'Allow initialization jobs to be identified by their owning breadcrumb.' \
+          git commit -m 'Preserve retry requests after cancellation and verify breadcrumb lifecycle' \
+            -m 'Cover slow containers, disposal, cancellation before UI completion and latest input. Prepare SWT browser runtime in isolated verification only.' \
             -m 'Assisted-by: OpenAI ChatGPT' \
             -m 'Signed-off-by: Carsten Hammer <carsten.hammer@t-online.de>'
           git push origin HEAD:refs/heads/fix/startup-1860
+      - name: Collect complete workbench log
+        if: always()
+        run: |
+          mkdir -p workbench-logs
+          find org.eclipse.jdt.ui.tests/target -type f -name .log -exec cp --parents '{}' workbench-logs/ \;
       - name: Collect reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: startup-lifecycle-reports
+          name: startup-final-verification
+          include-hidden-files: true
           path: |
-            startup-verification.log
-            startup-repeat-*.log
+            startup-*.log
             startup-lifecycle-fix.patch
             verified-reports/**
+            workbench-logs/**
             **/target/surefire-reports/**
-            **/target/work/data/.metadata/*.log
           if-no-files-found: warn
           retention-days: 7
