@@ -21,10 +21,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Status;
+
+import org.eclipse.core.resources.ResourcesPlugin;
 
 import org.eclipse.text.edits.MultiTextEdit;
 import org.eclipse.text.edits.TextEdit;
+
+import org.eclipse.ltk.core.refactoring.PerformChangeOperation;
+import org.eclipse.ltk.core.refactoring.RefactoringCore;
+import org.eclipse.ltk.core.refactoring.TextFileChange;
 
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IField;
@@ -54,6 +61,7 @@ import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ImportRewrite;
 import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
+import org.eclipse.jdt.core.refactoring.CompilationUnitChange;
 
 import org.eclipse.jdt.internal.corext.refactoring.structure.ImportRemover;
 
@@ -724,9 +732,25 @@ public final class EnumSourceValidator {
 				return false;
 			}
 
-			parsed.compilationUnit().applyTextEdit(combinedEdit, null);
-			parsed.compilationUnit().save(null, true);
-			return true;
+			CompilationUnitChange change= new CompilationUnitChange(
+					"@EnumSource: " + parsed.compilationUnit().getElementName(), parsed.compilationUnit()); //$NON-NLS-1$
+			try {
+				change.setEdit(combinedEdit);
+				change.setSaveMode(TextFileChange.KEEP_SAVE_STATE);
+				// Capture the pre-edit save state; never implicitly save existing user edits.
+				change.initializeValidationData(new NullProgressMonitor());
+				PerformChangeOperation operation= new PerformChangeOperation(change);
+				operation.setUndoManager(RefactoringCore.getUndoManager(), change.getName());
+				ResourcesPlugin.getWorkspace().run(operation, new NullProgressMonitor());
+				if (!operation.changeExecuted()) {
+					JUnitPlugin.log(new Status(IStatus.ERROR, JUnitPlugin.getPluginId(),
+							"Could not apply @EnumSource changes: " + operation.getValidationStatus())); //$NON-NLS-1$
+					return false;
+				}
+				return true;
+			} finally {
+				change.dispose();
+			}
 		} catch (Exception e) {
 			JUnitPlugin.log(new Status(IStatus.ERROR, JUnitPlugin.getPluginId(),
 					"Failed to apply @EnumSource changes to " + parsed.compilationUnit().getElementName(), e)); //$NON-NLS-1$
