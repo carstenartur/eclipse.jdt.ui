@@ -1,0 +1,62 @@
+name: PR 3231 real PDE restart
+on:
+  push:
+    branches: [verify/pr3231-pde-restart]
+    paths: ['.github/pde-restart/**', '.github/workflows/pr3231-pde-restart.yml']
+permissions:
+  contents: read
+concurrency:
+  group: pr3231-pde-restart
+  cancel-in-progress: true
+jobs:
+  restart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Provision GTK and full Eclipse SDK including PDE
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libwebkit2gtk-4.1-0 xvfb xauth dbus-x11
+          python .github/pde-restart/run.py provision
+      - name: Build PR production bundles
+        run: |
+          set -o pipefail
+          mvn -B -U -e package -Pbuild-individual-bundles \
+            -pl org.eclipse.jdt.ui -am -DskipTests=true \
+            -Dcompare-version-with-baselines.skip=true | tee restart-evidence/build-pr.log
+      - name: Build unchanged upstream production bundles
+        run: |
+          set -o pipefail
+          git fetch --depth=1 origin 9cd0c74a96e0344763194ccbb28339846e6d2a45
+          git worktree add --detach "$RUNNER_TEMP/pr3231-upstream" 9cd0c74a96e0344763194ccbb28339846e6d2a45
+          cd "$RUNNER_TEMP/pr3231-upstream"
+          mvn -B -U -e package -Pbuild-individual-bundles \
+            -pl org.eclipse.jdt.ui -am -DskipTests=true \
+            -Dcompare-version-with-baselines.skip=true | tee "$GITHUB_WORKSPACE/restart-evidence/build-upstream.log"
+      - name: Install exact source-built bundles and diagnostic startup extension
+        run: python .github/pde-restart/run.py prepare
+      - name: Seed and restart identical persisted workspaces
+        run: |
+          set -o pipefail
+          xvfb-run -a -s '-screen 0 1440x1000x24' dbus-run-session -- \
+            python .github/pde-restart/run.py exercise | tee restart-evidence/execution.log
+      - name: Upload restart evidence even on a failed probe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr3231-real-pde-restart
+          include-hidden-files: true
+          path: |
+            restart-evidence/**
+            .github/pde-restart/**
+            restart-lab/workspace-*/.metadata/.log
+          if-no-files-found: warn
+          retention-days: 14
