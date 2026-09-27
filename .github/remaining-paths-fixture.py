@@ -10,4 +10,9 @@ s = s.replace('fProject.getResolvedClasspath(true);\n', '''fProject.getResolvedC
 ''')
 s = s.replace('restoreHierarchy(fUnit.getType("A").getHandleIdentifier())', 'restoreHierarchy(fTypeHandle)')
 s = s.replace('restoreHierarchy(fUnit.getType("Missing").getHandleIdentifier())', 'restoreHierarchy(fMissingTypeHandle)')
+s = s.replace('restoreHierarchy(fMissingTypeHandle);\n\t\tassertBackgroundInitialization();\n\t\tawaitJobs(fHierarchy);', '''restoreHierarchy(fMissingTypeHandle);
+		// A missing working-copy member can be rejected without initializing a
+		// container at all; require safe completion, not unnecessary model work.
+		awaitJobs(fHierarchy);
+		assertTrue(StartupClasspathContainerInitializer.UI_CALLS.isEmpty(), () -> String.join("\\n", StartupClasspathContainerInitializer.UI_CALLS));''')
 p.write_text(s)
