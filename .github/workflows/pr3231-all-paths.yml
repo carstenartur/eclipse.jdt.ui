@@ -1,0 +1,53 @@
+name: PR 3231 remaining startup paths
+on:
+  push:
+    branches: [verify/pr3231-all-paths]
+    paths: ['.github/allpaths*', '.github/workflows/pr3231-all-paths.yml']
+permissions:
+  contents: read
+concurrency:
+  group: pr3231-all-paths
+  cancel-in-progress: true
+jobs:
+  regressions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply regression tests only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64, zlib, hashlib, subprocess
+          text = Path('.github/allpaths-tests.b64').read_text().replace('WutyeaU5', 'WutyeU5')
+          patch = zlib.decompress(base64.b64decode(text))
+          assert hashlib.sha256(patch).hexdigest() == 'efa9dfa1d2aae134a0b378506b093c286500be0ad65e90237323a9bc7b29382f'
+          subprocess.run(['git', 'apply', '-'], input=patch, check=True)
+          PY
+          git diff --check
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Install SWT runtime
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libwebkit2gtk-4.1-0 xvfb xauth
+      - name: Run new view regressions
+        run: |
+          set -o pipefail
+          xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
+            -pl org.eclipse.jdt.ui.tests -am -Dtest=ViewStartupTests \
+            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dcompare-version-with-baselines.skip=true -DskipTests=false | tee allpaths-tests.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allpaths-baseline
+          include-hidden-files: true
+          path: |
+            allpaths-*.log
+            **/target/surefire-reports/**
+            **/target/work/data/.metadata/.log
+          retention-days: 14
