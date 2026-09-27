@@ -23,6 +23,8 @@ jobs:
           patch = zlib.decompress(base64.b64decode(text))
           assert hashlib.sha256(patch).hexdigest() == 'efa9dfa1d2aae134a0b378506b093c286500be0ad65e90237323a9bc7b29382f'
           subprocess.run(['git', 'apply', '-'], input=patch, check=True)
+          p = Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/ViewStartupTests.java')
+          p.write_text(p.read_text().replace('import static org.junit.jupiter.api.Assertions.assertEquals;\n', ''))
           PY
           git diff --check
       - uses: actions/setup-java@v4
