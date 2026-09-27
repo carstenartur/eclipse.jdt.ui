@@ -163,7 +163,8 @@ public final class EnumSourceValidator {
 	}
 
 	private static boolean canExclude(ParsedEnumSource parsed, String enumConstantName) {
-		if (!parsed.effectiveValues().contains(enumConstantName)) {
+		// Never create an empty parameterized source, regardless of the filter mode.
+		if (parsed.effectiveValues().size() <= 1 || !parsed.effectiveValues().contains(enumConstantName)) {
 			return false;
 		}
 		if (MODE_EXCLUDE.equals(parsed.mode())) {
@@ -172,8 +173,7 @@ public final class EnumSourceValidator {
 		// In INCLUDE mode, empty names select every enum constant in the range, so
 		// exclusion creates an EXCLUDE filter. An explicit INCLUDE list must retain
 		// at least one value: clearing it would select the entire range again.
-		return parsed.names().isEmpty()
-				|| parsed.effectiveValues().size() > 1 && parsed.names().contains(enumConstantName);
+		return parsed.names().isEmpty() || parsed.names().contains(enumConstantName);
 	}
 
 	/**
@@ -194,7 +194,7 @@ public final class EnumSourceValidator {
 	/**
 	 * Excludes an enum constant while preserving all unrelated annotation members such as
 	 * {@code from} and {@code to}. Explicit INCLUDE lists are narrowed in place; otherwise
-	 * the EXCLUDE filter is created or extended.
+	 * the EXCLUDE filter is created or extended. At least one effective value must remain.
 	 *
 	 * @param method the parameterized test method
 	 * @param enumConstantName the enum constant to exclude

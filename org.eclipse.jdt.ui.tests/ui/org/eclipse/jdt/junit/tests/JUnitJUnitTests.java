@@ -58,6 +58,7 @@ JUnitQuickAssistTest.class,
 EnumSourceFilterTest.class,
 EnumSourceSafetyTest.class,
 EnumSourceValidationTest.class,
+EnumSourceLastValueTest.class,
 
 TestSorting.class
 //LegacyTestRunListenerTest.class

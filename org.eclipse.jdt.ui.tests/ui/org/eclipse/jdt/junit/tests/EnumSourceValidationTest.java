@@ -93,7 +93,7 @@ public class EnumSourceValidationTest {
 	private void assertAppendExclusionExpandsSingleName(String nameExpression) throws Exception {
 		// Both named tests exercise single-value shorthand without an ArrayInitializer.
 		IMethod method= createTest("""
-				@EnumSource(value = Color.class, from = "RED", to = "GREEN",
+				@EnumSource(value = Color.class, from = "RED", to = "BLUE",
 				    mode = EnumSource.Mode.EXCLUDE, names = %s)
 				""".formatted(nameExpression));
 		ICompilationUnit cu= method.getCompilationUnit();
@@ -113,7 +113,7 @@ public class EnumSourceValidationTest {
 		assertTrue("Expected the original name expression and appended GREEN in source: " + source, //$NON-NLS-1$
 				source.replaceAll("\\s+", "").contains(expectedNames.replaceAll("\\s+", ""))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 		assertTrue("Expected the RED lower bound to be preserved in source: " + source, source.contains("from = \"RED\"")); //$NON-NLS-1$ //$NON-NLS-2$
-		assertTrue("Expected the GREEN upper bound to be preserved in source: " + source, source.contains("to = \"GREEN\"")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue("Expected the BLUE upper bound to be preserved in source: " + source, source.contains("to = \"BLUE\"")); //$NON-NLS-1$ //$NON-NLS-2$
 		assertCompiles(cu);
 
 		assertFalse("Expected excludeEnumValue(GREEN) to be rejected for source: " + method.getCompilationUnit().getSource(), //$NON-NLS-1$
@@ -124,7 +124,8 @@ public class EnumSourceValidationTest {
 		assertEquals("Expected excluded names for source: " + method.getCompilationUnit().getSource(), //$NON-NLS-1$
 				List.of("GREEN"), EnumSourceValidator.getExcludedNames(method)); //$NON-NLS-1$
 		assertEnumConstantForInvocation(method, 1, "RED"); //$NON-NLS-1$
-		assertNoEnumConstantForInvocation(method, 2);
+		assertEnumConstantForInvocation(method, 2, "BLUE"); //$NON-NLS-1$
+		assertNoEnumConstantForInvocation(method, 3);
 		assertCompiles(cu);
 	}
 
@@ -144,7 +145,8 @@ public class EnumSourceValidationTest {
 				EnumSourceValidator.removeValueFromExclusion(method, "GREEN")); //$NON-NLS-1$
 		assertEquals("Expected excluded names for source: " + method.getCompilationUnit().getSource(), //$NON-NLS-1$
 				List.of("RED", "BLUE"), EnumSourceValidator.getExcludedNames(method)); //$NON-NLS-1$ //$NON-NLS-2$
-		assertEnumConstantForInvocation(method, 1, "GREEN"); //$NON-NLS-1$
+		// GREEN is runnable again but is the last value, so it cannot be excluded.
+		assertNoEnumConstantForInvocation(method, 1);
 		assertNoEnumConstantForInvocation(method, 2);
 		assertCompiles(method.getCompilationUnit());
 	}
@@ -161,7 +163,11 @@ public class EnumSourceValidationTest {
 		assertTrue("Expected removeValueFromExclusion(GREEN) to succeed for source: " + method.getCompilationUnit().getSource(), //$NON-NLS-1$
 				EnumSourceValidator.removeValueFromExclusion(method, "GREEN")); //$NON-NLS-1$
 		assertFilterRemoved(method);
-		assertEnumConstantForInvocation(method, 1, "GREEN"); //$NON-NLS-1$
+		String source= method.getCompilationUnit().getSource();
+		assertTrue("Expected the single-value range to remain in source: " + source, //$NON-NLS-1$
+				source.contains("from = \"GREEN\"") && source.contains("to = \"GREEN\"")); //$NON-NLS-1$ //$NON-NLS-2$
+		// GREEN is runnable again but is the last value, so it cannot be excluded.
+		assertNoEnumConstantForInvocation(method, 1);
 		assertNoEnumConstantForInvocation(method, 2);
 		assertCompiles(method.getCompilationUnit());
 	}
