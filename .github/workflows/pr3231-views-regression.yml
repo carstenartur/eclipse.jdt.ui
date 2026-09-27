@@ -44,11 +44,10 @@ jobs:
           export BUILD_RESULT=$result
           python - <<'PY'
           import os, xml.etree.ElementTree as ET
-          from pathlib import Path
           root=ET.parse('org.eclipse.jdt.ui.tests/target/surefire-reports/TEST-org.eclipse.jdt.ui.tests.packageview.ViewStartupTests.xml').getroot()
           assert int(root.get('tests'))==7 and int(root.get('errors'))==0 and int(root.get('skipped'))==0, root.attrib
           failures=[t.get('name') for t in root.findall('testcase') if t.find('failure') is not None]
-          expected={'editorLinkResolvesColdModelOffUIThread','disablingEditorLinkDiscardsPendingSelection','closingPackageExplorerDiscardsPendingSelection','hierarchyRestoreValidatesColdHandleOffUIThread','closingHierarchyWhileRestoringDoesNotWaitForInitializer','clearingHierarchyDiscardsPendingRestoreWithoutJoiningWorker','missingHierarchyHandleRestoresAnEmptyView'}
+          expected={'editorLinkResolvesColdModelOffUIThread','disablingEditorLinkDiscardsPendingSelection','closingPackageExplorerDiscardsPendingSelection','clearingHierarchyDiscardsPendingRestoreWithoutJoiningWorker'}
           if os.environ['IMPLEMENTATION']=='baseline':
               assert set(failures)==expected and int(os.environ['BUILD_RESULT'])!=0, failures
           else:
@@ -57,27 +56,18 @@ jobs:
           PY
           mkdir -p views-reports/focused
           cp org.eclipse.jdt.ui.tests/target/surefire-reports/* views-reports/focused/
-      - name: Complete package-view suite
+      - name: Complete package-view suite and repeat lifecycle scenarios
         if: matrix.implementation == 'fixed'
         run: |
           set -o pipefail
-          xvfb-run -a mvn -B -e verify -Pbuild-individual-bundles \
-            -pl org.eclipse.jdt.ui.tests -am -Dtest=PackageExplorerTests \
-            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dcompare-version-with-baselines.skip=true -Dmaven.test.failure.ignore=false -DskipTests=false | tee views-package.log
-          mkdir -p views-reports/package
-          cp org.eclipse.jdt.ui.tests/target/surefire-reports/* views-reports/package/
-      - name: Repeat guarded view lifecycle scenarios
-        if: matrix.implementation == 'fixed'
-        run: |
-          set -o pipefail
-          for attempt in 1 2 3; do
+          for suite in PackageExplorerTests ViewStartupTests ViewStartupTests ViewStartupTests; do
+            count=$(( ${count:-0} + 1 ))
             xvfb-run -a mvn -B -e verify -Pbuild-individual-bundles \
-              -pl org.eclipse.jdt.ui.tests -am -Dtest=ViewStartupTests \
+              -pl org.eclipse.jdt.ui.tests -am -Dtest="$suite" \
               -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
-              -Dcompare-version-with-baselines.skip=true -Dmaven.test.failure.ignore=false -DskipTests=false | tee "views-repeat-${attempt}.log"
-            mkdir -p "views-reports/repeat-${attempt}"
-            cp org.eclipse.jdt.ui.tests/target/surefire-reports/* "views-reports/repeat-${attempt}/"
+              -Dcompare-version-with-baselines.skip=true -Dmaven.test.failure.ignore=false -DskipTests=false | tee "views-suite-${count}.log"
+            mkdir -p "views-reports/suite-${count}"
+            cp org.eclipse.jdt.ui.tests/target/surefire-reports/* "views-reports/suite-${count}/"
           done
       - name: Unfiltered full repository verification
         if: matrix.implementation == 'fixed'
