@@ -1,0 +1,100 @@
+name: PR 3231 view regression comparison
+on:
+  push:
+    branches: [verify/pr3231-all-paths]
+    paths: ['.github/view-tests-*', '.github/remaining-paths-fixture.py', '.github/workflows/pr3231-views-regression.yml']
+permissions:
+  contents: read
+concurrency:
+  group: pr3231-view-regressions
+  cancel-in-progress: true
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        implementation: [baseline, fixed]
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      IMPLEMENTATION: ${{ matrix.implementation }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply identical persisted-handle fixtures
+        run: python .github/view-tests-apply.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Install SWT runtime
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libwebkit2gtk-4.1-0 xvfb xauth
+      - name: Verify negative control and corrected behavior
+        run: |
+          set -o pipefail
+          set +e
+          xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
+            -pl org.eclipse.jdt.ui.tests -am -Dtest=ViewStartupTests \
+            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dcompare-version-with-baselines.skip=true -Dmaven.test.failure.ignore=false -DskipTests=false | tee views-focused.log
+          result=${PIPESTATUS[0]}
+          set -e
+          export BUILD_RESULT=$result
+          python - <<'PY'
+          import os, xml.etree.ElementTree as ET
+          from pathlib import Path
+          root=ET.parse('org.eclipse.jdt.ui.tests/target/surefire-reports/TEST-org.eclipse.jdt.ui.tests.packageview.ViewStartupTests.xml').getroot()
+          assert int(root.get('tests'))==7 and int(root.get('errors'))==0 and int(root.get('skipped'))==0, root.attrib
+          failures=[t.get('name') for t in root.findall('testcase') if t.find('failure') is not None]
+          expected={'editorLinkResolvesColdModelOffUIThread','disablingEditorLinkDiscardsPendingSelection','closingPackageExplorerDiscardsPendingSelection','hierarchyRestoreValidatesColdHandleOffUIThread','closingHierarchyWhileRestoringDoesNotWaitForInitializer','clearingHierarchyDiscardsPendingRestoreWithoutJoiningWorker','missingHierarchyHandleRestoresAnEmptyView'}
+          if os.environ['IMPLEMENTATION']=='baseline':
+              assert set(failures)==expected and int(os.environ['BUILD_RESULT'])!=0, failures
+          else:
+              assert not failures and int(os.environ['BUILD_RESULT'])==0, failures
+          print('Verified:', root.attrib)
+          PY
+          mkdir -p views-reports/focused
+          cp org.eclipse.jdt.ui.tests/target/surefire-reports/* views-reports/focused/
+      - name: Complete package-view suite
+        if: matrix.implementation == 'fixed'
+        run: |
+          set -o pipefail
+          xvfb-run -a mvn -B -e verify -Pbuild-individual-bundles \
+            -pl org.eclipse.jdt.ui.tests -am -Dtest=PackageExplorerTests \
+            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dcompare-version-with-baselines.skip=true -Dmaven.test.failure.ignore=false -DskipTests=false | tee views-package.log
+          mkdir -p views-reports/package
+          cp org.eclipse.jdt.ui.tests/target/surefire-reports/* views-reports/package/
+      - name: Repeat guarded view lifecycle scenarios
+        if: matrix.implementation == 'fixed'
+        run: |
+          set -o pipefail
+          for attempt in 1 2 3; do
+            xvfb-run -a mvn -B -e verify -Pbuild-individual-bundles \
+              -pl org.eclipse.jdt.ui.tests -am -Dtest=ViewStartupTests \
+              -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+              -Dcompare-version-with-baselines.skip=true -Dmaven.test.failure.ignore=false -DskipTests=false | tee "views-repeat-${attempt}.log"
+            mkdir -p "views-reports/repeat-${attempt}"
+            cp org.eclipse.jdt.ui.tests/target/surefire-reports/* "views-reports/repeat-${attempt}/"
+          done
+      - name: Unfiltered full repository verification
+        if: matrix.implementation == 'fixed'
+        run: |
+          set -o pipefail
+          xvfb-run -a mvn -B -e verify -Pbuild-individual-bundles \
+            -Dcompare-version-with-baselines.skip=true -Dmaven.test.failure.ignore=false -DskipTests=false | tee views-full.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: views-${{ matrix.implementation }}
+          include-hidden-files: true
+          path: |
+            views-*.log
+            views-candidate.patch
+            views-source-hashes.json
+            views-reports/**
+            **/target/surefire-reports/**
+            **/target/work/data/.metadata/.log
+          retention-days: 14
