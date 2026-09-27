@@ -1,4 +1,4 @@
-name: PR 3231 remaining startup paths
+name: PR 3231 all startup paths verification
 on:
   push:
     branches: [verify/pr3231-all-paths]
@@ -11,22 +11,11 @@ concurrency:
 jobs:
   regressions:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Apply regression tests only
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import base64, zlib, hashlib, subprocess
-          text = Path('.github/allpaths-tests.b64').read_text().replace('WutyeaU5', 'WutyeU5')
-          patch = zlib.decompress(base64.b64decode(text))
-          assert hashlib.sha256(patch).hexdigest() == 'efa9dfa1d2aae134a0b378506b093c286500be0ad65e90237323a9bc7b29382f'
-          subprocess.run(['git', 'apply', '-'], input=patch, check=True)
-          p = Path('org.eclipse.jdt.ui.tests/ui/org/eclipse/jdt/ui/tests/packageview/ViewStartupTests.java')
-          p.write_text(p.read_text().replace('import static org.junit.jupiter.api.Assertions.assertEquals;\n', ''))
-          PY
-          git diff --check
+      - name: Apply candidate and tests
+        run: python .github/remaining-paths-apply.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -36,20 +25,105 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y libwebkit2gtk-4.1-0 xvfb xauth
-      - name: Run new view regressions
+      - name: Focused cold-view regression tests
         run: |
           set -o pipefail
           xvfb-run -a mvn -B -U -e verify -Pbuild-individual-bundles \
             -pl org.eclipse.jdt.ui.tests -am -Dtest=ViewStartupTests \
             -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
-            -Dcompare-version-with-baselines.skip=true -DskipTests=false | tee allpaths-tests.log
+            -Dcompare-version-with-baselines.skip=true -Dmaven.test.failure.ignore=false -DskipTests=false | tee allpaths-focused.log
+          mkdir -p allpaths-reports/focused
+          cp org.eclipse.jdt.ui.tests/target/surefire-reports/* allpaths-reports/focused/
+      - name: Existing package and breadcrumb suite
+        run: |
+          set -o pipefail
+          xvfb-run -a mvn -B -e verify -Pbuild-individual-bundles \
+            -pl org.eclipse.jdt.ui.tests -am -Dtest=PackageExplorerTests \
+            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dcompare-version-with-baselines.skip=true -Dmaven.test.failure.ignore=false -DskipTests=false | tee allpaths-package.log
+          mkdir -p allpaths-reports/package
+          cp org.eclipse.jdt.ui.tests/target/surefire-reports/* allpaths-reports/package/
+      - name: Unfiltered repository verification
+        run: |
+          set -o pipefail
+          xvfb-run -a mvn -B -e verify -Pbuild-individual-bundles \
+            -Dcompare-version-with-baselines.skip=true -Dmaven.test.failure.ignore=false -DskipTests=false | tee allpaths-full.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: allpaths-baseline
+          name: allpaths-regressions
           include-hidden-files: true
           path: |
             allpaths-*.log
+            allpaths-candidate.patch
+            allpaths-source-hashes.json
+            allpaths-reports/**
             **/target/surefire-reports/**
             **/target/work/data/.metadata/.log
+          retention-days: 14
+  restart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply identical candidate
+        run: python .github/remaining-paths-apply.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Provision Eclipse SDK and PDE
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libwebkit2gtk-4.1-0 xvfb xauth dbus-x11
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/pde-restart/run.py')
+          s=p.read_text().replace('build = builds[-1]', "build = 'I20260926-2300'")
+          p.write_text(s)
+          PY
+          python .github/pde-restart/run.py provision
+      - name: Build candidate and unchanged upstream
+        run: |
+          set -o pipefail
+          mvn -B -U -e package -Pbuild-individual-bundles -pl org.eclipse.jdt.ui -am \
+            -DskipTests=true -Dcompare-version-with-baselines.skip=true | tee restart-evidence/build-pr.log
+          git fetch --depth=1 origin 9cd0c74a96e0344763194ccbb28339846e6d2a45
+          git worktree add --detach "$RUNNER_TEMP/pr3231-upstream" 9cd0c74a96e0344763194ccbb28339846e6d2a45
+          cd "$RUNNER_TEMP/pr3231-upstream"
+          mvn -B -U -e package -Pbuild-individual-bundles -pl org.eclipse.jdt.ui -am \
+            -DskipTests=true -Dcompare-version-with-baselines.skip=true | tee "$GITHUB_WORKSPACE/restart-evidence/build-upstream.log"
+      - name: Execute real persisted-workspace restarts
+        run: |
+          set -o pipefail
+          python .github/pde-restart/run.py prepare
+          xvfb-run -a -s '-screen 0 1440x1000x24' dbus-run-session -- \
+            python .github/pde-restart/run.py exercise | tee restart-evidence/execution.log
+      - name: Require all three PR paths to initialize off the UI thread
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          results=json.loads(Path('restart-evidence/results.json').read_text())
+          tested=[r for r in results if r.get('implementation')=='pr']
+          assert len(tested)==3, results
+          for r in tested:
+              assert r['exit']==0 and r['finished'] and not r['fatal'], r
+              assert r['initializer_threads'] and not r['initializer_on_main'], r
+              assert r['restored_editor'] and r['final_editor'] and r['final_breadcrumb'], r
+              assert r['mode']!='link' or r['final_link'], r
+              assert r['mode']!='hierarchy' or r['final_hierarchy'], r
+          print(json.dumps(tested,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allpaths-pde-restart
+          include-hidden-files: true
+          path: |
+            restart-evidence/**
+            allpaths-candidate.patch
+            allpaths-source-hashes.json
+            .github/pde-restart/**
           retention-days: 14
