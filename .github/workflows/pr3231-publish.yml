@@ -1,0 +1,51 @@
+name: Publish verified PR 3231 startup paths
+on:
+  push:
+    branches: [verify/pr3231-all-paths]
+    paths: ['.github/workflows/pr3231-publish.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify completed tests and preserve source checker
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          test "$(gh api repos/carstenartur/eclipse.jdt.ui/actions/runs/36316697686 --jq .conclusion)" = success
+          test "$(gh api repos/carstenartur/eclipse.jdt.ui/actions/jobs/108610894362 --jq .conclusion)" = success
+          cp .github/pr3231-publish-source.py /tmp/pr3231-publish-source.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: views-fixed
+          run-id: 36316697686
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: _verified/views
+      - uses: actions/download-artifact@v4
+        with:
+          name: allpaths-pde-restart
+          run-id: 36316068882
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: _verified/restart
+      - name: Check current PR head and apply only verified production and test sources
+        run: |
+          git fetch --depth=1 origin refs/heads/fix/startup-1860
+          test "$(git rev-parse FETCH_HEAD)" = 97aeeaacad2c1af8bb08d1494ddfd192d5f96f67
+          git checkout --detach FETCH_HEAD
+          python /tmp/pr3231-publish-source.py
+      - name: Append verified fix to existing PR branch
+        run: |
+          git config user.name 'Carsten Hammer'
+          git config user.email 'carsten.hammer@t-online.de'
+          git commit -m 'Initialize linked views and restore type hierarchies off the UI thread' \
+            -m 'Prepare editor-linked Package Explorer inputs asynchronously and reject obsolete selections. Validate persisted hierarchy handles and compute a detached hierarchy in the restore worker; adopt only current results without joining cancelled workers from the UI thread.' \
+            -m 'Cover cold initialization, disabling linking, view disposal, hierarchy input cancellation and missing handles. All three real PDE restart scenarios initialize only on worker threads with responsive UI. Verified by full repository build and regression comparison 36316697686, and restart job 108610894362 in run 36316068882.' \
+            -m 'Related to eclipse-jdt/eclipse.jdt.ui#1860.' \
+            -m 'Signed-off-by: Carsten Hammer <carsten.hammer@t-online.de>' \
+            -m 'Assisted-by: OpenAI ChatGPT'
+          git push origin HEAD:refs/heads/fix/startup-1860
+          git show --stat --oneline HEAD
