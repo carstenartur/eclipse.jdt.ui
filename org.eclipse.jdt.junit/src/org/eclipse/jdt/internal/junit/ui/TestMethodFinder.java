@@ -91,9 +91,9 @@ public final class TestMethodFinder {
 					|| (parameterTypes != null && !hasParameterTypes(method, parameterTypes))) {
 				continue;
 			}
-			// Only accept a unique match. Without parameter metadata, another overload
-			// may match later; a second matching method makes the selection ambiguous.
 			if (result != null) {
+				// Ambiguous: both the previous result and this method match the supplied
+				// name and optional parameter types. Do not select either overload.
 				return null;
 			}
 			result= method;
