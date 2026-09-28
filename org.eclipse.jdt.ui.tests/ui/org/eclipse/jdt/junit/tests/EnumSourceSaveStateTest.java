@@ -13,8 +13,13 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.assertCompiles;
 import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.assertExcludeMode;
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.assertExcludedNames;
 import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.assertFilterRemoved;
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.getMethod;
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.methodContext;
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.sourceContext;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -22,9 +27,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.junit.After;
 import org.junit.Before;
@@ -48,14 +51,8 @@ import org.eclipse.jdt.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IMethod;
-import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.JavaCore;
-import org.eclipse.jdt.core.JavaModelException;
-import org.eclipse.jdt.core.compiler.IProblem;
-import org.eclipse.jdt.core.dom.AST;
-import org.eclipse.jdt.core.dom.ASTParser;
-import org.eclipse.jdt.core.dom.CompilationUnit;
 
 import org.eclipse.jdt.internal.junit.ui.EnumSourceValidator;
 
@@ -157,26 +154,27 @@ public class EnumSourceSaveStateTest {
 	public void testRejectedLastValueDoesNotSaveDirtyEditor() throws Exception {
 		IMethod method= createTest(Operation.REINCLUDE_ONE);
 		ICompilationUnit cu= method.getCompilationUnit();
+		String context= "REJECT_LAST_VALUE/DIRTY " + cu.getPath(); //$NON-NLS-1$
 		String savedSource= readFile(cu);
-		openEditor(cu, EditorState.DIRTY);
+		openEditor(cu, EditorState.DIRTY, context);
 		String original= document().get();
 
-		assertFalse("The last executable BLUE value must not be excluded", //$NON-NLS-1$
+		assertFalse(context + ": the last executable BLUE value must not be excluded from " + methodContext(method), //$NON-NLS-1$
 				EnumSourceValidator.excludeEnumValue(method, "BLUE")); //$NON-NLS-1$
 
-		assertEquals("A rejected edit must preserve the document", original, document().get()); //$NON-NLS-1$
-		assertEquals("A rejected edit must not save user changes", savedSource, readFile(cu)); //$NON-NLS-1$
-		assertTrue("The editor must remain dirty", fEditor.isDirty()); //$NON-NLS-1$
-		assertFalse("A rejected edit must not register an undo change", RefactoringCore.getUndoManager().anythingToUndo()); //$NON-NLS-1$
+		assertEquals(context + ": A rejected edit must preserve the document", original, document().get()); //$NON-NLS-1$
+		assertEquals(context + ": A rejected edit must not save user changes", savedSource, readFile(cu)); //$NON-NLS-1$
+		assertTrue(context + ": The editor must remain dirty", fEditor.isDirty()); //$NON-NLS-1$
+		assertFalse(context + ": A rejected edit must not register an undo change", RefactoringCore.getUndoManager().anythingToUndo()); //$NON-NLS-1$
 	}
 
 	private void assertSaveState(Operation operation, EditorState state) throws Exception {
-		String context= operation + "/" + state; //$NON-NLS-1$
 		IMethod method= createTest(operation);
 		ICompilationUnit cu= method.getCompilationUnit();
+		String context= operation + "/" + state + " " + cu.getPath(); //$NON-NLS-1$ //$NON-NLS-2$
 		String savedSource= readFile(cu);
 		if (state != EditorState.CLOSED) {
-			openEditor(cu, state);
+			openEditor(cu, state, context);
 		}
 		String original= cu.getSource();
 		assertEquals(context + ": fixture must still have its original disk content", savedSource, readFile(cu)); //$NON-NLS-1$
@@ -186,7 +184,7 @@ public class EnumSourceSaveStateTest {
 			case REINCLUDE_ONE -> EnumSourceValidator.removeValueFromExclusion(method, "GREEN"); //$NON-NLS-1$
 			case REINCLUDE_ALL -> EnumSourceValidator.removeExcludeMode(method);
 		};
-		assertTrue(context + ": the requested source edit must succeed", changed); //$NON-NLS-1$
+		assertTrue(context + ": the requested source edit must succeed for " + sourceContext(cu), changed); //$NON-NLS-1$
 		String modified= cu.getSource();
 		assertCompiles(cu);
 		List<String> expectedExcluded= switch (operation) {
@@ -194,7 +192,7 @@ public class EnumSourceSaveStateTest {
 			case REINCLUDE_ONE -> List.of("RED"); //$NON-NLS-1$
 			case REINCLUDE_ALL -> List.of();
 		};
-		assertEquals(context + ": expected exclusions after the edit", expectedExcluded, EnumSourceValidator.getExcludedNames(method)); //$NON-NLS-1$
+		assertExcludedNames(method, expectedExcluded);
 		if (operation == Operation.REINCLUDE_ALL) {
 			assertFilterRemoved(method);
 		} else {
@@ -203,11 +201,11 @@ public class EnumSourceSaveStateTest {
 
 		// Opening after a closed-file edit mirrors the action's open-in-editor step.
 		if (state == EditorState.CLOSED) {
-			openEditor(cu, EditorState.SAVED);
+			openEditor(cu, EditorState.SAVED, context);
 		}
 		assertState(context, cu, modified, state == EditorState.DIRTY ? savedSource : modified, state == EditorState.DIRTY);
 		if (state == EditorState.DIRTY) {
-			assertTrue(context + ": unrelated user text must remain in the document", modified.startsWith(USER_EDIT)); //$NON-NLS-1$
+			assertTrue(context + ": unrelated user text must remain in the document: " + modified, modified.startsWith(USER_EDIT)); //$NON-NLS-1$
 		}
 
 		IUndoManager undoManager= RefactoringCore.getUndoManager();
@@ -226,25 +224,26 @@ public class EnumSourceSaveStateTest {
 		assertEquals(context + ": editor dirty state", dirty, fEditor.isDirty()); //$NON-NLS-1$
 	}
 
-	private void openEditor(ICompilationUnit cu, EditorState state) throws Exception {
+	private void openEditor(ICompilationUnit cu, EditorState state, String context) throws Exception {
 		fEditor= (ITextEditor) JavaUI.openInEditor(cu);
-		assertNotNull("Expected a Java editor", fEditor); //$NON-NLS-1$
-		assertFalse("The editor must start saved", fEditor.isDirty()); //$NON-NLS-1$
+		assertNotNull(context + ": expected a Java editor", fEditor); //$NON-NLS-1$
+		assertFalse(context + ": the editor must start saved", fEditor.isDirty()); //$NON-NLS-1$
 		if (state == EditorState.DIRTY) {
 			document().replace(0, 0, USER_EDIT);
-			assertTrue("The fixture must contain unsaved user text", fEditor.isDirty()); //$NON-NLS-1$
+			assertTrue(context + ": the fixture must contain unsaved user text", fEditor.isDirty()); //$NON-NLS-1$
 		}
 	}
 
 	private IDocument document() {
-		return fEditor.getDocumentProvider().getDocument(fEditor.getEditorInput());
+		IDocument document= fEditor.getDocumentProvider().getDocument(fEditor.getEditorInput());
+		assertNotNull("Expected the editor document for " + fEditor.getEditorInput().getName(), document); //$NON-NLS-1$
+		return document;
 	}
 
 	private IMethod createTest(Operation operation) throws Exception {
 		String filter= operation == Operation.EXCLUDE ? "" //$NON-NLS-1$
 				: ", mode = EnumSource.Mode.EXCLUDE, names = { \"RED\", \"GREEN\" }"; //$NON-NLS-1$
-		IPackageFragment pack= fSourceFolder.createPackageFragment("test1", false, null); //$NON-NLS-1$
-		ICompilationUnit cu= pack.createCompilationUnit("MyTest.java", """
+		ICompilationUnit cu= EnumSourceTestSupport.createCompilationUnit(fSourceFolder, "test1", "MyTest.java", """
 				package test1;
 
 				import org.junit.jupiter.params.ParameterizedTest;
@@ -258,19 +257,8 @@ public class EnumSourceSaveStateTest {
 				    public void testWithEnum(Color color) {
 				    }
 				}
-				""".formatted(filter), false, null);
-		assertCompiles(cu);
-		return cu.getType("MyTest").getMethod("testWithEnum", new String[] { "QColor;" }); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-	}
-
-	private static void assertCompiles(ICompilationUnit cu) throws JavaModelException {
-		ASTParser parser= ASTParser.newParser(AST.getJLSLatest());
-		parser.setSource(cu);
-		parser.setResolveBindings(true);
-		CompilationUnit root= (CompilationUnit) parser.createAST(null);
-		String errors= Arrays.stream(root.getProblems()).filter(IProblem::isError)
-				.map(IProblem::getMessage).collect(Collectors.joining(System.lineSeparator()));
-		assertEquals("Expected no compile errors for source:" + System.lineSeparator() + cu.getSource(), "", errors); //$NON-NLS-1$ //$NON-NLS-2$
+				""".formatted(filter), false);
+		return getMethod(cu, "testWithEnum", "QColor;"); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	private static String readFile(ICompilationUnit cu) throws Exception {

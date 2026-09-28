@@ -13,13 +13,18 @@
  *******************************************************************************/
 package org.eclipse.jdt.junit.tests;
 
-import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.assertNoEnumConstantForInvocation;
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.assertExcludedNames;
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.assertNoExclusionTarget;
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.getMethod;
 import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.invocation;
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.methodContext;
+import static org.eclipse.jdt.junit.tests.EnumSourceTestSupport.sourceContext;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -33,7 +38,9 @@ import org.eclipse.jdt.junit.model.ITestElement.Result;
 import org.eclipse.jdt.junit.model.ITestRunSession;
 import org.eclipse.jdt.testplugin.JavaProjectHelper;
 
+import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IMethod;
+import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 
@@ -86,13 +93,13 @@ public class EnumSourceLastValueTest extends AbstractTestRunListenerTest {
 				}
 				""");
 
-		IMethod unfiltered= type.getMethod("unfiltered", new String[] { "QColor;" }); //$NON-NLS-1$ //$NON-NLS-2$
-		assertTrue("Expected the first of three values to be excluded", EnumSourceValidator.excludeEnumValue(unfiltered, "RED")); //$NON-NLS-1$ //$NON-NLS-2$
+		IMethod unfiltered= getMethod(type.getCompilationUnit(), "unfiltered", "QColor;"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue("Expected exclusion of RED from three values in " + methodContext(unfiltered), EnumSourceValidator.excludeEnumValue(unfiltered, "RED")); //$NON-NLS-1$ //$NON-NLS-2$
 		assertTwoToOne(unfiltered);
-		assertTwoToOne(type.getMethod("included", new String[] { "QColor;" })); //$NON-NLS-1$ //$NON-NLS-2$
-		assertTwoToOne(type.getMethod("excluded", new String[] { "QColor;" })); //$NON-NLS-1$ //$NON-NLS-2$
-		assertTwoToOne(type.getMethod("ranged", new String[] { "QColor;" })); //$NON-NLS-1$ //$NON-NLS-2$
-		assertLastValueProtected(type.getMethod("singleton", new String[] { "QSingle;" }), "ONLY"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		assertTwoToOne(getMethod(type.getCompilationUnit(), "included", "QColor;")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTwoToOne(getMethod(type.getCompilationUnit(), "excluded", "QColor;")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTwoToOne(getMethod(type.getCompilationUnit(), "ranged", "QColor;")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertLastValueProtected(getMethod(type.getCompilationUnit(), "singleton", "QSingle;"), "ONLY"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
 		// Compilation alone cannot detect an empty parameterized source. Launch Jupiter
 		// and verify that all five methods really execute their sole remaining value.
@@ -112,7 +119,7 @@ public class EnumSourceLastValueTest extends AbstractTestRunListenerTest {
 				    void ranged(Color color) { }
 				}
 				""");
-		assertLastValueProtected(type.getMethod("ranged", new String[] { "QColor;" }), "GREEN"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+		assertLastValueProtected(getMethod(type.getCompilationUnit(), "ranged", "QColor;"), "GREEN"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 	}
 
 	@Test
@@ -128,17 +135,17 @@ public class EnumSourceLastValueTest extends AbstractTestRunListenerTest {
 				    void excluded(Color color) { }
 				}
 				""");
-		IMethod method= type.getMethod("excluded", new String[] { "QColor;" }); //$NON-NLS-1$ //$NON-NLS-2$
+		IMethod method= getMethod(type.getCompilationUnit(), "excluded", "QColor;"); //$NON-NLS-1$ //$NON-NLS-2$
 		ExcludeParameterValueAction action= new ExcludeParameterValueAction();
 		action.update(invocation(method, 2));
-		assertTrue("Expected BLUE to be excludable while GREEN is still present", action.isEnabled()); //$NON-NLS-1$
+		assertTrue("Expected BLUE at invocation index 2 to be excludable while GREEN is present in " + methodContext(method), action.isEnabled()); //$NON-NLS-1$
 
-		assertTrue("Expected exclusion of GREEN to leave BLUE", EnumSourceValidator.excludeEnumValue(method, "GREEN")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue("Expected exclusion of GREEN to leave BLUE in " + methodContext(method), EnumSourceValidator.excludeEnumValue(method, "GREEN")); //$NON-NLS-1$ //$NON-NLS-2$
 		String source= method.getCompilationUnit().getSource();
 		action.run();
 
 		assertEquals("Expected the stale action not to remove the last value", source, method.getCompilationUnit().getSource()); //$NON-NLS-1$
-		assertFalse("Expected the stale action to become disabled", action.isEnabled()); //$NON-NLS-1$
+		assertFalse("Expected the stale action for BLUE at invocation index 2 to become disabled in " + methodContext(method), action.isEnabled()); //$NON-NLS-1$
 		assertLastValueProtected(method, "BLUE"); //$NON-NLS-1$
 	}
 
@@ -157,17 +164,19 @@ public class EnumSourceLastValueTest extends AbstractTestRunListenerTest {
 				    void repaired(Color color) { assertEquals(Color.GREEN, color); }
 				}
 				""");
-		IMethod method= type.getMethod("repaired", new String[] { "QColor;" }); //$NON-NLS-1$ //$NON-NLS-2$
-		assertTrue("Expected a manually emptied source to remain repairable", //$NON-NLS-1$
+		IMethod method= getMethod(type.getCompilationUnit(), "repaired", "QColor;"); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue("Expected re-inclusion of GREEN into the manually emptied source " + methodContext(method), //$NON-NLS-1$
 				EnumSourceValidator.removeValueFromExclusion(method, "GREEN")); //$NON-NLS-1$
-		assertEquals("Expected only RED and BLUE to remain excluded", //$NON-NLS-1$
-				List.of("RED", "BLUE"), EnumSourceValidator.getExcludedNames(method)); //$NON-NLS-1$ //$NON-NLS-2$
+		assertExcludedNames(method, List.of("RED", "BLUE")); //$NON-NLS-1$ //$NON-NLS-2$
 		assertLastValueProtected(method, "GREEN"); //$NON-NLS-1$
 		assertSuccessfulRun(type, 1);
 	}
 
 	private IType createTestType(String source) throws Exception {
-		IType type= createType(source, "pack", "LastValueTest.java"); //$NON-NLS-1$ //$NON-NLS-2$
+		IPackageFragmentRoot sourceFolder= JavaProjectHelper.addSourceContainer(fProject, "src"); //$NON-NLS-1$
+		ICompilationUnit cu= EnumSourceTestSupport.createCompilationUnit(sourceFolder, "pack", "LastValueTest.java", source, true); //$NON-NLS-1$ //$NON-NLS-2$
+		IType type= cu.findPrimaryType();
+		assertNotNull("Expected the launch type in " + sourceContext(cu), type); //$NON-NLS-1$
 		buildTestCase(type);
 		return type;
 	}
@@ -175,8 +184,8 @@ public class EnumSourceLastValueTest extends AbstractTestRunListenerTest {
 	private static void assertTwoToOne(IMethod method) throws Exception {
 		ExcludeParameterValueAction action= new ExcludeParameterValueAction();
 		action.update(invocation(method, 1));
-		assertTrue("Expected exclusion to be offered with two values for " + method.getElementName(), action.isEnabled()); //$NON-NLS-1$
-		assertTrue("Expected two-to-one exclusion for " + method.getElementName(), //$NON-NLS-1$
+		assertTrue("Expected exclusion to be offered with two values for " + methodContext(method), action.isEnabled()); //$NON-NLS-1$
+		assertTrue("Expected two-to-one exclusion for " + methodContext(method), //$NON-NLS-1$
 				EnumSourceValidator.excludeEnumValue(method, "GREEN")); //$NON-NLS-1$
 		assertLastValueProtected(method, "BLUE"); //$NON-NLS-1$
 	}
@@ -184,7 +193,7 @@ public class EnumSourceLastValueTest extends AbstractTestRunListenerTest {
 	private static void assertLastValueProtected(IMethod method, String value) throws Exception {
 		String source= method.getCompilationUnit().getSource();
 		// The resolver returns an editable exclusion target, not every runnable value.
-		assertNoEnumConstantForInvocation(method, 1);
+		assertNoExclusionTarget(method, 1);
 		ExcludeParameterValueAction action= new ExcludeParameterValueAction();
 		action.update(invocation(method, 1));
 		assertFalse("Expected no exclusion action for last value " + value + " in source: " + source, action.isEnabled()); //$NON-NLS-1$ //$NON-NLS-2$
@@ -195,11 +204,16 @@ public class EnumSourceLastValueTest extends AbstractTestRunListenerTest {
 
 	private void assertSuccessfulRun(IType type, int expectedInvocations) throws Exception {
 		TestRunLog log= new TestRunLog();
+		TestRunLog details= new TestRunLog();
 		AtomicReference<Result> completed= new AtomicReference<>();
 		TestRunListener listener= new TestRunListener() {
 			@Override
 			public void testCaseFinished(ITestCaseElement testCase) {
 				log.add(testCase.getTestResult(false).toString());
+				var failure= testCase.getFailureTrace();
+				details.add(testCase.getTestClassName() + '#' + testCase.getTestMethodName()
+						+ ": " + testCase.getTestResult(false) //$NON-NLS-1$
+						+ (failure == null ? "" : System.lineSeparator() + failure.getTrace())); //$NON-NLS-1$
 			}
 
 			@Override
@@ -211,11 +225,14 @@ public class EnumSourceLastValueTest extends AbstractTestRunListenerTest {
 		JUnitCore.addTestRunListener(listener);
 		try {
 			String[] results= launchJUnit(type, TestKindRegistry.JUNIT5_TEST_KIND_ID, log);
-			assertNotNull("Expected the Jupiter session to finish", completed.get()); //$NON-NLS-1$
-			assertEquals("Expected no parameterized-source runtime errors", Result.OK, completed.get()); //$NON-NLS-1$
-			assertEquals("Expected exactly one invocation per remaining source", expectedInvocations, results.length); //$NON-NLS-1$
+			String context= sourceContext(type.getCompilationUnit()) + System.lineSeparator()
+					+ "Observed invocations:" + System.lineSeparator() + String.join(System.lineSeparator(), details.getLog()) //$NON-NLS-1$
+					+ System.lineSeparator() + "Result log: " + Arrays.toString(results); //$NON-NLS-1$
+			assertNotNull("Expected the Jupiter session to finish for " + context, completed.get()); //$NON-NLS-1$
+			assertEquals("Expected no parameterized-source runtime errors for " + context, Result.OK, completed.get()); //$NON-NLS-1$
+			assertEquals("Expected exactly one invocation per remaining source in " + context, expectedInvocations, results.length); //$NON-NLS-1$
 			for (int i= 0; i < results.length; i++) {
-				assertEquals("Expected successful invocation at index " + i, Result.OK.toString(), results[i]); //$NON-NLS-1$
+				assertEquals("Expected successful invocation at index " + i + " in " + context, Result.OK.toString(), results[i]); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 		} finally {
 			JUnitCore.removeTestRunListener(listener);
