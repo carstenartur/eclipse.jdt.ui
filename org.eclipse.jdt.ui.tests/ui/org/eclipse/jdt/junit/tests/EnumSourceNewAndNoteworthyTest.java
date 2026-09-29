@@ -98,7 +98,7 @@ public class EnumSourceNewAndNoteworthyTest extends AbstractTestRunListenerTest 
 		@Override
 		public void createInitialLayout(IPageLayout layout) {
 			layout.setEditorAreaVisible(true);
-			layout.addView(TestRunnerViewPart.NAME, IPageLayout.BOTTOM, 0.48f, layout.getEditorArea());
+			layout.addView(TestRunnerViewPart.NAME, IPageLayout.BOTTOM, 0.42f, layout.getEditorArea());
 		}
 	}
 
@@ -128,7 +128,7 @@ public class EnumSourceNewAndNoteworthyTest extends AbstractTestRunListenerTest 
 		try {
 			page.setPerspective(perspective);
 			shell.setMaximized(false);
-			shell.setBounds(20, 20, 720, 720);
+			shell.setBounds(20, 20, 720, 760);
 			IType type= createType(SOURCE, "pack", "ColorTest.java");
 			assertRun(runExample(type), 3);
 			TestRunnerViewPart part= (TestRunnerViewPart) page.showView(TestRunnerViewPart.NAME);
