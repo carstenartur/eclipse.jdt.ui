@@ -128,7 +128,7 @@ public class EnumSourceNewAndNoteworthyTest extends AbstractTestRunListenerTest 
 		try {
 			page.setPerspective(perspective);
 			shell.setMaximized(false);
-			shell.setBounds(20, 20, 790, 760);
+			shell.setBounds(20, 20, 720, 720);
 			IType type= createType(SOURCE, "pack", "ColorTest.java");
 			assertRun(runExample(type), 3);
 			TestRunnerViewPart part= (TestRunnerViewPart) page.showView(TestRunnerViewPart.NAME);
@@ -144,7 +144,7 @@ public class EnumSourceNewAndNoteworthyTest extends AbstractTestRunListenerTest 
 			shell.forceActive();
 			positionSource(text);
 			Control capture= commonControl(tabFolder(text), tabFolder(table));
-			assertTrue(capture.getSize().x <= 790);
+			assertTrue(capture.getSize().x <= 720);
 			assertEquals(3, table.getItemCount());
 			assertSourceVisible(text, "@EnumSource(Color.class)");
 			Files.writeString(output.resolve("ColorTest-before.java"), type.getCompilationUnit().getSource());
@@ -176,7 +176,7 @@ public class EnumSourceNewAndNoteworthyTest extends AbstractTestRunListenerTest 
 			assertNotNull(reinclude.getMenu());
 			selectNativeMenuItem(menu, reinclude, true);
 			Menu submenu= reinclude.getMenu();
-			MenuItem green= findItem(submenu, "GREEN");
+			MenuItem green= findItem(submenu, "Re-include 'GREEN'");
 			assertTrue(green.isEnabled());
 			findItem(submenu, "Re-include All Enum Values");
 			assertTrue("The actual re-inclusion submenu must be open", submenu.isVisible());
