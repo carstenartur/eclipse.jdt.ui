@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -10,12 +10,17 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Carsten Hammer - cleanup target scope expansion
  *******************************************************************************/
 package org.eclipse.jdt.internal.corext.fix;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -95,6 +100,8 @@ import org.eclipse.jdt.internal.ui.refactoring.IScheduledRefactoring;
 import org.eclipse.jdt.internal.ui.util.Progress;
 
 public class CleanUpRefactoring extends Refactoring implements IScheduledRefactoring {
+
+	private static final String EXPAND_CLEAN_UP_SCOPE_METHOD= "expandCleanUpScope"; //$NON-NLS-1$
 
 	public static class CleanUpTarget {
 
@@ -647,18 +654,26 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 		RefactoringStatus result= new RefactoringStatus();
 
 		ICleanUp[] cleanUps= getCleanUps();
-		pm.beginTask("", cuCount * 2 * fCleanUps.size() + 4 * cleanUps.length); //$NON-NLS-1$
+		boolean expandsScope= supportsScopeExpansion(cleanUps);
+		pm.beginTask("", expandsScope ? IProgressMonitor.UNKNOWN : cuCount * 2 * fCleanUps.size() + 4 * cleanUps.length); //$NON-NLS-1$
 		try {
 			DynamicValidationStateChange change= new DynamicValidationStateChange(getName());
 			change.setSchedulingRule(getSchedulingRule());
 			for (Entry<IJavaProject, List<CleanUpTarget>> entry : fProjects.entrySet()) {
 				IJavaProject project= entry.getKey();
 				List<CleanUpTarget> targetsList= entry.getValue();
-				CleanUpTarget[] targets= targetsList.toArray(new CleanUpTarget[targetsList.size()]);
 				if (fUseOptionsFromProfile) {
 					result.merge(setOptionsFromProfile(project, cleanUps));
 					if (result.hasFatalError())
 						return result;
+				}
+				CleanUpTarget[] targets= targetsList.toArray(new CleanUpTarget[targetsList.size()]);
+				if (expandsScope) {
+					targets= expandCleanUpTargets(project, targets, cleanUps, Progress.subMonitor(pm, cleanUps.length));
+					targetsList.clear();
+					for (CleanUpTarget target : targets) {
+						targetsList.add(target);
+					}
 				}
 				result.merge(checkPreConditions(project, targets, Progress.subMonitor(pm, 3 * cleanUps.length)));
 				if (result.hasFatalError())
@@ -681,6 +696,98 @@ public class CleanUpRefactoring extends Refactoring implements IScheduledRefacto
 		}
 
 		return result;
+	}
+
+	private static boolean supportsScopeExpansion(ICleanUp[] cleanUps) {
+		for (ICleanUp cleanUp : cleanUps) {
+			if (findScopeExpansionMethod(cleanUp) != null) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private CleanUpTarget[] expandCleanUpTargets(IJavaProject project, CleanUpTarget[] initialTargets,
+			ICleanUp[] cleanUps, IProgressMonitor monitor) throws CoreException {
+		Map<ICompilationUnit, CleanUpTarget> targetsByUnit= new LinkedHashMap<>();
+		for (CleanUpTarget target : initialTargets) {
+			targetsByUnit.put(target.getCompilationUnit().getPrimary(), target);
+		}
+
+		boolean changed;
+		do {
+			changed= false;
+			List<ICompilationUnit> currentScope= targetsByUnit.keySet().stream().toList();
+			for (ICleanUp cleanUp : cleanUps) {
+				Collection<?> discovered= invokeScopeExpansion(cleanUp, project, currentScope, monitor);
+				for (Object candidate : discovered) {
+					if (!(candidate instanceof ICompilationUnit unit)) {
+						throw invalidScopeProvider(cleanUp, "returned an element that is not an ICompilationUnit", null); //$NON-NLS-1$
+					}
+					ICompilationUnit primary= unit.getPrimary();
+					if (!project.equals(primary.getJavaProject())) {
+						throw invalidScopeProvider(cleanUp, "returned a compilation unit from another Java project", null); //$NON-NLS-1$
+					}
+					if (!primary.exists()) {
+						throw invalidScopeProvider(cleanUp, "returned a compilation unit that does not exist", null); //$NON-NLS-1$
+					}
+					if (!targetsByUnit.containsKey(primary)) {
+						targetsByUnit.put(primary, new CleanUpTarget(primary));
+						changed= true;
+					}
+				}
+				if (monitor.isCanceled()) {
+					throw new OperationCanceledException();
+				}
+				monitor.worked(1);
+			}
+		} while (changed);
+
+		return targetsByUnit.values().toArray(new CleanUpTarget[targetsByUnit.size()]);
+	}
+
+	private static Collection<?> invokeScopeExpansion(ICleanUp cleanUp, IJavaProject project,
+			Collection<ICompilationUnit> currentScope, IProgressMonitor monitor) throws CoreException {
+		Method method= findScopeExpansionMethod(cleanUp);
+		if (method == null) {
+			return List.of();
+		}
+		try {
+			Object result= method.invoke(cleanUp, project, List.copyOf(currentScope), monitor);
+			if (result == null) {
+				return List.of();
+			}
+			if (result instanceof Collection<?> collection) {
+				return collection;
+			}
+			throw invalidScopeProvider(cleanUp, "did not return a Collection", null); //$NON-NLS-1$
+		} catch (IllegalAccessException | IllegalArgumentException e) {
+			throw invalidScopeProvider(cleanUp, "could not be invoked", e); //$NON-NLS-1$
+		} catch (InvocationTargetException e) {
+			Throwable cause= e.getCause();
+			if (cause instanceof CoreException coreException) {
+				throw coreException;
+			}
+			if (cause instanceof OperationCanceledException canceledException) {
+				throw canceledException;
+			}
+			throw invalidScopeProvider(cleanUp, "failed while expanding the cleanup scope", cause); //$NON-NLS-1$
+		}
+	}
+
+	private static Method findScopeExpansionMethod(ICleanUp cleanUp) {
+		try {
+			return cleanUp.getClass().getMethod(EXPAND_CLEAN_UP_SCOPE_METHOD, IJavaProject.class,
+					Collection.class, IProgressMonitor.class);
+		} catch (NoSuchMethodException e) {
+			return null;
+		}
+	}
+
+	private static CoreException invalidScopeProvider(ICleanUp cleanUp, String detail, Throwable cause) {
+		String message= "Invalid multi-file cleanup scope provider " + cleanUp.getClass().getName() + ": " + detail; //$NON-NLS-1$ //$NON-NLS-2$
+		return new CoreException(new Status(IStatus.ERROR, JavaPlugin.getPluginId(),
+				IJavaStatusConstants.INTERNAL_ERROR, message, cause));
 	}
 
 	private void findFilesToBeModified(CompositeChange change, List<IResource> result) throws JavaModelException {
